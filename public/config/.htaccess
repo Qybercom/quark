@@ -1,0 +1,13 @@
+php_flag display_errors on
+php_value error_reporting -1
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule .* index.php
+</IfModule>
+
+Options -Indexes
+
+AddDefaultCharset utf-8
