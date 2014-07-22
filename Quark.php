@@ -100,15 +100,22 @@ class Quark {
 				throw new QuarkArchException(500, 'Unknown service class ' . $service);
 
 			/**
-			 * @var $worker IQuarkService|IQuarkBroadcastService|IQuarkGetService|IQuarkPostService|IQuarkCustomProcessorService
+			 * @var $worker IQuarkService|IQuarkGetService|IQuarkPostService|IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithRequestPreprocessor
 			 */
 			$worker = new $service();
 
-			if (self::is($service, 'Quark\IQuarkCustomProcessorService')) self::$_processor = $worker->Processor();
+			if (self::is($service, 'Quark\IQuarkServiceWithCustomProcessor')) self::$_processor = $worker->Processor();
 
-			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request();
-			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
-				echo $worker->$method(self::$_processor->Decode(file_get_contents('php://input')));
+			$input = self::$_processor->Decode(file_get_contents('php://input'));
+
+			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input);
+
+			if (self::is($service, 'Quark\IQuarkAuthorizableService') && !self::Access($worker->AuthorizationCriteria())) {
+				echo $worker->AuthorizationFailed();
+				exit();
+			}
+
+			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service')) echo $worker->$method($input);
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -322,10 +329,14 @@ class Quark {
 	}
 
 	/**
-	 * @return mixed
+	 * @param IQuarkAuthorizableModel $user
+	 * @return IQuarkAuthorizableModel
 	 */
-	public static function User () {
-		return $_SESSION['user'];
+	public static function User (IQuarkAuthorizableModel $user = null) {
+		if ($user != null)
+			$_SESSION['user'] = $user;
+
+		return isset($_SESSION['user']) ? $_SESSION['user'] : null;
 	}
 
 	/**
@@ -334,10 +345,10 @@ class Quark {
 	 */
 	public static function Login (IQuarkAuthorizableDataProvider $provider) {
 		$user = $provider->Authenticate();
+		$class = get_class($user);
+		if ($user == null || !self::is($class, 'Quark\IQuarkAuthorizableModel')) return false;
 
-		if ($user == null) return false;
-
-		if (!isset($_SESSION['user'])) session_start();
+		@session_start();
 
 		$_SESSION['user'] = $user;
 
@@ -354,6 +365,20 @@ class Quark {
 		session_destroy();
 
 		return true;
+	}
+
+	/**
+	 * @param array $roles
+	 * @return bool
+	 */
+	public static function Access ($roles) {
+		if (!is_array($roles)) return true;
+
+		$ok = true;
+
+		foreach ($roles as $i => $role) $ok = $ok && $role;
+
+		return $ok;
 	}
 
 	/**
@@ -377,7 +402,7 @@ class Quark {
 
 		return file_put_contents(
 			$logs . $domain . '.log',
-			'[' . $lvl . '] ' . date(self::Config()->Culture()->DateFormat()) . ' ' . $message . "\r\n",
+			'[' . $lvl . '] ' . date(self::Config()->Culture()->DateTimeFormat()) . ' ' . $message . "\r\n",
 			FILE_APPEND | LOCK_EX
 		);
 	}
@@ -582,17 +607,6 @@ interface IQuarkExtensionConfig {
 interface IQuarkService { }
 
 /**
- * Interface IQuarkBroadcastService
- * @package Quark
- */
-interface IQuarkBroadcastService extends IQuarkService {
-	/**
-	 * @return mixed
-	 */
-	function Request();
-}
-
-/**
  * Interface IQuarkGetService
  * @package Quark
  */
@@ -617,10 +631,22 @@ interface IQuarkPostService extends IQuarkService {
 }
 
 /**
- * Interface IQuarkCustomProcessorService
+ * Interface IQuarkServiceWithRequestPreprocessor
  * @package Quark
  */
-interface IQuarkCustomProcessorService extends IQuarkService {
+interface IQuarkServiceWithRequestPreprocessor extends IQuarkService {
+	/**
+	 * @param mixed $request
+	 * @return mixed
+	 */
+	function Request($request);
+}
+
+/**
+ * Interface IQuarkServiceWithCustomProcessor
+ * @package Quark
+ */
+interface IQuarkServiceWithCustomProcessor extends IQuarkService {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
@@ -914,6 +940,10 @@ class QuarkField {
 		return self::_dateTime('Time', $key, $nullable, $culture);
 	}
 
+	public static function Email ($key, $nullable = false) {
+
+	}
+
 	/**
 	 * @param $key
 	 * @param $values
@@ -941,6 +971,41 @@ class QuarkField {
 }
 
 /**
+ * Class QuarkRole
+ * @package Quark
+ */
+class QuarkRole {
+	const ALL = '*';
+	const AUTHENTICATED = '@';
+	const BANNED = '~';
+	const OWNER = '$';
+	const SUPPORT = '?';
+	const MODERATOR = '!';
+	const ADMIN = '#';
+
+	/**
+	 * @return bool
+	 */
+	public static function Authenticated () {
+		return Quark::User() != null;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function Owner () {
+		return false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function Administrator () {
+		return Quark::User()->SystemRole() == self::ADMIN;
+	}
+}
+
+/**
  * Interface IQuarkAuthorizableService
  * @package Quark
  */
@@ -948,7 +1013,12 @@ interface IQuarkAuthorizableService {
 	/**
 	 * @return array
 	 */
-	function Roles();
+	function AuthorizationCriteria();
+
+	/**
+	 * @return mixed
+	 */
+	function AuthorizationFailed();
 }
 
 /**
@@ -957,7 +1027,7 @@ interface IQuarkAuthorizableService {
  */
 interface IQuarkAuthorizableDataProvider {
 	/**
-	 * @return bool
+	 * @return IQuarkAuthorizableModel
 	 */
 	function Authenticate();
 }
@@ -971,6 +1041,11 @@ interface IQuarkAuthorizableModel {
 	 * @return mixed
 	 */
 	function LoginCriteria();
+
+	/**
+	 * @return mixed
+	 */
+	function SystemRole();
 }
 
 /**

@@ -16,7 +16,7 @@ use Quark\IQuarkAuthorizableDataProvider;
  */
 class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	/**
-	 * @var IMongoModel|IMongoModelWithBeforeSave|IMongoModelWithBeforeRemove
+	 * @var IMongoModel|IMongoModelWithBeforeSave|IMongoModelWithBeforeRemove|IQuarkAuthorizableModel
 	 */
 	private $_model;
 
@@ -63,6 +63,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 		 * @var IMongoModel|IMongoModelWithAfterFind $record
 		 */
 		$record = new $model();
+		$schema = $record->Fields();
 
 		$buffer = Quark::is($model, 'Quark\Extensions\Mongo\IMongoModelWithAfterFind')
 			? $record->AfterFind($raw)
@@ -70,8 +71,8 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 
 		if ($buffer == null) return null;
 
-		foreach ($buffer as $key => $value)
-			$record->$key = self::_id($key, $value);
+		foreach ($schema as $key => $value)
+			$record->$key = self::_id($key, isset($buffer[$key]) ? $buffer[$key] : $value);
 
 		return $record;
 	}
@@ -83,7 +84,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	public function __construct (IMongoModel $model, $source = null) {
 		$this->_model = $model;
 
-		if ($source != null)
+		if (func_num_args() == 2)
 			$this->PopulateWith($source);
 	}
 
@@ -103,14 +104,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	 * @return Model
 	 */
 	public function PopulateWith ($input = []) {
-		$method = 'Data';
-
-		if (is_array($input)) $method .= 'Array';
-		if (is_object($input)) $method .= 'Object';
-
-		if ($method == 'Data') return $this;
-
-		$data = Quark::$method($input, $this->_model->Fields());
+		$data = Quark::DataArray($input, $this->_model->Fields());
 
 		foreach ($data as $key => $value)
 			$this->_model->$key = $value;
