@@ -281,7 +281,8 @@ class Quark {
 	 * @return string
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
-		return preg_replace('#(/+)#', '/', $path) . ($endSlash && $path[strlen($path) - 1] != '/' ? '/' : '');
+		return preg_replace('#(/+)#', '/', str_replace('\\', '/', $path))
+			. ($endSlash && $path[strlen($path) - 1] != '/' ? '/' : '');
 	}
 
 	/**
@@ -318,6 +319,49 @@ class Quark {
 		ob_start();
 		include $view;
 		return ob_get_clean();
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public static function User () {
+		return $_SESSION['user'];
+	}
+
+	/**
+	 * @param IQuarkAuthorizableDataProvider $provider
+	 * @return bool
+	 */
+	public static function Login (IQuarkAuthorizableDataProvider $provider) {
+		$user = $provider->Authenticate();
+
+		if ($user == null) return false;
+
+		if (!isset($_SESSION['user'])) session_start();
+
+		$_SESSION['user'] = $user;
+
+		return true;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function Logout () {
+		if (!isset($_SESSION['user'])) return false;
+
+		unset($_SESSION['user']);
+		session_destroy();
+
+		return true;
+	}
+
+	/**
+	 * @param $url
+	 */
+	public static function Redirect ($url) {
+		header('Location: ' . $url);
+		exit();
 	}
 
 	/**
@@ -894,6 +938,39 @@ class QuarkField {
 
 		return $ok;
 	}
+}
+
+/**
+ * Interface IQuarkAuthorizableService
+ * @package Quark
+ */
+interface IQuarkAuthorizableService {
+	/**
+	 * @return array
+	 */
+	function Roles();
+}
+
+/**
+ * Interface IQuarkAuthorizableDataProvider
+ * @package Quark
+ */
+interface IQuarkAuthorizableDataProvider {
+	/**
+	 * @return bool
+	 */
+	function Authenticate();
+}
+
+/**
+ * Interface IQuarkAuthorizableModel
+ * @package Quark
+ */
+interface IQuarkAuthorizableModel {
+	/**
+	 * @return mixed
+	 */
+	function LoginCriteria();
 }
 
 /**

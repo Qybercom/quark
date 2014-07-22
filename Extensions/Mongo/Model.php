@@ -2,15 +2,19 @@
 namespace Quark\Extensions\Mongo;
 
 use Quark\Quark;
-use Quark\IQuarkModel;
-use Quark\QuarkArchException;
 use Quark\QuarkField;
+
+use Quark\QuarkArchException;
+
+use Quark\IQuarkModel;
+use Quark\IQuarkAuthorizableModel;
+use Quark\IQuarkAuthorizableDataProvider;
 
 /**
  * Class Model
  * @package Quark\Extensions\Mongo
  */
-class Model implements IQuarkModel {
+class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	/**
 	 * @var IMongoModel|IMongoModelWithBeforeSave|IMongoModelWithBeforeRemove
 	 */
@@ -63,6 +67,8 @@ class Model implements IQuarkModel {
 		$buffer = Quark::is($model, 'Quark\Extensions\Mongo\IMongoModelWithAfterFind')
 			? $record->AfterFind($raw)
 			: $raw;
+
+		if ($buffer == null) return null;
 
 		foreach ($buffer as $key => $value)
 			$record->$key = self::_id($key, $value);
@@ -245,5 +251,12 @@ class Model implements IQuarkModel {
 		if (!is_array($criteria)) $criteria = array();
 
 		return self::_source($model)->count($criteria, $limit, $skip);
+	}
+
+	/**
+	 * @return IQuarkAuthorizableModel
+	 */
+	public function Authenticate () {
+		return self::FindOne(str_replace('Models\\', '', get_class($this->_model)), $this->_model->LoginCriteria());
 	}
 }

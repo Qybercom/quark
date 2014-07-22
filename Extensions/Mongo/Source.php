@@ -2,6 +2,7 @@
 namespace Quark\Extensions\Mongo;
 
 use Quark\IQuarkExtension;
+
 use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
@@ -14,7 +15,7 @@ class Source implements IQuarkExtension {
 	private static $_pool = array();
 
 	/**
-	 * @param null|Config $config
+	 * @param Config|null $config
 	 * @throws QuarkConnectionException
 	 * @return mixed|void
 	 */
