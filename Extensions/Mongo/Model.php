@@ -54,9 +54,12 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	/**
 	 * @param $model
 	 * @param $raw
+	 * @param bool $afterFind
 	 * @return IMongoModel|IMongoModelWithAfterFind
 	 */
-	private static function _record ($model, $raw) {
+	private static function _record ($model, $raw, $afterFind = true) {
+		if ($raw == null) return null;
+
 		$model = '\\Models\\' . $model;
 
 		/**
@@ -65,14 +68,18 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 		$record = new $model();
 		$schema = $record->Fields();
 
-		$buffer = Quark::is($model, 'Quark\Extensions\Mongo\IMongoModelWithAfterFind')
-			? $record->AfterFind($raw)
+		$buffer = Quark::is($model, 'Quark\Extensions\Mongo\IMongoModelWithAfterFind') && $afterFind
+			? $record->AfterFind(json_decode(json_encode($raw)))
 			: $raw;
+
+		$buffer = json_decode(json_encode($buffer));
 
 		if ($buffer == null) return null;
 
+		$record->_id = $buffer->_id->{'$id'};
+
 		foreach ($schema as $key => $value)
-			$record->$key = self::_id($key, isset($buffer[$key]) ? $buffer[$key] : $value);
+			$record->$key = isset($buffer->$key) ? $buffer->$key : $value;
 
 		return $record;
 	}
@@ -104,7 +111,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	 * @return Model
 	 */
 	public function PopulateWith ($input = []) {
-		$data = Quark::DataArray($input, $this->_model->Fields());
+		$data = Quark::DataObject($input, $this->_model->Fields());
 
 		foreach ($data as $key => $value)
 			$this->_model->$key = $value;
@@ -119,18 +126,18 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 		return QuarkField::Rules($this->_model->Rules());
 	}
 
+	private function _helper ($name) {
+		if (!Quark::is($this->_model, 'Quark\Extensions\Mongo\IMongoModelWith' . $name)) return true;
+
+		return  $this->_model->$name() !== false;
+	}
+
 	/**
 	 * @param $options
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		if (
-			Quark::is(
-				$this->_model,
-				'Quark\Extensions\Mongo\IMongoModelWithBeforeSave'
-			)
-			&& !$this->_model->BeforeSave()
-		) return false;
+		if (!$this->_helper('BeforeSave')) return false;
 
 		if (!is_array($options)) $options = array();
 
@@ -142,13 +149,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		if (
-			Quark::is(
-				$this->_model,
-				'Quark\Extensions\Mongo\IMongoModelWithBeforeRemove'
-			)
-			&& !$this->_model->BeforeRemove()
-		) return false;
+		if (!$this->_helper('BeforeRemove')) return false;
 
 		if (!is_array($options)) $options = array();
 
@@ -167,6 +168,13 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 		if (!is_array($criteria)) $criteria = array();
 		if (!is_array($options)) $options = array();
 
+		$afterFind = true;
+
+		if (isset($options['afterFind'])) {
+			$afterFind = $options['afterFind'];
+			unset($options['afterFind']);
+		}
+
 		$raw = self::_source($model)->find($criteria);
 
 		if (isset($options['sort']))
@@ -181,7 +189,7 @@ class Model implements IQuarkModel, IQuarkAuthorizableDataProvider {
 		$records = array();
 
 		foreach ($raw as $i => $item)
-			$records[] = self::_record($model, $item);
+			$records[] = self::_record($model, $item, $afterFind);
 
 		return $records;
 	}

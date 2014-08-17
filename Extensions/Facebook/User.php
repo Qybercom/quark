@@ -5,6 +5,10 @@ use Quark\IQuarkExtension;
 use Quark\Quark;
 use Quark\QuarkArchException;
 
+/**
+ * Class User
+ * @package Quark\Extensions\Facebook
+ */
 class User implements IQuarkExtension {
 	private static $_facebook;
 	private static $_session;
@@ -42,6 +46,8 @@ class User implements IQuarkExtension {
 
 		if ($token != null)
 			self::$_token = $token;
+
+		Quark::Log('token: [' . self::$_token . ']');
 
 		return self::$_token;
 	}

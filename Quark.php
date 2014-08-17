@@ -30,6 +30,9 @@ class Quark {
 	const EVENT_CONNECTION_EXCEPTION = 'Quark.Exception.Connection';
 	const EVENT_COMMON_EXCEPTION = 'Quark.Exception.Common';
 
+	const KEY_TYPE_OBJECT = 'key.object';
+	const KEY_TYPE_ARRAY = 'key.array';
+
 	private static $_service = '/';
 	private static $_events = array();
 
@@ -235,6 +238,8 @@ class Quark {
 	 * @return array
 	 */
 	public static function DataObject ($source, $backbone = []) {
+		$source = json_decode(json_encode($source));
+
 		if (!is_object($source)) $source = new \StdClass();
 		if (!is_array($backbone)) $backbone = array();
 
@@ -246,6 +251,32 @@ class Quark {
 				if (is_array($value)) $output->$key = self::DataArray($source->$key, $value);
 				else $output->$key = $source->$key;
 			}
+		}
+
+		return $output;
+	}
+
+	/**
+	 * @param $source
+	 * @param $name
+	 * @param $type
+	 * @return mixed
+	 */
+	public static function valueForKey ($source, $name, $type = self::KEY_TYPE_OBJECT) {
+		$output = null;
+
+		switch ($type) {
+			case self::KEY_TYPE_OBJECT:
+				$output = is_object($source) && isset($source->$name) ? $source->$name : null;
+				break;
+
+			case self::KEY_TYPE_ARRAY:
+				$output = is_array($source) && isset($source[$name]) ? $source[$name] : null;
+				break;
+
+			default:
+				$output = null;
+				break;
 		}
 
 		return $output;
@@ -289,7 +320,7 @@ class Quark {
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
 		return preg_replace('#(/+)#', '/', str_replace('\\', '/', $path))
-			. ($endSlash && $path[strlen($path) - 1] != '/' ? '/' : '');
+			. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : '');
 	}
 
 	/**
@@ -336,7 +367,7 @@ class Quark {
 		if ($user != null)
 			$_SESSION['user'] = $user;
 
-		return isset($_SESSION['user']) ? $_SESSION['user'] : null;
+		return isset($_SESSION['user']) ? $_SESSION['user']->RenewSession() : null;
 	}
 
 	/**
@@ -1046,6 +1077,11 @@ interface IQuarkAuthorizableModel {
 	 * @return mixed
 	 */
 	function SystemRole();
+
+	/**
+	 * @return IQuarkAuthorizableModel
+	 */
+	function RenewSession();
 }
 
 /**
@@ -1274,5 +1310,5 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 * @param $raw
 	 * @return mixed
 	 */
-	public function Decode ($raw) { return json_decode($raw, true); }
+	public function Decode ($raw) { return json_decode($raw); }
 }
