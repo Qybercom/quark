@@ -439,9 +439,22 @@ class Quark {
 	}
 }
 
-set_include_path('../');
 spl_autoload_extensions('.php');
-spl_autoload_register();
+spl_autoload_register(function ($class) {
+	$quark = Quark::NormalizePath(__DIR__ . '/' . str_replace('Quark', '', $class) . '.php', false);
+	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . str_replace('Quark', '', $class) . '.php', false);
+	
+	$file = $quark;
+	
+	if (!file_exists($quark)) {
+		if (!file_exists($app))
+			throw new QuarkArchException('Class file ' . $quark . ' is invalid class path');
+		
+		$file = $app;
+	}
+	
+	include $file;
+});
 
 /**
  * Class QuarkConfig
