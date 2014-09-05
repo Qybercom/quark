@@ -19,7 +19,7 @@ class User implements IQuarkExtension {
 	 * @throws QuarkArchException
 	 * @return mixed
 	 */
-	public static function Config ($config) {
+	public static function providers ($config) {
 		$facebook = Quark::NormalizePath(__DIR__ . '/SDK/src/facebook.php', false);
 		$facebook_base = Quark::NormalizePath(__DIR__ . '/SDK/src/base_facebook.php', false);
 

@@ -520,6 +520,20 @@ class QuarkConfig {
  * @package Quark
  */
 class QuarkCredentials {
+	private static $_transports = array(
+		'http' => 'tcp',
+		'https' => 'ssl',
+		'ftp' => 'tcp',
+		'ftps' => 'ssl'
+	);
+
+	private static $_ports = array(
+		'http' => '80',
+		'https' => '443',
+		'ftp' => '21',
+		'ftps' => '22'
+	);
+
 	/**
 	 * @var string
 	 */
@@ -558,6 +572,27 @@ class QuarkCredentials {
 	}
 
 	/**
+	 * @param $uri
+	 *
+	 * @return QuarkCredentials
+	 */
+	public static function FromURI ($uri) {
+		$url = parse_url($uri);
+
+		$credentials = new self(Quark::valueForKey($url, 'scheme', Quark::KEY_TYPE_ARRAY));
+		$credentials->host = Quark::valueForKey($url, 'host', Quark::KEY_TYPE_ARRAY);
+		$credentials->port = Quark::valueForKey($url, 'port', Quark::KEY_TYPE_ARRAY);
+		$credentials->username = Quark::valueForKey($url, 'user', Quark::KEY_TYPE_ARRAY);
+		$credentials->password = Quark::valueForKey($url, 'pass', Quark::KEY_TYPE_ARRAY);
+		$credentials->suffix
+			= Quark::valueForKey($url, 'path', Quark::KEY_TYPE_ARRAY)
+			. Quark::valueForKey($url, 'query', Quark::KEY_TYPE_ARRAY)
+			. Quark::valueForKey($url, 'fragment', Quark::KEY_TYPE_ARRAY);
+
+		return $credentials;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function uri () {
@@ -572,6 +607,23 @@ class QuarkCredentials {
 			. '/'
 			. ($this->suffix !== null ? Quark::NormalizePath($this->suffix, false) : '')
 		;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Socket () {
+		return (isset(self::$_transports[$this->protocol])
+					? self::$_transports[$this->protocol]
+					: 'tcp'
+				)
+				. '://'
+				. gethostbyname($this->host)
+				. ':'
+				. (isset(self::$_ports[$this->protocol])
+					? self::$_ports[$this->protocol]
+					: 80
+				);
 	}
 
 	/**
@@ -637,6 +689,11 @@ interface IQuarkExtension {
 	static function Config($config);
 }
 
+/**
+ * Interface IQuarkExtensionConfig
+ *
+ * @package Quark
+ */
 interface IQuarkExtensionConfig {
 	/**
 	 * @return string
@@ -1095,6 +1152,238 @@ interface IQuarkAuthorizableModel {
 	 * @return IQuarkAuthorizableModel
 	 */
 	function RenewSession();
+}
+
+/**
+ * Class QuarkClient
+ * @package Quark
+ */
+class QuarkClient {
+	/**
+	 * @var QuarkCredentials
+	 */
+	private $_credentials = null;
+
+	/**
+	 * @var IQuarkIOProcessor
+	 */
+	private $_processor = null;
+
+	private $_key = null;
+	private $_certificate = null;
+
+	private $_timeout = 3;
+
+	private $_headers = array();
+	private $_data = '';
+	private $_raw = '';
+	private $_response = '';
+
+	private $_errorNumber = 0;
+	private $_errorString = '';
+
+	/**
+	 * @param QuarkCredentials $credentials
+	 * @param IQuarkIOProcessor $processor
+	 */
+	public function __construct (QuarkCredentials $credentials = null, IQuarkIOProcessor $processor = null) {
+		$this->_credentials = $credentials;
+		$this->_processor = $processor == null ? new QuarkPlainIOProcessor() : $processor;
+	}
+
+	/**
+	 * @param QuarkCredentials $credentials
+	 *
+	 * @return QuarkCredentials
+	 */
+	public function Credentials (QuarkCredentials $credentials = null) {
+		if ($credentials != null)
+			$this->_credentials = $credentials;
+
+		return $this->_credentials;
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 *
+	 * @return IQuarkIOProcessor
+	 */
+	public function Processor (IQuarkIOProcessor $processor = null) {
+		if ($processor != null)
+			$this->_processor = $processor;
+
+		return $this->_processor;
+	}
+
+	/**
+	 * @param int $timeout
+	 *
+	 * @return int
+	 */
+	public function Timeout ($timeout = 10) {
+		if (func_num_args() != 0)
+			$this->_timeout = $timeout;
+
+		return $this->_timeout;
+	}
+
+	/**
+	 * @param string $key
+	 * @param string $certificate
+	 */
+	public function Sign ($key, $certificate) {
+		$this->_key = $key;
+		$this->_certificate = $certificate;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function ErrorNumber () {
+		return $this->_errorNumber;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ErrorString () {
+		return $this->_errorString;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 *
+	 * @return QuarkClient
+	 */
+	public function Header ($key, $value) {
+		$this->_headers[$key] = $value;
+
+		return $this;
+	}
+
+	/**
+	 * @param array $headers
+	 *
+	 * @return array
+	 */
+	public function Headers ($headers = []) {
+		if (func_num_args() != 0)
+			$this->_headers = $headers;
+
+		return $this->_headers;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 *
+	 * @return QuarkClient
+	 */
+	public function Field ($key, $value) {
+		if (!is_array($this->_data)) return $this;
+
+		$this->_data[$key] = $value;
+
+		return $this;
+	}
+
+	/**
+	 * @param mixed $data
+	 *
+	 * @return array
+	 */
+	public function Data ($data = '') {
+		if (func_num_args() != 0)
+			$this->_data = $data;
+
+		return $this->_data;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Raw () {
+		return $this->_raw;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Response () {
+		return $this->_response;
+	}
+
+	/**
+	 * @param string $method
+	 * @param callable $processPayload
+	 *
+	 * @return bool|mixed
+	 */
+	private function _request ($method, $processPayload) {
+		$stream = stream_context_create();
+
+		if ($this->_certificate !== null && $this->_key !== null) {
+			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate);
+			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_key);
+		}
+
+		$socket = @stream_socket_client(
+			$this->_credentials->Socket(),
+			$this->_errorNumber,
+			$this->_errorString,
+			$this->_timeout,
+			STREAM_CLIENT_CONNECT,
+			$stream
+		);
+
+		if (!$socket) return false;
+
+		if (!isset($this->_headers['Host']))
+			$this->_headers['Host'] = $this->_credentials->host;
+
+		$payload
+			= $method
+			. ' '
+			. $this->_credentials->suffix
+			. ' HTTP/1.0'
+			. "\r\n";
+
+		foreach ($this->_headers as $key => $value)
+			$payload .= $key . ': ' . $value . "\r\n";
+
+		$payload .= "\r\n" . $processPayload();
+
+		fwrite($socket, $payload);
+		$this->_raw = stream_get_contents($socket);
+		fclose($socket);
+
+		$matches = preg_match_all('#^(HTTP)(.*)\r\n\r\n(.*)$#Uis', $this->_raw, $found, PREG_SET_ORDER);
+
+		$this->_response = $this->_processor->Decode(sizeof($found) != 0 && sizeof($found[0]) == 4 ? $found[0][3] : '');
+
+		return $this->_response;
+	}
+
+	/**
+	 * @return bool|mixed
+	 */
+	public function Get () {
+		return $this->_request('GET', function () {
+			return '';
+		});
+	}
+
+	/**
+	 * @return bool|mixed
+	 */
+	public function Post () {
+		$this->_headers['Content-Length'] = strlen($this->_processor->Encode($this->_data));
+
+		return $this->_request('POST', function () {
+			return $this->_processor->Encode($this->_data);
+		});
+	}
 }
 
 /**

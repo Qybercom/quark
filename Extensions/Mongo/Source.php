@@ -19,7 +19,7 @@ class Source implements IQuarkExtension {
 	 * @throws QuarkConnectionException
 	 * @return mixed|void
 	 */
-	public static function Config ($config) {
+	public static function providers ($config) {
 		$pool = $config->Pool();
 		$db = null;
 
