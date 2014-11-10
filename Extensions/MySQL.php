@@ -16,6 +16,8 @@ use Quark\QuarkConnectionException;
  * @package Quark\Extensions
  */
 class MySQL implements IQuarkDataProvider {
+	const FIELD_COUNT_ALL = 'COUNT(*)';
+
 	/**
 	 * @var \mysqli $_connection
 	 */
@@ -97,7 +99,7 @@ class MySQL implements IQuarkDataProvider {
 			: Quark::ClassName($model);
 
 		$i = 1;
-		$query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);
+		echo $query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);
 
 		$mode = isset($options['mode'])
 			? $options['mode']
@@ -132,7 +134,20 @@ class MySQL implements IQuarkDataProvider {
 	private function _field ($field) {
 		if (!is_string($field)) return '';
 
-		return '`' . $field . '`';
+		return '`' . $this->_connection->real_escape_string($field) . '`';
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return bool|float|int|string
+	 */
+	private function _value ($value) {
+		if (!is_scalar($value)) return null;
+
+		$output = $this->_connection->real_escape_string($value);
+
+		return is_string($value) ? '\'' . $output . '\'' : $output;
 	}
 
 	/**
@@ -149,34 +164,31 @@ class MySQL implements IQuarkDataProvider {
 		$value = '';
 
 		foreach ($condition as $key => $rule) {
-			$value = $rule;
-			$field = $this->_connection->real_escape_string($key);
+			$field = $this->_field($key);
+			$value = $this->_value($rule);
 
 			if (is_array($rule))
 				$value = self::_condition($rule, ' AND ');
 
-			if (is_string($rule))
-				$value = '\'' . $this->_connection->real_escape_string($rule) . '\'';
-
 			switch ($field) {
-				case '$lte': $output[] = '<=' . $value; break;
-				case '$lt': $output[] = '<' . $value; break;
-				case '$gt': $output[] = '>' . $value; break;
-				case '$gte': $output[] = '>=' . $value; break;
-				case '$ne': $output[] = '<>' . $value; break;
+				case '`$lte`': $output[] = '<=' . $value; break;
+				case '`$lt`': $output[] = '<' . $value; break;
+				case '`$gt`': $output[] = '>' . $value; break;
+				case '`$gte`': $output[] = '>=' . $value; break;
+				case '`$ne`': $output[] = '<>' . $value; break;
 
-				case '$or':
+				case '`$or`':
 					$value = self::_condition($rule, ' OR ');
 					$output[] = ' (' . $value . ') ';
 					break;
 
-				case '$nor':
+				case '`$nor`':
 					$value = self::_condition($rule, ' NOT OR ');
 					$output[] = ' (' . $value . ') ';
 					break;
 
 				default:
-					$output[] = (is_string($key) ? self::_field($field) : '') . (is_scalar($rule) ? '=' : '') . $value;
+					$output[] = !$value ? '' : (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
 					break;
 			}
 		}
@@ -209,7 +221,7 @@ class MySQL implements IQuarkDataProvider {
 					default: $sort = ''; break;
 				}
 
-				$output .= ' ' . self::_field($key) . ' ' . $sort;
+				$output .= ' ' . $this->_field($key) . ' ' . $sort;
 			}
 		}
 
@@ -227,8 +239,8 @@ class MySQL implements IQuarkDataProvider {
 		$values = array();
 
 		foreach ($model as $key => $value) {
-			$keys[] = $this->_connection->real_escape_string($key);
-			$values[] = $this->_connection->real_escape_string($value);
+			$keys[] = $this->_field($key);
+			$values[] = $this->_value($value);
 		}
 
 		return $this->_query(
@@ -283,8 +295,9 @@ class MySQL implements IQuarkDataProvider {
 		$output = array();
 		$records = $this->_select($model, $criteria, $options);
 
-		foreach ($records as $i => $record)
-			$output[] = $record;
+		if ($records)
+			foreach ($records as $i => $record)
+				$output[] = $record;
 
 		return $output;
 	}
@@ -325,8 +338,29 @@ class MySQL implements IQuarkDataProvider {
 	private function _select ($model, $criteria, $options = []) {
 		$fields = '*';
 
-		if (isset($options['fields']) && is_array($options['fields']))
-			$fields = implode(', ', $options['fields']);
+		if (isset($options['fields']) && is_array($options['fields'])) {
+			$fields = '';
+			$key = '';
+			$count = sizeof($options['fields']);
+			$i = 1;
+
+			foreach ($options['fields'] as $j => $field) {
+				$key = false;
+
+				switch ($field) {
+					case self::FIELD_COUNT_ALL:
+						$key = $field;
+						break;
+
+					default:
+						$key = $this->_field($field);
+						break;
+				}
+
+				$fields = $key . ($i == $count || !$key ? '' : ', ');
+				$i++;
+			}
+		}
 
 		return $this->_query(
 			$model,
@@ -346,7 +380,7 @@ class MySQL implements IQuarkDataProvider {
 		$fields = array();
 
 		foreach ($model as $key => $value)
-			$fields[] = $this->_connection->real_escape_string($key) . '=' . '\'' . $this->_connection->real_escape_string($value) . '\'';
+			$fields[] = $this->_field($key) . '=' . '\'' . $this->_value($value) . '\'';
 
 		return $this->_query(
 			$model,
@@ -381,7 +415,7 @@ class MySQL implements IQuarkDataProvider {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
 		$result = $this->_select($model, $criteria, $options + array(
-			'fields' => array('COUNT(*)')
+			'fields' => array(self::FIELD_COUNT_ALL)
 		));
 
 		return !$result ? 0 : (int)$result->fetch_row()[0];
