@@ -871,7 +871,7 @@ interface IQuarkServiceWithCustomProcessor extends IQuarkService {
  */
 class QuarkModel {
 	/**
-	 * @var IQuarkModel|IQuarkStrongModel $_model
+	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeSave $_model
 	 */
 	private $_model;
 
@@ -1045,7 +1045,11 @@ class QuarkModel {
 	public function Create ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		return self::_provider($this->_model)->Create(self::_canonize($this->_model), $options);
+		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeSave')
+			? $this->_model->BeforeSave($options)
+			: true;
+
+		return $ok ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1055,7 +1059,11 @@ class QuarkModel {
 	public function Save ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		return self::_provider($this->_model)->Save(self::_canonize($this->_model), $options);
+		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeSave')
+			? $this->_model->BeforeSave($options)
+			: true;
+
+		return $ok ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1279,6 +1287,20 @@ interface IQuarkModelWithAfterFind {
 	 * @return mixed
 	 */
 	function AfterFind($raw);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeSave
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeSave {
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	function BeforeSave($raw);
 }
 
 

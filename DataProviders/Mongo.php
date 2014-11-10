@@ -56,7 +56,12 @@ class Mongo implements IQuarkDataProvider {
 	 */
 	public function Connect (QuarkCredentials $credentials) {
 		try {
-			$this->_connection = @new \MongoClient($credentials->uri(), $credentials->Options());
+			$options = array();
+
+			if (is_array($credentials->Options()))
+				$options = $credentials->Options();
+
+			$this->_connection = new \MongoClient($credentials->uri(), $options);
 
 			if ($credentials->suffix) {
 				$db = $credentials->suffix;
