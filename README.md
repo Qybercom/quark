@@ -11,4 +11,4 @@ Requirements
 
 **Additional**
 <br>
-Some extensions *(e.g. Mongo)* may require additional PHP extensions. The list of core extensions is represented in wiki.
+Some parts *(e.g. Mongo, MySQL)* may require additional PHP extensions. The list of core extensions is represented in wiki.
