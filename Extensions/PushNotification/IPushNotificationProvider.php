@@ -16,16 +16,27 @@ interface IPushNotificationProvider {
 	function URL();
 
 	/**
-	 * @param mixed $payload
-	 *
-	 * @return string
+	 * Config Push Notification Provider
 	 */
-	function Payload($payload);
+	function Config();
+
+	/**
+	 * @return \Quark\QuarkClientDTO
+	 */
+	function Request();
+
+	/**
+	 * @return \Quark\QuarkClientDTO
+	 */
+	function Response();
 
 	/**
 	 * @param array $opt
-	 *
-	 * @return mixed
 	 */
 	function Options($opt);
+
+	/**
+	 * @param Device $device
+	 */
+	function Device($device);
 }

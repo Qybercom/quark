@@ -3,6 +3,9 @@ namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+use Quark\QuarkClient;
+use Quark\QuarkClientDTO;
+use Quark\QuarkCredentials;
 
 /**
  * Class PushNotification
@@ -23,6 +26,11 @@ class PushNotification implements IQuarkExtension {
 	private $_options = array();
 
 	/**
+	 * @var QuarkClient|null
+	 */
+	private $_client = null;
+
+	/**
 	 * @param IQuarkExtensionConfig|Config|null $config
 	 *
 	 * @return mixed
@@ -36,6 +44,9 @@ class PushNotification implements IQuarkExtension {
 	 */
 	public function __construct ($payload = []) {
 		$this->_payload = $payload;
+
+		$this->_client = new QuarkClient();
+		$this->_client->Sign('wpc_pass', 'D:/dev/onwheels/web/server.pem');
 	}
 
 	/**
@@ -77,7 +88,12 @@ class PushNotification implements IQuarkExtension {
 		$this->_devices[] = $device;
 	}
 
+	/**
+	 * @return bool
+	 */
 	public function Send () {
+		if (!(self::$_config instanceof Config)) return false;
+
 		$providers = self::$_config->Providers();
 
 		foreach ($this->_devices as $i => $device) {
@@ -88,8 +104,18 @@ class PushNotification implements IQuarkExtension {
 
 				if ($provider->Type() != $device->type) continue;
 
+				$this->_client->Reset();
 
+				$provider->Device($device);
+
+				$this->_client->Credentials(QuarkCredentials::FromURI($provider->URL()));
+				$this->_client->Request($provider->Request());
+				$this->_client->Response($provider->Response());
+				$this->_client->Post();
+				//print_r($this->_client);
 			}
 		}
+
+		return true;
 	}
 }

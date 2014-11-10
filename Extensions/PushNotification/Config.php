@@ -22,6 +22,7 @@ class Config implements IQuarkExtensionConfig {
 	 * @param IPushNotificationProvider $provider
 	 */
 	public function Provider (IPushNotificationProvider $provider) {
+		$provider->Config();
 		$this->_providers[] = $provider;
 	}
 
