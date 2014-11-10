@@ -523,6 +523,24 @@ class QuarkConfig {
 	public function Mode ($mode = null) {
 		return $this->_mode = ($mode === null) ? $this->_mode : $mode;
 	}
+
+	/**
+	 * @param IQuarkDataProvider $provider
+	 * @param                    $name
+	 * @param QuarkCredentials   $credentials
+	 */
+	public function DataSource (IQuarkDataProvider $provider, $name, QuarkCredentials $credentials) {
+		try {
+			$provider->Source($name, $credentials);
+		}
+		catch (QuarkConnectionException $e) {
+			Quark::Log('Unable to connect \'' . $name . '\'', Quark::LOG_FATAL);
+			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
+				'name' => $name,
+				'credentials' => $credentials
+			));
+		}
+	}
 }
 
 /**
@@ -951,7 +969,7 @@ class QuarkModel {
 		$provider = $model->DataProvider();
 
 		if (!($provider instanceof IQuarkDataProvider))
-			throw new QuarkArchException((string)$provider . ' is not a IQuarkDataProvider');
+			throw new QuarkArchException(gettype($provider) . ' is not a valid IQuarkDataProvider');
 
 		return $provider;
 	}
@@ -1165,6 +1183,12 @@ interface IQuarkDataProvider {
 	 * @param QuarkCredentials $credentials
 	 */
 	static function SourceSet($name, QuarkCredentials $credentials);
+
+	/**
+	 * @param                  $name
+	 * @param QuarkCredentials $credentials
+	 */
+	function Source($name, QuarkCredentials $credentials);
 
 	/**
 	 * @param IQuarkModel $model

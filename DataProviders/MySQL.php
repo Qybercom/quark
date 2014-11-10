@@ -35,8 +35,12 @@ class MySQL implements IQuarkDataProvider {
 	 * @param $name
 	 *
 	 * @return QuarkCredentials
+	 * @throws QuarkArchException
 	 */
 	public static function SourceGet ($name) {
+		if (!isset(self::$_pool[$name]))
+			throw new QuarkArchException('MySQL connection \'' . $name . '\' is not pooled');
+
 		return self::$_pool[$name];
 	}
 
@@ -47,14 +51,17 @@ class MySQL implements IQuarkDataProvider {
 	 * @throws QuarkArchException
 	 */
 	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new MySQL($credentials);
+		self::$_pool[$name] = new MySQL();
+		self::$_pool[$name]->Connect($credentials);
 	}
 
 	/**
+	 * @param                  $name
 	 * @param QuarkCredentials $credentials
 	 */
-	public function __construct (QuarkCredentials $credentials) {
+	public function Source ($name, QuarkCredentials $credentials) {
 		$this->Connect($credentials);
+		self::$_pool[$name] = $this;
 	}
 
 	/**
@@ -99,7 +106,7 @@ class MySQL implements IQuarkDataProvider {
 			: Quark::ClassName($model);
 
 		$i = 1;
-		echo $query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);
+		$query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);
 
 		$mode = isset($options['mode'])
 			? $options['mode']

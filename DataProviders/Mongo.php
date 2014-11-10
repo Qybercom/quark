@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkArchException;
 use Quark\QuarkCredentials;
 use Quark\QuarkConnectionException;
 
@@ -28,8 +29,12 @@ class Mongo implements IQuarkDataProvider {
 	 * @param $name
 	 *
 	 * @return QuarkCredentials
+	 * @throws QuarkArchException
 	 */
 	public static function SourceGet ($name) {
+		if (!isset(self::$_pool[$name]))
+			throw new QuarkArchException('MongoDB connection \'' . $name . '\' is not pooled');
+
 		return self::$_pool[$name];
 	}
 
@@ -38,14 +43,17 @@ class Mongo implements IQuarkDataProvider {
 	 * @param QuarkCredentials $credentials
 	 */
 	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new Mongo($credentials);
+		self::$_pool[$name] = new Mongo();
+		self::$_pool[$name]->Connect($credentials);
 	}
 
 	/**
+	 * @param                  $name
 	 * @param QuarkCredentials $credentials
 	 */
-	public function __construct (QuarkCredentials $credentials) {
+	public function Source ($name, QuarkCredentials $credentials) {
 		$this->Connect($credentials);
+		self::$_pool[$name] = $this;
 	}
 
 	/**
