@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions;
+namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
@@ -11,7 +11,7 @@ use Quark\QuarkConnectionException;
 /**
  * Class Database
  *
- * @package Quark\Extensions\Mongo
+ * @package Quark\DataProviders
  */
 class Mongo implements IQuarkDataProvider {
 	private $_connection;

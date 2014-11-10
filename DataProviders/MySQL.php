@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions;
+namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
@@ -13,7 +13,7 @@ use Quark\QuarkConnectionException;
 /**
  * Class MySQL
  *
- * @package Quark\Extensions
+ * @package Quark\DataProviders
  */
 class MySQL implements IQuarkDataProvider {
 	const FIELD_COUNT_ALL = 'COUNT(*)';
