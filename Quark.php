@@ -118,40 +118,27 @@ class Quark {
 
 			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input);
 
-			$isService = self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service');
-
-			if (!self::is($service, 'Quark\IQuarkAuthorizableService')) {
-				if ($isService)
-					echo $worker->$method($input);
-			}
-			else {
+			if (self::is($service, 'Quark\IQuarkAuthorizableService')) {
 				$providers = $worker->AuthorizationProviders();
 
 				if (!is_array($providers))
 					throw new QuarkArchException('Authorization providers are not specified for authorizable service');
 
-				foreach ($providers as $i => $provider)
-					if ($provider instanceof IQuarkAuthorizationProvider) $provider->Initialize($input);
+				foreach ($providers as $i => $provider) {
+					if (!($provider instanceof IQuarkAuthorizationProvider)) continue;
 
-				$auth = true;
-				$criteria = $worker->AuthorizationCriteria($input);
+					$provider->Initialize($input);
+					self::$_append = $provider->Trail(self::$_append);
+				}
 
-				if (is_array($criteria))
-					foreach ($criteria as $i => $rule) $auth = $auth && $rule;
-
-				if (!$auth) {
+				if (!$worker->AuthorizationCriteria($input)) {
 					echo $worker->AuthorizationFailed();
 					exit();
 				}
-
-				foreach ($providers as $i => $provider)
-					if ($provider instanceof IQuarkAuthorizationProvider)
-						self::$_append = $provider->Trail(self::$_append);
-
-				if ($isService)
-					echo $worker->$method($input);
 			}
 
+			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
+				echo $worker->$method($input);
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -373,6 +360,22 @@ class Quark {
 
 		foreach ($classes as $i => $class)
 			if (self::is($class, $interface)) $output[] = $class;
+
+		return $output;
+	}
+
+	/**
+	 * @param array $arr
+	 * @param object $source
+	 *
+	 * @return null|\StdClass
+	 */
+	public static function ArrayToObject ($arr, $source = null) {
+		$output = is_object($source) ? $source : new \StdClass();
+
+		if (is_array($arr))
+			foreach ($arr as $key => $value)
+				$output->$key = $value;
 
 		return $output;
 	}
@@ -791,7 +794,7 @@ interface IQuarkAuthorizableService {
 	/**
 	 * @param $request
 	 *
-	 * @return array
+	 * @return bool
 	 */
 	function AuthorizationCriteria($request);
 
@@ -910,6 +913,16 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function __get ($key) {
+		if (!isset($this->_model->$key)) {
+			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array(
+				'model' => $this->_model
+			));
+
+			Quark::Log('QuarkModel: Undefined property "' . $key . '" in model ' . Quark::ClassName($this->_model), Quark::LOG_WARN);
+
+			return null;
+		}
+
 		return $this->_model->$key;
 	}
 
@@ -954,8 +967,6 @@ class QuarkModel {
 		foreach ($source as $key => $value)
 			$this->_model->$key = $value;
 
-		$this->Canonize();
-
 		return $this;
 	}
 
@@ -977,25 +988,25 @@ class QuarkModel {
 	/**
 	 * @param IQuarkModel|IQuarkModelWithAfterFind $model
 	 * @param $raw
+	 * @param $options
 	 *
 	 * @return null|QuarkModel
 	 */
-	private static function _record ($model, $raw) {
-		$class = get_class($model);
-		/**
-		 * @var IQuarkModel|IQuarkModelWithAfterFind $model
-		 */
-		$model = new $class();
-
+	private static function _record ($model, $raw, $options = []) {
 		if ($raw == null) return null;
 
-		$buffer = Quark::is($model, 'Quark\IQuarkModelWithAfterFind')
-			? $model->AfterFind($raw)
-			: $raw;
+		$output = new QuarkModel($model, $raw);
 
-		if ($buffer == null) return null;
+		if ($model instanceof IQuarkModelWithAfterFind) {
+			if ($model->AfterFind($raw, $options) === false) return null;
 
-		return new QuarkModel($model, $buffer);
+			$output->PopulateWith($model);
+		}
+
+		if (isset($options['extract']) && $options['extract'] == true)
+			$output = self::Extract($output);
+
+		return $output;
 	}
 
 	/**
@@ -1006,11 +1017,13 @@ class QuarkModel {
 	private static function _canonize ($model) {
 		if (!Quark::is($model, 'Quark\\IQuarkStrongModel')) return $model;
 
-		$output = new \StdClass();
+		$class = get_class($model);
+
+		$output = new $class();
 		$fields = $model->Fields();
 
 		foreach($fields as $key => $format)
-			$output->$key = $model->$key;
+			$output->$key = isset($model->$key) ? $model->$key : $format;
 
 		return $output;
 	}
@@ -1049,6 +1062,9 @@ class QuarkModel {
 			$output = new \StdClass();
 			$item = $source->Model();
 
+			if ($item instanceof IQuarkModelWithBeforeExtract)
+				$item->BeforeExtract();
+
 			foreach ($item as $key => $value)
 				$output->$key = $value;
 
@@ -1067,7 +1083,7 @@ class QuarkModel {
 			? $this->_model->BeforeSave($options)
 			: true;
 
-		return $ok ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
+		return $ok || $ok == null ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1081,7 +1097,7 @@ class QuarkModel {
 			? $this->_model->BeforeSave($options)
 			: true;
 
-		return $ok ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
+		return $ok || $ok == null ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1103,7 +1119,7 @@ class QuarkModel {
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
 		foreach ($raw as $i => $item)
-			$records[] = self::_record($model, $item);
+			$records[] = self::_record($model, $item, $options);
 
 		return $records;
 	}
@@ -1115,7 +1131,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public static function FindOne (IQuarkModel $model, $criteria = [], $options = []) {
-		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options));
+		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options);
 	}
 
 	/**
@@ -1125,7 +1141,9 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
-		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options));
+		if (!\MongoId::isValid($id)) return null;
+
+		return self::_record($model, self::_provider($model)->FindOneById($model, new \MongoId($id), $options), $options);
 	}
 
 	/**
@@ -1320,11 +1338,23 @@ interface IQuarkModelWithAfterFind {
  */
 interface IQuarkModelWithBeforeSave {
 	/**
-	 * @param $raw
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	function BeforeSave($raw);
+	function BeforeSave($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeExtract
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeExtract {
+	/**
+	 * @return mixed
+	 */
+	function BeforeExtract();
 }
 
 

@@ -153,6 +153,20 @@ class Mongo implements IQuarkDataProvider {
 		if (isset($options['skip']))
 			$raw->skip($options['skip']);
 
+		if (isset($options['getId']) && $options['getId'] == true) {
+			$buffer = array();
+			$item = null;
+
+			foreach ($raw as $i => $document) {
+				$item = $document;
+				$item->_id = $document->_id->{'$id'};
+
+				$buffer[] = $item;
+			}
+
+			$raw = $buffer;
+		}
+
 		return $raw;
 	}
 
