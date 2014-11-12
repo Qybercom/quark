@@ -115,7 +115,7 @@ class Quark {
 			if (self::is($service, 'Quark\IQuarkServiceWithCustomProcessor')) self::$_processor = $worker->Processor();
 
 			$input = self::$_processor->Decode(file_get_contents('php://input'));
-			$input = self::ArrayToObject((array)$input + $_GET);
+			$input = self::ArrayToObject((array)$input + $_GET + $_POST);
 
 			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input);
 

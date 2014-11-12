@@ -178,7 +178,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @return IQuarkModel
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		return $this->_collection($model, $options)->findOne($criteria, self::_fields($options), $options);
+		return $this->_collection($model, $options)->findOne($criteria, self::_fields($options)/*, $options*/);
 	}
 
 	/**
