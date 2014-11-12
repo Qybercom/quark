@@ -115,6 +115,7 @@ class Quark {
 			if (self::is($service, 'Quark\IQuarkServiceWithCustomProcessor')) self::$_processor = $worker->Processor();
 
 			$input = self::$_processor->Decode(file_get_contents('php://input'));
+			$input = self::ArrayToObject((array)$input + $_GET);
 
 			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input);
 
@@ -137,8 +138,14 @@ class Quark {
 				}
 			}
 
-			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
-				echo $worker->$method($input);
+			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service')) {
+				$response = $worker->$method($input);
+
+				if (!is_string($response))
+					throw new QuarkArchException('Service "' . $service . '" returned invalid response type. String need.');
+
+				echo $response;
+			}
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -544,7 +551,40 @@ class QuarkConfig {
 			));
 		}
 	}
+
+	/**
+	 * @param IQuarkExtension $extension
+	 */
+	public function Extension (IQuarkExtension $extension) {
+		try {
+			if ($extension == null)
+				throw new QuarkArchException(' Provided extension in QuarkConfig is null');
+
+			$extension->Init();
+		}
+		catch (QuarkConnectionException $e) {
+			Quark::Log('Extension connection failure in \'' . Quark::ClassName($extension) . '\'', Quark::LOG_FATAL);
+			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array('extension' => $extension));
+		}
+		catch (QuarkArchException $e) {
+			Quark::Log('Extension architecture failure in \'' . Quark::ClassName($extension) . '\'' . $e->message, Quark::LOG_FATAL);
+			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array('extension' => $extension));
+		}
+	}
 }
+
+/**
+ * Interface IQuarkExtension
+ *
+ * @package Quark
+ */
+interface IQuarkExtension {
+	/**
+	 * @return mixed
+	 */
+	function Init();
+}
+
 
 /**
  * Class QuarkCredentials
@@ -552,6 +592,8 @@ class QuarkConfig {
  */
 class QuarkCredentials {
 	private static $_transports = array(
+		'tcp' => 'tcp',
+		'ssl' => 'ssl',
 		'http' => 'tcp',
 		'https' => 'ssl',
 		'ftp' => 'tcp',
@@ -671,9 +713,12 @@ class QuarkCredentials {
 				. '://'
 				. gethostbyname($this->host)
 				. ':'
-				. (isset(self::$_ports[$this->protocol])
-					? self::$_ports[$this->protocol]
-					: 80
+				. (isset($this->port)
+					? $this->port
+					: (isset(self::$_ports[$this->protocol])
+						? self::$_ports[$this->protocol]
+						: 80
+					)
 				);
 	}
 
@@ -776,7 +821,7 @@ interface IQuarkAuthorizationProvider {
 	static function Login(IQuarkAuthorizableModel $model, $credentials);
 
 	/**
-	 * @return IQuarkAuthorizableModel
+	 * @return QuarkModel
 	 */
 	static function User();
 
@@ -966,6 +1011,8 @@ class QuarkModel {
 
 		foreach ($source as $key => $value)
 			$this->_model->$key = $value;
+
+		$this->Canonize();
 
 		return $this;
 	}
@@ -1772,8 +1819,11 @@ class QuarkClient {
 	 * @return QuarkClientDTO|null
 	 */
 	private function ___request ($method) {
-		if (!($this->_request instanceof QuarkClientDTO)) return null;
-		if (!($this->_response instanceof QuarkClientDTO)) return null;
+		if (!($this->_request instanceof QuarkClientDTO))
+			$this->_request = new QuarkClientDTO();
+
+		if (!($this->_response instanceof QuarkClientDTO))
+			$this->_response = new QuarkClientDTO();
 
 		$stream = stream_context_create();
 		stream_context_set_option($stream, 'ssl', 'verify_host', false);
@@ -1787,14 +1837,15 @@ class QuarkClient {
 			STREAM_CLIENT_CONNECT,
 			$stream
 		);
-		print_r($this->_credentials);
+
 		if (!$socket) return null;
-		echo "\r\n\r\n\r\n\r\n";
+
 		$this->_request->Header(self::HEADER_HOST, $this->_credentials->host);
-		echo $request =  $this->_request->Serialize($method, $this->_credentials->uri());
+		$request = $this->_request->Serialize($method, $this->_credentials->suffix);
+
 		try {
 			fwrite($socket, $request);
-			echo $content = stream_get_contents($socket);
+			$content = stream_get_contents($socket);
 			$this->_response->PopulateFromHTTPResponse($content);
 			fclose($socket);
 		}
@@ -1956,7 +2007,7 @@ class QuarkClientDTO {
 			$this->Header($header[0], trim($header[1]));
 		}
 
-		$this->_data = $this->_processor->Decode($response[4]);
+		$this->_data = $this->_processor instanceof IQuarkIOProcessor ? $this->_processor->Decode($response[4]) : $response[4];
 
 		return $this;
 	}
@@ -1968,14 +2019,13 @@ class QuarkClientDTO {
 	 * @return string
 	 */
 	public function Serialize ($method, $path) {
-		$payload
-			= ' ' . $method
-			. ' '
-			. $path
-			. ' HTTP/1.0'
-			. "\r\n";
+		$payload = $method . ' ' . $path . ' HTTP/1.0' . "\r\n";
 
-		$data = $this->_processor->Encode($this->_data);
+		$data = '';
+
+		if ($this->_processor instanceof IQuarkIOProcessor)
+			$data = $this->_processor->Encode($this->_data);
+
 		$dataLength = strlen($data);
 
 		if ($dataLength != 0 && !isset($this->_headers[QuarkClient::HEADER_CONTENT_LENGTH]))
@@ -2528,7 +2578,18 @@ class QuarkCertificate {
 		return self::$_allowed;
 	}
 
+	private $_location = '';
 	private $_passphrase = '';
+	private $_content = '';
+
+	/**
+	 * @param string $passphrase
+	 * @param string $location
+	 */
+	public function __construct ($passphrase = '', $location = '') {
+		$this->Passphrase($passphrase);
+		$this->Location($location);
+	}
 
 	/**
 	 * @param string $passphrase
@@ -2543,11 +2604,46 @@ class QuarkCertificate {
 	}
 
 	/**
-	 * @param string $target
+	 * @param string $location
 	 *
+	 * @return string
+	 * @throws QuarkArchException
+	 */
+	public function Location ($location = '') {
+		if (func_num_args() == 1)
+			$this->_location = $location;
+
+		if (!is_string($this->_location) || !is_file($this->_location))
+			throw new QuarkArchException('QuarkCertificate: location is not a valid file');
+
+		return $this->_location;
+	}
+
+	/**
+	 * @throws QuarkArchException
+	 */
+	public function Load () {
+		$this->_content = file_get_contents($this->Location());
+	}
+
+	/**
+	 * @throws QuarkArchException
+	 */
+	public function Save () {
+		file_put_contents($this->Location(), $this->_content);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Content () {
+		return $this->_content;
+	}
+
+	/**
 	 * @return array|string
 	 */
-	public function Generate ($target = '') {
+	public function Generate () {
 		$data = array();
 		$pem = array();
 
@@ -2562,12 +2658,7 @@ class QuarkCertificate {
 		@openssl_pkey_export($key, $pem[1], $this->_passphrase);
 
 		openssl_error_string();
-		$pem = implode($pem);
-
-		$target = Quark::NormalizePath($target, false);
-
-		if (func_num_args() == 1 && is_file($target))
-			file_put_contents($target, $pem);
+		$this->_content = implode($pem);
 
 		return $pem;
 	}

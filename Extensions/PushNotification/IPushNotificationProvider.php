@@ -11,32 +11,28 @@ interface IPushNotificationProvider {
 	function Type();
 
 	/**
+	 * @param $config
+	 */
+	function Config($config);
+
+	/**
+	 * @param Device $device
+	 */
+	function Device(Device $device);
+
+	/**
 	 * @return string
 	 */
 	function URL();
 
 	/**
-	 * Config Push Notification Provider
-	 */
-	function Config();
-
-	/**
+	 * @param $payload
 	 * @return \Quark\QuarkClientDTO
 	 */
-	function Request();
+	function Request($payload);
 
 	/**
 	 * @return \Quark\QuarkClientDTO
 	 */
 	function Response();
-
-	/**
-	 * @param array $opt
-	 */
-	function Options($opt);
-
-	/**
-	 * @param Device $device
-	 */
-	function Device($device);
 }

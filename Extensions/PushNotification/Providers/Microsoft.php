@@ -20,6 +20,8 @@ use Quark\Extensions\PushNotification\IPushNotificationProvider;
  * @package Quark\Extensions\PushNotification\Providers
  */
 class Microsoft implements IPushNotificationProvider {
+	const TYPE = 'windows';
+
 	private $_config = null;
 	private $_access = null;
 
@@ -34,10 +36,19 @@ class Microsoft implements IPushNotificationProvider {
 	);
 
 	/**
+	 * @param $config
+	 */
+	public function Config ($config) {
+		if (!is_array($config)) return;
+
+		$this->_config = $config;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function Type () {
-		return 'windows';
+		return self::TYPE;
 	}
 
 	/**
@@ -69,24 +80,57 @@ class Microsoft implements IPushNotificationProvider {
 				. '</text>';
 	}
 
+	private function _toast () {
+		$title = 'hello';
+		$img = 'http://static.home.evolutex.ru/push.png';
+
+		/*return '<?xml version="1.0" encoding="utf-8"?>'.
+		'<tile>'.
+		'<visual lang="en-US">'.
+		'<binding template="TileWideImageAndText01">'.
+		'<image id="1" src="'.$img.'"/>'.
+		'<text id="1">' . $title . '</text>'.
+		'</binding>'.
+		'</visual>'.
+		'</tile>';*/
+
+		return '<?xml version="1.0" encoding="utf-8"?>'
+		.'<toast>'
+        .'<visual lang="en-US">'
+        .'<binding template="ToastText01">'
+        .'<text id="1">New test arrived!</text>'
+        .'</binding>'
+        .'</visual>'
+        .'</toast>';
+
+		//return '<tile><visual><binding template="TileSquareText01"><text id="1">tile one text</text></binding><binding template="TileSquareText02"><text id="2">tile two text</text></binding></visual></tile>';
+	}
+
 	/**
+	 * @param $payload
 	 * @return QuarkClientDTO
 	 */
-	public function Request () {
+	public function Request ($payload) {
 		$request = new QuarkClientDTO();
-		$request->Processor(new QuarkXMLIOProcessor());
+		//$request->Processor(new QuarkXMLIOProcessor());
 
 		$access = $this->_token();
+		$data = $this->_toast();
 
-		$request->Header('Authorization', trim($access->token_type . ' ' . $access->access_token));
-		$request->Header('X-WNS-RequestForStatus', 'true');
+		$request->Header('Content-Type', 'text/xml');
+		$request->Header('Content-Length', strlen($data));
+		$request->Header('X-WNS-Type', 'wns/toast');
+		$request->Header('Authorization', 'Bearer ' . preg_replace('/\s+/', '', $access->access_token . '='));
+		//$request->Header('Authorization', trim($access->token_type . ' ' . $access->access_token));
+		/*$request->Header('X-WNS-RequestForStatus', 'true');
 		$request->Header('X-WNS-Type', 'wns/' . $this->_options['type']);
 
 		$request->Data(array(
 			$this->_options['type'] => array(
 				'visual' => $this->_options['bindings']
 			)
-		));
+		));*/
+		$request->Data($data);
 
 		return $request;
 	}
@@ -102,13 +146,6 @@ class Microsoft implements IPushNotificationProvider {
 	}
 
 	/**
-	 *
-	 */
-	public function Config () {
-		// TODO: Implement Options() method.
-	}
-
-	/**
 	 * @return mixed
 	 */
 	private function _token () {
@@ -116,11 +153,9 @@ class Microsoft implements IPushNotificationProvider {
 
 		$request = new QuarkClientDTO();
 		$request->Processor(new QuarkFormIOProcessor());
-		$request->Data(array(
+		$request->Data($this->_config + array(
 			'grant_type' => 'client_credentials',
-			'client_id' => '000000004012B814',
-			'client_secret' => 'YTUrLvFDDD/EfsnHJEC45+190i8kXAj6',
-			'scope' => 'notify.windows.com'
+			'scope' => 'notify.windows.com'//'s.notify.live.net'
 		));
 
 		$response = new QuarkClientDTO();
@@ -132,20 +167,15 @@ class Microsoft implements IPushNotificationProvider {
 			$response
 		);
 
-		return $this->_access = $client->Post()->Data();
-	}
+		print_r($client);
 
-	/**
-	 * @param array $opt
-	 */
-	public function Options ($opt) {
-		$this->_options = $opt;
+		return $this->_access = $client->Post()->Data();
 	}
 
 	/**
 	 * @param Device $device
 	 */
-	public function Device ($device) {
+	public function Device (Device $device) {
 		$this->_device = $device;
 	}
 }

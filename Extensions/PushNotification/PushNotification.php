@@ -2,7 +2,6 @@
 namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
-use Quark\IQuarkExtensionConfig;
 use Quark\QuarkClient;
 use Quark\QuarkClientDTO;
 use Quark\QuarkCredentials;
@@ -13,31 +12,34 @@ use Quark\QuarkCredentials;
  * @package Quark\Extensions\PushNotification
  */
 class PushNotification implements IQuarkExtension {
+	private static $_providers = array();
+
 	/**
-	 * @var Config
+	 * @return mixed
 	 */
-	private static $_config;
+	public function Init () {
+
+	}
+
+	/**
+	 * @param IPushNotificationProvider $provider
+	 * @param $config
+	 */
+	public function Provider (IPushNotificationProvider $provider, $config = []) {
+		$provider->Config($config);
+		self::$_providers[] = $provider;
+	}
 
 	/**
 	 * @var array
 	 */
 	private $_payload = array();
 	private $_devices = array();
-	private $_options = array();
 
 	/**
-	 * @var QuarkClient|null
+	 * @var QuarkClient
 	 */
 	private $_client = null;
-
-	/**
-	 * @param IQuarkExtensionConfig|Config|null $config
-	 *
-	 * @return mixed
-	 */
-	static function Config ($config) {
-		self::$_config = $config;
-	}
 
 	/**
 	 * @param array $payload
@@ -46,7 +48,13 @@ class PushNotification implements IQuarkExtension {
 		$this->_payload = $payload;
 
 		$this->_client = new QuarkClient();
-		$this->_client->Sign('wpc_pass', 'D:/dev/onwheels/web/server.pem');
+	}
+
+	/**
+	 * @return QuarkClient
+	 */
+	public function Client () {
+		return $this->_client;
 	}
 
 	/**
@@ -62,26 +70,6 @@ class PushNotification implements IQuarkExtension {
 	}
 
 	/**
-	 * @param string $type
-	 * @param array $opt
-	 *
-	 * @return array
-	 */
-	public function Options ($type = '', $opt = []) {
-		$args = func_num_args();
-
-		if ($args == 0)
-			return $this->_options;
-
-		if ($args == 2)
-			$this->_options[$type] = $opt;
-
-		return isset($this->_options[$type])
-			? $this->_options[$type]
-			: array();
-	}
-
-	/**
 	 * @param Device $device
 	 */
 	public function Device (Device $device) {
@@ -92,27 +80,22 @@ class PushNotification implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
-		if (!(self::$_config instanceof Config)) return false;
-
-		$providers = self::$_config->Providers();
-
 		foreach ($this->_devices as $i => $device) {
-			foreach ($providers as $p => $provider) {
+			foreach (self::$_providers as $p => $provider) {
 				/**
 				 * @var $provider IPushNotificationProvider
 				 */
 
 				if ($provider->Type() != $device->type) continue;
 
-				$this->_client->Reset();
-
 				$provider->Device($device);
 
+				$this->_client->Reset();
 				$this->_client->Credentials(QuarkCredentials::FromURI($provider->URL()));
-				$this->_client->Request($provider->Request());
+				$this->_client->Request($provider->Request($this->_payload));
 				$this->_client->Response($provider->Response());
 				$this->_client->Post();
-				//print_r($this->_client);
+				print_r($this->_client);
 			}
 		}
 
