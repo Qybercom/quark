@@ -112,7 +112,10 @@ class Quark {
 			 */
 			$worker = new $service();
 
-			if (self::is($service, 'Quark\IQuarkServiceWithCustomProcessor')) self::$_processor = $worker->Processor();
+			if (self::is($service, 'Quark\IQuarkServiceWithCustomProcessor')) {
+				self::$_processor = $worker->Processor();
+				header('Content-Type: ' . self::$_processor->MimeType());
+			}
 
 			$input = self::$_processor->Decode(file_get_contents('php://input'));
 			$input = self::ArrayToObject((array)$input + $_GET + $_POST);
