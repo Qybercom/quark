@@ -136,19 +136,13 @@ class Quark {
 				}
 
 				if (!$worker->AuthorizationCriteria($input)) {
-					echo $worker->AuthorizationFailed();
+					self::_response($service, $worker->AuthorizationFailed());
 					exit();
 				}
 			}
 
-			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service')) {
-				$response = $worker->$method($input);
-
-				if (!is_string($response))
-					throw new QuarkArchException('Service "' . $service . '" returned invalid response type. String need.');
-
-				echo $response;
-			}
+			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
+				self::_response($service, $worker->$method($input));
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -166,6 +160,19 @@ class Quark {
 			self::Log($e->getMessage(), self::LOG_FATAL);
 			self::Dispatch(self::EVENT_COMMON_EXCEPTION, $e);
 		}
+	}
+
+	/**
+	 * @param $service
+	 * @param $response
+	 *
+	 * @throws QuarkArchException
+	 */
+	private static function _response ($service, $response) {
+		if (!is_string($response))
+			throw new QuarkArchException('Service "' . $service . '" returned invalid response type. String need.');
+
+		echo $response;
 	}
 
 	/**
