@@ -15,9 +15,9 @@ class Quark {
 	const MODE_PRODUCTION = 'production';
 
 	const PATH_APP = '/';
-	const PATH_SERVICES = '/services/';
-	const PATH_MODELS = '/models/';
-	const PATH_VIEWS = '/views/';
+	const PATH_SERVICES = '/Services/';
+	const PATH_MODELS = '/Models/';
+	const PATH_VIEWS = '/Views/';
 	const PATH_LOGS = '/logs/';
 
 	const LOG_OK = ' ok ';
