@@ -34,7 +34,7 @@ class MySQL implements IQuarkDataProvider {
 	/**
 	 * @param $name
 	 *
-	 * @return QuarkCredentials
+	 * @return IQuarkDataProvider
 	 * @throws QuarkArchException
 	 */
 	public static function SourceGet ($name) {
@@ -103,7 +103,7 @@ class MySQL implements IQuarkDataProvider {
 	private function _query ($model ,$options, $query) {
 		$collection = isset($options['collection'])
 			? $options['collection']
-			: Quark::ClassName($model);
+			: Quark::ClassOf($model);
 
 		$i = 1;
 		$query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);

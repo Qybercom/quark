@@ -358,7 +358,7 @@ class Quark {
 	 *
 	 * @return bool
 	 */
-	public static function ClassName ($target) {
+	public static function ClassOf ($target) {
 		if (!is_object($target)) return false;
 
 		$class = get_class($target);
@@ -573,11 +573,11 @@ class QuarkConfig {
 			$extension->Init();
 		}
 		catch (QuarkConnectionException $e) {
-			Quark::Log('Extension connection failure in \'' . Quark::ClassName($extension) . '\'', Quark::LOG_FATAL);
+			Quark::Log('Extension connection failure in \'' . Quark::ClassOf($extension) . '\'', Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array('extension' => $extension));
 		}
 		catch (QuarkArchException $e) {
-			Quark::Log('Extension architecture failure in \'' . Quark::ClassName($extension) . '\'' . $e->message, Quark::LOG_FATAL);
+			Quark::Log('Extension architecture failure in \'' . Quark::ClassOf($extension) . '\'' . $e->message, Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array('extension' => $extension));
 		}
 	}
@@ -697,15 +697,16 @@ class QuarkCredentials {
 	}
 
 	/**
+	 * @param bool $user
 	 * @return string
 	 */
-	public function uri () {
+	public function uri ($user = true) {
 		return
 			($this->protocol !== null ? $this->protocol : 'http')
 			. '://'
-			. ($this->username !== null ? $this->username : '')
-			. ($this->username !== null && $this->password !== null ? ':' . $this->password : '')
-			. ($this->username !== null ? '@' : '')
+			. ($user && $this->username !== null ? $this->username : '')
+			. ($user && $this->username !== null && $this->password !== null ? ':' . $this->password : '')
+			. ($user && $this->username !== null ? '@' : '')
 			. $this->host
 			. ($this->port !== null ? ':' . $this->port : '')
 			. ($this->suffix !== null ? Quark::NormalizePath('/' . $this->suffix, false) : '')
@@ -877,7 +878,7 @@ interface IQuarkAuthorizableModel {
 	function Authorize($criteria);
 
 	/**
-	 * @param IQuarkAuthorizationProvider
+	 * @param IQuarkAuthorizationProvider $provider
 	 * @param $request
 	 *
 	 * @return mixed
@@ -973,7 +974,7 @@ class QuarkModel {
 				'model' => $this->_model
 			));
 
-			Quark::Log('QuarkModel: Undefined property "' . $key . '" in model ' . Quark::ClassName($this->_model), Quark::LOG_WARN);
+			Quark::Log('QuarkModel: Undefined property "' . $key . '" in model ' . Quark::ClassOf($this->_model), Quark::LOG_WARN);
 
 			return null;
 		}
@@ -1249,7 +1250,7 @@ interface IQuarkDataProvider {
 	/**
 	 * @param $name
 	 *
-	 * @return QuarkCredentials
+	 * @return IQuarkDataProvider
 	 */
 	static function SourceGet($name);
 
@@ -1824,9 +1825,10 @@ class QuarkClient {
 	}
 
 	/**
-	 * @param string $method
+	 * @param $method
 	 *
-	 * @return QuarkClientDTO|null
+	 * @return QuarkClientDTO
+	 * @throws QuarkArchException
 	 */
 	private function ___request ($method) {
 		if (!($this->_request instanceof QuarkClientDTO))
@@ -1839,7 +1841,7 @@ class QuarkClient {
 		stream_context_set_option($stream, 'ssl', 'verify_host', false);
 		stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 
-		$socket = stream_socket_client(
+		$socket = @stream_socket_client(
 			$this->_credentials->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -1848,7 +1850,14 @@ class QuarkClient {
 			$stream
 		);
 
-		if (!$socket) return null;
+		if (!$socket) {
+			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
+				'num' => $this->_errorNumber,
+				'description' => $this->_errorString
+			));
+
+			return null;
+		}
 
 		$this->_request->Header(self::HEADER_HOST, $this->_credentials->host);
 		$request = $this->_request->Serialize($method, $this->_credentials->suffix);
@@ -1860,7 +1869,7 @@ class QuarkClient {
 			fclose($socket);
 		}
 		catch (\Exception $e) {
-			print_r($e);
+			throw new QuarkArchException('QuarkClient connection error: ' . $e->getMessage());
 		}
 
 		return $this->_response;
@@ -2013,6 +2022,8 @@ class QuarkClientDTO {
 
 				continue;
 			}
+
+			if (!isset($header[0]) || !isset($header[1])) continue;
 
 			$this->Header($header[0], trim($header[1]));
 		}

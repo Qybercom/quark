@@ -21,6 +21,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($request) {
+		@session_start();
+
 		if (!isset($_SESSION)) return null;
 
 		self::$_user = self::$_model->RenewSession($this, $_SESSION);
@@ -72,6 +74,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public static function Logout () {
+		@session_start();
+
 		if (!isset($_SESSION['user'])) return false;
 
 		self::$_user = null;

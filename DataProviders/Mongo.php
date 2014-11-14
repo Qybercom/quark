@@ -28,7 +28,7 @@ class Mongo implements IQuarkDataProvider {
 	/**
 	 * @param $name
 	 *
-	 * @return QuarkCredentials
+	 * @return IQuarkDataProvider
 	 * @throws QuarkArchException
 	 */
 	public static function SourceGet ($name) {
@@ -84,7 +84,7 @@ class Mongo implements IQuarkDataProvider {
 	private function _collection ($model ,$options) {
 		$collection = isset($options['collection'])
 			? $options['collection']
-			: Quark::ClassName($model);
+			: Quark::ClassOf($model);
 
 		return  $this->_connection->$collection;
 	}
@@ -190,7 +190,7 @@ class Mongo implements IQuarkDataProvider {
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return $this->_collection($model, $options)->findOne(array(
-			'_id' => Quark::ClassName($id) == 'MongoId' ? $id : new \MongoId((string)$id)
+			'_id' => Quark::ClassOf($id) == 'MongoId' ? $id : new \MongoId((string)$id)
 		), self::_fields($options), $options);
 	}
 
