@@ -103,9 +103,12 @@ class Quark {
 			$size--;
 		}
 
-		self::$_service = $route[$size] . 'Service.php';
-
 		try {
+			if (!isset($route[$size]))
+				throw new QuarkHTTPException(404, 'Unknown service ' . implode('/', $route));
+
+			self::$_service = $route[$size] . 'Service.php';
+
 			if (!is_file($path))
 				throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
 
@@ -464,7 +467,7 @@ class Quark {
 	public static function ViewInLayout ($layout, $name, $params = []) {
 		if (is_array($name)) {
 			$params = $name;
-			$name = self::$_service;
+			$name = str_replace('Service.php', '', self::$_service);
 		}
 
 		return self::View($layout, $params + array(
