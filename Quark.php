@@ -76,7 +76,8 @@ class Quark {
 		if (is_file($static))
 			echo file_get_contents($static);
 
-		$tree = explode('/', self::NormalizePath(preg_replace('#\.php#Uis', '', $query)));
+		$query = self::NormalizePath(preg_replace('#\.php#Uis', '', $query));
+		$tree = explode('/', $query);
 		$route = array();
 
 		foreach ($tree as $i => $node)
@@ -89,12 +90,20 @@ class Quark {
 			$length++;
 		}
 
-		self::$_service = implode('/', $route);
+		$path = '';
+		$size = $length - 1;
 
-		$route[$length - 1] .= 'Service.php';
-		$service = implode('/', $route);
+		while ($size >= 0) {
+			$path = self::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . self::PATH_SERVICES . '/' . $route[$size] . 'Service.php', false);
 
-		$path = self::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . self::PATH_SERVICES . '/' . $service, false);
+			if (is_file($path)) break;
+
+			$query = preg_replace('#\/' . $route[$size] . '$#Uis', '', $query);
+
+			$size--;
+		}
+
+		self::$_service = $route[$size] . 'Service.php';
 
 		try {
 			if (!is_file($path))
@@ -102,7 +111,7 @@ class Quark {
 
 			include $path;
 
-			$service = '\\Services\\' . str_replace('/', '\\', str_replace('.php', '', $service));
+			$service = '\\Services\\' . str_replace('/', '\\', str_replace('.php', '', self::$_service));
 
 			if (!class_exists($service) || !self::is($service, 'Quark\IQuarkService'))
 				throw new QuarkArchException(500, 'Unknown service class ' . $service);
@@ -120,7 +129,7 @@ class Quark {
 			$input = self::$_processor->Decode(file_get_contents('php://input'));
 			$input = self::ArrayToObject((array)$input + $_GET + $_POST);
 
-			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input);
+			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input, $query);
 
 			if (self::is($service, 'Quark\IQuarkAuthorizableService')) {
 				$providers = $worker->AuthorizationProviders();
@@ -142,7 +151,7 @@ class Quark {
 			}
 
 			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
-				self::_response($service, $worker->$method($input));
+				self::_response($service, $worker->$method($input, $query));
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -169,10 +178,12 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	private static function _response ($service, $response) {
-		if (!is_string($response))
-			throw new QuarkArchException('Service "' . $service . '" returned invalid response type. String need.');
+		if (is_string($response))
+			echo $response;
 
-		echo $response;
+		self::Dispatch(self::EVENT_ARCH_EXCEPTION, array(
+			'message' => 'Service "' . $service . '" returned invalid response type. String need.'
+		));
 	}
 
 	/**
