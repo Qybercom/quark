@@ -62,6 +62,15 @@ class Quark {
 	}
 
 	/**
+	 * @param $service
+	 *
+	 * @return string
+	 */
+	private static function _bundle ($service) {
+		return self::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . self::PATH_SERVICES . '/' . $service . 'Service.php', false);
+	}
+
+	/**
 	 * @param QuarkConfig $config
 	 */
 	public static function Run (QuarkConfig $config) {
@@ -74,7 +83,10 @@ class Quark {
 		$static = self::NormalizePath($query, false);
 
 		if (is_file($static))
-			echo file_get_contents($static);
+			exit(file_get_contents($static));
+
+
+
 
 		$query = self::NormalizePath(preg_replace('#\.php#Uis', '', $query));
 		$tree = explode('/', $query);
@@ -84,30 +96,27 @@ class Quark {
 			if (strlen(trim($node)) != 0) $route[] = ucfirst($node);
 
 		$length = sizeof($route);
-
-		if ($length == 0) {
-			$route[] = 'Index';
-			$length++;
-		}
-
+		$service = implode('/', $route);
 		$path = '';
-		$size = $length - 1;
 
-		while ($size >= 0) {
-			$path = self::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . self::PATH_SERVICES . '/' . $route[$size] . 'Service.php', false);
+		while ($length > 0) {
+			$path = self::_bundle($service);
 
 			if (is_file($path)) break;
 
-			$query = preg_replace('#\/' . $route[$size] . '$#Uis', '', $query);
+			$length--;
 
-			$size--;
+			$query = preg_replace('#\/' . $route[$length] . '$#Uis', '', $query);
+			$service = preg_replace('#\/' . $route[$length] . '$#Uis', '', $service);
+		}
+
+		if ($length == 0) {
+			$service = 'Index';
+			$path = self::_bundle($service);
 		}
 
 		try {
-			if (!isset($route[$size]))
-				throw new QuarkHTTPException(404, 'Unknown service ' . implode('/', $route));
-
-			self::$_service = $route[$size] . 'Service.php';
+			self::$_service = $service . 'Service.php';
 
 			if (!is_file($path))
 				throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
@@ -115,6 +124,9 @@ class Quark {
 			include $path;
 
 			$service = '\\Services\\' . str_replace('/', '\\', str_replace('.php', '', self::$_service));
+
+
+
 
 			if (!class_exists($service) || !self::is($service, 'Quark\IQuarkService'))
 				throw new QuarkArchException(500, 'Unknown service class ' . $service);
