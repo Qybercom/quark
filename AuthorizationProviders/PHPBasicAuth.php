@@ -3,6 +3,7 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
+use Quark\Quark;
 use Quark\QuarkModel;
 
 class PHPBasicAuth implements IQuarkAuthorizationProvider {
@@ -18,12 +19,19 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($request) {
-		if (!isset($_SERVER['PHP_AUTH_USER'])) return null;
+		if (!isset($request->authorization) && self::$_user == null) {
+			self::Error401();
+			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
+		}
+		else {
+			$parts = explode(' ', $request->authorization);
+			$user = explode(':', base64_decode($parts[1]));
 
-		self::$_user = self::$_model->RenewSession($this, array(
-			'username' => $_SERVER['PHP_AUTH_USER'],
-			'password' => $_SERVER['PHP_AUTH_PW']
-		));
+			self::$_user = self::$_model->RenewSession($this, array(
+				'username' => $user[0],
+				'password' => $user[1]
+			));
+		}
 	}
 
 	/**
@@ -51,24 +59,16 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public static function Login (IQuarkAuthorizableModel $model, $credentials) {
-		if (isset($_SERVER['PHP_AUTH_USER'])) return true;
-
-		header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
-		header('HTTP/1.0 401 Unauthorized');
-
 		self::$_user = $model->Authorize(array(
-			'username' => isset($_SERVER['PHP_AUTH_USER']) ? $_SERVER['PHP_AUTH_USER'] : '',
-			'password' => isset($_SERVER['PHP_AUTH_PW'])  ? $_SERVER['PHP_AUTH_PW'] : ''
+			'username' => $_SERVER['PHP_AUTH_USER'],
+			'password' => $_SERVER['PHP_AUTH_PW']
 		));
 
-		if (!self::$_user) return false;
-
-		return true;
+		return self::$_user != null;
 	}
 
-	public static function Unauthorized () {
-		//header('HTTP/1.0 401 Unauthorized');
-		header('HTTP/1.0 403 Access denied');
+	public static function Error401 ($msg = 'Unauthorized') {
+		header('HTTP/1.0 401 ' . $msg);
 	}
 
 	/**
@@ -82,6 +82,7 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public static function Logout () {
+		self::Error401();
 		return true;
 	}
 }
