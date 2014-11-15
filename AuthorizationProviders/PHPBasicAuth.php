@@ -19,17 +19,14 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($request) {
-		if (!isset($request->authorization) && self::$_user == null) {
+		if (!isset($_SERVER['PHP_AUTH_USER']) && self::$_user == null) {
 			self::Error401();
 			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
 		}
 		else {
-			$parts = explode(' ', $request->authorization);
-			$user = explode(':', base64_decode($parts[1]));
-
 			self::$_user = self::$_model->RenewSession($this, array(
-				'username' => $user[0],
-				'password' => $user[1]
+				'username' => $_SERVER['PHP_AUTH_USER'],
+				'password' => $_SERVER['PHP_AUTH_PW']
 			));
 		}
 	}
