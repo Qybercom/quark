@@ -99,7 +99,11 @@ class Quark {
 		$service = implode('/', $route);
 		$path = '';
 
-		while ($length > 0) {
+		if ($length == 0) {
+			$service = 'Index';
+			$path = self::_bundle($service);
+		}
+		else while ($length > 0) {
 			$path = self::_bundle($service);
 
 			if (is_file($path)) break;
@@ -108,11 +112,6 @@ class Quark {
 
 			$query = preg_replace('#\/' . $route[$length] . '$#Uis', '', $query);
 			$service = preg_replace('#\/' . $route[$length] . '$#Uis', '', $service);
-		}
-
-		if ($length == 0) {
-			$service = 'Index';
-			$path = self::_bundle($service);
 		}
 
 		try {
@@ -450,7 +449,7 @@ class Quark {
 		$file = $name;
 
 		if (is_array($name)) {
-			$file = self::$_service;
+			$file = str_replace('Service.php', '', self::$_service);
 			$params = $name;
 		}
 
@@ -974,7 +973,7 @@ interface IQuarkServiceWithCustomProcessor extends IQuarkService {
  */
 class QuarkModel {
 	/**
-	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeSave $_model
+	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeCreate $_model
 	 */
 	private $_model;
 
@@ -1163,8 +1162,8 @@ class QuarkModel {
 	public function Create ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeSave')
-			? $this->_model->BeforeSave($options)
+		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeCreate')
+			? $this->_model->BeforeCreate($options)
 			: true;
 
 		return $ok || $ok == null ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
@@ -1427,6 +1426,20 @@ interface IQuarkModelWithBeforeSave {
 	 * @return mixed
 	 */
 	function BeforeSave($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeSave
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeCreate {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	function BeforeCreate($options);
 }
 
 /**
