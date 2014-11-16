@@ -1166,7 +1166,7 @@ class QuarkModel {
 			? $this->_model->BeforeCreate($options)
 			: true;
 
-		return $ok || $ok == null ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1180,7 +1180,7 @@ class QuarkModel {
 			? $this->_model->BeforeSave($options)
 			: true;
 
-		return $ok || $ok == null ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
