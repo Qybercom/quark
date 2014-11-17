@@ -3,9 +3,14 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
-use Quark\Quark;
+
 use Quark\QuarkModel;
 
+/**
+ * Class PHPBasicAuth
+ *
+ * @package Quark\AuthorizationProviders
+ */
 class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	/**
 	 * @var IQuarkAuthorizableModel $_model
@@ -64,8 +69,14 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 		return self::$_user != null;
 	}
 
+	/**
+	 * @param string $msg
+	 *
+	 * @return string
+	 */
 	public static function Error401 ($msg = 'Unauthorized') {
 		header('HTTP/1.0 401 ' . $msg);
+		return '';
 	}
 
 	/**

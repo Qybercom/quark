@@ -1,5 +1,6 @@
 <?php
 namespace Quark;
+
 /**
  * Class Quark
  *
@@ -131,7 +132,7 @@ class Quark {
 				throw new QuarkArchException(500, 'Unknown service class ' . $service);
 
 			/**
-			 * @var $worker IQuarkService|IQuarkGetService|IQuarkPostService|IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithRequestPreprocessor
+			 * @var $worker IQuarkService|IQuarkGetService|IQuarkPostService|IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithRequestPreprocessor|IQuarkServiceWithInputFilter
 			 */
 			$worker = new $service();
 
@@ -143,7 +144,22 @@ class Quark {
 			$input = self::$_processor->Decode(file_get_contents('php://input'));
 			$input = self::ArrayToObject((array)$input + $_GET + $_POST);
 
-			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input, $query);
+
+
+			if (Quark::is($service, 'Quark\\IQuarkServiceWithInputFilter')) {
+				$output = new \StdClass();
+				$fields = $worker->InputFilterAllow();
+
+				if (is_array($fields))
+					foreach($fields as $i => $field)
+						if (isset($input->$field))
+							$output->$key = $input->$field;
+
+				$input = $output;
+			}
+
+
+			if (self::is($service, 'Quark\IQuarkBroadcastService')) $worker->Request($input, $route);
 
 			if (self::is($service, 'Quark\IQuarkAuthorizableService')) {
 				$providers = $worker->AuthorizationProviders();
@@ -165,7 +181,7 @@ class Quark {
 			}
 
 			if (self::is($service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
-				self::_response($service, $worker->$method($input, $query));
+				self::_response($service, $worker->$method($input, $route));
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -423,6 +439,27 @@ class Quark {
 	}
 
 	/**
+	 * @param       $source
+	 * @param array $exclude
+	 *
+	 * @return object|bool
+	 */
+	public static function FilterObject ($source, $exclude = []) {
+		if (!is_object($source)) return false;
+		if (!is_array($exclude)) return $source;
+
+		$class = get_class($source);
+		$output = new $class;
+
+		foreach ($source as $key => $value)
+			if (!in_array($key, $exclude))
+				$output->$key = $value;
+
+		var_dump($output);
+		return $output;
+	}
+
+	/**
 	 * @param $path
 	 * @param $endSlash
 	 * @return string
@@ -598,11 +635,11 @@ class QuarkConfig {
 			$extension->Init();
 		}
 		catch (QuarkConnectionException $e) {
-			Quark::Log('Extension connection failure in \'' . Quark::ClassOf($extension) . '\'', Quark::LOG_FATAL);
+			Quark::Log('Extension connection failure in \'' . Quark::ClassOf($extension) . '\' ' . $e->message, Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array('extension' => $extension));
 		}
 		catch (QuarkArchException $e) {
-			Quark::Log('Extension architecture failure in \'' . Quark::ClassOf($extension) . '\'' . $e->message, Quark::LOG_FATAL);
+			Quark::Log('Extension architecture failure in \'' . Quark::ClassOf($extension) . '\' ' . $e->message, Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array('extension' => $extension));
 		}
 	}
@@ -965,6 +1002,18 @@ interface IQuarkServiceWithCustomProcessor extends IQuarkService {
 	function Processor();
 }
 
+/**
+ * Interface IQuarkServiceWithInputFilter
+ *
+ * @package Quark
+ */
+interface IQuarkServiceWithInputFilter {
+	/**
+	 * @return array
+	 */
+	function InputFilterAllow();
+}
+
 
 /**
  * Class QuarkModel
@@ -973,7 +1022,7 @@ interface IQuarkServiceWithCustomProcessor extends IQuarkService {
  */
 class QuarkModel {
 	/**
-	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeCreate $_model
+	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate|IQuarkModelWithInputFilter $_model
 	 */
 	private $_model;
 
@@ -1045,7 +1094,19 @@ class QuarkModel {
 	public function PopulateWith ($source) {
 		if (!is_array($source) && !is_object($source)) return $this;
 
+		$raw = new \StdClass();
+
 		foreach ($source as $key => $value)
+			$raw->$key = $value;
+
+		$output = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforePopulate')
+			? $this->_model->BeforePopulate($raw)
+			: $source;
+
+		if ($output === false) return $this;
+		if ($output === null) $output = $source;
+
+		foreach ($output as $key => $value)
 			$this->_model->$key = $value;
 
 		$this->Canonize();
@@ -1093,20 +1154,20 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param IQuarkModel|IQuarkStrongModel $model
+	 * @param IQuarkModel|IQuarkModelWithInputFilter|IQuarkStrongModel $model
 	 *
-	 * @return \StdClass
+	 * @return object
 	 */
 	private static function _canonize ($model) {
 		if (!Quark::is($model, 'Quark\\IQuarkStrongModel')) return $model;
 
 		$class = get_class($model);
-
 		$output = new $class();
 		$fields = $model->Fields();
 
-		foreach($fields as $key => $format)
-			$output->$key = isset($model->$key) ? $model->$key : $format;
+		if (is_array($fields))
+			foreach($fields as $key => $format)
+				$output->$key = isset($model->$key) ? $model->$key : $format;
 
 		return $output;
 	}
@@ -1188,7 +1249,11 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		return self::_provider($this->_model)->Remove(self::_canonize($this->_model), $options);
+		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeRemove')
+			? $this->_model->BeforeRemove($options)
+			: true;
+
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Remove(self::_canonize($this->_model), $options) : false;
 	}
 
 	/**
@@ -1419,6 +1484,20 @@ interface IQuarkModelWithAfterFind {
  *
  * @package Quark
  */
+interface IQuarkModelWithBeforeCreate {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	function BeforeCreate($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeSave
+ *
+ * @package Quark
+ */
 interface IQuarkModelWithBeforeSave {
 	/**
 	 * @param $options
@@ -1429,17 +1508,17 @@ interface IQuarkModelWithBeforeSave {
 }
 
 /**
- * Interface IQuarkModelWithBeforeSave
+ * Interface IQuarkModelWithBeforeRemove
  *
  * @package Quark
  */
-interface IQuarkModelWithBeforeCreate {
+interface IQuarkModelWithBeforeRemove {
 	/**
 	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	function BeforeCreate($options);
+	function BeforeRemove($options);
 }
 
 /**
@@ -1452,6 +1531,20 @@ interface IQuarkModelWithBeforeExtract {
 	 * @return mixed
 	 */
 	function BeforeExtract();
+}
+
+/**
+ * Interface IQuarkModelWithBeforePopulate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforePopulate {
+	/**
+	 * @param mixed $source
+	 *
+	 * @return mixed
+	 */
+	function BeforePopulate($source);
 }
 
 
@@ -1610,6 +1703,19 @@ class QuarkField {
 	}
 
 	/**
+	 * @param       $key
+	 * @param array $values
+	 * @param bool  $nullable
+	 *
+	 * @return bool
+	 */
+	public static function Enum ($key, $values = [], $nullable = false) {
+		if ($nullable && $key === null) return true;
+
+		return is_array($values) && in_array($key, $values);
+	}
+
+	/**
 	 * @param string $type
 	 * @param mixed $key
 	 * @param bool $nullable
@@ -1662,8 +1768,17 @@ class QuarkField {
 		return self::_dateTime('Time', $key, $nullable, $culture);
 	}
 
+	/**
+	 * @param      $key
+	 * @param bool $nullable
+	 *
+	 * @return bool
+	 */
 	public static function Email ($key, $nullable = false) {
+		if ($nullable && $key === null) return true;
+		if (!is_string($key)) return false;
 
+		return preg_match('#(.*)\@(.*)#Uis', $key);
 	}
 
 	/**

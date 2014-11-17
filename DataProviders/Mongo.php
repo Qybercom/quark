@@ -19,6 +19,41 @@ class Mongo implements IQuarkDataProvider {
 	private static $_pool = array();
 
 	/**
+	 * @param object $source
+	 *
+	 * @return string
+	 */
+	public static function _id ($source) {
+		if (!is_object($source)) return '';
+
+		return isset($source->_id->{'$id'}) ? $source->_id->{'$id'} : '';
+	}
+
+	/**
+	 * @param array $source
+	 * @param array $exclude
+	 *
+	 * @return array
+	 */
+	public static function _ids ($source = [], $exclude = []) {
+		if (!is_array($source)) return array();
+
+		if (is_string($exclude))
+			$exclude = array($exclude);
+
+		if (!is_array($exclude))
+			$exclude = array();
+
+		$ids = array();
+
+		foreach ($source as $i => $id)
+			if (\MongoId::isValid($id) && !in_array($id, $exclude))
+				$ids[] = new \MongoId($id);
+
+		return $ids;
+	}
+
+	/**
 	 * @return array
 	 */
 	public static function SourcePool () {
