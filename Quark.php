@@ -394,7 +394,7 @@ class QuarkService {
 			$response->Header('Content-Type', $response->Processor()->MimeType());
 		}
 
-		$request->Headers(getallheaders());
+		$request->Headers(\getallheaders());
 		$request->PopulateFrom($_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n" . file_get_contents('php://input'));
 		$request->AttachData($_GET + $_POST);
 
