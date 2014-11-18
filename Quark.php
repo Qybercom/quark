@@ -393,7 +393,7 @@ class QuarkService {
 		ob_start();
 
 		if ($this->_service instanceof IQuarkAuthorizableService) {
-			$provider = $this->_service->AuthorizationProviders();
+			$provider = $this->_service->AuthorizationProvider();
 
 			if (!($provider instanceof IQuarkAuthorizationProvider))
 				throw new QuarkArchException('Specified provider is not a valid IQuarkAuthorizationProvider');
@@ -760,7 +760,7 @@ interface IQuarkAuthorizableService {
 	/**
 	 * @return array
 	 */
-	function AuthorizationProviders();
+	function AuthorizationProvider();
 }
 
 /**
@@ -911,6 +911,24 @@ class QuarkView {
 		));
 
 		return $layout;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function UI () {
+		$out = '';
+
+		$css = __DIR__ . '/Quark.css';
+		$js = __DIR__ . '/Quark.js';
+
+		if (file_exists($css))
+			$out .= '<style type="text/css">' . file_get_contents($css) . '</style>';
+
+		if (file_exists($js))
+			$out .= '<script type="text/javascript">' . file_get_contents($js) . '</script>';
+
+		return $out;
 	}
 
 	/**

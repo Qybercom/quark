@@ -1,149 +1,190 @@
-.q-header-mini {
-font-size: 16px;
-margin: 4px 2px;
+body {
+    font-family: Calibri, OpenSans, FontAwesome sans-serif;
 }
 
-.q-notice {
-margin: 2px;
-padding: 10px;
+.qui-app {
+    display: block;
+    text-decoration: none;
+
+    background: rgb(38, 38, 38);
+    color: white;
+    font-size: 24px;
+
+    position: absolute;
+    left: 0px;
+    top: 0px;
+
+    padding: 15px;
 }
 
-.pure {
-background: rgb(255, 255, 255);
+.qui-menu-main {
+    font-size: 16px;
+
+    position: absolute;
+    left: 0px;
+    top: 66px;
+
+    padding: 15px;
 }
 
-.info {
-background: rgb(224, 234, 255);
+.qui-header {
+    display: block;
+    text-decoration: none;
+
+    font-size: 22px;
+
+    margin-top: 15px;
+    margin-left: 75px;
 }
 
-.success {
-background: rgb(117, 255, 82);
-color: white;
+.qui-button {
+    font-size: 12px;
+    color: rgb(150, 150, 150);
+    cursor: pointer;
+    text-decoration: none;
 }
 
-.warning {
-background: rgb(248, 255, 82);
+.qui-button .label {
+    font-family: Calibri, OpenSans, FontAwesome sans-serif;
+    margin-left: 5px;
 }
 
-.error {
-background: rgb(255, 144, 82);
-color: white;
+.qui-label {
+    font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
+    color: rgb(150, 150, 150);
 }
 
-.q-hr {
-height: 1px;
-border: 0px;
-background: rgb(211, 211, 211);
+.qui-button:hover {
+    color: black;
 }
 
-
-
-
-
-.q-control {
-display: inline-block;
-background: white;
-border: 1px solid rgb(235, 235, 235);
-outline: none;
-margin: 2px;
-padding: 10px;
-font-family: OpenSans, Calibri, FontAwesome;
+.qui-button.block {
+    background: white;
+    padding: 10px;
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 3px;
 }
 
-
-.q-control-group {
-padding: 1px;
+.qui-button.block:hover {
+    background: rgb(230, 230, 230);
 }
 
-
-.q-label {
-display: inline-block;
-margin: 2px;
-color: rgb(175, 175, 175);
-word-wrap: break-word;
+.qui-table .qui-button {
+    font-size: 16px;
+    text-decoration: none;
 }
 
-.q-label.left { float: left; }
-.q-label.right { float: right; }
-
-
-
-.q-button {
-background: rgb(240, 240, 240);
-outline: none;
-cursor: pointer;
+.qui-table .fa.qui-button {
+    font-size: 12px;
+    text-decoration: none;
 }
 
-.q-button:hover {
-background: rgb(255, 255, 255);
-}
-
-.q-button:active {
-background: rgb(230, 230, 230);
-}
-
-
-.q-button.violet {
-background: rgb(152, 98, 210);
-border: 0px;
-color: white;
-}
-
-.q-button.violet:hover {
-background: rgb(172, 118, 230);
-}
-
-.q-button.violet:active {
-background: rgb(112, 48, 160);
-}
-
-.q-form {
-display: block;
-padding: 15px;
+.qui-header .qui-button {
+    font-size: 22px;
+    text-decoration: none;
 }
 
 
-
-
-
-
-[disabled] {
-background: rgb(230, 230, 230) !important;
-color: white !important;
+.qui-list-menu {
+    padding: 10px 0px;
+    margin: 15px 1px;
+    border-top: 1px solid rgb(235, 235, 235);
 }
 
-[disabled]:hover {
-background: rgb(230, 230, 230) !important;
-color: white !important;
+.qui-navigator {
+    float: right;
+    font-size: 10px;
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid lightgray;
 }
 
-[disabled]:active {
-background: rgb(230, 230, 230) !important;
-color: white !important;
+.qui-label {
+    color: gray;
 }
 
-.width-10 { width: 10%; }
-.width-15 { width: 15%; }
-.width-20 { width: 20%; }
-.width-25 { width: 25%; }
-.width-30 { width: 30%; }
-.width-33 { width: 33%; }
-.width-35 { width: 35%; }
-.width-40 { width: 40%; }
-.width-45 { width: 45%; }
-.width-50 { width: 50%; }
-.width-55 { width: 55%; }
-.width-60 { width: 60%; }
-.width-65 { width: 65%; }
-.width-66 { width: 66%; }
-.width-70 { width: 70%; }
-.width-75 { width: 75%; }
-.width-80 { width: 80%; }
-.width-85 { width: 85%; }
-.width-90 { width: 90%; }
-.width-95 { width: 95%; }
-.width-100 { width: 100%; }
+.qui-table td {
+    padding: 5px;
+    border-bottom: 1px solid lightgray;
+}
 
-.hidden {
-display: none;
+.qui-table tr:last-child td {
+    border-bottom: 1px solid white;
+}
+
+.qui-content {
+    margin-top: 75px;
+    margin-right: 15px;
+    margin-left: 75px;
+    min-width: 300px;
+}
+
+.qui-menu-main .qui-button {
+    padding: 10px;
+    font-size: 18px;
+    text-decoration: none;
+}
+
+.qui-message {
+    padding: 10px;
+    margin: 3px 1px;
+
+    font-size: 12px;
+    border-radius: 5px;
+}
+
+.qui-message .fa {
+    display: inline-block;
+    margin-right: 5px;
+    float: left;
+}
+
+.qui-message .content {
+    display: inline-block;
+    margin-left: 5px;
+}
+
+.qui-message.info {
+    border: 1px solid #CDD9FF/*#EFF3FF*/;
+}
+
+.qui-message.warn {
+    border: 1px solid #E8E8AD /*#EFF3FF*/;
+}
+
+.qui-message.fatal {
+    border: 1px solid #ffceaf /*#EFF3FF*/;
+}
+
+.qui-message.question {
+    border: 1px solid rgb(230, 230, 230) /*#EFF3FF*/;
+}
+
+.qui-message.ok {
+    border: 1px solid rgb(167, 255, 167);
+}
+
+.qui-document {
+    font-family: Consolas, 'Anonymous Pro', monospace;
+    font-size: 12px;
+
+    padding: 10px;
+    margin-bottom: 5px;
+
+    border-radius: 3px;
+    border: 1px solid rgb(230, 230, 230);
+}
+
+.qui-section-header {
+    font-size: 16px;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+.qui-input {
+    padding: 10px;
+    border: 1px solid rgb(230, 230, 230);
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
 }
