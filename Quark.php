@@ -939,7 +939,7 @@ class QuarkView {
 	 * @return QuarkView
 	 */
 	public static function InLayout ($view, $layout, $vars = []) {
-		return (new QuarkView($view, $vars))->Layout($layout);
+		return (new QuarkView($view, $vars))->Layout($layout, $vars);
 	}
 
 	/**
