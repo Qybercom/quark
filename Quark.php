@@ -463,6 +463,14 @@ class QuarkService {
 	 */
 	public static function Select () {
 		$route = QuarkDTO::ParseRoute($_SERVER['REQUEST_URI']);
+
+		$buffer = array();
+		foreach ($route as $i => $item)
+			$buffer[] = ucfirst($item);
+
+		$route = $buffer;
+		unset($buffer);
+
 		$length = sizeof($route);
 		$service = $length == 0 ? 'Index' : implode('/', $route);
 		$path = self::_bundle($service);
