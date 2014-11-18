@@ -66,7 +66,7 @@ class Quark {
 			self::Log($e->message, $e->lvl);
 		}
 		catch (\Exception $e) {
-			self::Log($e->getMessage(), self::LOG_FATAL);
+			self::Log('Common exception: ' . $e->getMessage() . "\r\n at " . $e->getFile() . ':' . $e->getLine(), self::LOG_FATAL);
 		}
 	}
 
