@@ -26,6 +26,11 @@ class Quark {
 	const LOG_WARN = 'warn';
 	const LOG_FATAL = 'fatal';
 
+	const EVENT_ARCH_EXCEPTION = 'Quark.Exception.Arch';
+	const EVENT_HTTP_EXCEPTION = 'Quark.Exception.HTTP';
+	const EVENT_CONNECTION_EXCEPTION = 'Quark.Exception.Connection';
+	const EVENT_COMMON_EXCEPTION = 'Quark.Exception.Common';
+
 	/**
 	 * @var QuarkConfig
 	 */
@@ -119,11 +124,12 @@ class Quark {
 	}
 
 	/**
-	 * @param $source
+	 * @param mixed $source
+	 * @param mixed $backbone
 	 *
 	 * @return \StdClass
 	 */
-	public static function ToObject ($source) {
+	public static function ToObject ($source, $backbone = []) {
 		if (is_object($source)) return $source;
 
 		$output = new \StdClass();
@@ -132,6 +138,14 @@ class Quark {
 
 		foreach ($source as $key => $value)
 			$output->$key = $value;
+
+		if (func_num_args() == 2) {
+			$backbone = self::ToObject($backbone);
+
+			foreach ($backbone as $key => $value)
+				if (!isset($output->$key))
+					$output->$key = $value;
+		}
 
 		return $output;
 	}
@@ -577,19 +591,25 @@ class QuarkCredentials {
 	 * @return QuarkCredentials
 	 */
 	public static function FromURI ($uri) {
-		$url = parse_url($uri);
+		$url = Quark::ToObject(parse_url($uri), array(
+			'query' => '',
+			'scheme' => '',
+			'host' => '',
+			'port' => 80,
+			'user' => '',
+			'pass' => '',
+			'path' => '',
+			'fragment' => ''
+		));
 
-		$query = Quark::valueForKey($url, 'query', Quark::KEY_TYPE_ARRAY);
-
-		$credentials = new self(Quark::valueForKey($url, 'scheme', Quark::KEY_TYPE_ARRAY));
-		$credentials->host = Quark::valueForKey($url, 'host', Quark::KEY_TYPE_ARRAY);
-		$credentials->port = Quark::valueForKey($url, 'port', Quark::KEY_TYPE_ARRAY);
-		$credentials->username = Quark::valueForKey($url, 'user', Quark::KEY_TYPE_ARRAY);
-		$credentials->password = Quark::valueForKey($url, 'pass', Quark::KEY_TYPE_ARRAY);
-		$credentials->suffix
-			= Quark::valueForKey($url, 'path', Quark::KEY_TYPE_ARRAY)
-			. (strlen($query) != 0 ? '?' . $query : '')
-			. Quark::valueForKey($url, 'fragment', Quark::KEY_TYPE_ARRAY);
+		$credentials = new self($url->scheme);
+		$credentials->Endpoint($url->host, $url->port);
+		$credentials->User($url->user, $url->pass);
+		$credentials->Resource(
+			$url->path
+			. (strlen($url->query) != 0 ? '?' . $url->query : '')
+			. $url->fragment
+		);
 
 		return $credentials;
 	}
@@ -758,7 +778,7 @@ interface IQuarkAuthorizableService {
 	function AuthorizationFailed();
 
 	/**
-	 * @return array
+	 * @return IQuarkAuthorizationProvider
 	 */
 	function AuthorizationProvider();
 }
@@ -2032,6 +2052,27 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function __get ($key) {
+		return isset($this->_data->$key)
+			? $this->_data->$key
+			: null;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	public function __set ($key, $value) {
+		$this->_data = Quark::ToObject($this->_data);
+
+		$this->_data->$key = $value;
+	}
+
+	/**
 	 * @return QuarkDTO
 	 */
 	public function Reset () {
@@ -2793,9 +2834,10 @@ class QuarkCertificate {
 	public function Location ($location = '') {
 		if (func_num_args() == 1)
 			$this->_location = $location;
-
-		if (!is_string($this->_location) || !is_file($this->_location))
-			throw new QuarkArchException('QuarkCertificate: location is not a valid file');
+		else {
+			if (!is_string($this->_location) || !is_file($this->_location))
+				throw new QuarkArchException('QuarkCertificate: location is not a valid file');
+		}
 
 		return $this->_location;
 	}
