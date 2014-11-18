@@ -188,6 +188,26 @@ class Quark {
 	}
 
 	/**
+	 * @param array $source
+	 *
+	 * Algorithm got from http://php.net/manual/en/function.getallheaders.php#84262 and adopted for Quark infrastructure
+	 *
+	 * @return array
+	 */
+	public static function Headers ($source = []) {
+		$output = array();
+
+		if (func_num_args() == 0 || !is_array($source))
+			$source = $_SERVER;
+
+		foreach ($source as $name => $value)
+			if (substr($name, 0, 5) == 'HTTP_')
+				$output[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+
+		return $output;
+	}
+
+	/**
 	 * @param $url
 	 */
 	public static function Redirect ($url) {
@@ -394,7 +414,7 @@ class QuarkService {
 			$response->Header('Content-Type', $response->Processor()->MimeType());
 		}
 
-		$request->Headers(\getallheaders());
+		$request->Headers(Quark::Headers());
 		$request->PopulateFrom($_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n" . file_get_contents('php://input'));
 		$request->AttachData($_GET + $_POST);
 
