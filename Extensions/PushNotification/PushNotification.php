@@ -3,7 +3,7 @@ namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
 use Quark\QuarkClient;
-use Quark\QuarkClientDTO;
+use Quark\QuarkDTO;
 use Quark\QuarkCredentials;
 
 /**

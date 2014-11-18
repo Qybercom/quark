@@ -4,7 +4,7 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IPushNotificationProvider;
 
-use Quark\QuarkClientDTO;
+use Quark\QuarkDTO;
 use Quark\QuarkCertificate;
 use Quark\QuarkPlainIOProcessor;
 
@@ -53,17 +53,17 @@ class Apple implements IPushNotificationProvider {
 	/**
 	 * @param $payload
 	 *
-	 * @return QuarkClientDTO
+	 * @return QuarkDTO
 	 */
 	public function Request ($payload) {
 		// TODO: Implement Request() method.
 	}
 
 	/**
-	 * @return QuarkClientDTO
+	 * @return QuarkDTO
 	 */
 	public function Response () {
-		$response = new QuarkClientDTO();
+		$response = new QuarkDTO();
 		$response->Processor(new QuarkPlainIOProcessor());
 
 		return $response;

@@ -27,12 +27,13 @@ interface IPushNotificationProvider {
 
 	/**
 	 * @param $payload
-	 * @return \Quark\QuarkClientDTO
+	 *
+*@return \Quark\QuarkDTO
 	 */
 	function Request($payload);
 
 	/**
-	 * @return \Quark\QuarkClientDTO
+	 * @return \Quark\QuarkDTO
 	 */
 	function Response();
 }

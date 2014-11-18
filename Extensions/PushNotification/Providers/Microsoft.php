@@ -3,7 +3,7 @@ namespace Quark\Extensions\PushNotification\Providers;
 
 use Quark\Extensions\PushNotification\Device;
 use Quark\QuarkClient;
-use Quark\QuarkClientDTO;
+use Quark\QuarkDTO;
 use Quark\QuarkCredentials;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTMLIOProcessor;
@@ -108,10 +108,11 @@ class Microsoft implements IPushNotificationProvider {
 
 	/**
 	 * @param $payload
-	 * @return QuarkClientDTO
+	 *
+*@return QuarkDTO
 	 */
 	public function Request ($payload) {
-		$request = new QuarkClientDTO();
+		$request = new QuarkDTO();
 		//$request->Processor(new QuarkXMLIOProcessor());
 
 		$access = $this->_token();
@@ -136,10 +137,10 @@ class Microsoft implements IPushNotificationProvider {
 	}
 
 	/**
-	 * @return \Quark\QuarkClientDTO
+	 * @return \Quark\QuarkDTO
 	 */
 	public function Response () {
-		$response = new QuarkClientDTO();
+		$response = new QuarkDTO();
 		$response->Processor(new QuarkPlainIOProcessor());
 
 		return $response;
@@ -151,14 +152,14 @@ class Microsoft implements IPushNotificationProvider {
 	private function _token () {
 		if ($this->_access != null) return $this->_access;
 
-		$request = new QuarkClientDTO();
+		$request = new QuarkDTO();
 		$request->Processor(new QuarkFormIOProcessor());
 		$request->Data($this->_config + array(
 			'grant_type' => 'client_credentials',
 			'scope' => 'notify.windows.com'//'s.notify.live.net'
 		));
 
-		$response = new QuarkClientDTO();
+		$response = new QuarkDTO();
 		$response->Processor(new QuarkJSONIOProcessor());
 
 		$client = new QuarkClient(

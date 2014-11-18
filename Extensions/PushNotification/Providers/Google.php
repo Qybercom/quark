@@ -4,7 +4,7 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IPushNotificationProvider;
 
-use Quark\QuarkClientDTO;
+use Quark\QuarkDTO;
 use Quark\QuarkPlainIOProcessor;
 use Quark\QuarkJSONIOProcessor;
 
@@ -49,10 +49,10 @@ class Google implements IPushNotificationProvider {
 	/**
 	 * @param $payload
 	 *
-	 * @return QuarkClientDTO
+	 * @return QuarkDTO
 	 */
 	public function Request ($payload) {
-		return new QuarkClientDTO(
+		return new QuarkDTO(
 			array(
 				'Authorization' => 'key='. $this->_key
 			),
@@ -65,10 +65,10 @@ class Google implements IPushNotificationProvider {
 	}
 
 	/**
-	 * @return QuarkClientDTO
+	 * @return QuarkDTO
 	 */
 	public function Response () {
-		$response = new QuarkClientDTO();
+		$response = new QuarkDTO();
 		$response->Processor(new QuarkPlainIOProcessor());
 
 		return $response;
