@@ -24,7 +24,8 @@ body {
     left: 0px;
     top: 66px;
 
-    padding: 15px;
+    padding: 8px;
+    text-align: center;
 }
 
 .qui-header {

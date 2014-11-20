@@ -130,14 +130,16 @@ class Quark {
 	 * @return \StdClass
 	 */
 	public static function ToObject ($source, $backbone = []) {
-		if (is_object($source)) return $source;
+		$output = $source;
 
-		$output = new \StdClass();
+		if (!is_object($source)) {
+			$output = new \StdClass();
 
-		if (!is_array($source)) return $output;
+			if (!is_array($source)) return $output;
 
-		foreach ($source as $key => $value)
-			$output->$key = $value;
+			foreach ($source as $key => $value)
+				$output->$key = $value;
+		}
 
 		if (func_num_args() == 2) {
 			$backbone = self::ToObject($backbone);
