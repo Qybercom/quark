@@ -380,7 +380,7 @@ class QuarkConfig {
  * @package Quark
  */
 class QuarkService {
-	const ORIGIN_ALL = '*';
+	const ORIGIN_ANY = '*';
 
 	/**
 	 * @var IQuarkService|null
