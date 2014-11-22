@@ -380,6 +380,8 @@ class QuarkConfig {
  * @package Quark
  */
 class QuarkService {
+	const ORIGIN_ALL = '*';
+
 	/**
 	 * @var IQuarkService|null
 	 */
@@ -405,7 +407,7 @@ class QuarkService {
 		if ($this->_service instanceof IQuarkServiceWithCustomProcessor) {
 			$request->Processor($this->_service->Processor());
 			$response->Processor($this->_service->Processor());
-			$response->Header('Content-Type', $response->Processor()->MimeType());
+			$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $response->Processor()->MimeType());
 		}
 
 		if ($this->_service instanceof IQuarkServiceWithCustomRequestProcessor)
@@ -413,8 +415,11 @@ class QuarkService {
 
 		if ($this->_service instanceof IQuarkServiceWithCustomResponseProcessor) {
 			$response->Processor($this->_service->ResponseProcessor());
-			$response->Header('Content-Type', $response->Processor()->MimeType());
+			$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $response->Processor()->MimeType());
 		}
+
+		if ($this->_service instanceof IQuarkServiceWithAccessControl)
+			$response->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $this->_service->AllowOrigin());
 
 		$request->Headers(Quark::Headers());
 		$request->PopulateFrom($_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n" . file_get_contents('php://input'));
@@ -536,7 +541,6 @@ interface IQuarkExtension {
 	 */
 	function Init();
 }
-
 
 /**
  * Class QuarkCredentials
@@ -920,6 +924,18 @@ interface IQuarkStrongService {
 	 * @return array
 	 */
 	function InputFilter();
+}
+
+/**
+ * Interface IQuarkServiceWithAccessControl
+ *
+ * @package Quark
+ */
+interface IQuarkServiceWithAccessControl {
+	/**
+	 * @return string
+	 */
+	function AllowOrigin();
 }
 
 /**
@@ -1850,13 +1866,6 @@ class QuarkField {
  * @package Quark
  */
 class QuarkClient {
-	const HEADER_CACHE_CONTROL = 'Cache-Control';
-	const HEADER_CONTENT_LENGTH = 'Content-Length';
-	const HEADER_CONTENT_TYPE = 'Content-Type';
-	const HEADER_COOKIE = 'Cookie';
-	const HEADER_HOST = 'Host';
-	const HEADER_SET_COOKIE = 'Set-Cookie';
-
 	/**
 	 * @var QuarkCredentials
 	 */
@@ -2020,7 +2029,7 @@ class QuarkClient {
 			return null;
 		}
 
-		$this->_request->Header(self::HEADER_HOST, $this->_credentials->host);
+		$this->_request->Header(QuarkDTO::HEADER_HOST, $this->_credentials->host);
 		$request = $this->_request->Serialize($method, $this->_credentials->suffix);
 
 		try {
@@ -2056,6 +2065,14 @@ class QuarkClient {
  * @package Quark
  */
 class QuarkDTO {
+	const HEADER_CACHE_CONTROL = 'Cache-Control';
+	const HEADER_CONTENT_LENGTH = 'Content-Length';
+	const HEADER_CONTENT_TYPE = 'Content-Type';
+	const HEADER_COOKIE = 'Cookie';
+	const HEADER_HOST = 'Host';
+	const HEADER_SET_COOKIE = 'Set-Cookie';
+	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
+
 	private $_raw = '';
 
 	private $_method = '';
@@ -2173,13 +2190,13 @@ class QuarkDTO {
 		foreach ($headers as $i => $head) {
 			$header = explode(':', $head);
 
-			if ($header[0] == QuarkClient::HEADER_SET_COOKIE) {
+			if ($header[0] == QuarkDTO::HEADER_SET_COOKIE) {
 				$this->Cookie(QuarkCookie::FromSetCookie($header[0]));
 
 				continue;
 			}
 
-			if ($header[0] == QuarkClient::HEADER_COOKIE) {
+			if ($header[0] == QuarkDTO::HEADER_COOKIE) {
 				$cookie = explode(';', $header[1]);
 
 				foreach ($cookie as $c => $cook)
@@ -2215,8 +2232,8 @@ class QuarkDTO {
 
 		$dataLength = strlen($data);
 
-		if ($dataLength != 0 && !isset($this->_headers[QuarkClient::HEADER_CONTENT_LENGTH]))
-			$this->_headers[QuarkClient::HEADER_CONTENT_LENGTH] = $dataLength;
+		if ($dataLength != 0 && !isset($this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH]))
+			$this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH] = $dataLength;
 
 		foreach ($this->_headers as $key => $value)
 			$payload .= $key . ': ' . $value . "\r\n";
