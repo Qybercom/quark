@@ -1048,6 +1048,7 @@ class QuarkModel {
 	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate|IQuarkModelWithInputFilter $_model
 	 */
 	private $_model;
+	public $sign = '';
 
 	/**
 	 * @param IQuarkModel $model
@@ -1065,7 +1066,7 @@ class QuarkModel {
 	 *
 	 * @return mixed
 	 */
-	public function __get ($key) {
+	public function &__get ($key) {
 		if (!isset($this->_model->$key)) {
 			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array(
 				'model' => $this->_model
@@ -1161,6 +1162,15 @@ class QuarkModel {
 	 */
 	private static function _record ($model, $raw, $options = []) {
 		if ($raw == null) return null;
+
+		/**
+		 * Attention!
+		 * Here is solution for non-controlled passing-by-reference of $model
+		 * In case if You pass it without re-instantiating, it will appear situation when in ::Find method, $model will
+		 * refer to SAME object, which is not correct in this AR ORM use case
+		 */
+		$class = get_class($model);
+		$model = new $class();
 
 		$output = new QuarkModel($model, $raw);
 
@@ -1289,8 +1299,9 @@ class QuarkModel {
 		$records = array();
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
-		foreach ($raw as $i => $item)
+		foreach ($raw as $i => $item) {
 			$records[] = self::_record($model, $item, $options);
+		}
 
 		return $records;
 	}

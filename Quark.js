@@ -291,3 +291,12 @@ Quark.Template = function (selector, tags) {
 		return content;
 	};
 };
+
+
+Quark.Chart = function (selector, data) {
+	var that = this;
+
+	that.Render = function () {
+
+	};
+};

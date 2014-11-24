@@ -120,6 +120,12 @@ body {
     min-width: 300px;
 }
 
+.qui-content-column {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 15px;
+}
+
 .qui-menu-main .qui-button {
     padding: 10px;
     font-size: 18px;
