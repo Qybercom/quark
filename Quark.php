@@ -588,7 +588,7 @@ class QuarkCredentials {
 	/**
 	 * @var integer
 	 */
-	public $port;
+	public $port = 80;
 
 	/**
 	 * @var string
@@ -710,7 +710,10 @@ class QuarkCredentials {
 				. gethostbyname($this->host)
 				. ':'
 				. ($this->port != 80
-					? $this->port
+					? (is_int($this->port)
+						? $this->port
+						: 80
+					)
 					: (isset(self::$_ports[$this->protocol])
 						? self::$_ports[$this->protocol]
 						: 80
@@ -1335,9 +1338,11 @@ class QuarkModel {
 		$records = array();
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
-		foreach ($raw as $i => $item) {
+		if ($raw == null)
+			return array();
+
+		foreach ($raw as $i => $item)
 			$records[] = self::_record($model, $item, $options);
-		}
 
 		return $records;
 	}
@@ -1359,8 +1364,6 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
-		if (!\MongoId::isValid($id)) return null;
-
 		return self::_record($model, self::_provider($model)->FindOneById($model, new \MongoId($id), $options), $options);
 	}
 
