@@ -1364,7 +1364,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
-		return self::_record($model, self::_provider($model)->FindOneById($model, new \MongoId($id), $options), $options);
+		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options);
 	}
 
 	/**
