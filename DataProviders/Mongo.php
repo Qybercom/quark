@@ -228,7 +228,7 @@ class Mongo implements IQuarkDataProvider {
 
 		*/return $this->_collection($model, $options)->findOne(array(
 			'_id' => Quark::ClassOf($id) == 'MongoId' ? $id : new \MongoId((string)$id)
-		), self::_fields($options), $options);
+		), self::_fields($options)/*, $options*/);
 	}
 
 	/**
