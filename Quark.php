@@ -596,6 +596,11 @@ class QuarkCredentials {
 	public $suffix;
 
 	/**
+	 * @var string
+	 */
+	public $token;
+
+	/**
 	 * @param string|null $protocol
 	 */
 	public function __construct ($protocol = null) {
@@ -649,6 +654,34 @@ class QuarkCredentials {
 	}
 
 	/**
+	 * @param $username
+	 * @param $password
+	 *
+	 * @return QuarkCredentials
+	 */
+	public static function ByAuthCriteria ($username, $password) {
+		$credentials = new self();
+
+		$credentials->username = $username;
+		$credentials->password = $password;
+
+		return $credentials;
+	}
+
+	/**
+	 * @param $token
+	 *
+	 * @return QuarkCredentials
+	 */
+	public static function ByToken ($token) {
+		$credentials = new self();
+
+		$credentials->token = $token;
+
+		return $credentials;
+	}
+
+	/**
 	 * @param bool $user
 	 * @return string
 	 */
@@ -676,7 +709,7 @@ class QuarkCredentials {
 				. '://'
 				. gethostbyname($this->host)
 				. ':'
-				. (isset($this->port)
+				. ($this->port != 80
 					? $this->port
 					: (isset(self::$_ports[$this->protocol])
 						? self::$_ports[$this->protocol]
@@ -1044,6 +1077,9 @@ class QuarkView {
  * @package Quark
  */
 class QuarkModel {
+	const OPTION_EXTRACT = 'extract';
+	const OPTION_VALIDATE = 'validate';
+
 	/**
 	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate|IQuarkModelWithInputFilter $_model
 	 */
@@ -1180,7 +1216,7 @@ class QuarkModel {
 			$output->PopulateWith($model);
 		}
 
-		if (isset($options['extract']) && $options['extract'] == true)
+		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] == true)
 			$output = self::Extract($output);
 
 		return $output;
@@ -1211,10 +1247,10 @@ class QuarkModel {
 	 * @return bool
 	 */
 	private function _validate ($options = []) {
-		if (!isset($options['validate']))
-			$options['validate'] = true;
+		if (!isset($options[self::OPTION_VALIDATE]))
+			$options[self::OPTION_VALIDATE] = true;
 
-		if (!$options['validate']) return true;
+		if (!$options[self::OPTION_VALIDATE]) return true;
 
 		return $this->Validate();
 	}
@@ -2022,7 +2058,7 @@ class QuarkClient {
 		stream_context_set_option($stream, 'ssl', 'verify_host', false);
 		stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 
-		$socket = @stream_socket_client(
+		$socket = stream_socket_client(
 			$this->_credentials->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
