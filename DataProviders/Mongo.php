@@ -224,9 +224,9 @@ class Mongo implements IQuarkDataProvider {
 	 * @return IQuarkModel
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
-		if (!\MongoId::isValid($id)) return null;
-		
-		return $this->_collection($model, $options)->findOne(array(
+		/*if (!\MongoId::isValid($id)) return null;
+
+		*/return $this->_collection($model, $options)->findOne(array(
 			'_id' => Quark::ClassOf($id) == 'MongoId' ? $id : new \MongoId((string)$id)
 		), self::_fields($options), $options);
 	}
