@@ -155,8 +155,8 @@ Quark.UX = function (selector) {
 						top = height <= opt.min.height ? 0 : e.pageY;
 					}
 
-					if (width) startTarget.css('width', width + 'px');
-					if (height) startTarget.css('height', height + 'px');
+					if (width) startTarget.css('width', (width <= opt.min.width ? opt.min.width: width) + 'px');
+					if (height) startTarget.css('height', (height <= opt.min.height ? opt.min.height : height) + 'px');
 					if (left) startTarget.css('left', left + 'px');
 					if (top) startTarget.css('top', top + 'px');
 
