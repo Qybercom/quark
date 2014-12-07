@@ -281,8 +281,8 @@ class Quark {
 
 spl_autoload_extensions('.php');
 spl_autoload_register(function ($class) {
-	$quark = Quark::NormalizePath(__DIR__ . '/' . str_replace('Quark', '', $class) . '.php', false);
-	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . str_replace('Quark', '', $class) . '.php', false);
+	$quark = Quark::NormalizePath(__DIR__ . '/' . str_replace('Quark\\', '', $class) . '.php', false);
+	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . str_replace('Quark\\', '', $class) . '.php', false);
 	
 	$file = $quark;
 	
@@ -310,6 +310,11 @@ class QuarkConfig {
 	 * @var string
 	 */
 	private $_mode = Quark::MODE_DEV;
+
+	/**
+	 * @var array
+	 */
+	private $_extensions = array();
 
 	/**
 	 * @param string $mode
@@ -355,13 +360,23 @@ class QuarkConfig {
 
 	/**
 	 * @param IQuarkExtension $extension
+	 *
+	 * @return IQuarkExtension
 	 */
 	public function Extension (IQuarkExtension $extension) {
 		try {
 			if ($extension == null)
 				throw new QuarkArchException(' Provided extension in QuarkConfig is null');
 
+			$class = Quark::ClassOf($extension);
+
+			foreach ($this->_extensions as $i => $item)
+				if (Quark::ClassOf($item) == $class) return $item;
+
 			$extension->Init();
+			$this->_extensions[] = $extension;
+
+			return $extension;
 		}
 		catch (QuarkConnectionException $e) {
 			Quark::Log('Extension connection failure in \'' . Quark::ClassOf($extension) . '\' ' . $e->message, Quark::LOG_FATAL);
@@ -1016,24 +1031,6 @@ class QuarkView {
 	}
 
 	/**
-	 * @return string
-	 */
-	public static function UI () {
-		$out = '';
-
-		$css = __DIR__ . '/Quark.css';
-		$js = __DIR__ . '/Quark.js';
-
-		if (file_exists($css))
-			$out .= '<style type="text/css">' . file_get_contents($css) . '</style>';
-
-		if (file_exists($js))
-			$out .= '<script type="text/javascript">' . file_get_contents($js) . '</script>';
-
-		return $out;
-	}
-
-	/**
 	 * @param string $view
 	 * @param string $layout
 	 * @param array $vars
@@ -1125,6 +1122,16 @@ class QuarkModel {
 	 */
 	public function __set ($key, $value) {
 		$this->_model->$key = $value;
+	}
+
+	/**
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
+	 */
+	public function __call ($method, $args) {
+		return call_user_func_array(array($this->_model, $method), $args);
 	}
 
 	/**
@@ -2061,7 +2068,7 @@ class QuarkClient {
 		stream_context_set_option($stream, 'ssl', 'verify_host', false);
 		stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 
-		$socket = stream_socket_client(
+		$socket = @stream_socket_client(
 			$this->_credentials->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
