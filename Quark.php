@@ -1227,6 +1227,23 @@ class QuarkModel {
 		$class = get_class($model);
 		$model = new $class();
 
+		$buffer = array();
+		$item = null;
+
+		foreach ($raw as $i => $document) {
+			$item = $document;
+
+			var_dump('sd');
+			foreach ($document as $key => $value) {
+				var_dump($key . ' ' . gettype($value));
+				$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
+			}
+
+			$buffer[] = $item;
+		}
+
+		$raw = $buffer;
+
 		$output = new QuarkModel($model, $raw);
 
 		if ($model instanceof IQuarkModelWithAfterFind) {

@@ -188,23 +188,6 @@ class Mongo implements IQuarkDataProvider {
 		if (isset($options['skip']))
 			$raw->skip($options['skip']);
 
-		$buffer = array();
-		$item = null;
-
-		foreach ($raw as $i => $document) {
-			$item = $document;
-
-			var_dump('sd');
-			foreach ($document as $key => $value) {
-				var_dump($key . ' ' . gettype($value));
-				$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
-			}
-
-			$buffer[] = $item;
-		}
-
-		$raw = $buffer;
-
 		if (isset($options['getId']) && $options['getId'] == true) {
 			$buffer = array();
 			$item = null;
