@@ -170,6 +170,20 @@ class Mongo implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	private static function _record ($raw) {
+		$item = $raw;
+
+		foreach ($raw as $key => $value)
+			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
+
+		return $item;
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
@@ -188,21 +202,19 @@ class Mongo implements IQuarkDataProvider {
 		if (isset($options['skip']))
 			$raw->skip($options['skip']);
 
-		if (isset($options['getId']) && $options['getId'] == true) {
-			$buffer = array();
-			$item = null;
+		$buffer = array();
+		$item = null;
 
-			foreach ($raw as $i => $document) {
-				$item = $document;
+		foreach ($raw as $i => $document) {
+			$item = $document;
+
+			if (isset($options['getId']) && $options['getId'] == true)
 				$item->_id = $document->_id->{'$id'};
 
-				$buffer[] = $item;
-			}
-
-			$raw = $buffer;
+			$buffer[] = self::_record($item);
 		}
 
-		return $raw;
+		return $buffer;
 	}
 
 	/**
@@ -213,7 +225,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @return IQuarkModel
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		return $this->_collection($model, $options)->findOne($criteria, self::_fields($options)/*, $options*/);
+		return self::_record($this->_collection($model, $options)->findOne($criteria, self::_fields($options)/*, $options*/));
 	}
 
 	/**
@@ -226,9 +238,9 @@ class Mongo implements IQuarkDataProvider {
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		if (!\MongoId::isValid($id)) return null;
 
-		return $this->_collection($model, $options)->findOne(array(
+		return self::_record($this->_collection($model, $options)->findOne(array(
 			'_id' => Quark::ClassOf($id) == 'MongoId' ? $id : new \MongoId($id)
-		), self::_fields($options)/*, $options*/);
+		), self::_fields($options)/*, $options*/));
 	}
 
 	/**

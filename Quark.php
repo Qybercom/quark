@@ -1227,16 +1227,6 @@ class QuarkModel {
 		$class = get_class($model);
 		$model = new $class();
 
-		$item = null;
-
-		foreach ($raw as $key => $value) {
-			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
-
-			Quark::Log($key . ': ' . gettype($value));
-		}
-
-		$raw = $item;
-
 		$output = new QuarkModel($model, $raw);
 
 		if ($model instanceof IQuarkModelWithAfterFind) {
