@@ -180,8 +180,6 @@ class Mongo implements IQuarkDataProvider {
 		foreach ($raw as $key => $value)
 			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
 
-		var_dump($item);
-
 		return $item;
 	}
 
