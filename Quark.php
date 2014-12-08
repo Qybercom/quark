@@ -1229,8 +1229,12 @@ class QuarkModel {
 
 		$item = null;
 
-		foreach ($raw as $key => $value)
+		foreach ($raw as $key => $value) {
 			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
+
+			if (Quark::isAssoc($value))
+				Quark::Log('assoc: ' . $key);
+		}
 
 		$raw = $item;
 
