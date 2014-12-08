@@ -177,7 +177,7 @@ class Quark {
 	 * @return bool
 	 */
 	public static function isAssoc ($source) {
-		self::Log('assoc: ' . (is_array($source) && !is_numeric(implode(array_keys($source)) ? 'yes' : 'no')));
+		self::Log('assoc: ' . (is_array($source) && !is_int(implode(array_keys($source)) ? 'yes' : 'no')));
 		return is_array($source) && !is_numeric(implode(array_keys($source)));
 	}
 
