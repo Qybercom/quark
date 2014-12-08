@@ -172,6 +172,15 @@ class Quark {
 	}
 
 	/**
+	 * @param $source
+	 *
+	 * @return bool
+	 */
+	public static function isAssoc ($source) {
+		return is_array($source) && is_numeric(implode(array_keys($source)));
+	}
+
+	/**
 	 * @param $path
 	 * @param $endSlash
 	 * @return string
