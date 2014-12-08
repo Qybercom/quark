@@ -1227,19 +1227,12 @@ class QuarkModel {
 		$class = get_class($model);
 		$model = new $class();
 
-		$buffer = array();
 		$item = null;
 
-		foreach ($raw as $i => $document) {
-			$item = $document;
+		foreach ($raw as $key => $value)
+			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
 
-			foreach ($document as $key => $value)
-				$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
-
-			$buffer[] = $item;
-		}
-
-		$raw = $buffer;
+		$raw = $item;
 
 		$output = new QuarkModel($model, $raw);
 
