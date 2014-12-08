@@ -196,7 +196,10 @@ class Mongo implements IQuarkDataProvider {
 				$item = $document;
 				$item->_id = $document->_id->{'$id'};
 
-				$buffer[] = Quark::isAssoc($item) ? Quark::ToObject($item) : $item;
+				foreach ($document as $key => $value)
+					$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
+
+				$buffer[] = $item;
 			}
 
 			$raw = $buffer;
