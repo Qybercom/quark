@@ -112,6 +112,7 @@ Quark.UX = function (selector) {
 
 		that.Elem.each(function () {
 			var target = $(this),
+				parent = null,
 				handle = new Quark.CX.Mouse(opt.handle),
 				dimension = {x: 0, y: 0},
 				offset = {x: 0, y: 0},
@@ -129,6 +130,7 @@ Quark.UX = function (selector) {
 
 				start: function (e) {
 					startTarget = (opt.handle ? $(e.target).parent(target) : $(e.target));
+					parent = startTarget.parent().position();
 
 					startDimension.x = startTarget.width();
 					startDimension.y = startTarget.height();
@@ -144,7 +146,7 @@ Quark.UX = function (selector) {
 
 					if (direction.w) {
 						width = startDimension.x - offset.x;
-						left = width <= opt.min.width ? 0 : e.pageX;
+						left = width <= opt.min.width ? 0 : e.pageX - parent.left;
 					}
 
 					if (direction.s)
@@ -152,7 +154,7 @@ Quark.UX = function (selector) {
 
 					if (direction.n) {
 						height = startDimension.y - offset.y;
-						top = height <= opt.min.height ? 0 : e.pageY;
+						top = height <= opt.min.height ? 0 : e.pageY - parent.top;
 					}
 
 					if (width) startTarget.css('width', (width <= opt.min.width ? opt.min.width: width) + 'px');
