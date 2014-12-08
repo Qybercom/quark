@@ -177,7 +177,7 @@ class Quark {
 	 * @return bool
 	 */
 	public static function isAssoc ($source) {
-		return is_array($source) && array_merge($source) === $source && is_numeric(implode(array_keys($source)));
+		return is_array($source) && is_numeric(implode(array_keys($source)));
 	}
 
 	/**
