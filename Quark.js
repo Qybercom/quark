@@ -319,3 +319,14 @@ Quark.Chart = function (selector, data) {
 
 	};
 };
+
+
+Quark.Select = function (selector) {
+	var that = this;
+
+	that.Elem = $(selector);
+
+	that.Elem.each(function () {
+
+	});
+};

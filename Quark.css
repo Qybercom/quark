@@ -196,3 +196,23 @@ body {
     font-size: 12px;
     font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
 }
+
+.qui-input.select {
+    display: inline-block;
+}
+
+.qui-input.select .option {
+    display: none;
+    font-size: 12px;
+    border: 1px solid rgb(230, 230, 230);
+    min-width: 50px;
+}
+
+.qui-input.select .option:first-child {
+    display: inline-block;
+}
+
+.qui-input.select:active .option {
+    display: block;
+    margin-top: -32px;
+}

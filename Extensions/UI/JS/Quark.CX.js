@@ -60,6 +60,8 @@ Quark.CX.Mouse = function (selector) {
 		$(document).on('mousedown', that.Elem, function (e) {
 			target = $(e.target);
 
+			if (!that.Elem.is(target)) return true;
+
 			if (opt.handle != false && !target.is(opt.handle)) return true;
 			if (target.is(opt.cancel)) return false;
 
