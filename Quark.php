@@ -1236,7 +1236,7 @@ class QuarkModel {
 		}
 
 		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] == true)
-			$output = self::Extract($output);
+			$output = $output->Extract();
 
 		return $output;
 	}
@@ -1277,31 +1277,33 @@ class QuarkModel {
 	/**
 	 * @param $source
 	 *
-	 * @return array|null|\StdClass
+	 * @return array
 	 */
-	public static function Extract ($source) {
-		if (is_array($source)) {
-			$output = array();
+	public static function ExtractFrom ($source = []) {
+		if (!is_array($source)) return array();
 
-			foreach ($source as $i => $item)
-				$output[] = self::Extract($item);
+		$output = array();
 
-			return $output;
-		}
-		else {
-			if (!($source instanceof QuarkModel)) return null;
+		foreach ($source as $i => $item)
+			if ($item instanceof QuarkModel)
+				$output[] = $item->Extract();
 
-			$output = new \StdClass();
-			$item = $source->Model();
+		return $output;
+	}
 
-			if ($item instanceof IQuarkModelWithBeforeExtract)
-				$item->BeforeExtract();
+	/**
+	 * @return \StdClass
+	 */
+	public function Extract () {
+		$output = new \StdClass();
 
-			foreach ($item as $key => $value)
-				$output->$key = $value;
+		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
+			$this->_model->BeforeExtract();
 
-			return $output;
-		}
+		foreach ($this->_model as $key => $value)
+			$output->$key = $value;
+
+		return $output;
 	}
 
 	/**
