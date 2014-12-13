@@ -16,7 +16,8 @@ class QuarkSource {
 		'(',')','{','}','[',']',
 		'-','+','*','/',
 		'>','<','>=','<=','!=','==',
-		'=','=>','->'
+		'=','=>','->',
+		'&&', '||'
 	);
 
 	/**
@@ -103,6 +104,7 @@ class QuarkSource {
 	 */
 	public function Obfuscate ($css = false) {
 		$this->_source = preg_replace('#\/\*(.*)\*\/#Uis', '', $this->_source);
+		$this->_source = preg_replace('#\/\/(.*)\\r\\n#Uis', '', $this->_source);
 		$this->_source = str_replace("\r\n", '', $this->_source);
 		$this->_source = preg_replace('/\s+/', ' ', $this->_source);
 		$this->_source = trim(str_replace('<?phpn', '<?php n', $this->_source));
