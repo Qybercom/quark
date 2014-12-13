@@ -1093,6 +1093,8 @@ class QuarkModel {
 	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate|IQuarkModelWithInputFilter $_model
 	 */
 	private $_model;
+	private $_null = null;
+
 	public $sign = '';
 
 	/**
@@ -1119,7 +1121,10 @@ class QuarkModel {
 
 			Quark::Log('QuarkModel: Undefined property "' . $key . '" in model ' . Quark::ClassOf($this->_model), Quark::LOG_WARN);
 
-			return null;
+			/**
+			 * Solution for support same behavior of passing by reference a null model property
+			 */
+			return $this->_null;
 		}
 
 		return $this->_model->$key;
