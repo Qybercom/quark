@@ -199,20 +199,21 @@ body {
 
 .qui-input.select {
     display: inline-block;
+    min-width: 100px;
+    cursor: pointer;
+    background: white;
 }
 
-.qui-input.select .option {
+.qui-tool-group {
     display: none;
-    font-size: 12px;
+    position: absolute;
+    z-index: 10;
+    background: white;
+    min-width: 100px;
+    min-height: 16px;
+    padding: 5px;
+    margin-left: -3px;
     border: 1px solid rgb(230, 230, 230);
-    min-width: 50px;
-}
-
-.qui-input.select .option:first-child {
-    display: inline-block;
-}
-
-.qui-input.select:active .option {
-    display: block;
-    margin-top: -32px;
+    border-top: 0px;
+    /*line-height: 24px;*/
 }
