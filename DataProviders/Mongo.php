@@ -175,6 +175,8 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	private static function _record ($raw) {
+		if (!is_array($raw) && !is_object($raw)) return null;
+
 		$item = new \StdClass();
 
 		foreach ($raw as $key => $value)

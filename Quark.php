@@ -145,7 +145,7 @@ class Quark {
 			$backbone = self::ToObject($backbone);
 
 			foreach ($backbone as $key => $value)
-				if (!isset($output->$key))
+				if (empty($output->$key))
 					$output->$key = $value;
 		}
 
@@ -1095,8 +1095,6 @@ class QuarkModel {
 	private $_model;
 	private $_null = null;
 
-	public $sign = '';
-
 	/**
 	 * @param IQuarkModel $model
 	 * @param mixed       $source
@@ -1159,6 +1157,8 @@ class QuarkModel {
 	 * @return bool
 	 */
 	public function Validate () {
+		if ($this->_model instanceof IQuarkModelWithBeforeValidate && $this->_model->BeforeValidate() === false) return false;
+
 		return QuarkField::Rules($this->_model->Rules());
 	}
 
@@ -1183,7 +1183,7 @@ class QuarkModel {
 		foreach ($source as $key => $value)
 			$raw->$key = $value;
 
-		$output = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforePopulate')
+		$output = $this->_model instanceof IQuarkModelWithBeforePopulate
 			? $this->_model->BeforePopulate($raw)
 			: $source;
 
@@ -1191,7 +1191,7 @@ class QuarkModel {
 		if ($output === null) $output = $source;
 
 		foreach ($output as $key => $value)
-			$this->_model->$key = $value;
+			$this->_model->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
 
 		$this->Canonize();
 
@@ -1247,22 +1247,52 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param IQuarkModel|IQuarkModelWithInputFilter|IQuarkStrongModel $model
+	 * @param IQuarkModel|IQuarkStrongModel $model
 	 *
 	 * @return object
 	 */
 	private static function _canonize ($model) {
-		if (!Quark::is($model, 'Quark\\IQuarkStrongModel')) return $model;
+		if (!($model instanceof IQuarkStrongModel)) return $model;
 
 		$class = get_class($model);
 		$output = new $class();
 		$fields = $model->Fields();
 
 		if (is_array($fields))
-			foreach($fields as $key => $format)
-				$output->$key = isset($model->$key) ? $model->$key : $format;
+			$output = self::_tree($output, $fields, $model);
 
 		return $output;
+	}
+
+	/**
+	 * @param $model
+	 * @param $fields
+	 * @param $defaults
+	 *
+	 * @return mixed
+	 */
+	private static function _tree ($model, $fields, $defaults = null) {
+		$value = null;
+		$def = null;
+		$model = Quark::ToObject($model);
+		$defaults = Quark::ToObject($defaults);
+
+		foreach($fields as $key => $format) {
+			$value = !empty($model->$key) ? $model->$key : $format;
+			$def = !empty($defaults->$key) ? $defaults->$key : $value;
+
+			$model->$key = Quark::isAssoc($format)
+				? self::_tree($format, $value, $def)
+				: ($format instanceof IQuarkModel
+					? ($def instanceof QuarkModel
+						? $def->Model()
+						: new QuarkModel($format, $def)
+					)
+					: $def
+				);
+			}
+
+		return $model;
 	}
 
 	/**
@@ -1318,7 +1348,7 @@ class QuarkModel {
 	public function Create ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeCreate')
+		$ok = $this->_model instanceof IQuarkModelWithBeforeCreate
 			? $this->_model->BeforeCreate($options)
 			: true;
 
@@ -1332,7 +1362,7 @@ class QuarkModel {
 	public function Save ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeSave')
+		$ok = $this->_model instanceof IQuarkModelWithBeforeSave
 			? $this->_model->BeforeSave($options)
 			: true;
 
@@ -1344,7 +1374,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		$ok = Quark::is($this->_model, 'Quark\IQuarkModelWithBeforeRemove')
+		$ok = $this->_model instanceof IQuarkModelWithBeforeRemove
 			? $this->_model->BeforeRemove($options)
 			: true;
 
@@ -1643,6 +1673,17 @@ interface IQuarkModelWithBeforePopulate {
 	function BeforePopulate($source);
 }
 
+/**
+ * Interface IQuarkModelWithBeforeValidate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeValidate {
+	/**
+	 * @return mixed
+	 */
+	function BeforeValidate();
+}
 
 
 
@@ -1651,6 +1692,18 @@ interface IQuarkModelWithBeforePopulate {
  * @package Quark
  */
 class QuarkField {
+	/**
+	 * @param      $key
+	 * @param bool $nullable
+	 *
+	 * @return bool
+	 */
+	public static function Valid ($key, $nullable = false) {
+		if ($nullable && $key === null) return true;
+
+		return $key instanceof QuarkModel ? $key->Validate() : false;
+	}
+
 	/**
 	 * @param $key
 	 * @param $value
@@ -1666,16 +1719,31 @@ class QuarkField {
 	}
 
 	/**
-	 * @param $key
-	 * @param $value
+	 * @param      $key
+	 * @param      $value
 	 * @param bool $sever
 	 * @param bool $nullable
+	 *
 	 * @return bool
 	 */
 	public static function Eq ($key, $value, $sever = false, $nullable = false) {
 		if ($nullable && $key === null) return true;
 
 		return $sever ? $key === $value : $key == $value;
+	}
+
+	/**
+	 * @param      $key
+	 * @param      $value
+	 * @param bool $sever
+	 * @param bool $nullable
+	 *
+	 * @return bool
+	 */
+	public static function Ne ($key, $value, $sever = false, $nullable = false) {
+		if ($nullable && $key === null) return true;
+
+		return $sever ? $key !== $value : $key != $value;
 	}
 
 	/**

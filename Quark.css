@@ -195,6 +195,7 @@ body {
     border-radius: 3px;
     font-size: 12px;
     font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
+    margin-bottom: 1px;
 }
 
 .qui-input.select {
