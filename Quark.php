@@ -1247,7 +1247,7 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param IQuarkModel|IQuarkStrongModel $model
+	 * @param IQuarkModel|IQuarkStrongModel|IQuarkModelWithOnCanonize $model
 	 *
 	 * @return object
 	 */
@@ -1258,8 +1258,18 @@ class QuarkModel {
 		$output = new $class();
 		$fields = $model->Fields();
 
+		if ($model instanceof IQuarkModelWithOnCanonize) {
+			$reaction = $model->OnCanonize();
+
+			if ($reaction)
+				$fields = $reaction;
+
+			if ($reaction === false)
+				return $model;
+		}
+
 		if (is_array($fields))
-			$output = self::_tree($output, $fields, $model);
+			$output = self::_tree_canon($output, $fields, $model);
 
 		return $output;
 	}
@@ -1271,7 +1281,7 @@ class QuarkModel {
 	 *
 	 * @return mixed
 	 */
-	private static function _tree ($model, $fields, $defaults = null) {
+	private static function _tree_canon ($model, $fields, $defaults = null) {
 		$value = null;
 		$def = null;
 		$model = Quark::ToObject($model);
@@ -1282,7 +1292,7 @@ class QuarkModel {
 			$def = !empty($defaults->$key) ? $defaults->$key : $value;
 
 			$model->$key = Quark::isAssoc($format)
-				? self::_tree($format, $value, $def)
+				? self::_tree_canon($format, $value, $def)
 				: ($format instanceof IQuarkModel
 					? ($def instanceof QuarkModel
 						? $def->Model()
@@ -1330,13 +1340,25 @@ class QuarkModel {
 	 * @return \StdClass
 	 */
 	public function Extract () {
-		$output = new \StdClass();
-
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
 
-		foreach ($this->_model as $key => $value)
-			$output->$key = $value;
+		return self::_tree_extract($this->_model);
+	}
+
+	/**
+	 * @param $model
+	 *
+	 * @return \StdClass
+	 */
+	private static function _tree_extract ($model) {
+		$output = new \StdClass();
+
+		foreach ($model as $key => $value) {
+			if ($value instanceof QuarkModel) $output->$key = $value->Extract();
+			elseif ($value instanceof \StdClass) $output->$key = self::_tree_extract($value);
+			else $output->$key = $value;
+		}
 
 		return $output;
 	}
@@ -1683,6 +1705,18 @@ interface IQuarkModelWithBeforeValidate {
 	 * @return mixed
 	 */
 	function BeforeValidate();
+}
+
+/**
+ * Interface IQuarkModelWithOnCanonize
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithOnCanonize extends IQuarkStrongModel {
+	/**
+	 * @return mixed
+	 */
+	function OnCanonize();
 }
 
 
