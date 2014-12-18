@@ -1698,30 +1698,16 @@ class QuarkModel {
 			$value = !empty($model->$key) ? $model->$key : $format;
 			$def = !empty($defaults->$key) ? $defaults->$key : $value;
 
-			if (is_array($format)) {
-				if (Quark::isAssoc($format))
-					$model->$key = self::_tree_canon($format, $value, $def);
-				else {
-					$items = array();
-					$i = 0;
-					$size = sizeof($value);
-
-					while ($i < $size) {
-						$items[] = self::_tree_canon($format, $value[$i], isset($def[0]) ? $def[0] : null);
-
-						$i++;
-					}
-
-					$model->$key = $items;
-				}
-			}
-			else $model->$key = $format instanceof IQuarkModel
-				? ($def instanceof QuarkModel
-					? $def->Model()
-					: new QuarkModel($format, $def)
-				)
-				: $def;
-			}
+			$model->$key = Quark::isAssoc($format)
+				? self::_tree_canon($format, $value, $def)
+				: ($format instanceof IQuarkModel
+					? ($def instanceof QuarkModel
+						? $def->Model()
+						: new QuarkModel($format, $def)
+					)
+					: $def
+				);
+		}
 
 		return $model;
 	}
