@@ -1810,7 +1810,7 @@ class QuarkModel {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
-	 * @return mixed
+	 * @return array
 	 */
 	public static function Find (IQuarkModel $model, $criteria = [], $options = []) {
 		$records = array();
@@ -1829,7 +1829,7 @@ class QuarkModel {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
-	 * @return mixed
+	 * @return QuarkModel|null
 	 */
 	public static function FindOne (IQuarkModel $model, $criteria = [], $options = []) {
 		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options);
@@ -1839,7 +1839,7 @@ class QuarkModel {
 	 * @param IQuarkModel $model
 	 * @param $id
 	 * @param $options
-	 * @return mixed
+	 * @return QuarkModel|null
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options);

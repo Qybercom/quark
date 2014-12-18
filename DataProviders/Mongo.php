@@ -131,6 +131,8 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
+		unset($model->_id);
+
 		return $this->_collection($model, $options)->insert($model, $options);
 	}
 
