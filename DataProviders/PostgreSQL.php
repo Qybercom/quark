@@ -4,24 +4,16 @@ namespace Quark\DataProviders;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
-use Quark\Quark;
 use Quark\QuarkCredentials;
+
 use Quark\QuarkArchException;
-use Quark\QuarkConnectionException;
 
 /**
- * Class FileSystem
+ * Class PostgreSQL
  *
  * @package Quark\DataProviders
  */
-class FileSystem implements IQuarkDataProvider {
-	const PROTOCOL = 'file://';
-	const OPTIONS_UPSTREAM = 'upstream';
-	const OPTIONS_SORT_BY_TYPE = 'sortByType';
-	const OPTIONS_SORT_BY_NAME = 'sortByName';
-	const OPTIONS_SORT_BY_EXTENSION = 'sortByExtension';
-
-	private $_root = '';
+class PostgreSQL implements IQuarkDataProvider {
 	private static $_pool = array();
 
 	/**
@@ -39,7 +31,7 @@ class FileSystem implements IQuarkDataProvider {
 	 */
 	public static function SourceGet ($name) {
 		if (!isset(self::$_pool[$name]))
-			throw new QuarkArchException('FileSystem connection \'' . $name . '\' is not pooled');
+			throw new QuarkArchException('PostgreSQL connection \'' . $name . '\' is not pooled');
 
 		return self::$_pool[$name];
 	}
@@ -49,7 +41,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @param QuarkCredentials $credentials
 	 */
 	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new FileSystem();
+		self::$_pool[$name] = new Mongo();
 		self::$_pool[$name]->Connect($credentials);
 	}
 
@@ -60,16 +52,6 @@ class FileSystem implements IQuarkDataProvider {
 	public function Source ($name, QuarkCredentials $credentials) {
 		$this->Connect($credentials);
 		self::$_pool[$name] = $this;
-	}
-
-	/**
-	 * @param QuarkCredentials $credentials
-	 *
-	 * @return mixed|void
-	 * @throws QuarkConnectionException
-	 */
-	public function Connect (QuarkCredentials $credentials) {
-		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $credentials->uri()))));
 	}
 
 	/**
@@ -102,59 +84,11 @@ class FileSystem implements IQuarkDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $criteria
-	 * @param array $options
 	 *
 	 * @return array
 	 */
-	public function Find (IQuarkModel $model, $criteria, $options = []) {
-		$buffer = array();
-
-		$raw = scandir($this->_root);
-
-		if (!isset($options[self::OPTIONS_UPSTREAM]))
-			$options[self::OPTIONS_UPSTREAM] = false;
-
-		if ($options[self::OPTIONS_UPSTREAM] == false)
-			foreach ($raw as $i => $item) {
-				if ($item == '.' || $item == '..') continue;
-
-				$buffer[] = $item;
-			}
-
-		if (isset($options[self::OPTIONS_SORT_BY_NAME]))
-			sort($buffer, $options[self::OPTIONS_SORT_BY_NAME]);
-
-		if (isset($options[self::OPTIONS_SORT_BY_TYPE])) {
-			$fs = array();
-
-			foreach ($buffer as $i => $entry)
-				if (is_dir($this->_root . $entry)) $fs[] = $entry;
-
-			foreach ($buffer as $i => $entry)
-				if (is_file($this->_root . $entry)) $fs[] = $entry;
-
-			$buffer = $fs;
-		}
-
-		$output = array();
-		$target = '';
-		$isDir = false;
-
-		\clearstatcache();
-
-		foreach ($buffer as $i => $file) {
-			$target = $this->_root . $file;
-			$isDir = is_dir($target);
-
-			$output[] = array(
-				'name' => $file,
-				'isDir' => $isDir,
-				'fullPath' => $target,
-				'size' => $isDir ? '' : filesize($target)
-			);
-		}
-
-		return $output;
+	public function Find (IQuarkModel $model, $criteria) {
+		// TODO: Implement Find() method.
 	}
 
 	/**

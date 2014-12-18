@@ -2,7 +2,8 @@
 namespace Quark\Extensions\UI;
 
 use Quark\IQuarkExtension;
-use Quark\Tools\QuarkSource;
+
+use Quark\QuarkSource;
 
 /**
  * Class Resource
@@ -53,8 +54,8 @@ class Resource implements IQuarkExtension {
 	/**
 	 * @return Resource
 	 */
-	public function JS_CX () {
-		$this->JS(__DIR__ . '/JS/Quark.CX.js');
+	public function JS_IO () {
+		$this->JS(__DIR__ . '/../../ViewResources/Quark/JS/Quark.IO.js');
 
 		return $this;
 	}
@@ -63,8 +64,8 @@ class Resource implements IQuarkExtension {
 	 * @return Resource
 	 */
 	public function JS_UX () {
-		$this->JS_CX();
-		$this->JS(__DIR__ . '/JS/Quark.UX.js');
+		$this->JS_IO();
+		$this->JS(__DIR__ . '/../../ViewResources/Quark/JS/Quark.UX.js');
 
 		return $this;
 	}

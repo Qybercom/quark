@@ -199,6 +199,14 @@ class Quark {
 	}
 
 	/**
+	 * @param string $file
+	 * @return string
+	 */
+	public static function FileExtension ($file) {
+		return array_reverse(explode('.', $file))[0];
+	}
+
+	/**
 	 * @param array $source
 	 *
 	 * Algorithm got from http://php.net/manual/en/function.getallheaders.php#84262 and adopted for Quark infrastructure
@@ -290,8 +298,12 @@ class Quark {
 
 spl_autoload_extensions('.php');
 spl_autoload_register(function ($class) {
-	$quark = Quark::NormalizePath(__DIR__ . '/' . str_replace('Quark\\', '', $class) . '.php', false);
-	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . str_replace('Quark\\', '', $class) . '.php', false);
+	$safe = sha1($class);
+
+	$class = str_replace($safe , '\\Quark\\', str_replace('Quark\\', '', str_replace('\\Quark\\', $safe, $class)));
+
+	$quark = Quark::NormalizePath(__DIR__ . '/' . $class . '.php', false);
+	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . $class . '.php', false);
 	
 	$file = $quark;
 	
@@ -1004,50 +1016,202 @@ interface IQuarkServiceWithAccessControl {
  * @package Quark
  */
 class QuarkView {
-	private $_view = '';
+	/**
+	 * @var IQuarkViewModel|null
+	 */
+	private $_view = null;
+	private $_file = '';
 	private $_vars = array();
+	private $_resources = array();
+
+	private $_null = null;
 
 	/**
-	 * @param        $name
-	 * @param array  $vars
+	 * @param IQuarkViewModel $view
+	 * @param array $vars
+	 * @param array $resources
+	 *
 	 * @throws QuarkArchException
 	 */
-	public function __construct ($name, $vars = []) {
-		if (!is_string($name))
-			throw new QuarkArchException('Provided view name is not a string');
+	public function __construct (IQuarkViewModel $view, $vars = [], $resources = []) {
+		$this->_view = $view;
+		$this->_file = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . Quark::PATH_VIEWS . '/' . $this->_view->View() . '.php', false);
 
-		$this->_view = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . Quark::PATH_VIEWS . '/' . $name . '.php', false);
-
-		if (!is_file($this->_view))
-			throw new QuarkArchException('Unknown view file ' . $this->_view);
+		if (!is_file($this->_file))
+			throw new QuarkArchException('Unknown view file ' . $this->_file);
 
 		$this->Vars($vars);
+
+		$this->_resources = $resources;
 	}
 
 	/**
-	 * @param       $name
-	 * @param array $vars
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function &__get ($key) {
+		if (!isset($this->_view->$key)) {
+			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array(
+				'view' => $this->_view
+			));
+
+			Quark::Log('QuarkView: Undefined property "' . $key . '" in view ' . Quark::ClassOf($this->_view), Quark::LOG_WARN);
+
+			/**
+			 * Solution for support same behavior of passing by reference a null model property
+			 */
+			return $this->_null;
+		}
+
+		return $this->_view->$key;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	public function __set ($key, $value) {
+		$this->_view->$key = $value;
+	}
+
+	/**
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
+	 */
+	public function __call ($method, $args) {
+		return call_user_func_array(array($this->_view, $method), $args);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Resources () {
+		$out = '';
+		$type = null;
+		$res = null;
+		$location = '';
+		$content = '';
+
+		$this->ResourceList();
+
+		/**
+		 * @var IQuarkViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource $resource
+		 */
+		foreach ($this->_resources as $i => $resource) {
+			$type = $resource->Type();
+
+			if (!($type instanceof IQuarkViewResourceType)) continue;
+
+			$location = $resource->Location();
+			$content = '';
+
+			if ($resource instanceof IQuarkForeignViewResource) { }
+
+			if ($resource instanceof IQuarkLocalViewResource) {
+				$res = QuarkSource::FromFile($location);
+
+				if ($resource->CacheControl())
+					$res->Obfuscate(true);
+
+				$content = $res->Source();
+
+				$location = '';
+			}
+
+			$out .= $type->Container($location, $content);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function ResourceList () {
+		if (!($this->_view instanceof IQuarkViewModelWithResources)) return $this->_resources;
+
+		$resources = $this->_view->Resources();
+
+		foreach ($resources as $i => $resource)
+			$this->_resource($resource);
+
+		return $this->_resources;
+	}
+
+	/**
+	 * @param IQuarkViewResource $resource
 	 *
 	 * @return QuarkView
 	 */
-	public function Layout ($name, $vars = []) {
-		$layout = new QuarkView($name, $vars);
-		$layout->Vars(array(
+	private function _resource (IQuarkViewResource $resource) {
+		if ($resource instanceof IQuarkViewResourceWithDependencies) {
+			$resources = $resource->Dependencies();
+
+			/**
+			 * @var IQuarkViewResource $dependency
+			 */
+			foreach ($resources as $i => $dependency) {
+				if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
+				if ($this->_resource_loaded($dependency)) continue;
+
+				$this->_resources[] = $dependency;
+			}
+		}
+
+		if (!$this->_resource_loaded($resource))
+			$this->_resources[] = $resource;
+
+		return $this;
+	}
+
+	/**
+	 * @param IQuarkViewResource $dependency
+	 *
+	 * @return bool
+	 */
+	private function _resource_loaded (IQuarkViewResource $dependency) {
+		$class = get_class($dependency);
+		$location = $dependency->Location();
+
+		/**
+		 * @var IQuarkViewResource $resource
+		 */
+		foreach ($this->_resources as $i => $resource)
+			if (get_class($resource) == $class && $resource->Location() == $location) return true;
+
+		return false;
+	}
+
+	/**
+	 * @param IQuarkViewModel $view
+	 * @param array $vars
+	 * @param array $resources
+	 *
+	 * @return QuarkView
+	 */
+	public function Layout (IQuarkViewModel $view, $vars = [], $resources = []) {
+		$view = new QuarkView($view, $vars, $resources);
+		$view->Vars(array(
 			'view' => $this->Compile()
 		));
 
-		return $layout;
+		return $view;
 	}
 
 	/**
-	 * @param string $view
-	 * @param string $layout
+	 * @param IQuarkViewModel $view
+	 * @param IQuarkViewModel $layout
 	 * @param array $vars
 	 *
 	 * @return QuarkView
 	 */
-	public static function InLayout ($view, $layout, $vars = []) {
-		return (new QuarkView($view, $vars))->Layout($layout, $vars);
+	public static function InLayout (IQuarkViewModel $view, IQuarkViewModel $layout, $vars = []) {
+		$inline = new QuarkView($view, $vars);
+
+		return $inline->Layout($layout, $vars, $inline->ResourceList());
 	}
 
 	/**
@@ -1074,8 +1238,247 @@ class QuarkView {
 			$$name = $value;
 
 		ob_start();
-		include $this->_view;
+		include $this->_file;
 		return ob_get_clean();
+	}
+}
+
+/**
+ * Interface IQuarkViewModel
+ *
+ * @package Quark
+ */
+interface IQuarkViewModel {
+	/**
+	 * @return string
+	 */
+	function View();
+}
+
+/**
+ * Interface IQuarkViewModelWithResources
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelWithResources extends IQuarkViewModel {
+	/**
+	 * @return array
+	 */
+	function Resources();
+}
+
+/**
+ * Interface IQuarkViewModelWithCachedResources
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelWithCachedResources extends IQuarkViewModel {
+	/**
+	 * @return array
+	 */
+	function CachedResources();
+}
+
+/**
+ * Interface IQuarkViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkViewResource {
+	/**
+	 * @return string
+	 */
+	function Location();
+
+	/**
+	 * @return string
+	 */
+	function Type();
+}
+
+/**
+ * Interface IQuarkViewResourceWithDependencies
+ *
+ * @package Quark
+ */
+interface IQuarkViewResourceWithDependencies {
+	/**
+	 * @return array
+	 */
+	function Dependencies();
+}
+
+/**
+ * Interface IQuarkLocalViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkLocalViewResource {
+	/**
+	 * @return bool
+	 */
+	function CacheControl();
+}
+
+/**
+ * Interface IQuarkForeignViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkForeignViewResource {
+	/**
+	 * @return QuarkDTO
+	 */
+	function RequestDTO();
+}
+
+/**
+ * Class QuarkProjectViewResource
+ *
+ * @package Quark
+ */
+class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewResource {
+	/**
+	 * @var string
+	 */
+	private $_type = '';
+	private $_location = '';
+
+	/**
+	 * @param string $location
+	 * @param IQuarkViewResourceType $type
+	 */
+	public function __construct ($location, IQuarkViewResourceType $type) {
+		$this->_location = $location;
+		$this->_type = $type;
+	}
+
+	/**
+	 * @return IQuarkViewResourceType
+	 */
+	public function Type () {
+		return $this->_type;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return $this->_location;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
+	}
+}
+
+/**
+ * Class QuarkLocalCoreJSViewResource
+ *
+ * @package Quark
+ */
+class QuarkLocalCoreJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource {
+	/**
+	 * @return IQuarkViewResourceType
+	 */
+	public function Type () {
+		return new QuarkJSViewResourceType();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return __DIR__ . '/Quark.js';
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
+	}
+}
+
+/**
+ * Class QuarkLocalCoreCSSViewResource
+ *
+ * @package Quark
+ */
+class QuarkLocalCoreCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource {
+	/**
+	 * @return IQuarkViewResourceType
+	 */
+	public function Type () {
+		return new QuarkCSSViewResourceType();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return __DIR__ . '/Quark.css';
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
+	}
+}
+
+/**
+ * Interface IQuarkViewResourceType
+ *
+ * @package Quark
+ */
+interface IQuarkViewResourceType {
+	/**
+	 * @param $location
+	 * @param $content
+	 *
+	 * @return string
+	 */
+	function Container($location, $content);
+}
+
+/**
+ * Class QuarkCSSViewResourceType
+ *
+ * @package Quark
+ */
+class QuarkCSSViewResourceType implements IQuarkViewResourceType {
+	/**
+	 * @param $location
+	 * @param $content
+	 *
+	 * @return string
+	 */
+	public function Container ($location, $content) {
+		return strlen($location) != 0
+			? '<link rel="stylesheet" type="text/css" href="' . $location . '" />'
+			: '<style type="text/css">' . $content . '</style>';
+	}
+}
+
+/**
+ * Class QuarkJSViewResourceType
+ *
+ * @package Quark
+ */
+class QuarkJSViewResourceType implements IQuarkViewResourceType {
+	/**
+	 * @param $location
+	 * @param $content
+	 *
+	 * @return string
+	 */
+	public function Container ($location, $content) {
+		return '<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
 	}
 }
 
@@ -1090,7 +1493,7 @@ class QuarkModel {
 	const OPTION_VALIDATE = 'validate';
 
 	/**
-	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate|IQuarkModelWithInputFilter $_model
+	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate $_model
 	 */
 	private $_model;
 	private $_null = null;
@@ -3106,5 +3509,152 @@ class QuarkCertificate {
 		$this->_content = implode($pem);
 
 		return $pem;
+	}
+}
+
+/**
+ * Class QuarkSource
+ *
+ * @package Quark\Tools
+ */
+class QuarkSource {
+	private $_location = '';
+	private $_type = '';
+	private $_source = '';
+	private $_size = 0;
+
+	private $_trim = array(
+		'.',',',';','\'','?',':',
+		'(',')','{','}','[',']',
+		'-','+','*','/',
+		'>','<','>=','<=','!=','==',
+		'=','=>','->',
+		'&&', '||'
+	);
+
+	/**
+	 * @param string $source
+	 */
+	public function __construct ($source = '') {
+		$this->Load($source);
+	}
+
+	/**
+	 * @param $file
+	 *
+	 * @return QuarkSource
+	 * @throws QuarkArchException
+	 */
+	public static function FromFile ($file) {
+		$source = new self();
+
+		if (!$source->Load($file))
+			throw new QuarkArchException('There is no source file at ' . (string)$file);
+
+		return $source;
+	}
+
+	/**
+	 * @param $source
+	 *
+	 * @return bool
+	 */
+	public function Load ($source) {
+		if (!is_file($source)) return false;
+
+		$this->_location = $source;
+		$this->_type = Quark::FileExtension($source);
+		$this->_source = file_get_contents($source);
+		$this->_size();
+
+		return true;
+	}
+
+	/**
+	 * @param $destination
+	 *
+	 * @return bool
+	 */
+	public function Save ($destination) {
+		if (!is_file($destination)) return false;
+
+		file_put_contents($destination, $this->_source);
+		return true;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return $this->_location;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Type () {
+		return $this->_type;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Source () {
+		return $this->_source;
+	}
+
+	/**
+	 * @return float|int
+	 */
+	public function Size () {
+		return $this->_size;
+	}
+
+	/**
+	 * @param string $dim
+	 * @param int    $precision
+	 */
+	private function _size ($dim = 'k', $precision = 3) {
+		$size = strlen($this->_source);
+
+		switch ($dim) {
+			default: break;
+			case 'b': break;
+			case 'k': $size = $size / 1024; break;
+			case 'm': $size = $size / 1024 / 1024; break;
+			case 'g': $size = $size / 1024 / 1024 / 1024; break;
+			case 't': $size = $size / 1024 / 1024 / 1024 / 1024; break;
+		}
+
+		if ($dim != 'b')
+			$size = round($size, $precision);
+
+		$this->_size = $size;
+	}
+
+	/**
+	 * @param bool $css
+	 *
+	 * @return $this
+	 */
+	public function Obfuscate ($css = false) {
+		$this->_source = preg_replace('#\/\*(.*)\*\/#Uis', '', $this->_source);
+		$this->_source = preg_replace('#\/\/(.*)\\r\\n#Uis', '', $this->_source);
+		$this->_source = str_replace("\r\n", '', $this->_source);
+		$this->_source = preg_replace('/\s+/', ' ', $this->_source);
+		$this->_source = trim(str_replace('<?phpn', '<?php n', $this->_source));
+
+		foreach ($this->_trim as $i => $rule) {
+			$this->_source = str_replace(' ' . $rule . ' ', $rule, $this->_source);
+
+			if (!$css)
+				$this->_source = str_replace(' ' . $rule, $rule, $this->_source);
+
+			$this->_source = str_replace($rule . ' ', $rule, $this->_source);
+		}
+
+		$this->_size();
+
+		return $this;
 	}
 }

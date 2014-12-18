@@ -6,17 +6,17 @@
 var Quark = Quark || {};
 
 /**
- * Quark.CX namespace
+ * Quark.IO namespace
  */
-Quark.CX = {};
+Quark.IO = {};
 
 /**
- * @class Quark.CX.Mouse
+ * @class Quark.IO.Mouse
  *
  * @param selector
  * @constructor
  */
-Quark.CX.Mouse = function (selector) {
+Quark.IO.Mouse = function (selector) {
 	var that = this;
 
 	that.Elem = $(selector);
@@ -93,12 +93,12 @@ Quark.CX.Mouse = function (selector) {
 };
 
 /**
- * @class Quark.CX.Keyboard
+ * @class Quark.IO.Keyboard
  *
  * @param selector
  * @constructor
  */
-Quark.CX.Keyboard = function (selector) {
+Quark.IO.Keyboard = function (selector) {
 	var that = this;
 
 	that.Elem = $(selector);

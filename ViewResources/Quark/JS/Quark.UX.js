@@ -41,7 +41,7 @@ Quark.UX = function (selector) {
 		});
 
 		that.Elem.each(function () {
-			var target = new Quark.CX.Mouse($(this)),
+			var target = new Quark.IO.Mouse($(this)),
 				position = {x: 0, y: 0},
 				startPosition = {x: 0, y: 0},
 				startTarget = {};
@@ -113,7 +113,7 @@ Quark.UX = function (selector) {
 		that.Elem.each(function () {
 			var target = $(this),
 				parent = null,
-				handle = new Quark.CX.Mouse(opt.handle),
+				handle = new Quark.IO.Mouse(opt.handle),
 				dimension = {x: 0, y: 0},
 				offset = {x: 0, y: 0},
 				startDimension = {x: 0, y: 0},
