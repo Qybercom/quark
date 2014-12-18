@@ -1746,6 +1746,8 @@ class QuarkModel {
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
 
+		print_r($this->_model);
+
 		return self::_tree_extract($this->_model);
 	}
 
