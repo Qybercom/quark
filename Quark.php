@@ -1756,10 +1756,26 @@ class QuarkModel {
 	 */
 	private static function _tree_extract ($model) {
 		$output = new \StdClass();
+		$items = array();
+		$i = 0;
+		$size = 0;
 
 		foreach ($model as $key => $value) {
 			if ($value instanceof QuarkModel) $output->$key = $value->Extract();
 			elseif ($value instanceof \StdClass) $output->$key = self::_tree_extract($value);
+			elseif (is_array($value) && !Quark::isAssoc($value)) {
+				$items = array();
+				$i = 0;
+				$size = sizeof($value);
+
+				while ($i < $size) {
+					$items[] = self::_tree_extract($value[$i]);
+
+					$i++;
+				}
+
+				$output->$key = $items;
+			}
 			else $output->$key = $value;
 		}
 
