@@ -143,6 +143,8 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
+		$model->_id = new \MongoId($model->_id);
+
 		return $this->_collection($model, $options)->save($model, $options);
 	}
 
