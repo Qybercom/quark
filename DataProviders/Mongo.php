@@ -177,14 +177,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	private static function _record ($raw) {
-		if (!is_array($raw) && !is_object($raw)) return null;
-
-		$item = new \StdClass();
-
-		foreach ($raw as $key => $value)
-			$item->$key = Quark::isAssoc($value) ? Quark::ToObject($value) : $value;
-
-		return $item;
+		return is_array($raw) || is_object($raw) ? $raw : null;
 	}
 
 	/**

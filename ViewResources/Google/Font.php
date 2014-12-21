@@ -45,11 +45,11 @@ class Font implements IQuarkViewResource, IQuarkForeignViewResource {
 	public function __construct ($family, $options = []) {
 		$this->_family = $family;
 
-		$this->_sizes = isset($options[self::OPTION_SIZES]) && is_array($options[self::OPTION_SIZES]) && !Quark::isAssoc($options[self::OPTION_SIZES])
+		$this->_sizes = isset($options[self::OPTION_SIZES]) && is_array($options[self::OPTION_SIZES]) && !Quark::isAssociative($options[self::OPTION_SIZES])
 			? $options[self::OPTION_SIZES]
 			: $this->_sizes;
 
-		$this->_subsets = isset($options[self::OPTION_SUBSETS]) && is_array($options[self::OPTION_SUBSETS]) && !Quark::isAssoc($options[self::OPTION_SUBSETS])
+		$this->_subsets = isset($options[self::OPTION_SUBSETS]) && is_array($options[self::OPTION_SUBSETS]) && !Quark::isAssociative($options[self::OPTION_SUBSETS])
 			? $options[self::OPTION_SUBSETS]
 			: $this->_subsets;
 	}
