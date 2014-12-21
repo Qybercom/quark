@@ -144,7 +144,7 @@ class Mongo implements IQuarkDataProvider {
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
 		if (!isset($model->_id->{'$id'})) return null;
-		
+
 		$model->_id = new \MongoId($model->_id->{'$id'});
 
 		return $this->_collection($model, $options)->save($model, $options);

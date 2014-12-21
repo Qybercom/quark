@@ -222,9 +222,13 @@ class Quark {
 		if (func_num_args() == 0 || !is_array($source))
 			$source = $_SERVER;
 
-		foreach ($source as $name => $value)
+		foreach ($source as $name => $value) {
 			if (substr($name, 0, 5) == 'HTTP_')
 				$output[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+
+			if (substr($name, 0, 8) == 'CONTENT_')
+				$output[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $name))))] = $value;
+		}
 
 		return $output;
 	}
@@ -475,8 +479,28 @@ class QuarkService {
 			$response->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $this->_service->AllowOrigin());
 
 		$request->Headers(Quark::Headers());
-		$request->PopulateFrom($_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n" . file_get_contents('php://input'));
-		$request->AttachData($_GET + $_POST);
+
+		$head = $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n";
+
+		if (substr($request->Header(QuarkDTO::HEADER_CONTENT_TYPE), 0, 19) != 'multipart/form-data') {
+			$request->PopulateFrom($head . file_get_contents('php://input'));
+			$request->AttachData($_GET + $_POST);
+		}
+		else {
+			$key = $request->Processor()->MimeType();
+
+			if (isset($_POST[$key]))
+				$request->PopulateFrom($head . $_POST[$key]);
+
+			$request->AttachData((object)$_GET);
+
+			if (sizeof($_FILES) != 0)
+				$request->Data(Quark::Normalize(new \StdClass(), $request->Data(), function ($item) {
+					return is_scalar($item) && isset($_FILES[$item])
+						? QuarkFile::From($_FILES[$item])
+						: $item;
+				}));
+		}
 
 		if ($this->_service instanceof IQuarkStrongService)
 			$request->Data(Quark::Normalize($request->Data(), (object)$this->_service->InputFilter(), function ($item) { return $item; }));
@@ -2927,7 +2951,7 @@ class QuarkDTO {
 		if (func_num_args() == 2)
 			$this->_headers[$key] = $value;
 
-		return $this->_headers[$key];
+		return isset($this->_headers[$key]) ? $this->_headers[$key] : null;
 	}
 
 	/**
@@ -2997,7 +3021,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param array $data
+	 * @param mixed $data
 	 *
 	 * @return QuarkDTO
 	 */
@@ -3200,6 +3224,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 		return is_file($this->tmp_name) && rename($this->tmp_name, $this->_location);
 	}
 
+	public function Download () { }
+
 	/**
 	 * @return IQuarkDataProvider
 	 */
@@ -3242,9 +3268,18 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 		$output = array();
 
 		foreach ($files as $file)
-			$output[] = (new QuarkModel(new QuarkFile(), $file))->Model();
+			$output[] = self::From($file);
 
 		return $output;
+	}
+
+	/**
+	 * @param $file
+	 *
+	 * @return QuarkFile
+	 */
+	public static function From ($file) {
+		return (new QuarkModel(new QuarkFile(), $file))->Model();
 	}
 }
 
