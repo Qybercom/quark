@@ -121,7 +121,7 @@ class Mongo implements IQuarkDataProvider {
 			? $options['collection']
 			: Quark::ClassOf($model);
 
-		return  $this->_connection->$collection;
+		return $this->_connection->$collection;
 	}
 
 	/**
@@ -143,11 +143,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		if (!isset($model->_id->{'$id'})) return null;
-
 		$model->_id = new \MongoId($model->_id->{'$id'});
-
-		print_r($model);
 
 		return $this->_collection($model, $options)->save($model, $options);
 	}

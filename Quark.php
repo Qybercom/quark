@@ -138,10 +138,14 @@ class Quark {
 			$i = 0;
 			$size = sizeof($backbone);
 			$output = array();
+			$buffer = null;
 
 			while ($i < $size) {
 				$def = !empty($source[$i]) ? $source[$i] : $backbone[$i];
-				$output[] = self::Normalize($iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i), $def, $iterator);
+				$buffer = $iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i);
+
+				if ($buffer != null)
+				$output[] = self::Normalize($buffer, $def, $iterator);
 
 				$i++;
 			}
@@ -154,10 +158,16 @@ class Quark {
 
 				if ($backbone == null) return $source;
 
+				$buffer = null;
+
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
+					$buffer = $iterator($value, $def, $key);
+
+					if ($key === 0) continue;
+
+					$output->$key = self::Normalize($buffer, $def, $iterator);
 				}
 			}
 		}
@@ -1722,8 +1732,6 @@ class QuarkModel {
 
 		if (is_array($fields))
 			$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
-				if ($format instanceof \MongoId) return null;
-
 				return $format instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Model()
@@ -1791,7 +1799,7 @@ class QuarkModel {
 			? $this->_model->BeforeCreate($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Create($this->_model, $options) : false;
 	}
 
 	/**
@@ -1805,7 +1813,7 @@ class QuarkModel {
 			? $this->_model->BeforeSave($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Save(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Save($this->_model, $options) : false;
 	}
 
 	/**
