@@ -138,14 +138,10 @@ class Quark {
 			$i = 0;
 			$size = sizeof($backbone);
 			$output = array();
-			$buffer = null;
 
 			while ($i < $size) {
 				$def = !empty($source[$i]) ? $source[$i] : $backbone[$i];
-				$buffer = $iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i);
-
-				if ($buffer != null)
-				$output[] = self::Normalize($buffer, $def, $iterator);
+				$output[] = self::Normalize($iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i), $def, $iterator);
 
 				$i++;
 			}
@@ -163,11 +159,7 @@ class Quark {
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					$buffer = $iterator($value, $def, $key);
-
-					if ($key === 0) continue;
-
-					@$output->$key = self::Normalize($buffer, $def, $iterator);
+					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
 			}
 		}
