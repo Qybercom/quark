@@ -51,7 +51,7 @@ Quark.UX = function (selector) {
 				handle: opt.handle,
 				preventDefault: opt.preventDefault || true,
 
-				start: function (e) {
+				start: function (e) {console.log('drag');
 					startTarget = (opt.handle ? $(e.target).parent(target) : $(e.target));
 					startPosition = startTarget.position();
 

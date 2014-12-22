@@ -57,10 +57,10 @@ Quark.IO.Mouse = function (selector) {
 			setup: opt
 		};
 
-		$(document).on('mousedown', that.Elem, function (e) {
+		$(document).on('mousedown', selector, function (e) {
 			target = $(e.target);
 
-			if (!that.Elem.is(target)) return true;
+			//if (!target.is(that.Elem)) return true;
 
 			if (opt.handle != false && !target.is(opt.handle)) return true;
 			if (target.is(opt.cancel)) return false;

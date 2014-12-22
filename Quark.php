@@ -166,6 +166,13 @@ class Quark {
 	}
 
 	/**
+	 * @return string
+	 */
+	public static function Host () {
+		return $_SERVER['DOCUMENT_ROOT'];
+	}
+
+	/**
 	 * @param $source
 	 *
 	 * @return bool
@@ -198,7 +205,7 @@ class Quark {
 	 * @return string
 	 */
 	public static function SanitizePath ($path) {
-		return preg_replace('#(((\.*){1-2}/)+)#', '/', $path);
+		return self::NormalizePath(str_replace('./', '/', str_replace('../', '/', $path)), false);
 	}
 
 	/**
@@ -1069,6 +1076,7 @@ class QuarkView {
 	private $_file = '';
 	private $_vars = array();
 	private $_resources = array();
+	private $_html = '';
 
 	private $_null = null;
 
@@ -1240,11 +1248,21 @@ class QuarkView {
 	 */
 	public function Layout (IQuarkViewModel $view, $vars = [], $resources = []) {
 		$view = new QuarkView($view, $vars, $resources);
-		$view->Vars(array(
-			'view' => $this->Compile()
-		));
+		$view->View($this->Compile());
 
 		return $view;
+	}
+
+	/**
+	 * @param string $view
+	 *
+	 * @return string
+	 */
+	public function View ($view = '') {
+		if (func_num_args() == 1)
+			$this->_html = $view;
+
+		return $this->_html;
 	}
 
 	/**
@@ -3155,7 +3173,35 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 	public $size = 0;
 
 	private $_location = '';
+	private $_extension = '';
 	private $_content = '';
+
+	/**
+	 * @param $location
+	 *
+	 * @return mixed
+	 */
+	public static function Mime ($location) {
+		$info = finfo_open(FILEINFO_MIME_TYPE);
+		$type = finfo_file($info, $location);
+		finfo_close($info);
+
+		return $type;
+	}
+
+	/**
+	 * @param $mime
+	 *
+	 * @return string
+	 */
+	public static function ExtensionByMime ($mime) {
+		$extension = array_reverse(explode('/', $mime));
+
+		if ($extension[0] == 'jpeg')
+			$extension[0] = 'jpg';
+
+		return sizeof($extension) == 2 && substr_count($extension[0], '-') == 0 ? $extension[0] : null;
+	}
 
 	/**
 	 * @param string $location
@@ -3175,12 +3221,30 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 			$this->_location = Quark::NormalizePath($location, false);
 			$this->name = array_reverse(explode('/', $this->_location))[0];
 
-			$info = finfo_open(FILEINFO_MIME_TYPE);
-			$this->type = finfo_file($info, $this->_location);
-			finfo_close($info);
+			if (is_file($this->_location))
+				$this->type = self::Mime($this->_location);
 		}
 
 		return $this->_location;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function WebLocation () {
+		return Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
+	}
+
+	/**
+	 * @param $extension
+	 *
+	 * @return mixed
+	 */
+	public function Extension ($extension) {
+		if (func_num_args() == 1)
+			$this->_extension = $extension;
+
+		return $this->_extension;
 	}
 
 	/**
@@ -3231,9 +3295,16 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 	}
 
 	/**
+	 * @param bool $mime
+	 *
 	 * @return bool
 	 */
-	public function Upload () {
+	public function Upload ($mime = false) {
+		if ($mime) {
+			$ext = self::ExtensionByMime(self::Mime($this->tmp_name));
+			$this->_location .= $ext ? '.' . $ext : '';
+		}
+
 		return is_file($this->tmp_name) && rename($this->tmp_name, $this->_location);
 	}
 

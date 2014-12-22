@@ -88,11 +88,11 @@ Quark.Controls.File = function (selector, opt) {
 	var that = this;
 
 	that.Elem = $(selector);
-	that.Elem.on('click', Quark.Controls.File._send);
+	that.Elem.on('click', opt, Quark.Controls.File._send);
 };
 
-Quark.Controls.File._send = function () {
-	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'));
+Quark.Controls.File._send = function (e) {
+	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'), e.data);
 };
 
 /**
