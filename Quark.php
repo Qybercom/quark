@@ -492,7 +492,7 @@ class QuarkService {
 			if (isset($_POST[$key]))
 				$request->PopulateFrom($head . $_POST[$key]);
 
-			$request->AttachData((object)$_GET);
+			$request->AttachData((object)($_GET + $_POST));
 			$request->Files(QuarkFile::CollectionFrom($_FILES));
 
 			if (sizeof($_FILES) != 0)

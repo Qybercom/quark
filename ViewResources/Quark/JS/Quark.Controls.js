@@ -78,17 +78,36 @@ Quark.Controls.Select = function (selector, opt) {
 	});
 };
 
-Quark.Controls.File = function () {
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.Controls.File = function (selector, opt) {
+	var that = this;
 
+	that.Elem = $(selector);
+	that.Elem.on('click', Quark.Controls.File._send);
 };
 
+Quark.Controls.File._send = function () {
+	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'));
+};
+
+/**
+ * @param url
+ * @param name
+ * @param opt
+ */
 Quark.Controls.File.To = function (url, name, opt) {
 	opt = Quark.Extend(opt, {
 		multiple: false,
-		beforeSelect: function (elem) {},
-		beforeSubmit: function (elem) {},
-		success: function (response) {},
-		error: function (response) {}
+		json: true,
+		beforeSelect: function (elem) { },
+		beforeSubmit: function (elem) { },
+		success: function (response) { },
+		error: function (response) { }
 	});
 
 	var key = '-ggg';
@@ -97,7 +116,8 @@ Quark.Controls.File.To = function (url, name, opt) {
 		$('body').append(
 			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
 			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
-				'<input type="file" name="' + name + '" />' +
+				'<input type="text" name="' + name + (opt.multiple ? '[]' : '') + '" value="file_' + name + '" />' +
+				'<input type="file" name="file_' + name + (opt.multiple ? '[]' : '') + '" />' +
 			'</form>'
 		);
 
@@ -105,8 +125,12 @@ Quark.Controls.File.To = function (url, name, opt) {
 	var form = $('#form' + key);
 
 	frame.on('load', function (e) {
-		//opt.success($(this).html());
-		console.log('[ ok ]', $(this).contents().text());
+		var response = $(this).contents().text();
+
+		if (opt.json)
+			response = JSON.parse(response);
+
+		opt.success(response);
 	});
 
 	form
