@@ -77,3 +77,50 @@ Quark.Controls.Select = function (selector, opt) {
 		e.stopPropagation();
 	});
 };
+
+Quark.Controls.File = function () {
+
+};
+
+Quark.Controls.File.To = function (url, name, opt) {
+	opt = Quark.Extend(opt, {
+		multiple: false,
+		beforeSelect: function (elem) {},
+		beforeSubmit: function (elem) {},
+		success: function (response) {},
+		error: function (response) {}
+	});
+
+	var key = '-ggg';
+
+	if ($('#target' + key).length == 0)
+		$('body').append(
+			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
+			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
+				'<input type="file" name="' + name + '" />' +
+			'</form>'
+		);
+
+	var frame = $('#target' + key);
+	var form = $('#form' + key);
+
+	frame.on('load', function (e) {
+		//opt.success($(this).html());
+		console.log('[ ok ]', $(this).contents().text());
+	});
+
+	form
+		.children('[type="file"]')
+		.on('click', function (e) {
+			$(this).val('');
+
+			opt.beforeSelect($(this));
+		})
+		.on('change', function (e) {
+			opt.beforeSubmit($(this));
+
+			if ($(this).val().length != 0)
+				form.submit();
+		})
+		.click();
+};

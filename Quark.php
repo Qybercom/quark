@@ -141,7 +141,7 @@ class Quark {
 
 			while ($i < $size) {
 				$def = !empty($source[$i]) ? $source[$i] : $backbone[$i];
-				$output[] = self::Normalize($iterator($source[$i], $def, $i), $def, $iterator);
+				$output[] = self::Normalize($iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i), $def, $iterator);
 
 				$i++;
 			}
@@ -493,9 +493,10 @@ class QuarkService {
 				$request->PopulateFrom($head . $_POST[$key]);
 
 			$request->AttachData((object)$_GET);
+			$request->Files(QuarkFile::CollectionFrom($_FILES));
 
 			if (sizeof($_FILES) != 0)
-				$request->Data(Quark::Normalize(new \StdClass(), $request->Data(), function ($item) {
+				$request->Data(Quark::Normalize(new \StdClass(), (object)$request->Data(), function ($item) {
 					return is_scalar($item) && isset($_FILES[$item])
 						? QuarkFile::From($_FILES[$item])
 						: $item;
@@ -3018,6 +3019,18 @@ class QuarkDTO {
 			$this->_data = $data;
 
 		return $this->_data;
+	}
+
+	/**
+	 * @param array $files
+	 *
+	 * @return array
+	 */
+	public function Files ($files = []) {
+		if (func_num_args() != 0)
+			$this->_files = $files;
+
+		return $this->_files;
 	}
 
 	/**
