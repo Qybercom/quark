@@ -493,7 +493,7 @@ class QuarkService {
 
 		if (substr($request->Header(QuarkDTO::HEADER_CONTENT_TYPE), 0, 19) != 'multipart/form-data') {
 			$request->PopulateFrom($head . file_get_contents('php://input'));
-			$request->AttachData($_GET + $_POST);
+			$request->AttachData((object)($_GET + $_POST));
 		}
 		else {
 			$key = $request->Processor()->MimeType();
