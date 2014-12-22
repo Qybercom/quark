@@ -3686,9 +3686,15 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Encode ($data) {
-		$xml = new \SimpleXMLElement('<root/>');
-		array_walk_recursive($data, array($xml, 'addChild'));
-		return $xml->asXML();
+		try {
+			$xml = new \SimpleXMLElement('<root/>');
+			$xml = Quark::Normalize($xml, $data, function ($item) { return $item; });
+			return $xml->asXML();
+		}
+		catch (\Exception $e) {
+			print_r($e);
+			return '';
+		}
 	}
 
 	/**
@@ -3697,7 +3703,44 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		return new \SimpleXMLElement($raw);
+		try {
+			return new \SimpleXMLElement($raw);
+		}
+		catch (\Exception $e) {
+			return null;
+		}
+	}
+}
+
+/**
+ * Class QuarkWDDXIOProcessor
+ *
+ * @package Quark
+ */
+class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
+	/**
+	 * @return string
+	 */
+	public function MimeType () {
+		return 'text/xml';
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Decode ($raw) {
+		return wddx_deserialize($raw);
+	}
+
+	/**
+	 * @param $data
+	 *
+	 * @return mixed
+	 */
+	public function Encode ($data) {
+		return wddx_serialize_value($data);
 	}
 }
 
