@@ -159,7 +159,7 @@ class Quark {
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
+					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
 			}
 		}
