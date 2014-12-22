@@ -167,7 +167,7 @@ class Quark {
 
 					if ($key === 0) continue;
 
-					$output->$key = self::Normalize($buffer, $def, $iterator);
+					@$output->$key = self::Normalize($buffer, $def, $iterator);
 				}
 			}
 		}
@@ -1652,7 +1652,7 @@ class QuarkModel {
 		if (!is_array($source) && !is_object($source)) return $this;
 
 		$this->_model = Quark::Normalize($this->_model, (object)$source, function ($value) {
-			if ($value instanceof \MongoId) return null;
+			//if ($value instanceof \MongoId) return null;
 
 			return $value;
 		});
@@ -1825,7 +1825,7 @@ class QuarkModel {
 			? $this->_model->BeforeRemove($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Remove(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Remove($this->_model, $options) : false;
 	}
 
 	/**
