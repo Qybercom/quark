@@ -147,6 +147,8 @@ class Mongo implements IQuarkDataProvider {
 
 		$model->_id = new \MongoId($model->_id->{'$id'});
 
+		print_r($model);
+
 		return $this->_collection($model, $options)->save($model, $options);
 	}
 
