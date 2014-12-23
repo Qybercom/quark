@@ -21,7 +21,7 @@ class Device {
 	 * @param string $id
 	 */
 	public function __construct ($type = '', $id = '') {
-		$this->type = $type;
-		$this->id = $id;
+		$this->type = (string)$type;
+		$this->id = (string)$id;
 	}
 } 
