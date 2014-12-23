@@ -1644,7 +1644,7 @@ class QuarkModel {
 		if (!is_array($source) && !is_object($source)) return $this;
 
 		$this->_model = Quark::Normalize($this->_model, (object)$source, function ($value) {
-			//if ($value instanceof \MongoId) return null;
+			if ($value instanceof \MongoId) return null;
 
 			return $value;
 		});
@@ -1724,6 +1724,8 @@ class QuarkModel {
 
 		if (is_array($fields))
 			$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
+				if ($format instanceof \MongoId) return null;
+
 				return $format instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Model()
@@ -1787,11 +1789,13 @@ class QuarkModel {
 	public function Create ($options = []) {
 		if (!$this->_validate($options)) return false;
 
+		$this->_model = self::_canonize($this->_model);
+
 		$ok = $this->_model instanceof IQuarkModelWithBeforeCreate
 			? $this->_model->BeforeCreate($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Create(self::_canonize($this->_model), $options) : false;
+		return ($ok || $ok === null) ? self::_provider($this->_model)->Create($this->_model, $options) : false;
 	}
 
 	/**
@@ -1800,6 +1804,8 @@ class QuarkModel {
 	 */
 	public function Save ($options = []) {
 		if (!$this->_validate($options)) return false;
+
+		//$this->_model = (new self(self::_canonize($this->_model)))->Model();
 
 		$ok = $this->_model instanceof IQuarkModelWithBeforeSave
 			? $this->_model->BeforeSave($options)
