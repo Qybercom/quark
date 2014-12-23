@@ -1649,7 +1649,7 @@ class QuarkModel {
 			return $value;
 		});
 
-		//$this->Canonize();
+		$this->Canonize();
 
 		return $this;
 	}
@@ -1724,12 +1724,10 @@ class QuarkModel {
 
 		if (is_array($fields))
 			$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
-				if ($format instanceof \MongoId) return null;
-
 				return $format instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Model()
-						: new QuarkModel($format, $value)
+						: $value
 					)
 					: $value;
 			});
