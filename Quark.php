@@ -1805,7 +1805,7 @@ class QuarkModel {
 	public function Save ($options = []) {
 		if (!$this->_validate($options)) return false;
 
-		//$this->_model = (new self(self::_canonize($this->_model)))->Model();
+		$this->_model = (new self(self::_canonize($this->_model)))->Model();
 
 		$ok = $this->_model instanceof IQuarkModelWithBeforeSave
 			? $this->_model->BeforeSave($options)
