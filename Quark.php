@@ -1729,21 +1729,18 @@ class QuarkModel {
 
 		if (!is_array($fields)) return $model;
 
-		$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
-			if ($format instanceof \MongoId) return null;
-
-			return $format instanceof IQuarkModel
-				? ($value instanceof QuarkModel
-					? $value->Canonize()->Model()
-					: (new QuarkModel($format, $value))->Canonize()->Model()
-				)
-				: $value;
-		});
-
 		$output = $model;
 
-		foreach ($model as $key => $value)
+		foreach ($model as $key => $value) {
 			if (!isset($fields[$key])) unset($output->$key);
+			else {
+				$output->$key = $fields[$key] instanceof IQuarkModel
+					? (new QuarkModel($fields[$key], $value))->Model()
+					: $value;
+			}
+		}
+
+		unset($key, $value);
 
 		return $output;
 	}
