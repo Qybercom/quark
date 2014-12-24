@@ -1737,7 +1737,7 @@ class QuarkModel {
 				$output->$key = $fields[$key] instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Canonize()->Model()
-						: (new QuarkModel($fields[$key], $value))->Model()
+						: (new QuarkModel($fields[$key], $value))->Canonize()->Model()
 					)
 					: $value;
 			}
