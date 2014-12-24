@@ -1730,6 +1730,8 @@ class QuarkModel {
 		if (!is_array($fields)) return $model;
 
 		$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
+			if ($format instanceof \MongoId) return null;
+
 			return $format instanceof IQuarkModel
 				? ($value instanceof QuarkModel
 					? $value->Canonize()->Model()
