@@ -1729,6 +1729,15 @@ class QuarkModel {
 
 		if (!is_array($fields)) return $model;
 
+		$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
+			return $format instanceof IQuarkModel
+				? ($value instanceof QuarkModel
+					? $value->Canonize()->Model()
+					: (new QuarkModel($format, $value))->Model()
+				)
+				: $value;
+		});
+
 		$output = $model;
 
 		foreach ($model as $key => $value) {
@@ -1783,12 +1792,9 @@ class QuarkModel {
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
 
-		$output = $this->_model;
-
-		foreach ($this->_model as $key => $value)
-			$output->$key = $value instanceof QuarkModel ? $value->Extract() : $value;
-
-		return $output;
+		return Quark::Normalize($this->_model, $this->_model, function ($value) {
+			return $value instanceof QuarkModel ? $value->Extract() : $value;
+		});
 	}
 
 	/**
