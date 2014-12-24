@@ -1732,15 +1732,15 @@ class QuarkModel {
 		$output = $model;
 
 		foreach ($model as $key => $value) {
-			if (!isset($fields[$key])) unset($output->$key);
-			else {
+			//if (!isset($fields[$key])) unset($output->$key);
+			//else {
 				$output->$key = $fields[$key] instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Canonize()->Model()
 						: (new QuarkModel($fields[$key], $value))->Canonize()->Model()
 					)
 					: $value;
-			}
+			//}
 		}
 
 		unset($key, $value);
