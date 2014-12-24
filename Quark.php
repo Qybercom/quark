@@ -1727,17 +1727,23 @@ class QuarkModel {
 				return $model;
 		}
 
-		if (is_array($fields))
-			$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
-				return $format instanceof IQuarkModel
-					? ($value instanceof QuarkModel
-						? $value->Model()
-						: (new QuarkModel($format, $value))->Model()
-					)
-					: $value;
-			});
+		if (!is_array($fields)) return $model;
 
-		return $model;
+		$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
+			return $format instanceof IQuarkModel
+				? ($value instanceof QuarkModel
+					? $value->Canonize()->Model()
+					: (new QuarkModel($format, $value))->Canonize()->Model()
+				)
+				: $value;
+		});
+
+		$output = $model;
+
+		foreach ($model as $key => $value)
+			if (!isset($fields[$key])) unset($output->$key);
+
+		return $output;
 	}
 
 	/**
