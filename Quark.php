@@ -1783,11 +1783,12 @@ class QuarkModel {
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
 
-		return Quark::Normalize($this->_model, $this->_model, function ($value) {
-			return $value instanceof QuarkModel
-				? $value->Extract()
-				: $value;
-		});
+		$output = $this->_model;
+
+		foreach ($this->_model as $key => $value)
+			$output->$key = $value instanceof QuarkModel ? $value->Extract() : $value;
+
+		return $output;
 	}
 
 	/**
