@@ -131,7 +131,10 @@ class Quark {
 	 *
 	 * @return mixed
 	 */
-	public static function Normalize ($source, $backbone = [], $iterator) {
+	public static function Normalize ($source, $backbone = [], callable $iterator = null) {
+		if ($iterator == null)
+			$iterator = function ($item) { return $item; };
+
 		$output = $source;
 
 		if (self::isIterative($backbone)) {
@@ -145,6 +148,8 @@ class Quark {
 
 				$i++;
 			}
+
+			unset($i, $size, $def);
 		}
 		else {
 			if (is_scalar($backbone)) $output = $source;
@@ -154,13 +159,13 @@ class Quark {
 
 				if ($backbone == null) return $source;
 
-				$buffer = null;
-
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
 					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
+
+				unset($key, $value, $def);
 			}
 		}
 
@@ -513,7 +518,7 @@ class QuarkService {
 		}
 
 		if ($this->_service instanceof IQuarkStrongService)
-			$request->Data(Quark::Normalize($request->Data(), (object)$this->_service->InputFilter(), function ($item) { return $item; }));
+			$request->Data(Quark::Normalize($request->Data(), (object)$this->_service->InputFilter()));
 
 		$ok = true;
 		$output = null;
@@ -1287,7 +1292,7 @@ class QuarkView {
 	 */
 	public function Vars ($params = []) {
 		if (func_num_args() == 1)
-			$this->_vars = Quark::Normalize(new \StdClass(), (object)$params, function ($item) { return $item; });
+			$this->_vars = Quark::Normalize(new \StdClass(), (object)$params);
 
 		return $this->_vars;
 	}
@@ -1727,7 +1732,7 @@ class QuarkModel {
 				return $format instanceof IQuarkModel
 					? ($value instanceof QuarkModel
 						? $value->Model()
-						: $value
+						: (new QuarkModel($format, $value))->Model()
 					)
 					: $value;
 			});
@@ -2714,7 +2719,7 @@ class QuarkDTO {
 	 * @param $value
 	 */
 	public function __set ($key, $value) {
-		$this->_data = Quark::Normalize(new \StdClass(), (object)$this->_data, function ($item) { return $item; });
+		$this->_data = Quark::Normalize(new \StdClass(), (object)$this->_data);
 
 		$this->_data->$key = $value;
 	}
@@ -3063,7 +3068,7 @@ class QuarkDTO {
 	public function AttachData ($data = []) {
 		$this->_data = $data instanceof QuarkView
 			? $data
-			: Quark::Normalize($this->_data, $data, function ($item) { return $item; });
+			: Quark::Normalize($this->_data, $data);
 
 		return $this;
 	}
@@ -3692,7 +3697,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	public function Encode ($data) {
 		try {
 			$xml = new \SimpleXMLElement('<root/>');
-			$xml = Quark::Normalize($xml, $data, function ($item) { return $item; });
+			$xml = Quark::Normalize($xml, $data);
 			return $xml->asXML();
 		}
 		catch (\Exception $e) {
