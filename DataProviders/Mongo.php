@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkModel;
 use Quark\QuarkArchException;
 use Quark\QuarkCredentials;
 use Quark\QuarkConnectionException;
@@ -116,6 +117,12 @@ class Mongo implements IQuarkDataProvider {
 		}
 	}
 
+	/**
+	 * @param QuarkModel $model
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
 	private function _collection ($model ,$options) {
 		$collection = isset($options['collection'])
 			? $options['collection']
@@ -221,7 +228,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @param $criteria
 	 * @param $options
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
 		return self::_record($this->_collection($model, $options)->findOne($criteria, self::_fields($options)/*, $options*/));
@@ -232,13 +239,13 @@ class Mongo implements IQuarkDataProvider {
 	 * @param $id
 	 * @param $options
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		if (!\MongoId::isValid($id)) return null;
 
 		return self::_record($this->_collection($model, $options)->findOne(array(
-			'_id' => Quark::ClassOf($id) == 'MongoId' ? $id : new \MongoId($id)
+			'_id' => $id instanceof \MongoId ? $id : new \MongoId($id)
 		), self::_fields($options)/*, $options*/));
 	}
 

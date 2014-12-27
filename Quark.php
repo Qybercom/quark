@@ -99,29 +99,57 @@ class Quark {
 	/**
 	 * @param $target
 	 *
-	 * @return bool
+	 * @return string
 	 */
 	public static function ClassOf ($target) {
-		if (!is_object($target)) return false;
-
-		$class = get_class($target);
-		$ns = explode('\\', $class);
-
-		return $ns[sizeof($ns) - 1];
+		return is_object($target) ? array_reverse(explode('\\', get_class($target)))[0] : null;
 	}
 
 	/**
-	 * @param $interface
+	 * @param $source
+	 *
 	 * @return array
 	 */
-	public static function Implementations ($interface) {
-		$output = array();
-		$classes = get_declared_classes();
+	public static function Properties ($source) {
+		return is_object($source)
+			? array_intersect(
+				get_object_vars($source),
+				get_class_vars(get_class($source))
+			)
+			: array();
+	}
 
-		foreach ($classes as $class)
-			if (self::is($class, $interface)) $output[] = $class;
+	/**
+	 * @param $source
+	 * @param $name
+	 * @param $default
+	 *
+	 * @return mixed
+	 */
+	public static function Property ($source, $name, $default = null) {
+		if (is_object($source))
+			return isset($source->$name) ? $source->$name : $default;
 
-		return $output;
+		if (is_array($source))
+			return isset($source[$name]) ? $source[$name] : $default;
+
+		return $default;
+	}
+
+	/**
+	 * @param $source
+	 * @param $name
+	 *
+	 * @return bool
+	 */
+	public static function PropertyExists ($source, $name) {
+		if (is_object($source))
+			return isset($source->$name);
+
+		if (is_array($source))
+			return isset($source[$name]);
+
+		return false;
 	}
 
 	/**
@@ -162,7 +190,7 @@ class Quark {
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
+					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
 
 				unset($key, $value, $def);
@@ -420,24 +448,24 @@ class QuarkConfig {
 	 * @return IQuarkExtension
 	 */
 	public function Extension (IQuarkExtension $extension) {
+		$class = get_class($extension);
+
 		try {
 			if ($extension == null)
 				throw new QuarkArchException(' Provided extension in QuarkConfig is null');
 
-			$class = Quark::ClassOf($extension);
-
 			foreach ($this->_extensions as $item)
-				if (Quark::ClassOf($item) == $class) return $item;
+				if (get_class($item) == $class) return $item;
 
 			$extension->Init();
 			$this->_extensions[] = $extension;
 		}
 		catch (QuarkConnectionException $e) {
-			Quark::Log('Extension connection failure in \'' . Quark::ClassOf($extension) . '\' ' . $e->message, Quark::LOG_FATAL);
+			Quark::Log('Extension connection failure in \'' . $class . '\' ' . $e->message, Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array('extension' => $extension));
 		}
 		catch (QuarkArchException $e) {
-			Quark::Log('Extension architecture failure in \'' . Quark::ClassOf($extension) . '\' ' . $e->message, Quark::LOG_FATAL);
+			Quark::Log('Extension architecture failure in \'' . $class . '\' ' . $e->message, Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array('extension' => $extension));
 		}
 
@@ -1112,20 +1140,7 @@ class QuarkView {
 	 * @return mixed
 	 */
 	public function &__get ($key) {
-		if (!isset($this->_view->$key)) {
-			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array(
-				'view' => $this->_view
-			));
-
-			Quark::Log('QuarkView: Undefined property "' . $key . '" in view ' . Quark::ClassOf($this->_view), Quark::LOG_WARN);
-
-			/**
-			 * Solution for support same behavior of passing by reference a null model property
-			 */
-			return $this->_null;
-		}
-
-		return $this->_view->$key;
+		return isset($this->_view->$key) ? $this->_view->$key : $this->_null;
 	}
 
 	/**
@@ -1550,6 +1565,82 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 }
 
 
+
+
+
+
+
+
+/**
+ * Class QuarkCollection
+ *
+ * @package Quark
+ */
+class QuarkCollection {
+	private $_list = array();
+	private $_type = null;
+
+	/**
+	 * @param object $type
+	 */
+	public function __construct ($type) {
+		$this->_type = $type;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Type () {
+		return $this->_type;
+	}
+
+	/**
+	 * @param $item
+	 *
+	 * @return $this
+	 */
+	public function Add ($item) {
+		if ($item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type))
+			$this->_list[] = $item;
+
+		return $this;
+	}
+
+	/**
+	 * @param array $source
+	 * @param callable $iterator
+	 *
+	 * @return QuarkCollection
+	 */
+	public function PopulateWith ($source, callable $iterator = null) {
+		if (!is_array($source)) return $this;
+
+		if ($iterator == null)
+			$iterator = function ($item) { return $item; };
+
+		foreach ($source as $item)
+			$this->Add($iterator($item));
+
+		return $this;
+	}
+
+	/**
+	 * @param callable $iterator
+	 *
+	 * @return array
+	 */
+	public function Collection (callable $iterator = null) {
+		if ($iterator == null) return $this->_list;
+
+		$output = array();
+
+		foreach ($this->_list as $item)
+			$output[] = $iterator($item);
+
+		return $output;
+	}
+}
+
 /**
  * Class QuarkModel
  *
@@ -1560,20 +1651,21 @@ class QuarkModel {
 	const OPTION_VALIDATE = 'validate';
 
 	/**
-	 * @var IQuarkModel|IQuarkStrongModel|IQuarkModelWithAfterFind|IQuarkModelWithBeforeCreate|IQuarkModelWithBeforeSave|IQuarkModelWithBeforeRemove|IQuarkModelWithBeforePopulate $_model
+	 * @var IQuarkModel|null
 	 */
-	private $_model;
-	private $_null = null;
+	private $_model = null;
 
-	/**
-	 * @param IQuarkModel $model
-	 * @param mixed       $source
-	 */
-	public function __construct (IQuarkModel $model, $source = []) {
-		$this->_model = $model;
+	public function __construct (IQuarkModel $model, $source = null) {
+		/**
+		 * Attention!
+		 * Call of 'new' need to opposite non-controlled passing by reference
+		 */
+		$this->_model = new $model();
 
-		if (func_num_args() == 2)
-			$this->PopulateWith($source);
+		if (func_num_args() == 1)
+			$source = $model;
+
+		$this->PopulateWith($source);
 	}
 
 	/**
@@ -1582,19 +1674,6 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function &__get ($key) {
-		if (!isset($this->_model->$key)) {
-			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array(
-				'model' => $this->_model
-			));
-
-			Quark::Log('QuarkModel: Undefined property "' . $key . '" in model ' . Quark::ClassOf($this->_model), Quark::LOG_WARN);
-
-			/**
-			 * Solution for support same behavior of passing by reference a null model property
-			 */
-			return $this->_null;
-		}
-
 		return $this->_model->$key;
 	}
 
@@ -1624,37 +1703,12 @@ class QuarkModel {
 	}
 
 	/**
-	 * @return bool
-	 */
-	public function Validate () {
-		if ($this->_model instanceof IQuarkModelWithBeforeValidate && $this->_model->BeforeValidate() === false) return false;
-
-		return QuarkField::Rules($this->_model->Rules());
-	}
-
-	/**
-	 * @return $this
-	 */
-	public function Canonize () {
-		$this->_model = self::_canonize($this->_model);
-
-		return $this;
-	}
-
-	/**
 	 * @param $source
+	 *
 	 * @return QuarkModel
 	 */
 	public function PopulateWith ($source) {
-		if (!is_array($source) && !is_object($source)) return $this;
-
-		$this->_model = Quark::Normalize($this->_model, (object)$source, function ($value) {
-			if ($value instanceof \MongoId) return null;
-
-			return $value;
-		});
-
-		$this->Canonize();
+		$this->_model = self::_import($this->_model, $source);
 
 		return $this;
 	}
@@ -1666,185 +1720,249 @@ class QuarkModel {
 	 * @throws QuarkArchException
 	 */
 	private static function _provider (IQuarkModel $model) {
+		if (!($model instanceof IQuarkModelWithDataProvider))
+			throw new QuarkArchException('Attempt to get data provider from model ' . get_class($model) . ' which is not defined as IQuarkStoredModel');
+
 		$provider = $model->DataProvider();
 
 		if (!($provider instanceof IQuarkDataProvider))
-			throw new QuarkArchException(gettype($provider) . ' is not a valid IQuarkDataProvider');
+			throw new QuarkArchException('Model ' . get_class($model) . ' specified ' . (is_object($provider) ? get_class($provider) : gettype($provider)) . ', which is not a valid IQuarkDataProvider');
 
 		return $provider;
 	}
 
 	/**
-	 * @param IQuarkModel|IQuarkModelWithAfterFind $model
-	 * @param $raw
-	 * @param $options
+	 * @param IQuarkModel $model
+	 * @param array       $fields
 	 *
-	 * @return null|QuarkModel
+	 * @return IQuarkModel
 	 */
-	private static function _record ($model, $raw, $options = []) {
-		if ($raw == null) return null;
+	private static function _normalize (IQuarkModel $model, $fields = []) {
+		if (func_num_args() == 1 || (!is_array($fields) && !is_object($fields)))
+			$fields = $model->Fields();
 
-		/**
-		 * Attention!
-		 * Here is solution for non-controlled passing-by-reference of $model
-		 * In case if You pass it without re-instantiating, it will appear situation when in ::Find method, $model will
-		 * refer to SAME object, which is not correct in this AR ORM use case
-		 */
-		$class = get_class($model);
-		$model = new $class();
+		$output = $model;
 
-		$output = new QuarkModel($model, $raw);
+		if (!is_array($fields) && !is_object($fields)) return $output;
 
-		if ($model instanceof IQuarkModelWithAfterFind) {
-			if ($model->AfterFind($raw, $options) === false) return null;
-
-			$output->PopulateWith($model);
+		foreach ($fields as $key => $value) {
+			if (isset($model->$key)) {
+				if (!is_scalar($value)) $output->$key = $model->$key;
+				else {
+					settype($model->$key, gettype($value));
+					$output->$key = $model->$key;
+				}
+			}
+			else $output->$key = $value instanceof IQuarkModel
+				? self::_normalize($value)
+				: $value;
 		}
-
-		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] == true)
-			$output = $output->Extract();
 
 		return $output;
 	}
 
 	/**
-	 * @param IQuarkModel|IQuarkStrongModel|IQuarkModelWithOnCanonize $model
+	 * @param IQuarkModel $model
+	 * @param             $source
+	 //* @param             $options
 	 *
-	 * @return IQuarkModel|object
+	 * @return IQuarkModel
 	 */
-	private static function _canonize ($model) {
-		if (!($model instanceof IQuarkStrongModel)) return $model;
+	private static function _import (IQuarkModel $model, $source/*, $options = []*/) {
+		if (!is_array($source) && !is_object($source)) return $model;
 
 		$fields = $model->Fields();
 
-		if ($model instanceof IQuarkModelWithOnCanonize) {
-			$reaction = $model->OnCanonize();
+		foreach ($source as $key => $value) {
+			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
-			if ($reaction)
-				$fields = $reaction;
+			$property = Quark::Property($fields, $key, $value);
 
-			if ($reaction === false)
-				return $model;
+			if ($property instanceof QuarkCollection) {
+				$class = get_class($property->Type());
+
+				$model->$key = $property->PopulateWith($value, function ($item) use ($class) {
+					$output = new $class();
+
+					return $output instanceof IQuarkLinkedModel ? $output->Link($item) : $item;
+				});
+			}
+			else $model->$key = $property instanceof IQuarkLinkedModel
+				? $property->Link($value)
+				: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
 		}
 
-		if (!is_array($fields)) return $model;
+		return self::_normalize($model);
+	}
 
-		$model = Quark::Normalize($model, (object)$fields, function ($format, $value) {
-			return $format instanceof IQuarkModel
-				? ($value instanceof QuarkModel
-					? $value->Canonize()->Model()
-					: (new QuarkModel($format, $value))->Model()
-				)
-				: $value;
-		});
-
+	/**
+	 * @param IQuarkModel $model
+	 * @param             $options
+	 *
+	 * @return IQuarkModel
+	 */
+	private static function _export (IQuarkModel $model, $options = []) {
 		$output = $model;
+		$fields = $model->Fields();
+
+		if (!isset($options[self::OPTION_VALIDATE]))
+			$options[self::OPTION_VALIDATE] = true;
+
+		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
 		foreach ($model as $key => $value) {
-			if (!isset($fields[$key])) unset($output->$key);
+			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
+
+			if ($value instanceof QuarkCollection) {
+				$output->$key = $value->Collection(function ($item) {
+					if ($item instanceof QuarkModel) $item = $item->Model();
+
+					return $item instanceof IQuarkLinkedModel ? (object)$item->Unlink() : $item;
+				});
+			}
 			else {
-				$output->$key = $fields[$key] instanceof IQuarkModel
-					? (new QuarkModel($fields[$key], $value))->Model()
+				if ($value instanceof QuarkModel) $value = $value->Model();
+
+				$output->$key = $value instanceof IQuarkLinkedModel
+					? (object)$value->Unlink()
 					: $value;
 			}
 		}
 
-		unset($key, $value);
+		return self::_normalize($output);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return bool
+	 */
+	private static function _validate (IQuarkModel $model) {
+		if ($model instanceof IQuarkModelWithBeforeValidate && $model->BeforeValidate() === false) return false;
+
+		return QuarkField::Rules($model->Rules());
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param mixed       $data
+	 * @param array       $options
+	 *
+	 * @return QuarkModel|\StdClass
+	 */
+	private static function _record (IQuarkModel $model, $data, $options = []) {
+		$output = new QuarkModel($model, $data);
+
+		$model = $output->Model();
+
+		if ($model instanceof IQuarkModelWithAfterFind)
+			$model->AfterFind($data);
+
+		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
+			$output = $output->Extract($options[self::OPTION_EXTRACT]);
 
 		return $output;
+	}
+
+	/**
+	 * @param array $fields
+	 *
+	 * @return \StdClass
+	 */
+	public function Extract ($fields = []) {
+		$output = new \StdClass();
+
+		foreach ($this->_model as $key => $value) {
+			$property = Quark::Property($fields, $key, array());
+
+			$output->$key = $value instanceof QuarkModel
+				? $value->Extract($property)
+				: ($value instanceof QuarkCollection
+					? $value->Collection(function ($item) use ($property) {
+						return $item instanceof QuarkModel ? $item->Extract($property) : $item;
+					})
+					: $value);
+		}
+
+		if ((!is_array($fields) && !is_object($fields)) || sizeof($fields) == 0) return $output;
+
+		$buffer = new \StdClass();
+		$property = null;
+
+		foreach ($fields as $field => $rule) {
+			if (property_exists($output, $field))
+				$buffer->$field = Quark::Property($output, $field, null);
+
+			if (!is_bool($rule) && property_exists($output, (string)$rule))
+				$buffer->$rule = Quark::Property($output, $rule, null);
+		}
+
+		return $buffer;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Validate () {
+		return self::_validate($this->_model);
+	}
+
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function Create ($options = []) {
+		$model = self::_export($this->_model, $options);
+
+		if (!$model) return false;
+
+		$ok = $model instanceof IQuarkModelWithBeforeCreate
+			? $model->BeforeCreate($options)
+			: true;
+
+		return ($ok || $ok === null) ? self::_provider($model)->Create($model, $options) : false;
 	}
 
 	/**
 	 * @param array $options
 	 *
-	 * @return bool
-	 */
-	private function _validate ($options = []) {
-		if (!isset($options[self::OPTION_VALIDATE]))
-			$options[self::OPTION_VALIDATE] = true;
-
-		if (!$options[self::OPTION_VALIDATE]) return true;
-
-		return $this->Validate();
-	}
-
-	/**
-	 * @param $source
-	 *
-	 * @return array
-	 */
-	public static function ExtractFrom ($source = []) {
-		if (!is_array($source)) return array();
-
-		$output = array();
-
-		foreach ($source as $item)
-			if ($item instanceof QuarkModel)
-				$output[] = $item->Extract();
-
-		return $output;
-	}
-
-	/**
-	 * @return \StdClass
-	 */
-	public function Extract () {
-		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
-			$this->_model->BeforeExtract();
-
-		return Quark::Normalize($this->_model, $this->_model, function ($value) {
-			return $value instanceof QuarkModel ? $value->Extract() : $value;
-		});
-	}
-
-	/**
-	 * @param $options
-	 * @return mixed
-	 */
-	public function Create ($options = []) {
-		if (!$this->_validate($options)) return false;
-
-		$this->_model = self::_canonize($this->_model);
-
-		$ok = $this->_model instanceof IQuarkModelWithBeforeCreate
-			? $this->_model->BeforeCreate($options)
-			: true;
-
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Create($this->_model, $options) : false;
-	}
-
-	/**
-	 * @param $options
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		if (!$this->_validate($options)) return false;
+		$model = self::_export($this->_model, $options);
 
-		$this->_model = self::_canonize($this->_model);
+		if (!$model) return false;
 
-		$ok = $this->_model instanceof IQuarkModelWithBeforeSave
-			? $this->_model->BeforeSave($options)
+		$ok = $model instanceof IQuarkModelWithBeforeSave
+			? $model->BeforeSave($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Save($this->_model, $options) : false;
+		return ($ok || $ok === null) ? self::_provider($model)->Save($model, $options) : false;
 	}
 
 	/**
 	 * @param $options
+	 *
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		$ok = $this->_model instanceof IQuarkModelWithBeforeRemove
-			? $this->_model->BeforeRemove($options)
+		$model = self::_export($this->_model, $options);
+
+		if (!$model) return false;
+
+		$ok = $model instanceof IQuarkModelWithBeforeRemove
+			? $model->BeforeRemove($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($this->_model)->Remove($this->_model, $options) : false;
+		return ($ok || $ok === null) ? self::_provider($model)->Remove($model, $options) : false;
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
+	 *
 	 * @return array
 	 */
 	public static function Find (IQuarkModel $model, $criteria = [], $options = []) {
@@ -1864,6 +1982,7 @@ class QuarkModel {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
+	 *
 	 * @return QuarkModel|null
 	 */
 	public static function FindOne (IQuarkModel $model, $criteria = [], $options = []) {
@@ -1874,6 +1993,7 @@ class QuarkModel {
 	 * @param IQuarkModel $model
 	 * @param $id
 	 * @param $options
+	 *
 	 * @return QuarkModel|null
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
@@ -1883,35 +2003,112 @@ class QuarkModel {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
-	 * @param $options
-	 * @return mixed
-	 */
-	public static function Update (IQuarkModel $model, $criteria = [], $options = []) {
-		return self::_provider($model)->Update(self::_canonize($model), $criteria, $options);
-	}
-
-	/**
-	 * @param IQuarkModel $model
-	 * @param $criteria
 	 * @param $limit
 	 * @param $skip
 	 * @param $options
+	 *
 	 * @return int
 	 */
 	public static function Count (IQuarkModel $model, $criteria = [], $limit = 0, $skip = 0, $options = []) {
-		return self::_provider($model)->Count(self::_canonize($model), $criteria, $limit, $skip, $options);
+		return self::_provider($model)->Count($model, $criteria, $limit, $skip, $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public static function Update (IQuarkModel $model, $criteria = [], $options = []) {
+		$model = self::_export($model, $options);
+
+		if (!$model) return false;
+
+		$ok = $model instanceof IQuarkModelWithBeforeSave
+			? $model->BeforeSave($options)
+			: true;
+
+		return ($ok || $ok === null) ? self::_provider($model)->Update($model, $criteria, $options) : false;
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param $criteria
+	 * @param $options
+	 *
 	 * @return mixed
 	 */
 	public static function Delete (IQuarkModel $model, $criteria = [], $options = []) {
-		return self::_provider($model)->Delete(self::_canonize($model), $criteria, $options);
+		$model = self::_export($model, $options);
+
+		if (!$model) return false;
+
+		$ok = $model instanceof IQuarkModelWithBeforeRemove
+			? $model->BeforeRemove($options)
+			: true;
+
+		return ($ok || $ok === null) ? self::_provider($model)->Delete($model, $criteria, $options) : false;
 	}
 }
+
+/**
+ * Interface IQuarkModel
+ *
+ * @package Quark
+ */
+interface IQuarkModel {
+	/**
+	 * @return mixed
+	 */
+	function Fields();
+
+	/**
+	 * @return mixed
+	 */
+	function Rules();
+}
+
+/**
+ * Interface IQuarkModelWithDataProvider
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithDataProvider {
+	/**
+	 * @return mixed
+	 */
+	function DataProvider();
+}
+
+/**
+ * Interface IQuarkLinkedModel
+ *
+ * @package Quark
+ */
+interface IQuarkLinkedModel {
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	function Link($raw);
+
+	/**
+	 * @return mixed
+	 */
+	function Unlink();
+}
+
+/**
+ * Interface IQuarkStrongModel
+ *
+ * @package Quark
+ */
+interface IQuarkStrongModel { }
+
+
+
 
 /**
  * Interface IQuarkDataProvider
@@ -1972,7 +2169,7 @@ interface IQuarkDataProvider {
 	 * @param IQuarkModel $model
 	 * @param             $criteria
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	function FindOne(IQuarkModel $model, $criteria);
 
@@ -1980,7 +2177,7 @@ interface IQuarkDataProvider {
 	 * @param IQuarkModel $model
 	 * @param             $id
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	function FindOneById(IQuarkModel $model, $id);
 
@@ -2011,33 +2208,6 @@ interface IQuarkDataProvider {
 	 * @return int
 	 */
 	function Count (IQuarkModel $model, $criteria, $limit, $skip);
-}
-
-/**
- * Interface IQuarkModel
- * @package Quark
- */
-interface IQuarkModel {
-	/**
-	 * @return IQuarkDataProvider
-	 */
-	function DataProvider();
-
-	/**
-	 * @return array
-	 */
-	function Rules();
-}
-
-/**
- * Interface IQuarkStrongModel
- * @package Quark
- */
-interface IQuarkStrongModel {
-	/**
-	 * @return array
-	 */
-	function Fields();
 }
 
 /**
@@ -2108,32 +2278,6 @@ interface IQuarkModelWithBeforeRemove {
 }
 
 /**
- * Interface IQuarkModelWithBeforeExtract
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforeExtract {
-	/**
-	 * @return mixed
-	 */
-	function BeforeExtract();
-}
-
-/**
- * Interface IQuarkModelWithBeforePopulate
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforePopulate {
-	/**
-	 * @param mixed $source
-	 *
-	 * @return mixed
-	 */
-	function BeforePopulate($source);
-}
-
-/**
  * Interface IQuarkModelWithBeforeValidate
  *
  * @package Quark
@@ -2143,18 +2287,6 @@ interface IQuarkModelWithBeforeValidate {
 	 * @return mixed
 	 */
 	function BeforeValidate();
-}
-
-/**
- * Interface IQuarkModelWithOnCanonize
- *
- * @package Quark
- */
-interface IQuarkModelWithOnCanonize extends IQuarkStrongModel {
-	/**
-	 * @return mixed
-	 */
-	function OnCanonize();
 }
 
 
@@ -2465,6 +2597,8 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Rules ($rules) {
+		if (!is_array($rules)) return $rules === null ? true : (bool)$rules;
+
 		$ok = true;
 
 		foreach ($rules as $rule)
@@ -3713,7 +3847,6 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			return $xml->asXML();
 		}
 		catch (\Exception $e) {
-			print_r($e);
 			return '';
 		}
 	}

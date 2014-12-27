@@ -6,6 +6,7 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
+use Quark\QuarkModel;
 use Quark\QuarkCredentials;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
@@ -125,11 +126,11 @@ class MySQL implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param QuarkModel $model
 	 *
 	 * @return string|bool
 	 */
-	private static function _pk (IQuarkModel $model) {
+	private static function _pk (QuarkModel $model) {
 		return $model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : 'id';
 	}
 
@@ -303,7 +304,7 @@ class MySQL implements IQuarkDataProvider {
 		$records = $this->_select($model, $criteria, $options);
 
 		if ($records)
-			foreach ($records as $i => $record)
+			foreach ($records as $record)
 				$output[] = $record;
 
 		return $output;
@@ -314,7 +315,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @param             $criteria
 	 * @param array       $options
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
 		$records = $this->Find($model, $criteria, $options + array('limit' => 1));
@@ -327,7 +328,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @param $id
 	 * @param $options
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return $this->FindOne($model, array(
