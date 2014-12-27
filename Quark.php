@@ -190,7 +190,7 @@ class Quark {
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
+					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
 
 				unset($key, $value, $def);
@@ -1747,9 +1747,10 @@ class QuarkModel {
 
 		foreach ($fields as $key => $value) {
 			if (isset($model->$key)) {
-				if (!is_scalar($value)) $output->$key = $model->$key;
+				if (!is_scalar($value) || !is_scalar($model->$key)) $output->$key = $model->$key;
 				else {
 					settype($model->$key, gettype($value));
+
 					$output->$key = $model->$key;
 				}
 			}
@@ -1784,11 +1785,13 @@ class QuarkModel {
 				$model->$key = $property->PopulateWith($value, function ($item) use ($class) {
 					$output = new $class();
 
-					return $output instanceof IQuarkLinkedModel ? $output->Link($item) : $item;
+					return $output instanceof IQuarkLinkedModel
+						? $output->Link(Quark::isAssociative($item) ? (object)$item : $item)
+						: $item;
 				});
 			}
 			else $model->$key = $property instanceof IQuarkLinkedModel
-				? $property->Link($value)
+				? $property->Link(Quark::isAssociative($value) ? (object)$value : $value)
 				: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
 		}
 
@@ -1851,6 +1854,8 @@ class QuarkModel {
 	 * @return QuarkModel|\StdClass
 	 */
 	private static function _record (IQuarkModel $model, $data, $options = []) {
+		if ($data == null) return null;
+
 		$output = new QuarkModel($model, $data);
 
 		$model = $output->Model();
@@ -1871,6 +1876,9 @@ class QuarkModel {
 	 */
 	public function Extract ($fields = []) {
 		$output = new \StdClass();
+
+		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
+			$this->_model->BeforeExtract();
 
 		foreach ($this->_model as $key => $value) {
 			$property = Quark::Property($fields, $key, array());
@@ -2107,6 +2115,97 @@ interface IQuarkLinkedModel {
  */
 interface IQuarkStrongModel { }
 
+/**
+ * Interface IQuarkModelWithCustomPrimaryKey
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithCustomPrimaryKey {
+	/**
+	 * @return string
+	 */
+	function PrimaryKey();
+}
+
+/**
+ * Interface IQuarkModelWithAfterFind
+ * @package Quark
+ */
+interface IQuarkModelWithAfterFind {
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	function AfterFind($raw);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeSave
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeCreate {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	function BeforeCreate($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeSave
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeSave {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	function BeforeSave($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeRemove
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeRemove {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	function BeforeRemove($options);
+}
+
+/**
+ * Interface IQuarkModelWithBeforeValidate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeValidate {
+	/**
+	 * @return mixed
+	 */
+	function BeforeValidate();
+}
+
+/**
+ * Interface IQuarkModelWithBeforeExtract
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithBeforeExtract {
+	/**
+	 * @return mixed
+	 */
+	function BeforeExtract();
+}
+
 
 
 
@@ -2208,85 +2307,6 @@ interface IQuarkDataProvider {
 	 * @return int
 	 */
 	function Count (IQuarkModel $model, $criteria, $limit, $skip);
-}
-
-/**
- * Interface IQuarkModelWithCustomPrimaryKey
- *
- * @package Quark
- */
-interface IQuarkModelWithCustomPrimaryKey {
-	/**
-	 * @return string
-	 */
-	function PrimaryKey();
-}
-
-/**
- * Interface IQuarkModelWithAfterFind
- * @package Quark
- */
-interface IQuarkModelWithAfterFind {
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	function AfterFind($raw);
-}
-
-/**
- * Interface IQuarkModelWithBeforeSave
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforeCreate {
-	/**
-	 * @param $options
-	 *
-	 * @return mixed
-	 */
-	function BeforeCreate($options);
-}
-
-/**
- * Interface IQuarkModelWithBeforeSave
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforeSave {
-	/**
-	 * @param $options
-	 *
-	 * @return mixed
-	 */
-	function BeforeSave($options);
-}
-
-/**
- * Interface IQuarkModelWithBeforeRemove
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforeRemove {
-	/**
-	 * @param $options
-	 *
-	 * @return mixed
-	 */
-	function BeforeRemove($options);
-}
-
-/**
- * Interface IQuarkModelWithBeforeValidate
- *
- * @package Quark
- */
-interface IQuarkModelWithBeforeValidate {
-	/**
-	 * @return mixed
-	 */
-	function BeforeValidate();
 }
 
 
