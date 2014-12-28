@@ -56,8 +56,8 @@ Quark.IO.Mouse = function (selector) {
 		$(document).on('mousedown', selector, function (e) {
 			target = $(e.target);
 
-			if (opt.handle != false && !target.is(opt.handle)) return true;
-			if (target.is(opt.cancel)) return false;
+			if (target.is(opt.cancel)) return;
+			if (opt.handle != false && !target.is(opt.handle)) return;
 			if (!target.is(selector))
 				target = target.parent(selector);
 
@@ -67,6 +67,10 @@ Quark.IO.Mouse = function (selector) {
 				current: {
 					x: e.pageX,
 					y: e.pageY
+				},
+				scroll: {
+					x: target.parent().scrollLeft(),
+					y: target.parent().scrollTop()
 				},
 				point: {
 					x: e.pageX - position.left,
@@ -85,7 +89,7 @@ Quark.IO.Mouse = function (selector) {
 				Quark.IO.Mouse._drag
 			);
 
-			if (!opt.preventDefault) return true;
+			if (!opt.preventDefault) return;
 
 			e.stopPropagation();
 			return false;
@@ -111,13 +115,14 @@ Quark.IO.Mouse._drag = function (e) {
 	e.data.drag({
 		target: e.data.frame.target,
 		point: e.data.frame.point,
+		scroll: e.data.frame.scroll,
 		current: {
 			x: e.pageX,
 			y: e.pageY
 		},
 		position: {
-			x: e.pageX - e.data.frame.point.x,
-			y: e.pageY - e.data.frame.point.y
+			x: e.pageX - e.data.frame.point.x + e.data.frame.scroll.x,
+			y: e.pageY - e.data.frame.point.y + e.data.frame.scroll.y
 		},
 		delta: {
 			x: e.pageX - e.data.frame.current.x,

@@ -27,6 +27,17 @@ Quark.Extend = function (target, defaults) {
 };
 
 /**
+ * Original algorithm from
+ * http://stackoverflow.com/a/2117523/2097055
+ */
+Quark.GuID = function () {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+		var r = Math.random() * 16|0;
+		return (c == 'x' ? r : (r&0x3|0x8)).toString(16);
+	});
+};
+
+/**
  * @param events
  * @constructor
  */

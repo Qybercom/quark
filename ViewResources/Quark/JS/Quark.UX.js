@@ -65,9 +65,9 @@ Quark.UX = function (selector) {
 			},
 
 			directions: {
-				nw: def,  n: def, ne: def,
-				w: def, 			 e: def,
-				sw: def,  s: def, se: def
+				nw: def, n: def, ne: def,
+				w: def,            e: def,
+				sw: def, s: def, se: def
 			},
 
 			min: {
@@ -103,12 +103,17 @@ Quark.UX = function (selector) {
 					if (opt.start instanceof Function) opt.start(e);
 				},
 				drag: function (e) {
+					e.scroll = {
+						x: startTarget.parent().scrollLeft(),
+						y: startTarget.parent().scrollTop()
+					};
+
 					if (direction.e)
 						width = startDimension.x + e.delta.x;
 
 					if (direction.w) {
 						width = startDimension.x - e.delta.x;
-						left = width <= opt.min.width ? 0 : e.current.x - parent.left;
+						left = (width <= opt.min.width ? 0 : e.current.x - parent.left) + e.scroll.x;
 					}
 
 					if (direction.s)
@@ -116,7 +121,7 @@ Quark.UX = function (selector) {
 
 					if (direction.n) {
 						height = startDimension.y - e.delta.y;
-						top = height <= opt.min.height ? 0 : e.current.y - parent.top;
+						top = (height <= opt.min.height ? 0 : e.current.y - parent.top) + e.scroll.y;
 					}
 
 					if (width) startTarget.css('width', (width <= opt.min.width ? opt.min.width: width) + 'px');

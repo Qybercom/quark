@@ -200,7 +200,7 @@ body {
 
 .qui-input.select {
     display: inline-block;
-    min-width: 100px;
+    min-width: 50px;
     cursor: pointer;
     background: white;
 }
