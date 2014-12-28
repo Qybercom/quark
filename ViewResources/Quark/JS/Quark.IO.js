@@ -56,8 +56,8 @@ Quark.IO.Mouse = function (selector) {
 		$(document).on('mousedown', selector, function (e) {
 			target = $(e.target);
 
-			if (target.is(opt.cancel)) return;
-			if (opt.handle != false && !target.is(opt.handle)) return;
+			if (target.is(opt.cancel)) return true;
+			if (opt.handle != false && !target.is(opt.handle)) return true;
 			if (!target.is(selector))
 				target = target.parent(selector);
 
@@ -89,10 +89,7 @@ Quark.IO.Mouse = function (selector) {
 				Quark.IO.Mouse._drag
 			);
 
-			if (!opt.preventDefault) return;
-
-			e.stopPropagation();
-			return false;
+			return !opt.preventDefault;
 		});
 
 		$(document).on('mouseup', function (e) {
