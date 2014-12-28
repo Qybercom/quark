@@ -1824,10 +1824,11 @@ class QuarkModel {
 				});
 			}
 			else {
-				if ($value instanceof QuarkModel) $value = $value->Model();
+				if ($value instanceof QuarkModel)
+					$value = $value->Model();
 
 				$output->$key = $value instanceof IQuarkLinkedModel
-					? (object)$value->Unlink()
+					? $value->Unlink()
 					: $value;
 			}
 		}

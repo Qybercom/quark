@@ -25,51 +25,22 @@ Quark.UX = function (selector) {
 	 * @param opt
 	 */
 	that.Drag = function (opt) {
-		opt = Quark.Extend(opt, {
-			cancel: false,
-			handle: false,
-			preventDefault: true,
+		var drag = opt.drag,
+			setup = Quark.Extend(opt, {
+				preventDefault: true
+			});
 
-			start: false,
-			drag: false,
-			stop: false,
+		setup.drag = function (e) {
+			e.target.css({
+				left: e.position.x + 'px',
+				top: e.position.y + 'px'
+			});
 
-			axis: {
-				x: true,
-				y: true
-			}
-		});
+			if (drag instanceof Function) drag(e);
+		};
 
 		that.Elem.each(function () {
-			var target = new Quark.IO.Mouse($(this)),
-				position = {x: 0, y: 0},
-				startPosition = {x: 0, y: 0},
-				startTarget = {};
-
-			target.Drag({
-				cancel: opt.cancel,
-				handle: opt.handle,
-				preventDefault: opt.preventDefault || true,
-
-				start: function (e) {console.log('drag');
-					startTarget = (opt.handle ? $(e.target).parent(target) : $(e.target));
-					startPosition = startTarget.position();
-
-					if (opt.start instanceof Function) opt.start(e);
-				},
-				drag: function (e) {
-					position.x = (opt.axis.x ? e.pageX - e.data.pageX : 0) + (startPosition.x || startPosition.left);
-					position.y = (opt.axis.y ? e.pageY - e.data.pageY : 0) + (startPosition.y || startPosition.top);
-
-					startTarget.css({
-						left: position.x + 'px',
-						top: position.y + 'px'
-					});
-
-					if (opt.drag instanceof Function) opt.drag(e, position, startTarget);
-				},
-				stop: opt.stop
-			});
+			(new Quark.IO.Mouse($(this))).Drag(setup);
 		});
 	};
 
@@ -86,12 +57,7 @@ Quark.UX = function (selector) {
 			};
 
 		opt = Quark.Extend(opt, {
-			handle: false,
 			preventDefault: true,
-
-			start: false,
-			drag: false,
-			stop: false,
 
 			axis: {
 				x: true,
@@ -115,7 +81,6 @@ Quark.UX = function (selector) {
 				parent = null,
 				handle = new Quark.IO.Mouse(opt.handle),
 				dimension = {x: 0, y: 0},
-				offset = {x: 0, y: 0},
 				startDimension = {x: 0, y: 0},
 				startTarget = {},
 
@@ -125,8 +90,8 @@ Quark.UX = function (selector) {
 				top = 0;
 
 			handle.Drag({
-				preventDefault: opt.preventDefault || true,
-				handle: handle.Elem,
+				preventDefault: opt.preventDefault,
+				handle: opt.handle,
 
 				start: function (e) {
 					startTarget = (opt.handle ? $(e.target).parent(target) : $(e.target));
@@ -138,23 +103,20 @@ Quark.UX = function (selector) {
 					if (opt.start instanceof Function) opt.start(e);
 				},
 				drag: function (e) {
-					offset.x = (opt.axis.x ? e.pageX - e.data.pageX : 0);
-					offset.y = (opt.axis.y ? e.pageY - e.data.pageY : 0);
-
 					if (direction.e)
-						width = startDimension.x + offset.x;
+						width = startDimension.x + e.delta.x;
 
 					if (direction.w) {
-						width = startDimension.x - offset.x;
-						left = width <= opt.min.width ? 0 : e.pageX - parent.left;
+						width = startDimension.x - e.delta.x;
+						left = width <= opt.min.width ? 0 : e.current.x - parent.left;
 					}
 
 					if (direction.s)
-						height = startDimension.y + offset.y;
+						height = startDimension.y + e.delta.y;
 
 					if (direction.n) {
-						height = startDimension.y - offset.y;
-						top = height <= opt.min.height ? 0 : e.pageY - parent.top;
+						height = startDimension.y - e.delta.y;
+						top = height <= opt.min.height ? 0 : e.current.y - parent.top;
 					}
 
 					if (width) startTarget.css('width', (width <= opt.min.width ? opt.min.width: width) + 'px');

@@ -51,45 +51,79 @@ Quark.IO.Mouse = function (selector) {
 			preventDefault: true
 		});
 
-		var e, target, frame = {
-			pageX: 0,
-			pageY: 0,
-			setup: opt
-		};
+		var e, target, position = {}, frame = {};
 
 		$(document).on('mousedown', selector, function (e) {
 			target = $(e.target);
 
-			//if (!target.is(that.Elem)) return true;
-
 			if (opt.handle != false && !target.is(opt.handle)) return true;
 			if (target.is(opt.cancel)) return false;
+			if (!target.is(selector))
+				target = target.parent(selector);
 
-			frame.pageX = e.pageX;
-			frame.pageY = e.pageY;
-			frame.target = target;
+			position = target.position();
+			frame = {
+				target: target,
+				current: {
+					x: e.pageX,
+					y: e.pageY
+				},
+				point: {
+					x: e.pageX - position.left,
+					y: e.pageY - position.top
+				}
+			};
 
 			if (opt.start instanceof Function) opt.start(frame);
 
-			$(document).on('mousemove', frame, opt.drag);
+			$(document).on(
+				'mousemove',
+				{
+					frame: frame,
+					drag: opt.drag
+				},
+				Quark.IO.Mouse._drag
+			);
 
-			if (opt.preventDefault) {
-				e.stopPropagation();
-				return false;
-			}
+			if (!opt.preventDefault) return true;
+
+			e.stopPropagation();
+			return false;
 		});
 
 		$(document).on('mouseup', function (e) {
-			$(document).off('mousemove', opt.drag);
+			$(document).off('mousemove', Quark.IO.Mouse._drag);
 
-			if (opt.stop instanceof Function) {
-				frame.pageX = e.pageX;
-				frame.pageY = e.pageY;
+			if (!(opt.stop instanceof Function)) return;
 
-				opt.stop(frame);
-			}
+			target = $(e.target).offset();
+
+			opt.stop({
+				x: target.left,
+				y: target.top,
+				target: target
+			});
 		});
 	}
+};
+
+Quark.IO.Mouse._drag = function (e) {
+	e.data.drag({
+		target: e.data.frame.target,
+		point: e.data.frame.point,
+		current: {
+			x: e.pageX,
+			y: e.pageY
+		},
+		position: {
+			x: e.pageX - e.data.frame.point.x,
+			y: e.pageY - e.data.frame.point.y
+		},
+		delta: {
+			x: e.pageX - e.data.frame.current.x,
+			y: e.pageY - e.data.frame.current.y
+		}
+	});
 };
 
 /**
