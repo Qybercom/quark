@@ -1746,11 +1746,7 @@ class QuarkModel {
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
 		foreach ($fields as $key => $value) {
-			if (!isset($model->$key)) {
-				if (is_object($value)) $output->$key = null;
-				else $output->$key = $value;
-			}
-			elseif (isset($model->$key)) {
+			if (isset($model->$key)) {
 				if (!is_scalar($value) || !is_scalar($model->$key)) $output->$key = $model->$key;
 				else {
 					settype($model->$key, gettype($value));
