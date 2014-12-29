@@ -960,21 +960,21 @@ interface IQuarkAuthorizationProvider {
  */
 interface IQuarkAuthorizableService {
 	/**
-	 * @param $request
+	 * @return IQuarkAuthorizationProvider
+	 */
+	function AuthorizationProvider();
+
+	/**
+	 * @param QuarkDTO $request
 	 *
 	 * @return bool
 	 */
-	function AuthorizationCriteria($request);
+	function AuthorizationCriteria(QuarkDTO $request);
 
 	/**
 	 * @return mixed
 	 */
 	function AuthorizationFailed();
-
-	/**
-	 * @return IQuarkAuthorizationProvider
-	 */
-	function AuthorizationProvider();
 }
 
 /**
