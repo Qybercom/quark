@@ -2,9 +2,9 @@
 namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
+
 use Quark\Quark;
 use Quark\QuarkClient;
-use Quark\QuarkDTO;
 use Quark\QuarkCredentials;
 
 /**
@@ -81,8 +81,8 @@ class PushNotification implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
-		foreach ($this->_devices as $i => $device) {
-			foreach (self::$_providers as $p => $provider) {
+		foreach ($this->_devices as $device) {
+			foreach (self::$_providers as $provider) {
 				/**
 				 * @var $provider IPushNotificationProvider
 				 */

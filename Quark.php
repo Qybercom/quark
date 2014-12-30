@@ -3004,6 +3004,8 @@ class QuarkDTO {
 			$data = $this->_multipart($this->_data);
 			$data = $this->_processor->Encode($data);
 
+			$this->_headers[QuarkDTO::HEADER_CONTENT_TYPE] = $this->_processor->MimeType();
+
 			if (sizeof($this->_files) != 0) {
 				$this->_headers[QuarkDTO::HEADER_CONTENT_TYPE] = 'multipart/form-data; boundary=' . $this->_boundary;
 

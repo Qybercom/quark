@@ -23,8 +23,6 @@ class Google implements IPushNotificationProvider {
 	public function Config ($config) {
 		if (is_string($config))
 			$this->_key = $config;
-
-		var_dump($this);
 	}
 
 	/**
@@ -59,7 +57,7 @@ class Google implements IPushNotificationProvider {
 				'Authorization' => 'key='. $this->_key
 			),
 			array(
-				'registration_ids' => array($this->_device),
+				'registration_ids' => array($this->_device->id),
 				'data' => $payload,
 			),
 			new QuarkJSONIOProcessor()
