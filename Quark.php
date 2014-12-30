@@ -2846,6 +2846,9 @@ class QuarkDTO {
 	private $_raw = '';
 
 	private $_method = '';
+	private $_version = '';
+	private $_statusCode = 0;
+	private $_statusText = '';
 	private $_query = '';
 	private $_route = array();
 	private $_headers = array();
@@ -2898,6 +2901,9 @@ class QuarkDTO {
 		$this->_raw = '';
 
 		$this->_method = '';
+		$this->_version = '';
+		$this->_statusCode = 0;
+		$this->_statusText = '';
 		$this->_query = '';
 		$this->_route = array();
 		$this->_headers = array();
@@ -2954,6 +2960,15 @@ class QuarkDTO {
 		$request = explode(' ', $http[1]);
 		$this->Method($request[0]);
 		$this->Query(isset($request[1]) ? $request[1] : '');
+
+		if ($http[2]) {
+			$head = explode(' ', $http[2]);
+
+			$this->_version = $head[0];
+			$this->_statusCode = (int)(isset($head[1]) ? $head[1] : '');
+			$this->_statusText = isset($head[2]) ? $head[2] : '';
+		}
+
 		$this->Route();
 
 		$header = null;
@@ -3109,6 +3124,16 @@ class QuarkDTO {
 			$this->_method = $method;
 
 		return $this->_method;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function Status () {
+		return (object)array(
+			'code' => (int)$this->_statusCode,
+			'text' => $this->_statusText
+		);
 	}
 
 	/**

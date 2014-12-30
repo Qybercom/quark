@@ -97,9 +97,14 @@ class PushNotification implements IQuarkExtension {
 				$this->_client->Credentials(QuarkCredentials::FromURI($provider->URL()));
 				$this->_client->Request($provider->Request($this->_payload));
 				$this->_client->Response($provider->Response());
-				$ok &=$this->_client->Post();
+				$response = $this->_client->Post();
 
-				Quark::Log(print_r($this->_client, true));
+				$status = $this->_client->Response()->Status()->code == 200;
+
+				if (!$status)
+					Quark::Log(print_r($response, true), Quark::LOG_WARN);
+
+				$ok &= $status;
 			}
 		}
 
