@@ -69,7 +69,7 @@ class Google implements IPushNotificationProvider {
 	 */
 	public function Response () {
 		$response = new QuarkDTO();
-		$response->Processor(new QuarkPlainIOProcessor());
+		$response->Processor(new QuarkJSONIOProcessor());
 
 		return $response;
 	}

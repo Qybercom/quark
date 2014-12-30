@@ -81,6 +81,8 @@ class PushNotification implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
+		$ok = true;
+
 		foreach ($this->_devices as $device) {
 			foreach (self::$_providers as $provider) {
 				/**
@@ -95,12 +97,12 @@ class PushNotification implements IQuarkExtension {
 				$this->_client->Credentials(QuarkCredentials::FromURI($provider->URL()));
 				$this->_client->Request($provider->Request($this->_payload));
 				$this->_client->Response($provider->Response());
-				$this->_client->Post();
+				$ok &=$this->_client->Post();
 
 				Quark::Log(print_r($this->_client, true));
 			}
 		}
 
-		return true;
+		return $ok;
 	}
 }
