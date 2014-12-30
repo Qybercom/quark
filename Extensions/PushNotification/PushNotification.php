@@ -2,6 +2,7 @@
 namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
+use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkCredentials;
@@ -95,6 +96,8 @@ class PushNotification implements IQuarkExtension {
 				$this->_client->Request($provider->Request($this->_payload));
 				$this->_client->Response($provider->Response());
 				$this->_client->Post();
+
+				Quark::Log(print_r($this->_client, true));
 			}
 		}
 
