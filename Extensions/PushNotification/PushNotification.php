@@ -95,7 +95,6 @@ class PushNotification implements IQuarkExtension {
 				$this->_client->Request($provider->Request($this->_payload));
 				$this->_client->Response($provider->Response());
 				$this->_client->Post();
-				print_r($this->_client);
 			}
 		}
 
