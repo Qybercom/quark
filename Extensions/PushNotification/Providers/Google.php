@@ -23,6 +23,8 @@ class Google implements IPushNotificationProvider {
 	public function Config ($config) {
 		if (is_string($config))
 			$this->_key = $config;
+
+		var_dump($this);
 	}
 
 	/**
