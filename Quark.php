@@ -190,7 +190,7 @@ class Quark {
 				foreach ($backbone as $key => $value) {
 					$def = !empty($source->$key) ? $source->$key : $value;
 
-					$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
+					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
 				}
 
 				unset($key, $value, $def);
@@ -1787,7 +1787,7 @@ class QuarkModel {
 
 					return $output instanceof IQuarkLinkedModel
 						? $output->Link(Quark::isAssociative($item) ? (object)$item : $item)
-						: $item;
+						: new QuarkModel($output, $item);
 				});
 			}
 			else $model->$key = $property instanceof IQuarkLinkedModel

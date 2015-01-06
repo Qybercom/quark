@@ -18,8 +18,6 @@ class Font implements IQuarkViewResource, IQuarkForeignViewResource {
 	const OPTION_SIZES = 'sizes';
 	const OPTION_SUBSETS = 'subsets';
 
-	const N100 = '100';
-	const N200 = '200';
 	const N300 = '300';
 	const N400 = '400';
 	const N600 = '600';

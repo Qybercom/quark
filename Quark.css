@@ -1,5 +1,5 @@
 body {
-    font-family: Calibri, OpenSans, FontAwesome sans-serif;
+    font-family: Open Sans, Calibri, FontAwesome, sans-serif;
 }
 
 .qui-app {
@@ -46,12 +46,12 @@ body {
 }
 
 .qui-button .label {
-    font-family: Calibri, OpenSans, FontAwesome sans-serif;
+    font-family: Calibri, Open Sans, FontAwesome sans-serif;
     margin-left: 5px;
 }
 
 .qui-label {
-    font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
+    font-family: Calibri, Open Sans, FontAwesome, sans-serif;
     color: rgb(150, 150, 150);
 }
 
@@ -194,7 +194,7 @@ body {
     border: 1px solid rgb(230, 230, 230);
     border-radius: 3px;
     font-size: 12px;
-    font-family: Calibri, Open-Sans, FontAwesome, sans-serif;
+    font-family: Calibri, Open Sans, FontAwesome, sans-serif;
     margin-bottom: 1px;
 }
 
