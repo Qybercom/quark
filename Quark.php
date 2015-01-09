@@ -1755,7 +1755,7 @@ class QuarkModel {
 				}
 			}
 			else $output->$key = $value instanceof IQuarkModel
-				? self::_normalize($value)
+				? new QuarkModel($value)
 				: $value;
 		}
 
