@@ -625,6 +625,14 @@ class QuarkService {
 		while ($length > 0) {
 			if (is_file($path)) break;
 
+			$index = self::_bundle($service . '\\Index');
+
+			if (is_file($index)) {
+				$service .= '\\Index';
+				$path = $index;
+				break;
+			}
+
 			$length--;
 			$service = preg_replace('#\/' . ucfirst(trim($route[$length])) . '$#Uis', '', $service);
 			$path = self::_bundle($service);
