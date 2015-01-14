@@ -3,6 +3,8 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkAuthorizableModel;
+use Quark\Quark;
+use Quark\QuarkModel;
 
 /**
  * Class PHPSession
@@ -23,9 +25,9 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	public function Initialize ($request) {
 		@session_start();
 
-		if (!isset($_SESSION)) return null;
+		if (!isset($_SESSION) || !isset($_SESSION['user'])) return null;
 
-		self::$_user = self::$_model->RenewSession($this, $_SESSION);
+		self::$_user = self::$_model->RenewSession($this, Quark::Normalize(new \StdClass(), $_SESSION['user']));
 	}
 
 	/**
@@ -58,7 +60,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 
 		@session_start();
 
-		$_SESSION['user'] = self::$_user;
+		$_SESSION['user'] = self::$_user instanceof QuarkModel ? self::$_user->Model() : self::$_user;
 
 		return true;
 	}

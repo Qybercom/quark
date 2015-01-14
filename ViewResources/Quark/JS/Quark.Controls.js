@@ -110,7 +110,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 		error: function (response) { }
 	});
 
-	var key = '-ggg';
+	var key = '-upload';
 
 	if ($('#target' + key).length == 0)
 		$('body').append(

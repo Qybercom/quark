@@ -1710,6 +1710,9 @@ class QuarkModel {
 	public function PopulateWith ($source) {
 		$this->_model = self::_import($this->_model, $source);
 
+		if ($this->_model instanceof IQuarkModelWithOnPopulate)
+			$this->_model->OnPopulate($source);
+
 		return $this;
 	}
 
@@ -1721,7 +1724,7 @@ class QuarkModel {
 	 */
 	private static function _provider (IQuarkModel $model) {
 		if (!($model instanceof IQuarkModelWithDataProvider))
-			throw new QuarkArchException('Attempt to get data provider from model ' . get_class($model) . ' which is not defined as IQuarkStoredModel');
+			throw new QuarkArchException('Attempt to get data provider of model ' . get_class($model) . ' which is not defined as IQuarkModelWithDataProvider');
 
 		$provider = $model->DataProvider();
 
@@ -1783,19 +1786,25 @@ class QuarkModel {
 				$class = get_class($property->Type());
 
 				$model->$key = $property->PopulateWith($value, function ($item) use ($class) {
-					$output = new $class();
-
-					return $output instanceof IQuarkLinkedModel
-						? $output->Link(Quark::isAssociative($item) ? (object)$item : $item)
-						: new QuarkModel($output, $item);
+					return self::_link(new $class(), $item);
 				});
 			}
-			else $model->$key = $property instanceof IQuarkLinkedModel
-				? $property->Link(Quark::isAssociative($value) ? (object)$value : $value)
-				: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
+			else $model->$key = self::_link($property, $value);
 		}
 
 		return self::_normalize($model);
+	}
+
+	/**
+	 * @param $property
+	 * @param $value
+	 *
+	 * @return mixed|QuarkModel
+	 */
+	private static function _link ($property, $value) {
+		return $property instanceof IQuarkLinkedModel
+			? $property->Link(Quark::isAssociative($value) ? (object)$value : $value)
+			: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
 	}
 
 	/**
@@ -1818,22 +1827,25 @@ class QuarkModel {
 
 			if ($value instanceof QuarkCollection) {
 				$output->$key = $value->Collection(function ($item) {
-					if ($item instanceof QuarkModel) $item = $item->Model();
-
-					return $item instanceof IQuarkLinkedModel ? (object)$item->Unlink() : $item;
+					return self::_unlink($item);
 				});
 			}
-			else {
-				if ($value instanceof QuarkModel)
-					$value = $value->Model();
-
-				$output->$key = $value instanceof IQuarkLinkedModel
-					? $value->Unlink()
-					: $value;
-			}
+			else $output->$key = self::_unlink($value);
 		}
 
 		return self::_normalize($output);
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return mixed|IQuarkModel
+	 */
+	private static function _unlink ($value) {
+		if ($value instanceof QuarkModel)
+			$value = $value->Model();
+
+		return $value instanceof IQuarkLinkedModel ? $value->Unlink() : $value;
 	}
 
 	/**
@@ -2139,6 +2151,20 @@ interface IQuarkModelWithAfterFind {
 	 * @return mixed
 	 */
 	function AfterFind($raw);
+}
+
+/**
+ * Interface IQuarkModelWithOnPopulate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithOnPopulate {
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	function OnPopulate($raw);
 }
 
 /**
@@ -2977,23 +3003,7 @@ class QuarkDTO {
 		foreach ($headers as $head) {
 			$header = explode(':', $head);
 
-			if ($header[0] == QuarkDTO::HEADER_SET_COOKIE) {
-				$this->Cookie(QuarkCookie::FromSetCookie($header[0]));
-
-				continue;
-			}
-
-			if ($header[0] == QuarkDTO::HEADER_COOKIE) {
-				$cookie = explode(';', $header[1]);
-
-				foreach ($cookie as $cook)
-					$this->Cookie(QuarkCookie::FromCookie($cook));
-
-				continue;
-			}
-
-			if (isset($header[0]) && isset($header[1]))
-				$this->Header(trim($header[0]), trim($header[1]));
+			$this->_header($header[0], $header[1]);
 		}
 
 		$this->_data = $this->_processor instanceof IQuarkIOProcessor
@@ -3001,6 +3011,36 @@ class QuarkDTO {
 			: $http[4];
 
 		return $this;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	private function _header ($key, $value) {
+		if ($key == QuarkDTO::HEADER_SET_COOKIE) {
+			$this->Cookie(QuarkCookie::FromSetCookie($value));
+
+			return;
+		}
+
+		if ($key == QuarkDTO::HEADER_COOKIE) {
+			$cookie = explode(';', $value);
+
+			foreach ($cookie as $cook)
+				$this->Cookie(QuarkCookie::FromCookie($cook));
+
+			return;
+		}
+
+		if ($key == QuarkDTO::HEADER_CONTENT_TYPE) {
+			preg_match_all('#(.*)\; boundary\=(.*)#', $value, $found, PREG_SET_ORDER);
+
+			$this->_boundary = isset($found[0][2]) ? $found[0][2] : '';
+		}
+
+		if (isset($key) && isset($value))
+			$this->Header(trim($key), trim($value));
 	}
 
 	/**
@@ -3058,6 +3098,7 @@ class QuarkDTO {
 		if (!is_array($raw) && !is_object($raw)) return $raw;
 
 		$this->_boundary = 'QuarkBoundary' . Quark::GuID();
+		$this->_files = array();
 
 		$output = Quark::Normalize(new \StdClass(), (object)$raw, function ($item, &$def) {
 			if (!($def instanceof QuarkFile)) return $def;
@@ -3182,8 +3223,12 @@ class QuarkDTO {
 	 * @return array
 	 */
 	public function Headers ($headers = []) {
-		if (func_num_args() != 0)
+		if (func_num_args() != 0) {
 			$this->_headers = $headers;
+
+			foreach ($this->_headers as $key => $value)
+				$this->_header($key, $value);
+		}
 
 		return $this->_headers;
 	}
@@ -3369,7 +3414,7 @@ class QuarkCookie {
  *
  * @package Quark
  */
-class QuarkFile implements IQuarkModel, IQuarkStrongModel {
+class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate {
 	public $name = '';
 	public $type = '';
 	public $tmp_name = '';
@@ -3460,7 +3505,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 			$this->_content = $content;
 		else {
 			if ($this->_content == null)
-				$this->Load($this->_location);
+				$this->Load($this->tmp_name ? $this->tmp_name : $this->_location);
 		}
 
 		return $this->_content;
@@ -3483,7 +3528,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 		$this->Location($location);
 
 		if (!$this->Exists())
-			throw new QuarkArchException('Invalid file path ' . $this->_location);
+			throw new QuarkArchException('Invalid file path "' . $this->_location . '"');
 
 		$this->_content = file_get_contents($this->_location);
 
@@ -3508,15 +3553,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 			$this->_location .= $ext ? '.' . $ext : '';
 		}
 
-		return is_file($this->tmp_name) && rename($this->tmp_name, $this->_location);
+		return is_file($this->tmp_name) && is_dir(dirname($this->_location)) && rename($this->tmp_name, $this->_location);
 	}
 
 	public function Download () { }
-
-	/**
-	 * @return IQuarkDataProvider
-	 */
-	public function DataProvider () { }
 
 	/**
 	 * @return array
@@ -3567,6 +3607,31 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel {
 	 */
 	public static function From ($file) {
 		return (new QuarkModel(new QuarkFile(), $file))->Model();
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkModel(new QuarkFile($raw));
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->Location();
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function OnPopulate ($raw) {
+		$this->Location($raw->Location());
 	}
 }
 
@@ -4190,8 +4255,12 @@ class QuarkSource {
 	 * @return $this
 	 */
 	public function Obfuscate ($css = false) {
+		$slash = ':\\\\' . Quark::GuID() . '\\\\';
+
+		$this->_source = str_replace('://', $slash, $this->_source);
+		$this->_source = preg_replace('#\/\/(.*)\\n#Uis', '', $this->_source);
+		$this->_source = str_replace($slash, '://', $this->_source);
 		$this->_source = preg_replace('#\/\*(.*)\*\/#Uis', '', $this->_source);
-		$this->_source = preg_replace('#\/\/(.*)\\r\\n#Uis', '', $this->_source);
 		$this->_source = str_replace("\r\n", '', $this->_source);
 		$this->_source = preg_replace('/\s+/', ' ', $this->_source);
 		$this->_source = trim(str_replace('<?phpn', '<?php n', $this->_source));
