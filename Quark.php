@@ -3634,7 +3634,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	}
 
 	/**
-	 * @param $raw
+	 * @param QuarkFile $raw
 	 *
 	 * @return mixed
 	 */
