@@ -3582,7 +3582,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			$this->_location .= $ext ? '.' . $ext : '';
 		}
 
-		return is_file($this->tmp_name) && is_dir(dirname($this->_location)) && rename($this->tmp_name, $this->_location);
+		return file_exists($this->tmp_name) && is_dir(dirname($this->_location)) && rename($this->tmp_name, $this->_location);
 	}
 
 	public function Download () { }

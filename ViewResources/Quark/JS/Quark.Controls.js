@@ -11,6 +11,42 @@ var Quark = Quark || {};
 Quark.Controls = {};
 
 /**
+ * @param data
+ * @param append
+ *
+ * @return {string}
+ *
+ * @private
+ */
+Quark.Controls._toForm = function (data, append) {
+	append = append || '';
+
+	var out = '', end = '';
+
+	for (key in data) {
+		end = append == '' ? key : (append + '[' + key + ']');
+
+		if (data[key] != undefined && (data[key].constructor == Object || data[key].constructor == Array))
+			out += Quark.Controls._toForm(data[key], end);
+		else out += Quark.Controls._field(end, data[key] !== undefined ? data[key] : '');
+	}
+
+	return out;
+};
+
+/**
+ * @param key
+ * @param value
+ *
+ * @return {string}
+ *
+ * @private
+ */
+Quark.Controls._field = function (key, value) {
+	return '<input name="' + key + '" value="' + value + '" />';
+};
+
+/**
  * @param selector
  * @param data
  *
@@ -104,6 +140,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 	opt = Quark.Extend(opt, {
 		multiple: false,
 		json: true,
+		data: {},
 		beforeSelect: function (elem) { },
 		beforeSubmit: function (elem) { },
 		success: function (response) { },
@@ -116,6 +153,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 		$('body').append(
 			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
 			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
+				Quark.Controls._toForm(opt.data) +
 				'<input type="text" name="' + name + (opt.multiple ? '[]' : '') + '" value="file_' + name + '" />' +
 				'<input type="file" name="file_' + name + (opt.multiple ? '[]' : '') + '" />' +
 			'</form>'
