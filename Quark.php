@@ -3658,7 +3658,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function OnPopulate ($raw) {
-		$this->Location($raw->Location());
+		if (strlen(trim($this->_location)) == 0)
+			$this->Location($raw->Location());
 	}
 }
 
