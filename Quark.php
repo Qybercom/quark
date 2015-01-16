@@ -3479,9 +3479,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if ($extension[0] == 'jpeg')
 			$extension[0] = 'jpg';
 
-		Quark::Log('mime: ' . print_r($mime, true));
+		Quark::Log('mime: ' . print_r($extension, true));
 
-		return sizeof($extension) == 2 ? explode($extension[0], '-')[0]  : null;
+		return sizeof($extension) == 2 ? explode('-', $extension[0])[0]  : null;
 	}
 
 	/**
