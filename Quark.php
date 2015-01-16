@@ -3479,8 +3479,6 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if ($extension[0] == 'jpeg')
 			$extension[0] = 'jpg';
 
-		Quark::Log('mime: ' . print_r($extension, true));
-
 		return sizeof($extension) == 2 ? explode('-', $extension[0])[0]  : null;
 	}
 
@@ -3579,12 +3577,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function Upload ($mime = false) {
-		if ($mime) {
-			$ext = self::ExtensionByMime(self::Mime($this->tmp_name));
-			$this->_location .= $ext ? '.' . $ext : '';
-		}
+		if (!is_file($this->tmp_name) || !is_dir(dirname($this->_location)) || !rename($this->tmp_name, $this->_location)) return false;
 
-		return is_file($this->tmp_name) && is_dir(dirname($this->_location)) && rename($this->tmp_name, $this->_location);
+		if (!$mime) return true;
+
+		$ext = self::ExtensionByMime(self::Mime($this->_location));
+
+		if (!$ext) return false;
+
+		return rename($this->_location, $this->_location . $ext);
 	}
 
 	public function Download () { }
