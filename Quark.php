@@ -1737,8 +1737,12 @@ class QuarkModel {
 	public function PopulateWith ($source) {
 		$this->_model = self::_import($this->_model, $source);
 
-		if ($this->_model instanceof IQuarkModelWithOnPopulate)
-			$this->_model->OnPopulate($source);
+		if ($this->_model instanceof IQuarkModelWithOnPopulate) {
+			$out = $this->_model->OnPopulate($source);
+
+			if ($out === false)
+				$this->_model = null;
+		}
 
 		return $this;
 	}
@@ -1841,7 +1845,7 @@ class QuarkModel {
 	 * @return IQuarkModel
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		$output = $model;
+		$output = clone $model;
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
@@ -1915,7 +1919,7 @@ class QuarkModel {
 	 * @return \StdClass
 	 */
 	public function Extract ($fields = []) {
-		$output = new \StdClass();
+		$output = new \StdClass();;
 
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
@@ -3441,7 +3445,7 @@ class QuarkCookie {
  *
  * @package Quark
  */
-class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate {
+class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public $name = '';
 	public $type = '';
 	public $tmp_name = '';
@@ -3496,11 +3500,44 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 			$this->_location = Quark::NormalizePath($location, false);
 			$this->name = array_reverse(explode('/', $this->_location))[0];
 
-			if (is_file($this->_location))
+			if ($this->Exists()) {
 				$this->type = self::Mime($this->_location);
+				$this->_extension = self::ExtensionByMime($this->type);
+			}
 		}
 
 		return $this->_location;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Exists () {
+		return file_exists($this->_location);
+	}
+
+	/**
+	 * @param $location
+	 *
+	 * @return QuarkFile
+	 * @throws QuarkArchException
+	 */
+	public function Load ($location) {
+		$this->Location($location);
+
+		if (!$this->Exists())
+			throw new QuarkArchException('Invalid file path "' . $this->_location . '"');
+
+		$this->_content = file_get_contents($this->_location);
+
+		return $this;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Save () {
+		return file_put_contents($this->_location, $this->_content) != 0;
 	}
 
 	/**
@@ -3530,43 +3567,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	public function Content ($content = '') {
 		if (func_num_args() == 1)
 			$this->_content = $content;
-		else {
-			if ($this->_content == null)
-				$this->Load($this->tmp_name ? $this->tmp_name : $this->_location);
-		}
 
 		return $this->_content;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function Exists () {
-		return is_file($this->_location);
-	}
-
-	/**
-	 * @param $location
-	 *
-	 * @return QuarkFile
-	 * @throws QuarkArchException
-	 */
-	public function Load ($location) {
-		$this->Location($location);
-
-		if (!$this->Exists())
-			throw new QuarkArchException('Invalid file path "' . $this->_location . '"');
-
-		$this->_content = file_get_contents($this->_location);
-
-		return $this;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function Save () {
-		return file_put_contents($this->_location, $this->_content) != 0;
 	}
 
 	/**
@@ -3612,6 +3614,22 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	}
 
 	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkFile($raw);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->_location;
+	}
+
+	/**
 	 * @param array $files
 	 *
 	 * @return array
@@ -3634,32 +3652,6 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public static function From ($file) {
 		return (new QuarkModel(new QuarkFile(), $file))->Model();
-	}
-
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	public function Link ($raw) {
-		return new QuarkModel(new QuarkFile($raw));
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function Unlink () {
-		return $this->Location();
-	}
-
-	/**
-	 * @param QuarkFile $raw
-	 *
-	 * @return mixed
-	 */
-	public function OnPopulate ($raw) {
-		if (strlen(trim($this->_location)) == 0)
-			$this->Location($raw->Location());
 	}
 }
 
