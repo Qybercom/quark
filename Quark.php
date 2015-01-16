@@ -1687,7 +1687,7 @@ class QuarkModel {
 		 * Attention!
 		 * Cloning need to opposite non-controlled passing by reference
 		 */
-		$this->_model = new $model();
+		$this->_model = clone $model;
 
 		if (func_num_args() == 1)
 			$source = $model;
@@ -1845,7 +1845,7 @@ class QuarkModel {
 	 * @return IQuarkModel
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		$output = $model;
+		$output = new $model();
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
