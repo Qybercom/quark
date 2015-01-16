@@ -1845,7 +1845,7 @@ class QuarkModel {
 	 * @return IQuarkModel
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		$output = clone $model;
+		$output = $model;
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
