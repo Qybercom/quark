@@ -341,6 +341,25 @@ class Quark {
 	}
 
 	/**
+	 * @param string $start
+	 * @param string $end
+	 * @param string $format
+	 *
+	 * @return bool|int|string
+	 */
+	public static function DateInterval ($start, $end, $format = '') {
+		if (!QuarkField::DateTime($start)) return false;
+		if (!QuarkField::DateTime($end)) return false;
+
+		$start = strtotime($start);
+		$end = strtotime($end);
+
+		$duration = $end - $start;
+
+		return func_num_args() == 2 ? $duration : date($duration, $format);
+	}
+
+	/**
 	 * @param $message
 	 * @param string $lvl
 	 * @param string $domain
