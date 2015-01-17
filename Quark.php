@@ -1687,7 +1687,7 @@ class QuarkModel {
 		 * Attention!
 		 * Cloning need to opposite non-controlled passing by reference
 		 */
-		$this->_model = /*clone */$model;
+		$this->_model = new $model();
 
 		if (func_num_args() == 1)
 			$source = $model;
