@@ -35,6 +35,7 @@ class Quark {
 	 * @var QuarkConfig
 	 */
 	private static $_config;
+	private static $_host = '';
 	private static $_events = array();
 	private static $_gUID = array();
 
@@ -55,7 +56,56 @@ class Quark {
 		self::$_config = $config;
 
 		try {
-			echo QuarkService::Select()->Invoke();
+			if (PHP_SAPI != 'cli') echo QuarkService::Select()->Invoke();
+			else {
+				if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
+					throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration');
+
+				$tasks = array();
+
+				if ($_SERVER['argc'] == 1) {
+					$dir = new \RecursiveDirectoryIterator(self::Host());
+					$fs = new \RecursiveIteratorIterator($dir);
+
+					foreach ($fs as $file) {
+						/**
+						 * @var \FilesystemIterator $file
+						 */
+
+						if ($file->isDir() || !strstr($file->getFilename(), '.php')) continue;
+
+						$location = $file->getPathname();
+						include_once $location;
+						$class = self::ClassIn($location);
+						if (!self::is($class, 'Quark\IQuarkScheduledTask')) continue;
+
+						$_SERVER['REQUEST_URI'] = self::NormalizePath($class, false);
+						$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
+
+						$item = QuarkService::Select();
+
+						if ($item->Service() instanceof IQuarkScheduledTask)
+							$tasks[] = new QuarkTask($item);
+					}
+
+					$work = true;
+
+					/**
+					 * @var QuarkTask $task
+					 */
+					while ($work)
+						foreach ($tasks as $task)
+							$work = $task->Launch();
+				}
+				else {
+					if ($_SERVER['argc'] <= 1 || strlen(trim($_SERVER['argv'][1])) == 0)
+						$_SERVER['argv'][1] = '/';
+
+					$_SERVER['REQUEST_URI'] = $_SERVER['argv'][1][0] != '/' ? '/' . $_SERVER['argv'][1] : $_SERVER['argv'][1];
+
+					echo QuarkService::Select()->Invoke();
+				}
+			}
 		}
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
@@ -103,6 +153,29 @@ class Quark {
 	 */
 	public static function ClassOf ($target) {
 		return is_object($target) ? array_reverse(explode('\\', get_class($target)))[0] : null;
+	}
+
+	/**
+	 * @param $file
+	 *
+	 * @return string
+	 */
+	public static function ClassIn ($file) {
+		return is_string($file) ? '\\' . str_replace('/', '\\', str_replace(self::Host(), '', str_replace('.php', '', self::NormalizePath($file, false)))) : '';
+	}
+
+	/**
+	 * @param $interface
+	 * @return array
+	 */
+	public static function Implementations ($interface) {
+		$output = array();
+		$classes = get_declared_classes();
+
+		foreach ($classes as $class)
+			if (self::is($class, $interface)) $output[] = $class;
+
+		return $output;
 	}
 
 	/**
@@ -202,9 +275,21 @@ class Quark {
 
 	/**
 	 * @return string
+	 *
+	 * @throws QuarkArchException
 	 */
 	public static function Host () {
-		return $_SERVER['DOCUMENT_ROOT'];
+		if (self::$_host == '') {
+			if (PHP_SAPI == 'cli')
+				return self::$_host = self::NormalizePath(dirname($_SERVER['PHP_SELF']));
+
+			if (!isset($_SERVER['DOCUMENT_ROOT']))
+				throw new QuarkArchException('Cannot determine document root. Please check Your PHP and web server configuration');
+
+			self::$_host = self::NormalizePath($_SERVER['DOCUMENT_ROOT']);
+		}
+
+		return self::$_host;
 	}
 
 	/**
@@ -366,7 +451,7 @@ class Quark {
 	 * @return int|bool
 	 */
 	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
-		$logs = self::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . self::PATH_LOGS . '/');
+		$logs = self::NormalizePath(self::Host() . '/' . self::PATH_LOGS . '/');
 
 		if (!is_dir($logs)) mkdir($logs);
 
@@ -385,7 +470,7 @@ spl_autoload_register(function ($class) {
 	$class = str_replace($safe , '\\Quark\\', str_replace('Quark\\', '', str_replace('\\Quark\\', $safe, $class)));
 
 	$quark = Quark::NormalizePath(__DIR__ . '/' . $class . '.php', false);
-	$app = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . $class . '.php', false);
+	$app = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
 	
 	$file = $quark;
 	
@@ -396,7 +481,7 @@ spl_autoload_register(function ($class) {
 		$file = $app;
 	}
 
-	include $file;
+	include_once $file;
 });
 
 /**
@@ -513,6 +598,13 @@ class QuarkService {
 	}
 
 	/**
+	 * @return IQuarkService|null
+	 */
+	public function Service () {
+		return $this->_service;
+	}
+
+	/**
 	 * @return string
 	 * @throws QuarkArchException
 	 */
@@ -570,46 +662,45 @@ class QuarkService {
 		$ok = true;
 		$output = null;
 
-		ob_start();
+		if ($this->_service instanceof IQuarkTask) $output = $this->_service->Action($request);
+		else {
+			if ($this->_service instanceof IQuarkAuthorizableService) {
+				$provider = $this->_service->AuthorizationProvider();
 
-		if ($this->_service instanceof IQuarkAuthorizableService) {
-			$provider = $this->_service->AuthorizationProvider();
+				if (!($provider instanceof IQuarkAuthorizationProvider))
+					throw new QuarkArchException('Specified provider is not a valid IQuarkAuthorizationProvider');
 
-			if (!($provider instanceof IQuarkAuthorizationProvider))
-				throw new QuarkArchException('Specified provider is not a valid IQuarkAuthorizationProvider');
+				$provider->Initialize($request);
+				$response->AttachData($provider->Trail($response));
 
-			$provider->Initialize($request);
-			$response->AttachData($provider->Trail($response));
-
-			if (!$this->_service->AuthorizationCriteria($request)) {
-				$ok = false;
-				$output = $this->_service->AuthorizationFailed();
+				if (!$this->_service->AuthorizationCriteria($request)) {
+					$ok = false;
+					$output = $this->_service->AuthorizationFailed();
+				}
 			}
-		}
 
-		if ($ok) {
 			$method = $this->_service instanceof IQuarkAnyService
 				? 'any'
 				: strtolower($_SERVER['REQUEST_METHOD']);
 
-			if (Quark::is($this->_service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
+			if ($ok && Quark::is($this->_service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
 				$output = $this->_service->$method($request);
 		}
 
 		if ($output instanceof QuarkDTO) {
 			$response->Headers($output->Headers());
-			$response->AttachData($output->Data());
+			$response->AttachData($output->Data(), true);
 		}
-		else $response->AttachData($output);
+		else $response->AttachData($output, true);
 
-		$headers = $response->Headers();
+		if (!headers_sent()) {
+			$headers = $response->Headers();
 
-		foreach ($headers as $key => $value)
-			header($key . ': ' . $value);
+			foreach ($headers as $key => $value)
+				header($key . ': ' . $value);
+		}
 
-		echo $response->Processor()->Encode($response->Data());
-
-		return ob_get_clean();
+		return $response->Processor()->Encode($response->Data());
 	}
 
 	/**
@@ -618,7 +709,7 @@ class QuarkService {
 	 * @return string
 	 */
 	private static function _bundle ($service) {
-		return Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . Quark::PATH_SERVICES . '/' . $service . 'Service.php', false);
+		return Quark::NormalizePath(Quark::Host() . '/' . Quark::PATH_SERVICES . '/' . $service . 'Service.php', false);
 	}
 
 	/**
@@ -660,18 +751,18 @@ class QuarkService {
 		if (!is_file($path))
 			throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
 
-		include $path;
+		include_once $path;
 
 		$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
 
 		if (!class_exists($class))
-			throw new QuarkArchException(500, 'Unknown service class ' . $class);
+			throw new QuarkArchException('Unknown service class ' . $class);
 
 		$bundle = new $class();
 		$bundle->route = $route;
 
 		if (!($bundle instanceof IQuarkService))
-			throw new QuarkArchException(500, 'Class ' . $class . ' is not an IQuarkService');
+			throw new QuarkArchException('Class ' . $class . ' is not an IQuarkService');
 
 		return new QuarkService($bundle);
 	}
@@ -1028,12 +1119,14 @@ interface IQuarkAuthorizableModel {
 
 /**
  * Interface IQuarkService
+ *
  * @package Quark
  */
 interface IQuarkService { }
 
 /**
  * Interface IQuarkAnyService
+ *
  * @package Quark
  */
 interface IQuarkAnyService extends IQuarkService {
@@ -1046,6 +1139,7 @@ interface IQuarkAnyService extends IQuarkService {
 
 /**
  * Interface IQuarkGetService
+ *
  * @package Quark
  */
 interface IQuarkGetService extends IQuarkService {
@@ -1058,6 +1152,7 @@ interface IQuarkGetService extends IQuarkService {
 
 /**
  * Interface IQuarkPostService
+ *
  * @package Quark
  */
 interface IQuarkPostService extends IQuarkService {
@@ -1070,9 +1165,10 @@ interface IQuarkPostService extends IQuarkService {
 
 /**
  * Interface IQuarkServiceWithCustomProcessor
+ *
  * @package Quark
  */
-interface IQuarkServiceWithCustomProcessor extends IQuarkService {
+interface IQuarkServiceWithCustomProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
@@ -1081,9 +1177,10 @@ interface IQuarkServiceWithCustomProcessor extends IQuarkService {
 
 /**
  * Interface IQuarkServiceWithCustomProcessor
+ *
  * @package Quark
  */
-interface IQuarkServiceWithCustomRequestProcessor extends IQuarkService {
+interface IQuarkServiceWithCustomRequestProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
@@ -1092,9 +1189,10 @@ interface IQuarkServiceWithCustomRequestProcessor extends IQuarkService {
 
 /**
  * Interface IQuarkServiceWithCustomProcessor
+ *
  * @package Quark
  */
-interface IQuarkServiceWithCustomResponseProcessor extends IQuarkService {
+interface IQuarkServiceWithCustomResponseProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
@@ -1126,6 +1224,75 @@ interface IQuarkServiceWithAccessControl {
 }
 
 /**
+ * Class QuarkTask
+ *
+ * @package Quark
+ */
+class QuarkTask {
+	/**
+	 * @var QuarkService $_service
+	 */
+	private $_service = null;
+	private $_launched = '';
+
+	/**
+	 * @param QuarkService $service
+	 */
+	public function __construct (QuarkService $service) {
+		$this->_service = $service;
+		$this->_launched = date('Y-m-d H:i:s');
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Launch () {
+		/**
+		 * @var IQuarkTask|IQuarkScheduledTask $service
+		 */
+		$service = $this->_service->Service();
+
+		if (!$service->LaunchCriteria($this->_launched)) return true;
+
+		$out = $this->_service->Invoke();
+		$this->_launched = date('Y-m-d H:i:s');
+
+		if (is_bool($out)) return $out;
+
+		echo $out;
+		return true;
+	}
+}
+
+/**
+ * Interface IQuarkTask
+ *
+ * @package Quark
+ */
+interface IQuarkTask extends IQuarkService {
+	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return mixed
+	 */
+	function Action(QuarkDTO $request);
+}
+
+/**
+ * Interface IQuarkScheduledTask
+ *
+ * @package Quark
+ */
+interface IQuarkScheduledTask {
+	/**
+	 * @param string $previous
+	 *
+	 * @return bool
+	 */
+	function LaunchCriteria($previous);
+}
+
+/**
  * Class QuarkView
  *
  * @package Quark
@@ -1151,7 +1318,7 @@ class QuarkView {
 	 */
 	public function __construct (IQuarkViewModel $view, $vars = [], $resources = []) {
 		$this->_view = $view;
-		$this->_file = Quark::NormalizePath($_SERVER['DOCUMENT_ROOT'] . '/' . Quark::PATH_VIEWS . '/' . $this->_view->View() . '.php', false);
+		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::PATH_VIEWS . '/' . $this->_view->View() . '.php', false);
 
 		if (!is_file($this->_file))
 			throw new QuarkArchException('Unknown view file ' . $this->_file);
@@ -1590,13 +1757,6 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 		return '<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
 	}
 }
-
-
-
-
-
-
-
 
 /**
  * Class QuarkCollection
@@ -3331,14 +3491,15 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param mixed $data
+	 * @param array $data
+	 * @param bool  $string
 	 *
-	 * @return QuarkDTO
+	 * @return $this
 	 */
-	public function AttachData ($data = []) {
+	public function AttachData ($data = [], $string = false) {
 		$this->_data = $data instanceof QuarkView
 			? $data
-			: Quark::Normalize($this->_data, $data);
+			: ($string ? $data : Quark::Normalize($this->_data, $data));
 
 		return $this;
 	}
