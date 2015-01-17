@@ -659,6 +659,8 @@ class QuarkService {
 		if ($this->_service instanceof IQuarkStrongService)
 			$request->Data(Quark::Normalize($request->Data(), (object)$this->_service->InputFilter()));
 
+		ob_start();
+
 		$ok = true;
 		$output = null;
 
@@ -700,7 +702,9 @@ class QuarkService {
 				header($key . ': ' . $value);
 		}
 
-		return $response->Processor()->Encode($response->Data());
+		echo $response->Processor()->Encode($response->Data());
+
+		return ob_get_clean();
 	}
 
 	/**
@@ -3499,7 +3503,7 @@ class QuarkDTO {
 	public function AttachData ($data = [], $string = false) {
 		$this->_data = $data instanceof QuarkView
 			? $data
-			: ($string ? $data : Quark::Normalize($this->_data, $data));
+			: ($string && is_string($data) ? $data : Quark::Normalize($this->_data, $data));
 
 		return $this;
 	}
@@ -3705,7 +3709,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return string
 	 */
 	public function WebLocation () {
-		return Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
+		return '/' . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
 	}
 
 	/**
