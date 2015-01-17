@@ -1687,7 +1687,7 @@ class QuarkModel {
 		 * Attention!
 		 * Cloning need to opposite non-controlled passing by reference
 		 */
-		$this->_model = clone $model;
+		$this->_model = /*clone */$model;
 
 		if (func_num_args() == 1)
 			$source = $model;
@@ -1845,7 +1845,7 @@ class QuarkModel {
 	 * @return IQuarkModel
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		//$output = new $model();
+		$output = new $model();
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
@@ -1853,18 +1853,18 @@ class QuarkModel {
 
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		foreach ($model as $key => &$value) {
+		foreach ($model as $key => $value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			if ($value instanceof QuarkCollection) {
-				$model->$key = $value->Collection(function ($item) {
+				$output->$key = $value->Collection(function ($item) {
 					return self::_unlink($item);
 				});
 			}
-			else $model->$key = self::_unlink($value);
+			else $output->$key = self::_unlink($value);
 		}
 
-		return self::_normalize($model);
+		return self::_normalize($output);
 	}
 
 	/**
