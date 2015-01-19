@@ -59,11 +59,11 @@ class Quark {
 			if (PHP_SAPI != 'cli') echo QuarkService::Select()->Invoke();
 			else {
 				if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
-					throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration');
-
-				$tasks = array();
+					throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration.');
 
 				if ($_SERVER['argc'] == 1) {
+					$tasks = array();
+
 					$dir = new \RecursiveDirectoryIterator(self::Host());
 					$fs = new \RecursiveIteratorIterator($dir);
 
@@ -77,7 +77,7 @@ class Quark {
 						$location = $file->getPathname();
 						include_once $location;
 						$class = self::ClassIn($location);
-						if (!self::is($class, 'Quark\IQuarkScheduledTask')) continue;
+						if (!self::is($class, 'Quark\IQuarkScheduledTask', true)) continue;
 
 						$_SERVER['REQUEST_URI'] = self::NormalizePath($class, false);
 						$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
@@ -89,6 +89,8 @@ class Quark {
 					}
 
 					$work = true;
+
+					self::Log('Start scheduled tasks. Tasks in queue: ' . sizeof($tasks));
 
 					/**
 					 * @var QuarkTask $task
@@ -124,9 +126,11 @@ class Quark {
 	/**
 	 * @param $class
 	 * @param string|array $interface
+	 * @param bool $silent
+	 *
 	 * @return bool
 	 */
-	public static function is ($class, $interface = '') {
+	public static function is ($class, $interface = '', $silent = false) {
 		if (!is_array($interface))
 			$interface = array($interface);
 
@@ -134,7 +138,9 @@ class Quark {
 			$class = get_class($class);
 
 		if (!class_exists($class)) {
-			self::Log('Class "' . $class . '" does not exists', self::LOG_WARN);
+			if (!$silent)
+				self::Log('Class "' . $class . '" does not exists', self::LOG_WARN);
+
 			return false;
 		}
 
