@@ -36,7 +36,7 @@ class Google implements IPushNotificationProvider {
 	 * @return string
 	 */
 	public function URL () {
-		return 'http://api.mycab/gcm';//'https://android.googleapis.com/gcm/send';
+		return 'https://android.googleapis.com/gcm/send';
 	}
 
 	/**
