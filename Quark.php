@@ -2115,7 +2115,7 @@ class QuarkModel {
 
 		$output = self::_normalize($model);
 
-		foreach ($model as $key => $value) {
+		foreach ($output as $key => &$value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			if ($value instanceof QuarkCollection) {
