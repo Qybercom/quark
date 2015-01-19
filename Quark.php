@@ -3374,8 +3374,7 @@ class QuarkDTO {
 			$dataLength = strlen($data);
 		}
 
-		//if (!isset($this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH]))
-			//$this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH] = $dataLength;
+		$this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH] = $dataLength;
 
 		if ($this->_processor instanceof IQuarkIOProcessorWithCustomHeaders)
 			$this->_headers = $this->_processor->Headers($this->_headers);
