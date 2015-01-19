@@ -102,7 +102,7 @@ class PushNotification implements IQuarkExtension {
 				$status = $this->_client->Response()->Status()->code == 200;
 
 				if (!$status)
-					Quark::Log("Push notification failed. Response:\r\n" . print_r($response, true), Quark::LOG_WARN);
+					Quark::Log("Push notification failed. Response:\r\n" . print_r($this->_client, true), Quark::LOG_WARN);
 
 				$ok &= $status;
 			}
