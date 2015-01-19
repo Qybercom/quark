@@ -633,7 +633,10 @@ class QuarkService {
 
 		$request->Headers(Quark::Headers());
 
-		$head = $_SERVER['REQUEST_METHOD'] . ' ' . $_SERVER['REQUEST_URI'] . ' ' . $_SERVER['SERVER_PROTOCOL'] . "\r\nHost: " . $_SERVER['HTTP_HOST'] . "\r\n\r\n";
+		$head = (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '')
+			. (isset($_SERVER['REQUEST_URI']) ? ' ' . $_SERVER['REQUEST_URI'] : '')
+			. (isset($_SERVER['SERVER_PROTOCOL']) ? ' ' . $_SERVER['SERVER_PROTOCOL'] : '')
+			. "\r\nHost: " . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '') . "\r\n\r\n";
 
 		if (substr($request->Header(QuarkDTO::HEADER_CONTENT_TYPE), 0, 19) != 'multipart/form-data') {
 			$request->PopulateFrom($head . file_get_contents('php://input'));
@@ -893,8 +896,8 @@ class QuarkCredentials {
 			(object)array(
 				'query' => '',
 				'scheme' => '',
-				'host' => $_SERVER['SERVER_NAME'],
-				'port' => $_SERVER['SERVER_PORT'],
+				'host' => isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '',
+				'port' => isset($_SERVER['SERVER_PORT']) ? $_SERVER['SERVER_PORT'] : '',
 				'user' => '',
 				'pass' => '',
 				'path' => '',
@@ -3298,7 +3301,8 @@ class QuarkDTO {
 		foreach ($headers as $head) {
 			$header = explode(':', $head);
 
-			$this->_header($header[0], $header[1]);
+			if (isset($header[1]))
+				$this->_header($header[0], $header[1]);
 		}
 
 		$this->AttachData($this->_processor instanceof IQuarkIOProcessor
