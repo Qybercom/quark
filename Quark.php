@@ -2113,9 +2113,10 @@ class QuarkModel {
 
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		$output = self::_normalize($model);
+		$buffer = self::_normalize($model);
+		$output = clone $buffer;
 
-		foreach ($output as $key => &$value) {
+		foreach ($buffer as $key => $value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			if ($value instanceof QuarkCollection) {
