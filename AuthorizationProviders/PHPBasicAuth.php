@@ -44,6 +44,13 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	public function Trail ($response) { }
 
 	/**
+	 * @return IQuarkAuthorizationProvider
+	 */
+	public static function Instance () {
+		// TODO: Implement Instance() method.
+	}
+
+	/**
 	 * @param IQuarkAuthorizableModel $model
 	 *
 	 * @return IQuarkAuthorizationProvider
@@ -91,5 +98,12 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	public static function Logout () {
 		self::Error401();
 		return true;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function Signature () {
+		// TODO: Implement Signature() method.
 	}
 }

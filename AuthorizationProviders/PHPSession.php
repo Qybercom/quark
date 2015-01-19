@@ -3,6 +3,7 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkAuthorizableModel;
+
 use Quark\Quark;
 use Quark\QuarkModel;
 
@@ -17,6 +18,11 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 */
 	private static $_model;
 	private static $_user;
+
+	/**
+	 * @var PHPSession $_session;
+	 */
+	private static $_session;
 
 	/**
 	 * @param $request
@@ -37,6 +43,13 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	public function Trail ($response) { }
 
 	/**
+	 * @return IQuarkAuthorizationProvider
+	 */
+	public static function Instance () {
+		return self::$_session;
+	}
+
+	/**
 	 * @param IQuarkAuthorizableModel $model
 	 *
 	 * @return IQuarkAuthorizationProvider
@@ -44,7 +57,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	public static function Setup (IQuarkAuthorizableModel $model) {
 		self::$_model = $model;
 
-		return new PHPSession();
+		return self::$_session = new PHPSession();
 	}
 
 	/**
@@ -61,6 +74,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		@session_start();
 
 		$_SESSION['user'] = self::$_user instanceof QuarkModel ? self::$_user->Model() : self::$_user;
+		$_SESSION['signature'] = Quark::GuID();
 
 		return true;
 	}
@@ -85,5 +99,12 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		session_destroy();
 
 		return true;
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function Signature () {
+		return isset($_SESSION['signature']) ? $_SESSION['signature'] : '';
 	}
 }

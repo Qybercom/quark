@@ -7,11 +7,11 @@ use Quark\IQuarkAuthorizationProvider;
 use Quark\QuarkModel;
 
 /**
- * Class PHPDigestAuth
+ * Class CookieAuth
  *
  * @package Quark\AuthorizationProviders
  */
-class PHPDigestAuth implements IQuarkAuthorizationProvider {
+class CookieAuth implements IQuarkAuthorizationProvider {
 	/**
 	 * @param $request
 	 *

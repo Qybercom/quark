@@ -666,6 +666,10 @@ class QuarkService {
 
 		if ($this->_service instanceof IQuarkTask) $output = $this->_service->Action($request);
 		else {
+			$method = $this->_service instanceof IQuarkAnyService
+				? 'Any'
+				: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
+
 			if ($this->_service instanceof IQuarkAuthorizableService) {
 				$provider = $this->_service->AuthorizationProvider();
 
@@ -679,13 +683,26 @@ class QuarkService {
 					$ok = false;
 					$output = $this->_service->AuthorizationFailed();
 				}
+				else {
+					if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
+						/**
+						 * @note some PHP magic - ::Signature in IQuarkSignedService is static, but call is non static
+						 *       explanation - Zend engine translate at compile-time all method calls to static version
+						 *       http://stackoverflow.com/a/15756165/2097055
+						 */
+						$sign = $provider->Signature();
+
+						if ($sign == '' || $request->Signature() != $sign) {
+							$action = 'SignatureCheckFailedOn' . $method;
+
+							$ok = false;
+							$output = $this->_service->$action();
+						}
+					}
+				}
 			}
 
-			$method = $this->_service instanceof IQuarkAnyService
-				? 'any'
-				: strtolower($_SERVER['REQUEST_METHOD']);
-
-			if ($ok && Quark::is($this->_service, 'Quark\IQuark' . ucfirst($method) . 'Service'))
+			if ($ok && Quark::is($this->_service, 'Quark\IQuark' . $method . 'Service'))
 				$output = $this->_service->$method($request);
 		}
 
@@ -1051,6 +1068,11 @@ interface IQuarkAuthorizationProvider {
 	function Trail($response);
 
 	/**
+	 * @return IQuarkAuthorizationProvider
+	 */
+	static function Instance();
+
+	/**
 	 * @param IQuarkAuthorizableModel $model
 	 *
 	 * @return IQuarkAuthorizationProvider
@@ -1074,6 +1096,11 @@ interface IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	static function Logout();
+
+	/**
+	 * @return string
+	 */
+	static function Signature();
 }
 
 /**
@@ -1225,6 +1252,42 @@ interface IQuarkServiceWithAccessControl {
 	 * @return string
 	 */
 	function AllowOrigin();
+}
+
+/**
+ * Interface IQuarkSignedAnyService
+ *
+ * @package Quark
+ */
+interface IQuarkSignedAnyService {
+	/**
+	 * @return mixed
+	 */
+	function SignatureCheckFailedOnAny();
+}
+
+/**
+ * Interface IQuarkSignedGetService
+ *
+ * @package Quark
+ */
+interface IQuarkSignedGetService {
+	/**
+	 * @return mixed
+	 */
+	function SignatureCheckFailedOnGet();
+}
+
+/**
+ * Interface IQuarkSignedPostService
+ *
+ * @package Quark
+ */
+interface IQuarkSignedPostService {
+	/**
+	 * @return mixed
+	 */
+	function SignatureCheckFailedOnPost();
 }
 
 /**
@@ -1460,6 +1523,28 @@ class QuarkView {
 	}
 
 	/**
+	 * @param bool $field
+	 *
+	 * @return string
+	 * @throws QuarkArchException
+	 */
+	public function Signature ($field = true) {
+		if (!($this->_view instanceof IQuarkAuthorizableViewModel)) return '';
+
+		$provider = $this->_view->AuthProvider();
+
+		if (!($provider instanceof IQuarkAuthorizationProvider))
+			throw new QuarkArchException('View model ' . get_class($this->_view) . ' specified invalid AuthProvider');
+
+		$sign = $provider = $provider->Signature();
+
+		if (!is_string($sign))
+			throw new QuarkArchException('AuthProvider ' . get_class($provider) . ' specified non-string Signature');
+
+		return $field ? '<input type="hidden" name="_signature" value="' . $sign . '" />' : $sign;
+	}
+
+	/**
 	 * @param IQuarkViewModel $view
 	 * @param array $vars
 	 * @param array $resources
@@ -1533,6 +1618,18 @@ interface IQuarkViewModel {
 	 * @return string
 	 */
 	function View();
+}
+
+/**
+ * Interface IQuarkAuthorizableViewModel
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableViewModel {
+	/**
+	 * @return string
+	 */
+	function AuthProvider();
 }
 
 /**
@@ -2009,13 +2106,14 @@ class QuarkModel {
 	 * @return IQuarkModel
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		$output = new $model();
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
 			$options[self::OPTION_VALIDATE] = true;
 
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
+
+		$output = self::_normalize($model);
 
 		foreach ($model as $key => $value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
@@ -2028,7 +2126,7 @@ class QuarkModel {
 			else $output->$key = self::_unlink($value);
 		}
 
-		return self::_normalize($output);
+		return $output;
 	}
 
 	/**
@@ -3077,6 +3175,7 @@ class QuarkDTO {
 	private $_data = '';
 	private $_files = array();
 	private $_boundary = '';
+	private $_signature = '';
 
 	/**
 	 * @var IQuarkIOProcessor
@@ -3201,9 +3300,10 @@ class QuarkDTO {
 			$this->_header($header[0], $header[1]);
 		}
 
-		$this->_data = $this->_processor instanceof IQuarkIOProcessor
+		$this->AttachData($this->_processor instanceof IQuarkIOProcessor
 			? $this->_processor->Decode($http[4])
-			: $http[4];
+			: $http[4]
+		);
 
 		return $this;
 	}
@@ -3495,7 +3595,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param array $data
+	 * @param mixed $data
 	 * @param bool  $string
 	 *
 	 * @return $this
@@ -3505,7 +3605,16 @@ class QuarkDTO {
 			? $data
 			: ($string && is_string($data) ? $data : Quark::Normalize($this->_data, $data));
 
+		$this->_signature = isset($this->_data->_signature) ? $this->_data->_signature : '';
+
 		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Signature () {
+		return $this->_signature;
 	}
 
 	/**
