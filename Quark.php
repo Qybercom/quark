@@ -2192,14 +2192,14 @@ class QuarkModel {
 	 *
 	 * @return \StdClass
 	 */
-	public function Extract ($fields = [], $weak = false) {
+	public function Extract ($fields = null, $weak = false) {
 		$output = new \StdClass();
 
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
 
 		foreach ($this->_model as $key => $value) {
-			$property = Quark::Property($fields, $key, array());
+			$property = Quark::Property($fields, $key, null);
 
 			$output->$key = $value instanceof QuarkModel
 				? $value->Extract($property)
@@ -2210,7 +2210,7 @@ class QuarkModel {
 					: $value);
 		}
 
-		if (func_num_args() == 0) return $output;
+		if (func_num_args() == 0 || $fields === null) return $output;
 
 		$buffer = new \StdClass();
 		$property = null;
