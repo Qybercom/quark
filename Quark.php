@@ -2179,7 +2179,9 @@ class QuarkModel {
 			$model->AfterFind($data);
 
 		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
-			$output = $output->Extract($options[self::OPTION_EXTRACT]);
+			$output = $options[self::OPTION_EXTRACT] === true
+				? $output->Extract()
+				: $output->Extract($options[self::OPTION_EXTRACT]);
 
 		return $output;
 	}
