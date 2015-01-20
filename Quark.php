@@ -2113,7 +2113,7 @@ class QuarkModel {
 	 *
 	 * @return IQuarkModel
 	 */
-	private static function _export (IQuarkModel $model, $options = []) {
+	private static function _export (IQuarkModel &$model, $options = []) {
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
@@ -2186,11 +2186,12 @@ class QuarkModel {
 
 	/**
 	 * @param array $fields
+	 * @param bool  $weak
 	 *
 	 * @return \StdClass
 	 */
-	public function Extract ($fields = []) {
-		$output = new \StdClass();;
+	public function Extract ($fields = [], $weak = false) {
+		$output = new \StdClass();
 
 		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
 			$this->_model->BeforeExtract();
@@ -2207,17 +2208,22 @@ class QuarkModel {
 					: $value);
 		}
 
-		if ((!is_array($fields) && !is_object($fields)) || sizeof($fields) == 0) return $output;
+		if (func_num_args() == 0) return $output;
 
 		$buffer = new \StdClass();
 		$property = null;
 
-		foreach ($fields as $field => $rule) {
+		$backbone = $weak ? $this->_model->Fields() : $fields;
+
+		foreach ($backbone as $field => $rule) {
 			if (property_exists($output, $field))
 				$buffer->$field = Quark::Property($output, $field, null);
 
-			if (!is_bool($rule) && property_exists($output, (string)$rule))
-				$buffer->$rule = Quark::Property($output, $rule, null);
+			if ($weak && !isset($fields[$field])) continue;
+			else {
+				if (is_string($rule) && property_exists($output, $rule))
+					$buffer->$rule = Quark::Property($output, $rule, null);
+			}
 		}
 
 		return $buffer;
