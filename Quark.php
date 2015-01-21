@@ -2251,7 +2251,7 @@ class QuarkModel {
 
 		if (!$model) return false;
 
-		$ok = Quark::is($model, 'IQuarkModelWith' . $hook)
+		$ok = Quark::is($model, 'Quark\IQuarkModelWith' . $hook)
 			? $model->$hook($options)
 			: true;
 

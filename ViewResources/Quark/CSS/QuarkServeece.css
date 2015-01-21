@@ -1,0 +1,54 @@
+html {
+    height: 100%;
+}
+
+body {
+    font-family: Open Sans, FontAwesome, sans-serif;
+    font-size: 12px;
+
+    margin: 0;
+    padding: 0;
+
+    height: 100%;
+}
+
+#quark-serveece-menu {
+    background: rgb(24, 23, 23);
+    display: inline-block;
+    width: 200px;
+    min-height: 100%;
+    z-index: 2;
+}
+
+#quark-serveece-logo {
+    font-size: 24px;
+    padding: 10px;
+}
+
+.quark-serveece-menu-button {
+    display: block;
+    padding: 10px 25px;
+    color: white;
+    text-decoration: none;
+}
+
+.quark-serveece-menu-button:hover {
+    background: rgb(50, 50, 50);
+}
+
+#quark-serveece-page {
+    display: inline-block;
+    padding: 20px;
+
+    vertical-align: top;
+}
+
+#quark-serveece-page-header {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.quark-serveece-section-header {
+    font-size: 14px;
+    margin: 10px 0;
+}
