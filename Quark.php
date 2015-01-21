@@ -2258,6 +2258,7 @@ class QuarkModel {
 		if ($ok !== null && !$ok) return false;
 
 		$out = self::_provider($model)->$name($model, $options);
+		$this->PopulateWith($model);
 
 		if (!is_scalar($out))
 			$this->PopulateWith($out);
