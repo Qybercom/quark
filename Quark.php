@@ -2122,7 +2122,6 @@ class QuarkModel {
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
 		$model = self::_normalize($model);
-		//$output = clone $buffer;
 
 		foreach ($model as $key => &$value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
@@ -2239,20 +2238,40 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param $options
+	 * @param string $name
+	 * @param array $options
 	 *
-	 * @return mixed
+	 * @return bool
 	 */
-	public function Create ($options = []) {
+	private function _op ($name, $options = []) {
+		$name = ucfirst(strtolower($name));
+
+		$hook = 'Before' . $name;
 		$model = self::_export(clone $this->_model, $options);
 
 		if (!$model) return false;
 
-		$ok = $model instanceof IQuarkModelWithBeforeCreate
-			? $model->BeforeCreate($options)
+		$ok = Quark::is($model, 'IQuarkModelWith' . $hook)
+			? $model->$hook($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($model)->Create($model, $options) : false;
+		if ($ok !== null && !$ok) return false;
+
+		$out = self::_provider($model)->$name($model, $options);
+
+		if (!is_scalar($out))
+			$this->PopulateWith($out);
+
+		return true;
+	}
+
+	/**
+	 * @param $options
+	 *
+	 * @return bool
+	 */
+	public function Create ($options = []) {
+		return $this->_op('Create', $options);
 	}
 
 	/**
@@ -2261,15 +2280,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		$model = self::_export(clone $this->_model, $options);
-
-		if (!$model) return false;
-
-		$ok = $model instanceof IQuarkModelWithBeforeSave
-			? $model->BeforeSave($options)
-			: true;
-
-		return ($ok || $ok === null) ? self::_provider($model)->Save($model, $options) : false;
+		return $this->_op('Save', $options);
 	}
 
 	/**
@@ -2278,15 +2289,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		$model = self::_export(clone $this->_model, $options);
-
-		if (!$model) return false;
-
-		$ok = $model instanceof IQuarkModelWithBeforeRemove
-			? $model->BeforeRemove($options)
-			: true;
-
-		return ($ok || $ok === null) ? self::_provider($model)->Remove($model, $options) : false;
+		return $this->_op('Remove', $options);
 	}
 
 	/**
