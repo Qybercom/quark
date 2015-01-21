@@ -2113,7 +2113,7 @@ class QuarkModel {
 	 *
 	 * @return IQuarkModel
 	 */
-	private static function _export (IQuarkModel &$model, $options = []) {
+	private static function _export (IQuarkModel $model, $options = []) {
 		$fields = $model->Fields();
 
 		if (!isset($options[self::OPTION_VALIDATE]))
@@ -2121,21 +2121,21 @@ class QuarkModel {
 
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		$buffer = self::_normalize($model);
-		$output = clone $buffer;
+		$model = self::_normalize($model);
+		//$output = clone $buffer;
 
-		foreach ($buffer as $key => $value) {
+		foreach ($model as $key => &$value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			if ($value instanceof QuarkCollection) {
-				$output->$key = $value->Collection(function ($item) {
+				$model->$key = $value->Collection(function ($item) {
 					return self::_unlink($item);
 				});
 			}
-			else $output->$key = self::_unlink($value);
+			else $model->$key = self::_unlink($value);
 		}
 
-		return $output;
+		return $model;
 	}
 
 	/**
@@ -2244,7 +2244,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Create ($options = []) {
-		$model = self::_export($this->_model, $options);
+		$model = self::_export(clone $this->_model, $options);
 
 		if (!$model) return false;
 
@@ -2261,7 +2261,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		$model = self::_export($this->_model, $options);
+		$model = self::_export(clone $this->_model, $options);
 
 		if (!$model) return false;
 
@@ -2278,7 +2278,7 @@ class QuarkModel {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		$model = self::_export($this->_model, $options);
+		$model = self::_export(clone $this->_model, $options);
 
 		if (!$model) return false;
 
