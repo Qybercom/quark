@@ -2050,12 +2050,10 @@ class QuarkModel {
 
 		foreach ($fields as $key => $value) {
 			if (isset($model->$key)) {
-				if (!is_scalar($value) || !is_scalar($model->$key)) $output->$key = $model->$key;
-				else {
+				if (is_scalar($value) && is_scalar($model->$key))
 					settype($model->$key, gettype($value));
 
-					$output->$key = $model->$key;
-				}
+				$output->$key = $model->$key;
 			}
 			else $output->$key = $value instanceof IQuarkModel
 				? new QuarkModel($value)
@@ -2121,20 +2119,20 @@ class QuarkModel {
 
 		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		$model = self::_normalize($model);
+		$output = self::_normalize($model);
 
-		foreach ($model as $key => &$value) {
+		foreach ($model as $key => $value) {
 			if (!Quark::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			if ($value instanceof QuarkCollection) {
-				$model->$key = $value->Collection(function ($item) {
+				$output->$key = $value->Collection(function ($item) {
 					return self::_unlink($item);
 				});
 			}
-			else $model->$key = self::_unlink($value);
+			else $output->$key = self::_unlink($value);
 		}
 
-		return $model;
+		return $output;
 	}
 
 	/**
@@ -2260,7 +2258,7 @@ class QuarkModel {
 		$out = self::_provider($model)->$name($model, $options);
 		$this->PopulateWith($model);
 
-		return $out;
+		return true;
 	}
 
 	/**
