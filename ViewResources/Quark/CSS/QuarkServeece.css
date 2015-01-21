@@ -37,7 +37,9 @@ body {
 }
 
 #quark-serveece-page {
-    display: inline-block;
+    /*display: inline-block;*/
+    position: fixed;
+    left: 200px;
     padding: 20px;
 
     vertical-align: top;
