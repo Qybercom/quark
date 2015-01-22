@@ -3863,10 +3863,12 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param bool $full
+	 *
 	 * @return string
 	 */
-	public function WebLocation () {
-		return '/' . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
+	public function WebLocation ($full = true) {
+		return Quark::WebHost($full) . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
 	}
 
 	/**
