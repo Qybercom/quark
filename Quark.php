@@ -36,6 +36,7 @@ class Quark {
 	 */
 	private static $_config;
 	private static $_host = '';
+	private static $_webHost = '';
 	private static $_events = array();
 	private static $_gUID = array();
 
@@ -296,6 +297,36 @@ class Quark {
 		}
 
 		return self::$_host;
+	}
+
+	/**
+	 * @param bool $full
+	 * @param bool $secure
+	 *
+	 * @return string
+	 *
+	 * @throws QuarkArchException
+	 */
+	public static function WebHost ($full = true, $secure = false) {
+		if (self::$_webHost == '') {
+			if (!isset($_SERVER['SERVER_NAME']))
+				throw new QuarkArchException('Could not determine WebHost because $_SERVER[\'SERVER_NAME\'] is not specified');
+
+			if (!isset($_SERVER['SERVER_PROTOCOL']))
+				throw new QuarkArchException('Could not determine WebHost because $_SERVER[\'SERVER_PROTOCOL\'] is not specified');
+
+			$server = $_SERVER['SERVER_NAME'];
+			$protocol = strtolower(explode('/', $_SERVER['SERVER_PROTOCOL'])[0]);
+
+			if ($protocol != 'http')
+				throw new QuarkArchException('Could not determine WebHost because $_SERVER[\'SERVER_PROTOCOL\'] is not valid HTTP protocol');
+
+			$offset = str_replace('index.php', '', $_SERVER['PHP_SELF']);
+
+			return $full ? ($protocol . ($secure ? 's' : '') . '://' . $server . $offset) : $offset;
+		}
+
+		return self::$_webHost;
 	}
 
 	/**
@@ -2258,7 +2289,7 @@ class QuarkModel {
 		$out = self::_provider($model)->$name($model, $options);
 		$this->PopulateWith($model);
 
-		return true;
+		return $out;
 	}
 
 	/**
