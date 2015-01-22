@@ -135,6 +135,7 @@ body {
 }
 
 .qui-message {
+    font-family: FontAwesome, Open Sans, Calibri, sans-serif;
     padding: 10px;
     margin: 3px 1px;
 
@@ -143,12 +144,14 @@ body {
 }
 
 .qui-message .fa {
+    vertical-align: middle;
     display: inline-block;
     margin-right: 5px;
     float: left;
 }
 
 .qui-message .content {
+    vertical-align: middle;
     display: inline-block;
     margin-left: 5px;
 }
