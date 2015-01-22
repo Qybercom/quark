@@ -353,7 +353,6 @@ class Quark {
 	 * @return string
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
-		self::Log('path: ' . $path);
 		return preg_replace('#(/+)#', '/', str_replace('\\', '/', $path))
 			. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : '');
 	}
