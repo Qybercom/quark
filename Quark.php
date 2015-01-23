@@ -502,7 +502,9 @@ spl_autoload_register(function ($class) {
 
 	$quark = Quark::NormalizePath(__DIR__ . '/' . $class . '.php', false);
 	$app = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
-	
+
+	Quark::Log('Include ' . $app . ' [' . print_r(file_exists($app), true) . ']');
+
 	$file = $quark;
 	
 	if (!file_exists($quark)) {
