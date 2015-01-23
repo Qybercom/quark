@@ -15,12 +15,6 @@ class Quark {
 	const MODE_DEV = 'dev';
 	const MODE_PRODUCTION = 'production';
 
-	const PATH_APP = '/';
-	const PATH_SERVICES = '/Services/';
-	const PATH_MODELS = '/Models/';
-	const PATH_VIEWS = '/Views/';
-	const PATH_LOGS = '/logs/';
-
 	const LOG_OK = ' ok ';
 	const LOG_INFO = 'info';
 	const LOG_WARN = 'warn';
@@ -488,7 +482,7 @@ class Quark {
 	 * @return int|bool
 	 */
 	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
-		$logs = self::NormalizePath(self::Host() . '/' . self::PATH_LOGS . '/');
+		$logs = self::NormalizePath(self::Host() . '/' . self::Config()->Location(QuarkConfig::LOGS) . '/');
 
 		if (!is_dir($logs)) mkdir($logs);
 
@@ -526,6 +520,13 @@ spl_autoload_register(function ($class) {
  * @package Quark
  */
 class QuarkConfig {
+	const SERVICES = 'services';
+	const VIEWS = 'views';
+	const LOGS = 'logs';
+
+	const REQUEST = '_processorRequest';
+	const RESPONSE = '_processorResponse';
+
 	/**
 	 * @var IQuarkCulture
 	 */
@@ -542,11 +543,30 @@ class QuarkConfig {
 	private $_extensions = array();
 
 	/**
+	 * @var IQuarkIOProcessor
+	 */
+	private $_processorRequest = null;
+	private $_processorResponse = null;
+
+	/**
+	 * @var array
+	 */
+	private $_location = array(
+		self::SERVICES => 'Services',
+		self::VIEWS => 'Views',
+		self::LOGS => 'logs',
+	);
+
+	/**
 	 * @param string $mode
 	 */
 	public function __construct ($mode = Quark::MODE_DEV) {
 		$this->_mode = $mode;
+
 		$this->_culture = new QuarkCultureISO();
+
+		$this->_processorRequest = new QuarkFormIOProcessor();
+		$this->_processorResponse = new QuarkHTMLIOProcessor();
 	}
 
 	/**
@@ -612,6 +632,32 @@ class QuarkConfig {
 
 		return $extension;
 	}
+
+	/**
+	 * @param string $component
+	 * @param string $location
+	 *
+	 * @return string
+	 */
+	public function Location ($component, $location = '') {
+		if (func_num_args() == 2)
+			$this->_location[$component] = $location;
+
+		return isset($this->_location[$component]) ? $this->_location[$component] : '';
+	}
+
+	/**
+	 * @param string $direction
+	 * @param IQuarkIOProcessor $processor
+	 *
+	 * @return IQuarkIOProcessor
+	 */
+	public function Processor ($direction, IQuarkIOProcessor $processor = null) {
+		if (func_num_args() == 2)
+			$this->$direction = $processor;
+
+		return $this->$direction;
+	}
 }
 
 /**
@@ -647,9 +693,9 @@ class QuarkService {
 	 */
 	public function Invoke () {
 		$request = new QuarkDTO();
-		$request->Processor(new QuarkFormIOProcessor());
+		$request->Processor(Quark::Config()->Processor(QuarkConfig::REQUEST));
 		$response = new QuarkDTO();
-		$response->Processor(new QuarkHTMLIOProcessor());
+		$response->Processor(Quark::Config()->Processor(QuarkConfig::RESPONSE));
 
 		if ($this->_service instanceof IQuarkServiceWithCustomProcessor) {
 			$request->Processor($this->_service->Processor());
@@ -770,7 +816,7 @@ class QuarkService {
 	 * @return string
 	 */
 	private static function _bundle ($service) {
-		return Quark::NormalizePath(Quark::Host() . '/' . Quark::PATH_SERVICES . '/' . $service . 'Service.php', false);
+		return Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::SERVICES) . '/' . $service . 'Service.php', false);
 	}
 
 	/**
@@ -1438,7 +1484,7 @@ class QuarkView {
 	 */
 	public function __construct (IQuarkViewModel $view, $vars = [], $resources = []) {
 		$this->_view = $view;
-		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::PATH_VIEWS . '/' . $this->_view->View() . '.php', false);
+		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS) . '/' . $this->_view->View() . '.php', false);
 
 		if (!is_file($this->_file))
 			throw new QuarkArchException('Unknown view file ' . $this->_file);

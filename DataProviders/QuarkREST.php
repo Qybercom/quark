@@ -51,7 +51,7 @@ class QuarkREST implements IQuarkDataProvider {
 	 * @param string $action
 	 * @param mixed $data
 	 *
-	 * @return object|null
+	 * @return mixed
 	 * @throws QuarkArchException
 	 */
 	private function _api ($method, $action, $data = []) {
