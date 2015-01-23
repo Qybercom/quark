@@ -503,12 +503,10 @@ spl_autoload_register(function ($class) {
 	$quark = Quark::NormalizePath(__DIR__ . '/' . $class . '.php', false);
 	$app = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
 
-	Quark::Log('Include ' . $app . ' [' . print_r(file_exists($app), true) . ']');
-
 	$file = $quark;
 	
-	if (!file_exists($quark)) {
-		if (!file_exists($app))
+	if (!is_file($quark)) {
+		if (!is_file($app))
 			throw new QuarkArchException(
 				'Class file ' . $app . ' is invalid class path.' . "\r\n" .
 				' - Quark: [' . print_r($quark, true) . ']' . "\r\n" .
