@@ -6,7 +6,6 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
-use Quark\QuarkModel;
 use Quark\QuarkCredentials;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
@@ -23,52 +22,13 @@ class MySQL implements IQuarkDataProvider {
 	 * @var \mysqli $_connection
 	 */
 	private $_connection;
-	private static $_pool = array();
 
 	/**
-	 * @return array
-	 */
-	public static function SourcePool () {
-		return self::$_pool;
-	}
-
-	/**
-	 * @param $name
+	 * @param QuarkCredentials $credentials
 	 *
-	 * @return IQuarkDataProvider
+	 * @return mixed
 	 * @throws QuarkArchException
-	 */
-	public static function SourceGet ($name) {
-		if (!isset(self::$_pool[$name]))
-			throw new QuarkArchException('MySQL connection \'' . $name . '\' is not pooled');
-
-		return self::$_pool[$name];
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 *
-	 * @throws QuarkArchException
-	 */
-	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new MySQL();
-		self::$_pool[$name]->Connect($credentials);
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	public function Source ($name, QuarkCredentials $credentials) {
-		$this->Connect($credentials);
-		self::$_pool[$name] = $this;
-	}
-
-	/**
-	 * @param QuarkCredentials $credentials
-	 *
-	 * @throws QuarkArchException|QuarkConnectionException
+	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkCredentials $credentials) {
 		$this->_connection = \mysqli_init();
@@ -126,11 +86,11 @@ class MySQL implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param QuarkModel $model
+	 * @param IQuarkModel $model
 	 *
 	 * @return string|bool
 	 */
-	private static function _pk (QuarkModel $model) {
+	private static function _pk (IQuarkModel $model) {
 		return $model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : 'id';
 	}
 
@@ -168,8 +128,6 @@ class MySQL implements IQuarkDataProvider {
 		if (!is_array($condition) || sizeof($condition) == 0) return '';
 
 		$output = array();
-		$field = '';
-		$value = '';
 
 		foreach ($condition as $key => $rule) {
 			$field = $this->_field($key);
@@ -220,7 +178,6 @@ class MySQL implements IQuarkDataProvider {
 
 		if (isset($options['sort']) && is_array($options['sort'])) {
 			$output .= ' ORDER BY ';
-			$sort = '';
 
 			foreach ($options['sort'] as $key => $order) {
 				switch ($order) {
@@ -348,13 +305,10 @@ class MySQL implements IQuarkDataProvider {
 
 		if (isset($options['fields']) && is_array($options['fields'])) {
 			$fields = '';
-			$key = '';
 			$count = sizeof($options['fields']);
 			$i = 1;
 
-			foreach ($options['fields'] as $j => $field) {
-				$key = false;
-
+			foreach ($options['fields'] as $field) {
 				switch ($field) {
 					case self::FIELD_COUNT_ALL:
 						$key = $field;

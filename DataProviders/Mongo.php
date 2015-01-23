@@ -5,8 +5,6 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
-use Quark\QuarkModel;
-use Quark\QuarkArchException;
 use Quark\QuarkCredentials;
 use Quark\QuarkConnectionException;
 
@@ -16,8 +14,10 @@ use Quark\QuarkConnectionException;
  * @package Quark\DataProviders
  */
 class Mongo implements IQuarkDataProvider {
+	/**
+	 * @var \MongoDb $_connection
+	 */
 	private $_connection;
-	private static $_pool = array();
 
 	/**
 	 * @param object $source
@@ -55,47 +55,9 @@ class Mongo implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @return array
-	 */
-	public static function SourcePool () {
-		return self::$_pool;
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return IQuarkDataProvider
-	 * @throws QuarkArchException
-	 */
-	public static function SourceGet ($name) {
-		if (!isset(self::$_pool[$name]))
-			throw new QuarkArchException('MongoDB connection \'' . $name . '\' is not pooled');
-
-		return self::$_pool[$name];
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new Mongo();
-		self::$_pool[$name]->Connect($credentials);
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	public function Source ($name, QuarkCredentials $credentials) {
-		$this->Connect($credentials);
-		self::$_pool[$name] = $this;
-	}
-
-	/**
 	 * @param QuarkCredentials $credentials
 	 *
-	 * @return mixed|void
+	 * @return mixed
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkCredentials $credentials) {
@@ -197,6 +159,9 @@ class Mongo implements IQuarkDataProvider {
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
+		/**
+		 * @var \MongoCursor $raw
+		 */
 		$raw = $this->_collection($model, $options)->find($criteria, self::_fields($options));
 
 		if (isset($options['sort']))
@@ -211,7 +176,7 @@ class Mongo implements IQuarkDataProvider {
 		$buffer = array();
 		$item = null;
 
-		foreach ($raw as $i => $document) {
+		foreach ($raw as $document) {
 			$item = $document;
 
 			if (isset($options['getId']) && $options['getId'] == true)

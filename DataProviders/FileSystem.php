@@ -6,7 +6,6 @@ use Quark\IQuarkModel;
 
 use Quark\Quark;
 use Quark\QuarkCredentials;
-use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
 
 /**
@@ -22,50 +21,11 @@ class FileSystem implements IQuarkDataProvider {
 	const OPTIONS_SORT_BY_EXTENSION = 'sortByExtension';
 
 	private $_root = '';
-	private static $_pool = array();
-
-	/**
-	 * @return array
-	 */
-	public static function SourcePool () {
-		return self::$_pool;
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return IQuarkDataProvider
-	 * @throws QuarkArchException
-	 */
-	public static function SourceGet ($name) {
-		if (!isset(self::$_pool[$name]))
-			throw new QuarkArchException('FileSystem connection \'' . $name . '\' is not pooled');
-
-		return self::$_pool[$name];
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	public static function SourceSet ($name, QuarkCredentials $credentials) {
-		self::$_pool[$name] = new FileSystem();
-		self::$_pool[$name]->Connect($credentials);
-	}
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	public function Source ($name, QuarkCredentials $credentials) {
-		$this->Connect($credentials);
-		self::$_pool[$name] = $this;
-	}
 
 	/**
 	 * @param QuarkCredentials $credentials
 	 *
-	 * @return mixed|void
+	 * @return mixed
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkCredentials $credentials) {
@@ -115,7 +75,7 @@ class FileSystem implements IQuarkDataProvider {
 			$options[self::OPTIONS_UPSTREAM] = false;
 
 		if ($options[self::OPTIONS_UPSTREAM] == false)
-			foreach ($raw as $i => $item) {
+			foreach ($raw as $item) {
 				if ($item == '.' || $item == '..') continue;
 
 				$buffer[] = $item;
@@ -127,22 +87,20 @@ class FileSystem implements IQuarkDataProvider {
 		if (isset($options[self::OPTIONS_SORT_BY_TYPE])) {
 			$fs = array();
 
-			foreach ($buffer as $i => $entry)
+			foreach ($buffer as $entry)
 				if (is_dir($this->_root . $entry)) $fs[] = $entry;
 
-			foreach ($buffer as $i => $entry)
+			foreach ($buffer as $entry)
 				if (is_file($this->_root . $entry)) $fs[] = $entry;
 
 			$buffer = $fs;
 		}
 
 		$output = array();
-		$target = '';
-		$isDir = false;
 
 		\clearstatcache();
 
-		foreach ($buffer as $i => $file) {
+		foreach ($buffer as $file) {
 			$target = $this->_root . $file;
 			$isDir = is_dir($target);
 

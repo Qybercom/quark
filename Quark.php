@@ -572,7 +572,7 @@ class QuarkConfig {
 	 */
 	public function DataSource (IQuarkDataProvider $provider, $name, QuarkCredentials $credentials) {
 		try {
-			$provider->Source($name, $credentials);
+			QuarkModel::Source($name, $provider)->Connect($credentials);
 		}
 		catch (QuarkConnectionException $e) {
 			Quark::Log('Unable to connect \'' . $name . '\'', Quark::LOG_FATAL);
@@ -1026,30 +1026,43 @@ class QuarkCredentials {
 	/**
 	 * @param string $host
 	 * @param integer|null $port
+	 *
+	 * @return QuarkDTO
 	 */
 	public function Endpoint ($host, $port = null) {
 		$this->host = $host;
 		$this->port = $port;
+
+		return $this;
 	}
 
 	/**
 	 * @param string $username
 	 * @param string|null $password
+	 *
+	 * @return QuarkDTO
 	 */
 	public function User ($username, $password = null) {
 		$this->username = $username;
 		$this->password = $password;
+
+		return $this;
 	}
 
 	/**
 	 * @param string $resource
+	 *
+	 * @return QuarkDTO
 	 */
 	public function Resource ($resource) {
 		$this->suffix = $resource;
+
+		return $this;
 	}
 
 	/**
 	 * @param QuarkCredentials $credentials
+	 *
 	 * @return bool
 	 */
 	public function Equal (QuarkCredentials $credentials) {
@@ -1061,6 +1074,7 @@ class QuarkCredentials {
 
 	/**
 	 * @param array(QuarkCredentials) $credentials
+	 *
 	 * @return bool
 	 */
 	public function Used ($credentials = []) {
@@ -1977,6 +1991,27 @@ class QuarkModel {
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
 
+	private static $_providers = array();
+
+	/**
+	 * @param                    $name
+	 * @param IQuarkDataProvider $provider
+	 *
+	 * @return IQuarkDataProvider
+	 * @throws QuarkArchException
+	 */
+	public static function Source ($name, IQuarkDataProvider $provider = null) {
+		$args = func_num_args();
+
+		if ($args == 2)
+			self::$_providers[$name] = $provider;
+
+		if ($args == 1 && !isset(self::$_providers[$name]))
+			throw new QuarkArchException('Data provider ' . print_r($name, true) . ' is not pooled');
+
+		return self::$_providers[$name];
+	}
+
 	/**
 	 * @var IQuarkModel|null
 	 */
@@ -2573,52 +2608,35 @@ interface IQuarkModelWithBeforeExtract {
 	function BeforeExtract();
 }
 
-
-
-
 /**
  * Interface IQuarkDataProvider
  * @package Quark
  */
 interface IQuarkDataProvider {
 	/**
-	 * @return array
-	 */
-	static function SourcePool();
-
-	/**
-	 * @param $name
+	 * @param QuarkCredentials $credentials
 	 *
-	 * @return IQuarkDataProvider
+	 * @return mixed
 	 */
-	static function SourceGet($name);
-
-	/**
-	 * @param $name
-	 * @param QuarkCredentials $credentials
-	 */
-	static function SourceSet($name, QuarkCredentials $credentials);
-
-	/**
-	 * @param                  $name
-	 * @param QuarkCredentials $credentials
-	 */
-	function Source($name, QuarkCredentials $credentials);
+	function Connect(QuarkCredentials $credentials);
 
 	/**
 	 * @param IQuarkModel $model
+	 *
 	 * @return mixed
 	 */
 	function Create(IQuarkModel $model);
 
 	/**
 	 * @param IQuarkModel $model
+	 *
 	 * @return mixed
 	 */
 	function Save(IQuarkModel $model);
 
 	/**
 	 * @param IQuarkModel $model
+	 *
 	 * @return mixed
 	 */
 	function Remove(IQuarkModel $model);
@@ -2675,8 +2693,6 @@ interface IQuarkDataProvider {
 	 */
 	function Count (IQuarkModel $model, $criteria, $limit, $skip);
 }
-
-
 
 /**
  * Class QuarkField
@@ -3621,7 +3637,7 @@ class QuarkDTO {
 	/**
 	 * @param mixed $data
 	 *
-	 * @return array
+	 * @return mixed
 	 */
 	public function Data ($data = '') {
 		if (func_num_args() != 0)
