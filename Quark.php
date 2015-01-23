@@ -347,8 +347,8 @@ class Quark {
 	 * @return string
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
-		return preg_replace('#(/+)#', '/', str_replace('\\', '/', $path))
-			. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : '');
+		return trim(preg_replace('#(/+)#', '/', str_replace('\\', '/', $path))
+			. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : ''));
 	}
 
 	/**
