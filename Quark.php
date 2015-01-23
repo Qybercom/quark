@@ -508,7 +508,7 @@ spl_autoload_register(function ($class) {
 	if (!file_exists($quark)) {
 		if (!file_exists($app))
 			throw new QuarkArchException(
-				'Class file ' . $quark . ' is invalid class path.' . "\r\n" .
+				'Class file ' . $app . ' is invalid class path.' . "\r\n" .
 				' - Quark: [' . print_r($quark, true) . ']' . "\r\n" .
 				' - App: [' . print_r($app, true) . ']'
 			);
