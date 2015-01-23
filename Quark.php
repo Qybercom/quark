@@ -500,14 +500,14 @@ spl_autoload_register(function ($class) {
 	$file = Quark::NormalizePath(__DIR__ . '/' . substr($class, 6) . '.php', false);
 
 	if (is_file($file))
-		include_once $file;
+		include $file;
 });
 
 spl_autoload_register(function ($class) {
 	$file = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
 
 	if (is_file($file))
-		include_once $file;
+		include $file;
 });
 
 /**
