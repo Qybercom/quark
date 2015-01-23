@@ -243,17 +243,3 @@ class QuarkREST implements IQuarkDataProvider {
 		// TODO: Implement Count() method.
 	}
 }
-
-/**
- * Interface IQuarkRESTProvider
- *
- * @package Quark\DataProviders
- */
-interface IQuarkRESTProvider {
-	/**
-	 * @param IQuarkModel $model
-	 *
-	 * @return string
-	 */
-	function Id(IQuarkModel $model);
-}
