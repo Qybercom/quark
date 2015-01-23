@@ -971,18 +971,19 @@ class QuarkCredentials {
 
 	/**
 	 * @param $uri
+	 * @param bool $web
 	 *
 	 * @return QuarkCredentials
 	 */
-	public static function FromURI ($uri) {
+	public static function FromURI ($uri, $web = true) {
 		$url = Quark::Normalize(
 			(object)array(
 				'query' => '',
 				'scheme' => '',
-				'host' => isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '',
-				'port' => isset($_SERVER['SERVER_PORT']) ? (int)$_SERVER['SERVER_PORT'] : 80,
-				'user' => '',
-				'pass' => '',
+				'host' => $web ? (isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '') : null,
+				'port' => $web ? (isset($_SERVER['SERVER_PORT']) ? (int)$_SERVER['SERVER_PORT'] : 80) : null,
+				'user' => null,
+				'pass' => null,
 				'path' => '',
 				'fragment' => ''
 			),
@@ -2034,6 +2035,7 @@ class QuarkCollection {
  * @package Quark
  */
 class QuarkModel {
+	const OPTION_SORT = 'sort';
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
 
@@ -3829,14 +3831,18 @@ class QuarkCookie {
  *
  * @package Quark
  */
-class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQuarkModelWithDataProvider {
+	const LOCAL_FS = 'LocalFS';
+
+	public $_location = '';
+	public $location = '';
 	public $name = '';
 	public $type = '';
 	public $tmp_name = '';
 	public $size = 0;
+	public $extension = '';
+	public $isDir = false;
 
-	private $_location = '';
-	private $_extension = '';
 	private $_content = '';
 
 	/**
@@ -3881,23 +3887,23 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Location ($location = '') {
 		if (func_num_args() == 1) {
-			$this->_location = Quark::NormalizePath($location, false);
-			$this->name = array_reverse(explode('/', $this->_location))[0];
+			$this->location = Quark::NormalizePath($location, false);
+			$this->name = array_reverse(explode('/', $this->location))[0];
 
 			if ($this->Exists()) {
-				$this->type = self::Mime($this->_location);
-				$this->_extension = self::ExtensionByMime($this->type);
+				$this->type = self::Mime($this->location);
+				$this->extension = self::ExtensionByMime($this->type);
 			}
 		}
 
-		return $this->_location;
+		return $this->location;
 	}
 
 	/**
 	 * @return bool
 	 */
 	public function Exists () {
-		return file_exists($this->_location);
+		return file_exists($this->location);
 	}
 
 	/**
@@ -3910,9 +3916,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		$this->Location($location);
 
 		if (!$this->Exists())
-			throw new QuarkArchException('Invalid file path "' . $this->_location . '"');
+			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		$this->_content = file_get_contents($this->_location);
+		$this->_content = file_get_contents($this->location);
 
 		return $this;
 	}
@@ -3921,7 +3927,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function Save () {
-		return file_put_contents($this->_location, $this->_content) != 0;
+		return file_put_contents($this->location, $this->_content) != 0;
 	}
 
 	/**
@@ -3930,19 +3936,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return string
 	 */
 	public function WebLocation ($full = true) {
-		return Quark::WebHost($full) . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->_location));
-	}
-
-	/**
-	 * @param $extension
-	 *
-	 * @return mixed
-	 */
-	public function Extension ($extension) {
-		if (func_num_args() == 1)
-			$this->_extension = $extension;
-
-		return $this->_extension;
+		return Quark::WebHost($full) . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->location));
 	}
 
 	/**
@@ -3964,10 +3958,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public function Upload ($mime = true) {
 		if ($mime) {
 			$ext = self::ExtensionByMime(self::Mime($this->tmp_name));
-			$this->_location .= $ext ? '.' . $ext : '';
+			$this->location .= $ext ? '.' . $ext : '';
 		}
 
-		return is_file($this->tmp_name) && is_dir(dirname($this->_location)) && rename($this->tmp_name, $this->_location);
+		return is_file($this->tmp_name) && is_dir(dirname($this->location)) && rename($this->tmp_name, $this->location);
 	}
 
 	public function Download () { }
@@ -3991,9 +3985,13 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Fields () {
 		return array(
+			'_location' => '',
+			'location' => '',
 			'name' => '',
+			'extension' => '',
 			'type' => '',
 			'size' => 0,
+			'isDir' => false,
 			'tmp_name' => ''
 		);
 	}
@@ -4011,7 +4009,14 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->_location;
+		return $this->location;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function DataProvider () {
+		return QuarkModel::Source(self::LOCAL_FS);
 	}
 
 	/**

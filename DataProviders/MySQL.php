@@ -143,6 +143,11 @@ class MySQL implements IQuarkDataProvider {
 				case '`$gte`': $output[] = '>=' . $value; break;
 				case '`$ne`': $output[] = '<>' . $value; break;
 
+				case '`$and`':
+					$value = self::_condition($rule, ' AND ');
+					$output[] = ' (' . $value . ') ';
+					break;
+
 				case '`$or`':
 					$value = self::_condition($rule, ' OR ');
 					$output[] = ' (' . $value . ') ';

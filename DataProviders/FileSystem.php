@@ -7,6 +7,7 @@ use Quark\IQuarkModel;
 use Quark\Quark;
 use Quark\QuarkCredentials;
 use Quark\QuarkConnectionException;
+use Quark\QuarkModel;
 
 /**
  * Class FileSystem
@@ -15,12 +16,26 @@ use Quark\QuarkConnectionException;
  */
 class FileSystem implements IQuarkDataProvider {
 	const PROTOCOL = 'file://';
-	const OPTIONS_UPSTREAM = 'upstream';
-	const OPTIONS_SORT_BY_TYPE = 'sortByType';
-	const OPTIONS_SORT_BY_NAME = 'sortByName';
-	const OPTIONS_SORT_BY_EXTENSION = 'sortByExtension';
+
+	const FIRST_LOCATION = '_location';
+	const LOCATION = 'location';
+	const NAME = 'name';
+	const EXTENSION = 'extension';
+	const IS_DIR = 'isDir';
+	const SIZE = 'size';
+
+	const OPTIONS_RECURSIVE = 'opt.recursive';
+	const OPTIONS_JUMP = 'opt.jump';
+	const OPTIONS_GROUP = 'group';
 
 	private $_root = '';
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public static function LocalFS () {
+		return QuarkCredentials::FromURI(Quark::Host(), false);
+	}
 
 	/**
 	 * @param QuarkCredentials $credentials
@@ -38,7 +53,9 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model) {
-		// TODO: Implement Create() method.
+		$location = Quark::Property($model, self::LOCATION);
+
+		return is_file($location) ? true : file_put_contents($location, '');
 	}
 
 	/**
@@ -47,7 +64,10 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model) {
-		// TODO: Implement Save() method.
+		$_location = Quark::Property($model, self::FIRST_LOCATION);
+		$location = Quark::Property($model, self::LOCATION);
+
+		return rename($_location, $location);
 	}
 
 	/**
@@ -56,7 +76,134 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Remove (IQuarkModel $model) {
-		// TODO: Implement Remove() method.
+		$location = Quark::Property($model, self::LOCATION);
+
+		return is_file($location) ? unlink($location) : false;
+	}
+
+	/**
+	 * @param array $file
+	 * @param      $condition
+	 * @param bool $strict
+	 * @param string $part
+	 *
+	 * @return bool
+	 */
+	private static function _condition ($file, $condition, $strict = true, $part = '') {
+		if (!is_array($condition) || sizeof($condition) == 0) return true;
+
+		$output = true;
+
+		foreach ($condition as $key => $rule) {
+			if (!is_scalar($key)) continue;
+
+			$value = $rule;
+			$part = func_num_args() == 4 ? $part : $key;
+
+			if (is_array($rule))
+				$value = self::_condition($file, $rule, true, $key);
+
+			else switch ($key) {
+				case '$and': $value = self::_condition($file, $rule); break;
+				case '$or': $value = self::_condition($file, $rule, false); break;
+				case '$lte': $value = self::_step($file, $part, '<=', $value); break;
+				case '$lt': $value = self::_step($file, $part, '<', $value); break;
+				case '$gt': $value = self::_step($file, $part, '>', $value); break;
+				case '$gte': $value = self::_step($file, $part, '>=', $value); break;
+				case '$ne': $value = self::_step($file, $part, '!=', $value); break;
+				default: $value = self::_step($file, $part, '==', $value); break;
+			}
+
+			$output = self::_rule($strict, $output, $value);
+		}
+
+		return $output;
+	}
+
+	/**
+	 * @param $file
+	 * @param $key
+	 * @param $rule
+	 * @param $value
+	 *
+	 * @return bool
+	 */
+	private static function _step ($file, $key, $rule, $value) {
+		return isset($file[$key]) ? eval('return $file[$key] ' . $rule . ' $value;') : false;
+	}
+
+	/**
+	 * @param bool $strict
+	 * @param bool $result
+	 * @param bool $value
+	 *
+	 * @return bool
+	 */
+	private static function _rule ($strict, $result, $value) {
+		return $strict ? $result && $value : $result || $value;
+	}
+
+	/**
+	 * @param $location
+	 * @param $name
+	 * @param $extension
+	 * @param $isDir
+	 *
+	 * @return array
+	 */
+	private static function _file ($location, $name, $extension, $isDir) {
+		$location = Quark::NormalizePath($location, false);
+
+		return array(
+			self::FIRST_LOCATION => $location,
+			self::LOCATION => $location,
+			self::NAME => $name,
+			self::EXTENSION => $extension,
+			self::IS_DIR => $isDir,
+			self::SIZE => $isDir ? '' : filesize($location)
+		);
+	}
+
+	/**
+	 * @param mixed $criteria
+	 * @param mixed $options
+	 *
+	 * @return array
+	 */
+	private function _find ($criteria = [], $options = []) {
+		$output = array();
+
+		if (!isset($options[self::OPTIONS_RECURSIVE]))
+			$options[self::OPTIONS_RECURSIVE] = false;
+
+		if (!isset($options[self::OPTIONS_JUMP]))
+			$options[self::OPTIONS_JUMP] = false;
+
+		if ($options[self::OPTIONS_RECURSIVE]) {
+			$dir = new \RecursiveDirectoryIterator($this->_root);
+			$fs = new \RecursiveIteratorIterator($dir);
+		}
+		else {
+			$dir = new \DirectoryIterator($this->_root);
+			$fs = new \IteratorIterator($dir);
+		}
+
+		foreach ($fs as $file) {
+			/**
+			 * @var \FilesystemIterator $file
+			 */
+
+			$name = $file->getFilename();
+
+			if ($options[self::OPTIONS_JUMP] == false && ($name == '.' || $name == '..')) continue;
+
+			$buffer = self::_file($file->getPathname(), $name, $file->getExtension(), $file->isDir());
+
+			if (self::_condition($buffer, $criteria))
+				$output[] = $buffer;
+		}
+
+		return $output;
 	}
 
 	/**
@@ -67,52 +214,40 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
-		$buffer = array();
+		$buffer = self::_find($criteria);
 
-		$raw = scandir($this->_root);
+		if (isset($options[QuarkModel::OPTION_SORT]) && Quark::isAssociative($options[QuarkModel::OPTION_SORT])) {
+			$sort = $options[QuarkModel::OPTION_SORT];
 
-		if (!isset($options[self::OPTIONS_UPSTREAM]))
-			$options[self::OPTIONS_UPSTREAM] = false;
+			foreach ($sort as $key => $rule) {
+				usort($buffer, function ($a, $b) use ($key) {
+					if (!isset($a[$key]) || !isset($b[$key])) return 0;
 
-		if ($options[self::OPTIONS_UPSTREAM] == false)
-			foreach ($raw as $item) {
-				if ($item == '.' || $item == '..') continue;
+					if (is_bool($a[$key]) || is_bool($b[$key])) return self::_cmp($a[$key], $b[$key]);
+					if (is_string($a[$key]) || is_string($b[$key])) return strnatcmp($a[$key], $b[$key]);
 
-				$buffer[] = $item;
+					return 0;
+				});
+
+				if ($rule == -1)
+					$buffer = array_reverse($buffer);
 			}
-
-		if (isset($options[self::OPTIONS_SORT_BY_NAME]))
-			sort($buffer, $options[self::OPTIONS_SORT_BY_NAME]);
-
-		if (isset($options[self::OPTIONS_SORT_BY_TYPE])) {
-			$fs = array();
-
-			foreach ($buffer as $entry)
-				if (is_dir($this->_root . $entry)) $fs[] = $entry;
-
-			foreach ($buffer as $entry)
-				if (is_file($this->_root . $entry)) $fs[] = $entry;
-
-			$buffer = $fs;
 		}
 
-		$output = array();
+		return $buffer;
+	}
 
-		\clearstatcache();
-
-		foreach ($buffer as $file) {
-			$target = $this->_root . $file;
-			$isDir = is_dir($target);
-
-			$output[] = array(
-				'name' => $file,
-				'isDir' => $isDir,
-				'fullPath' => $target,
-				'size' => $isDir ? '' : filesize($target)
-			);
-		}
-
-		return $output;
+	/**
+	 * @param bool $a
+	 * @param bool $b
+	 *
+	 * @return int
+	 */
+	private static function _cmp ($a, $b) {
+		if ($a && $b) return 0;
+		elseif ($a && !$b) return 1;
+		elseif (!$a && $b) return -1;
+		else return 0;
 	}
 
 	/**
@@ -122,7 +257,9 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return IQuarkModel
 	 */
 	public function FindOne (IQuarkModel $model, $criteria) {
-		// TODO: Implement FindOne() method.
+		$buffer = self::_find($criteria);
+
+		return sizeof($buffer) == 0 ? null : $buffer[0];
 	}
 
 	/**
@@ -132,7 +269,11 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return IQuarkModel
 	 */
 	public function FindOneById (IQuarkModel $model, $id) {
-		// TODO: Implement FindOneById() method.
+		$buffer = self::_find(array(
+			self::LOCATION => $id
+		));
+
+		return sizeof($buffer) == 0 ? null : $buffer[0];
 	}
 
 	/**
@@ -166,6 +307,6 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
-		// TODO: Implement Count() method.
+		return sizeof(self::_find($criteria));
 	}
 }
