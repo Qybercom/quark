@@ -51,11 +51,20 @@ class PHPSession implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param IQuarkAuthorizableModel $model
+	 * @param int $lifetime
 	 *
 	 * @return IQuarkAuthorizationProvider
 	 */
-	public static function Setup (IQuarkAuthorizableModel $model) {
+	public static function Setup (IQuarkAuthorizableModel $model, $lifetime = 0) {
 		self::$_model = $model;
+
+		if (func_num_args() == 2) {
+			/**
+			 * http://stackoverflow.com/a/8311400/2097055
+			 */
+			ini_set('session.gc_maxlifetime', $lifetime);
+			session_set_cookie_params($lifetime);
+		}
 
 		return self::$_session = new PHPSession();
 	}
