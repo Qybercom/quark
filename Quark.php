@@ -758,8 +758,7 @@ class QuarkService {
 			if (isset($_POST[$key]))
 				$request->PopulateFrom($head . $_POST[$key]);
 
-			$request->AttachData((object)($_GET + $_POST));
-			$request->Files(QuarkFile::CollectionFrom($_FILES));
+			$request->AttachData((object)($_GET + $_POST + QuarkFile::FromFiles($_FILES)));
 
 			if (sizeof($_FILES) != 0)
 				$request->Data(Quark::Normalize(new \StdClass(), (object)$request->Data(), function ($item) {
@@ -4309,6 +4308,40 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public static function From ($file) {
 		return (new QuarkModel(new QuarkFile(), $file))->Model();
+	}
+
+	/**
+	 * @param $files
+	 *
+	 * @return array
+	 */
+	public static function FromFiles ($files) {
+		$output = array();
+
+		foreach ($files as $name => $file) {
+			$buffer = array();
+			$output[$name] = array();
+			$simple = true;
+
+			foreach ($file as $key => $value) {
+				if (!is_array($value)) $buffer[$key] = $value;
+				else {
+					array_walk_recursive($value, function ($item) use (&$buffer, $key) {
+						$buffer[$key] = $item;
+					});
+
+					$output[$name] = $value;
+					$simple = false;
+				}
+			}
+
+			if ($simple) $output[$name] = new QuarkModel(new QuarkFile, $buffer);
+			else array_walk_recursive($output, function (&$item) use ($buffer) {
+				$item = new QuarkModel(new QuarkFile, $buffer);
+			});
+		}
+
+		return $output;
 	}
 }
 
