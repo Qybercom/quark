@@ -17,7 +17,6 @@ body {
 
 #quark-serveece-menu {
     background: rgb(24, 23, 23);
-    /*display: inline-block;*/
     position: fixed;
     width: 200px;
     height: 100%;
@@ -59,4 +58,8 @@ body {
 .quark-serveece-section-header {
     font-size: 14px;
     margin: 10px 0;
+}
+
+.qui-button, .qui-input {
+    font-weight: 300;
 }
