@@ -1,9 +1,9 @@
 <?php
 namespace Quark\AuthorizationProviders;
 
-use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
@@ -12,69 +12,7 @@ use Quark\QuarkModel;
  * @package Quark\AuthorizationProviders
  */
 class PHPBasicAuth implements IQuarkAuthorizationProvider {
-	/**
-	 * @var IQuarkAuthorizableModel $_model
-	 */
-	private static $_model;
 	private static $_user;
-
-	/**
-	 * @param $request
-	 *
-	 * @return mixed
-	 */
-	public function Initialize ($request) {
-		if (!isset($_SERVER['PHP_AUTH_USER']) && self::$_user == null) {
-			self::Error401();
-			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
-		}
-		else {
-			self::$_user = self::$_model->RenewSession($this, array(
-				'username' => $_SERVER['PHP_AUTH_USER'],
-				'password' => $_SERVER['PHP_AUTH_PW']
-			));
-		}
-	}
-
-	/**
-	 * @param $response
-	 *
-	 * @return mixed
-	 */
-	public function Trail ($response) { }
-
-	/**
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Instance () {
-		// TODO: Implement Instance() method.
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
-	 *
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Setup (IQuarkAuthorizableModel $model) {
-		self::$_model = $model;
-
-		return new PHPBasicAuth();
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
-	 * @param                         $credentials
-	 *
-	 * @return bool
-	 */
-	public static function Login (IQuarkAuthorizableModel $model, $credentials) {
-		self::$_user = $model->Authorize(array(
-			'username' => $_SERVER['PHP_AUTH_USER'],
-			'password' => $_SERVER['PHP_AUTH_PW']
-		));
-
-		return self::$_user != null;
-	}
 
 	/**
 	 * @param string $msg
@@ -86,24 +24,61 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	}
 
 	/**
-	 * @return QuarkModel
+	 * @param string   $name
+	 * @param QuarkDTO $request
+	 * @param          $lifetime
+	 *
+	 * @return mixed
 	 */
-	public static function User () {
-		return self::$_user;
+	public function Initialize ($name, QuarkDTO $request, $lifetime) {
+		if (!isset($_SERVER['PHP_AUTH_USER']) && self::$_user == null) {
+			self::Error401();
+			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
+			return null;
+		}
+		else return array(
+			'username' => $_SERVER['PHP_AUTH_USER'],
+			'password' => $_SERVER['PHP_AUTH_PW']
+		);
 	}
 
 	/**
+	 * @param string     $name
+	 * @param QuarkDTO   $response
+	 * @param QuarkModel $user
+	 *
+	 * @return mixed
+	 */
+	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
+		// TODO: Implement Trail() method.
+	}
+
+	/**
+	 * @param string     $name
+	 * @param QuarkModel $model
+	 * @param            $criteria
+	 *
 	 * @return bool
 	 */
-	public static function Logout () {
-		self::Error401();
-		return true;
+	public function Login ($name, QuarkModel $model, $criteria) {
+		// TODO: Implement Login() method.
 	}
 
 	/**
+	 * @param string $name
+	 *
+	 * @return bool
+	 */
+	public function Logout ($name) {
+		self::Error401();
+	}
+
+	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public static function Signature () {
+	public function Signature ($name) {
 		// TODO: Implement Signature() method.
 	}
 }

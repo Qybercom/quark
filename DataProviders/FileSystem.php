@@ -31,6 +31,11 @@ class FileSystem implements IQuarkDataProvider {
 	private $_root = '';
 
 	/**
+	 * @var QuarkCredentials
+	 */
+	private $_credentials;
+
+	/**
 	 * @return QuarkCredentials
 	 */
 	public static function LocalFS () {
@@ -44,7 +49,15 @@ class FileSystem implements IQuarkDataProvider {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkCredentials $credentials) {
+		$this->_credentials = $credentials;
 		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $credentials->uri()))));
+	}
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public function Credentials () {
+		return $this->_credentials;
 	}
 
 	/**

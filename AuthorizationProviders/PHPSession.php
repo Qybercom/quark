@@ -2,10 +2,10 @@
 namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
-use Quark\IQuarkAuthorizableModel;
 
 use Quark\Quark;
 use Quark\QuarkModel;
+use Quark\QuarkDTO;
 
 /**
  * Class PHPSession
@@ -14,106 +14,75 @@ use Quark\QuarkModel;
  */
 class PHPSession implements IQuarkAuthorizationProvider {
 	/**
-	 * @var IQuarkAuthorizableModel $_model;
-	 */
-	private static $_model;
-	private static $_user;
-
-	/**
-	 * @var PHPSession $_session;
-	 */
-	private static $_session;
-
-	/**
-	 * @param $request
+	 * @param string   $name
+	 * @param QuarkDTO $request
+	 * @param          $lifetime
+	 *
 	 * @return mixed
 	 */
-	public function Initialize ($request) {
+	public function Initialize ($name, QuarkDTO $request, $lifetime) {
 		@session_start();
 
-		if (!isset($_SESSION) || !isset($_SESSION['user'])) return null;
+		if (!isset($_SESSION) || !isset($_SESSION[$name]) || !isset($_SESSION[$name]['user'])) return null;
 
-		self::$_user = self::$_model->RenewSession($this, Quark::Normalize(new \StdClass(), $_SESSION['user']));
+		/**
+		 * http://stackoverflow.com/a/8311400/2097055
+		 */
+		ini_set('session.gc_maxlifetime', $lifetime);
+		session_set_cookie_params($lifetime);
+
+		return $_SESSION[$name]['user'];
 	}
 
 	/**
-	 * @param $response
+	 * @param string $name
+	 * @param QuarkDTO $response
+	 * @param QuarkModel $user
+	 *
 	 * @return mixed
 	 */
-	public function Trail ($response) { }
+	public function Trail ($name, QuarkDTO $response, QuarkModel $user) { }
 
 	/**
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Instance () {
-		return self::$_session;
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
-	 * @param int $lifetime
-	 *
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Setup (IQuarkAuthorizableModel $model, $lifetime = 0) {
-		self::$_model = $model;
-
-		if (func_num_args() == 2) {
-			/**
-			 * http://stackoverflow.com/a/8311400/2097055
-			 */
-			ini_set('session.gc_maxlifetime', $lifetime);
-			session_set_cookie_params($lifetime);
-		}
-
-		return self::$_session = new PHPSession();
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
+	 * @param string $name
+	 * @param QuarkModel $model
 	 * @param $credentials
 	 *
 	 * @return bool
 	 */
-	public static function Login (IQuarkAuthorizableModel $model, $credentials) {
-		self::$_user = $model->Authorize($credentials);
-
-		if (!self::$_user) return false;
-
+	public function Login ($name, QuarkModel $model, $credentials) {
 		@session_start();
 
-		$_SESSION['user'] = self::$_user instanceof QuarkModel ? self::$_user->Model() : self::$_user;
-		$_SESSION['signature'] = Quark::GuID();
+		$_SESSION[$name]['user'] = $model->Model();
+		$_SESSION[$name]['signature'] = Quark::GuID();
 
 		return true;
 	}
 
 	/**
-	 * @return IQuarkAuthorizableModel
-	 */
-	public static function User () {
-		return self::$_user;
-	}
-
-	/**
+	 * @param string $name
+	 *
 	 * @return bool
 	 */
-	public static function Logout () {
+	public function Logout ($name) {
 		@session_start();
 
-		if (!isset($_SESSION['user'])) return false;
+		if (!isset($_SESSION[$name]['user'])) return false;
 
-		self::$_user = null;
-		unset($_SESSION['user']);
-		session_destroy();
+		unset($_SESSION[$name]['user']);
+
+		if (sizeof($_SESSION) == 0)
+			session_destroy();
 
 		return true;
 	}
 
 	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public static function Signature () {
-		return isset($_SESSION['signature']) ? $_SESSION['signature'] : '';
+	public function Signature ($name) {
+		return isset($_SESSION[$name]['signature']) ? $_SESSION[$name]['signature'] : '';
 	}
 }

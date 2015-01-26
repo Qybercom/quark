@@ -1,8 +1,11 @@
 <?php
-namespace Quark\DataProviders;
+namespace Quark\Extensions\Quark\RESTService;
 
-use Quark\IQuarkModel;
 use Quark\IQuarkDataProvider;
+use Quark\IQuarkExtension;
+use Quark\IQuarkConfigurableExtension;
+use Quark\IQuarkExtensionConfig;
+use Quark\IQuarkModel;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
@@ -10,40 +13,49 @@ use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkCredentials;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkModel;
 
 /**
- * Class QuarkREST
+ * Class RESTService
  *
- * @package Quark\DataProviders
+ * @package Quark\Extensions\Quark\RESTService
  */
-class QuarkREST implements IQuarkDataProvider {
+class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigurableExtension {
 	/**
 	 * @var QuarkCredentials
 	 */
 	private $_connection = null;
 
 	/**
-	 * @var IQuarkRESTProvider
+	 * @var IQuarkRESTServiceDescriptor
 	 */
-	private $_provider = null;
+	private $_descriptor = null;
 
 	/**
-	 * @param IQuarkRESTProvider $provider
+	 * @param IQuarkExtensionConfig|Config $config
+	 *
+	 * @return mixed
 	 */
-	public function __construct (IQuarkRESTProvider $provider) {
-		$this->_provider = $provider;
+	public function Init (IQuarkExtensionConfig $config) {
+		$this->_descriptor = $config->Descriptor();
+
+		Quark::Config()->DataProvider($config->Source(), $this, QuarkCredentials::FromURI($config->Endpoint()));
 	}
 
 	/**
 	 * @param QuarkCredentials $credentials
-	 * @param mixed $append
 	 *
 	 * @return mixed
 	 */
-	public function Connect (QuarkCredentials $credentials, $append = []) {
-		$this->_connection = func_num_args() == 2
-			? Quark::Normalize($this->_connection, $append)
-			: $credentials;
+	public function Connect (QuarkCredentials $credentials) {
+		$this->_connection = $credentials;
+	}
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public function Credentials () {
+		return $this->_connection;
 	}
 
 	/**
@@ -102,6 +114,13 @@ class QuarkREST implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @param string $token
+	 */
+	public function Reconnect ($token) {
+		$this->_connection->token = $token;
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return string
@@ -133,7 +152,7 @@ class QuarkREST implements IQuarkDataProvider {
 	 */
 	public function Save (IQuarkModel $model) {
 		try {
-			$api = $this->_api('POST', '/' . self::_class($model) . '/update/' . $this->_provider->Id($model), $model);
+			$api = $this->_api('POST', '/' . self::_class($model) . '/update/' . $this->_descriptor->IdentifyModel($model), $model);
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -149,7 +168,7 @@ class QuarkREST implements IQuarkDataProvider {
 	 */
 	public function Remove (IQuarkModel $model) {
 		try {
-			$api = $this->_api('GET', '/' . self::_class($model) . '/remove/' . $this->_provider->Id($model));
+			$api = $this->_api('GET', '/' . self::_class($model) . '/remove/' . $this->_descriptor->IdentifyModel($model));
 
 			return isset($api->status) && $api->status == 200;
 		}

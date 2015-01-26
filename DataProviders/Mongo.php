@@ -20,6 +20,11 @@ class Mongo implements IQuarkDataProvider {
 	private $_connection;
 
 	/**
+	 * @var QuarkCredentials
+	 */
+	private $_credentials;
+
+	/**
 	 * @param object $source
 	 *
 	 * @return string
@@ -72,11 +77,19 @@ class Mongo implements IQuarkDataProvider {
 			if ($credentials->suffix) {
 				$db = $credentials->suffix;
 				$this->_connection = $this->_connection->$db;
+				$this->_credentials = $credentials;
 			}
 		}
 		catch (\Exception $e) {
 			throw new QuarkConnectionException($credentials, Quark::LOG_FATAL);
 		}
+	}
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public function Credentials () {
+		return $this->_credentials;
 	}
 
 	/**
@@ -112,7 +125,7 @@ class Mongo implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		$model->_id = new \MongoId($model->_id);
+		$model->_id = new \MongoId(self::_id($model));
 
 		return $this->_collection($model, $options)->save($model, $options);
 	}
@@ -127,7 +140,7 @@ class Mongo implements IQuarkDataProvider {
 		if (!isset($model->_id)) return false;
 
 		return $this->_collection($model, $options)->remove(array(
-			'_id' => new \MongoId($model->_id)
+			'_id' => new \MongoId(self::_id($model))
 		), $options);
 	}
 

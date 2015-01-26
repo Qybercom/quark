@@ -2,24 +2,29 @@
 namespace Quark\Extensions\Facebook;
 
 use Quark\IQuarkExtension;
+use Quark\IQuarkConfigurableExtension;
+use Quark\IQuarkExtensionConfig;
+
 use Quark\Quark;
 use Quark\QuarkArchException;
 
 /**
  * Class User
+ *
  * @package Quark\Extensions\Facebook
  */
-class User implements IQuarkExtension {
+class User implements IQuarkExtension, IQuarkConfigurableExtension {
 	private static $_facebook;
 	private static $_session;
 	private static $_token;
 
 	/**
-	 * @param Config|null $config
+	 * @param IQuarkExtensionConfig|Config $config
+	 *
 	 * @throws QuarkArchException
 	 * @return mixed
 	 */
-	public static function Config ($config) {
+	public function Init (IQuarkExtensionConfig $config) {
 		$facebook = Quark::NormalizePath(__DIR__ . '/SDK/src/facebook.php', false);
 		$facebook_base = Quark::NormalizePath(__DIR__ . '/SDK/src/base_facebook.php', false);
 

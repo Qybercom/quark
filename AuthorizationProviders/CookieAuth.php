@@ -1,9 +1,8 @@
 <?php
 namespace Quark\AuthorizationProviders;
 
-use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
-
+use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
@@ -13,67 +12,53 @@ use Quark\QuarkModel;
  */
 class CookieAuth implements IQuarkAuthorizationProvider {
 	/**
-	 * @param $request
+	 * @param string   $name
+	 * @param QuarkDTO $request
+	 * @param          $lifetime
 	 *
 	 * @return mixed
 	 */
-	public function Initialize ($request) {
+	public function Initialize ($name, QuarkDTO $request, $lifetime) {
 		// TODO: Implement Initialize() method.
 	}
 
 	/**
-	 * @param $response
+	 * @param string     $name
+	 * @param QuarkDTO   $response
+	 * @param QuarkModel $user
 	 *
 	 * @return mixed
 	 */
-	public function Trail ($response) {
+	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
 		// TODO: Implement Trail() method.
 	}
 
 	/**
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Instance () {
-		// TODO: Implement Instance() method.
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
-	 *
-	 * @return IQuarkAuthorizationProvider
-	 */
-	public static function Setup (IQuarkAuthorizableModel $model) {
-		// TODO: Implement Setup() method.
-	}
-
-	/**
-	 * @param IQuarkAuthorizableModel $model
-	 * @param                         $credentials
+	 * @param string     $name
+	 * @param QuarkModel $model
+	 * @param            $criteria
 	 *
 	 * @return bool
 	 */
-	public static function Login (IQuarkAuthorizableModel $model, $credentials) {
+	public function Login ($name, QuarkModel $model, $criteria) {
 		// TODO: Implement Login() method.
 	}
 
 	/**
-	 * @return QuarkModel
-	 */
-	public static function User () {
-		// TODO: Implement User() method.
-	}
-
-	/**
+	 * @param string $name
+	 *
 	 * @return bool
 	 */
-	public static function Logout () {
+	public function Logout ($name) {
 		// TODO: Implement Logout() method.
 	}
 
 	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public static function Signature () {
+	public function Signature ($name) {
 		// TODO: Implement Signature() method.
 	}
 }

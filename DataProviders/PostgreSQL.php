@@ -6,14 +6,28 @@ use Quark\IQuarkModel;
 
 use Quark\QuarkCredentials;
 
-use Quark\QuarkArchException;
-
 /**
  * Class PostgreSQL
  *
  * @package Quark\DataProviders
  */
 class PostgreSQL implements IQuarkDataProvider {
+	/**
+	 * @param QuarkCredentials $credentials
+	 *
+	 * @return mixed
+	 */
+	public function Connect (QuarkCredentials $credentials) {
+		// TODO: Implement Connect() method.
+	}
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public function Credentials () {
+		// TODO: Implement Credentials() method.
+	}
+
 	/**
 	 * @param IQuarkModel $model
 	 *

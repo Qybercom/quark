@@ -24,6 +24,11 @@ class MySQL implements IQuarkDataProvider {
 	private $_connection;
 
 	/**
+	 * @var QuarkCredentials $_credentials
+	 */
+	private $_credentials;
+
+	/**
 	 * @param QuarkCredentials $credentials
 	 *
 	 * @return mixed
@@ -52,6 +57,15 @@ class MySQL implements IQuarkDataProvider {
 			(int)$credentials->port
 		))
 			throw new QuarkConnectionException($credentials, Quark::LOG_FATAL);
+
+		$this->_credentials = $credentials;
+	}
+
+	/**
+	 * @return QuarkCredentials
+	 */
+	public function Credentials () {
+		return $this->_credentials;
 	}
 
 	/**

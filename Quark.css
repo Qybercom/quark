@@ -1,44 +1,9 @@
 body {
-    font-family: Open Sans, Calibri, FontAwesome, sans-serif;
-}
-
-.qui-app {
-    display: block;
-    text-decoration: none;
-
-    background: rgb(38, 38, 38);
-    color: white;
-    font-size: 24px;
-
-    position: absolute;
-    left: 0px;
-    top: 0px;
-
-    padding: 15px;
-}
-
-.qui-menu-main {
-    font-size: 16px;
-
-    position: absolute;
-    left: 0px;
-    top: 66px;
-
-    padding: 8px;
-    text-align: center;
-}
-
-.qui-header {
-    display: block;
-    text-decoration: none;
-
-    font-size: 22px;
-
-    margin-top: 15px;
-    margin-left: 75px;
+    font-family: FontAwesome, Open Sans, sans-serif;
 }
 
 .qui-button {
+    font-family: FontAwesome, Open Sans, sans-serif;
     font-size: 12px;
     color: rgb(150, 150, 150);
     cursor: pointer;
@@ -46,12 +11,12 @@ body {
 }
 
 .qui-button .label {
-    font-family: Open Sans, Calibri, FontAwesome sans-serif;
+    font-family: FontAwesome, Open Sans, sans-serif;
     margin-left: 5px;
 }
 
 .qui-label {
-    font-family: Open Sans, Calibri, FontAwesome, sans-serif;
+    font-family: FontAwesome, Open Sans, sans-serif;
     color: rgb(150, 150, 150);
 }
 
@@ -62,7 +27,7 @@ body {
 .qui-button.block {
     background: white;
     padding: 10px;
-    font-family: Open Sans, Calibri, FontAwesome, sans-serif;
+    font-family: FontAwesome, Open Sans, sans-serif;
     border: 1px solid rgb(230, 230, 230);
     border-radius: 3px;
 }
@@ -71,47 +36,14 @@ body {
     background: rgb(230, 230, 230);
 }
 
-.qui-table .qui-button {
-    font-size: 16px;
-    text-decoration: none;
-}
-
-.qui-table .fa.qui-button {
-    font-size: 12px;
-    text-decoration: none;
-}
-
 .qui-header .qui-button {
     font-size: 22px;
     text-decoration: none;
 }
 
-
-.qui-list-menu {
-    padding: 10px 0px;
-    margin: 15px 1px;
-    border-top: 1px solid rgb(235, 235, 235);
-}
-
-.qui-navigator {
-    float: right;
-    font-size: 10px;
-    padding: 5px;
-    border-radius: 3px;
-    border: 1px solid lightgray;
-}
-
-.qui-label {
-    color: gray;
-}
-
 .qui-table td {
     padding: 5px;
-    border-bottom: 1px solid lightgray;
-}
-
-.qui-table tr:last-child td {
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid rgb(230, 230, 230);
 }
 
 .qui-content {
@@ -128,14 +60,8 @@ body {
     margin-bottom: 15px;
 }
 
-.qui-menu-main .qui-button {
-    padding: 10px;
-    font-size: 18px;
-    text-decoration: none;
-}
-
 .qui-message {
-    font-family: FontAwesome, Open Sans, Calibri, sans-serif;
+    font-family: FontAwesome, Open Sans, sans-serif;
     padding: 10px;
     margin: 3px 1px;
 
@@ -219,6 +145,6 @@ body {
     padding: 5px;
     margin-left: -3px;
     border: 1px solid rgb(230, 230, 230);
-    border-top: 0px;
+    border-top: 0;
     /*line-height: 24px;*/
 }

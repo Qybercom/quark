@@ -1,5 +1,5 @@
 <?php
-namespace Quark\AuthorizationProviders;
+namespace Quark\Extensions\Quark\RESTService;
 
 use Quark\IQuarkAuthorizationProvider;
 
@@ -7,11 +7,11 @@ use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
- * Class PHPDigestAuth
+ * Class Session
  *
- * @package Quark\AuthorizationProviders
+ * @package Quark\Extensions\Quark\RESTService
  */
-class PHPDigestAuth implements IQuarkAuthorizationProvider {
+class Session implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request
@@ -20,18 +20,18 @@ class PHPDigestAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		// TODO: Implement Initialize() method.
+		return $request;
 	}
 
 	/**
-	 * @param string     $name
-	 * @param QuarkDTO   $response
+	 * @param string   $name
+	 * @param QuarkDTO $response
 	 * @param QuarkModel $user
 	 *
 	 * @return mixed
 	 */
 	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		// TODO: Implement Trail() method.
+		return $user == null ? array() : array('access' => $user->access);
 	}
 
 	/**

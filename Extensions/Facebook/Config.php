@@ -3,6 +3,11 @@ namespace Quark\Extensions\Facebook;
 
 use Quark\IQuarkExtensionConfig;
 
+/**
+ * Class Config
+ *
+ * @package Quark\Extensions\Facebook
+ */
 class Config implements IQuarkExtensionConfig {
 	private $_id;
 	private $_secret;
@@ -24,12 +29,5 @@ class Config implements IQuarkExtensionConfig {
 			'appId' => $this->_id,
 			'secret' => $this->_secret
 		);
-	}
-
-	/**
-	 * @return string
-	 */
-	public function AssignedExtension () {
-		return 'Quark\Extensions\Facebook\User';
 	}
 }

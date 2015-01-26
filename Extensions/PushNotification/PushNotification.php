@@ -16,13 +16,6 @@ class PushNotification implements IQuarkExtension {
 	private static $_providers = array();
 
 	/**
-	 * @return mixed
-	 */
-	public function Init () {
-
-	}
-
-	/**
 	 * @param IPushNotificationProvider $provider
 	 * @param $config
 	 */
