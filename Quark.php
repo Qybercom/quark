@@ -3253,7 +3253,7 @@ class QuarkSession implements IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function Logout () {
-		if ($this->_provider == null) return false;
+		if ($this->_provider == null) return true;
 
 		$this->_user = null;
 		$logout = $this->_provider->Logout($this->_name);
