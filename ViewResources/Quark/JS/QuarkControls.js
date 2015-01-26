@@ -128,7 +128,11 @@ Quark.Controls.File = function (selector, opt) {
 };
 
 Quark.Controls.File._send = function (e) {
-	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'), e.data);
+	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'), Quark.Extend(e.data, {
+		data: {
+			_signature: $(this).attr('qui-signature')
+		}
+	}));
 };
 
 /**
