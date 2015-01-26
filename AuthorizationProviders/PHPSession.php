@@ -67,9 +67,9 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	public function Logout ($name) {
 		@session_start();
 
-		if (!isset($_SESSION[$name]['user'])) return false;
+		if (!isset($_SESSION[$name])) return false;
 
-		unset($_SESSION[$name]['user']);
+		unset($_SESSION[$name]);
 
 		if (sizeof($_SESSION) == 0)
 			session_destroy();
