@@ -30,9 +30,12 @@ class Mongo implements IQuarkDataProvider {
 	 * @return string
 	 */
 	public static function _id ($source) {
+		if (\MongoId::isValid($source)) return $source;
 		if (!is_object($source)) return '';
 
-		return isset($source->_id->{'$id'}) ? $source->_id->{'$id'} : '';
+		return isset($source->_id->{'$id'})
+			? $source->_id->{'$id'}
+			: (isset($source->_id) && \MongoId::isValid($source->_id) ? $source->_id : '');
 	}
 
 	/**

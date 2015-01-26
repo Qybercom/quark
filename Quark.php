@@ -2147,6 +2147,9 @@ class QuarkModel {
 		if (func_num_args() == 1)
 			$source = $model;
 
+		if ($source instanceof QuarkModel)
+			$source = $source->Model();
+
 		$this->PopulateWith($source);
 	}
 
