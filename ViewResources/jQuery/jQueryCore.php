@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\jQuery
  */
-class Core implements IQuarkViewResource, IQuarkForeignViewResource {
+class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
 	private $_version = '';
 
 	/**

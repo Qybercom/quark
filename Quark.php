@@ -1562,9 +1562,11 @@ class QuarkView {
 	}
 
 	/**
+	 * @param bool $obfuscate
+	 *
 	 * @return string
 	 */
-	public function Resources () {
+	public function Resources ($obfuscate = true) {
 		$out = '';
 		$type = null;
 		$res = null;
@@ -1589,7 +1591,7 @@ class QuarkView {
 			if ($resource instanceof IQuarkLocalViewResource) {
 				$res = QuarkSource::FromFile($location);
 
-				if ($resource->CacheControl())
+				if ($obfuscate && $resource->CacheControl())
 					$res->Obfuscate(true);
 
 				$content = $res->Source();
@@ -1630,6 +1632,8 @@ class QuarkView {
 			 * @var IQuarkViewResource $dependency
 			 */
 			foreach ($resources as $dependency) {
+				if ($dependency == null) continue;
+
 				if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
 				if ($this->_resource_loaded($dependency)) continue;
 

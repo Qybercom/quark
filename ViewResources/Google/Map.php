@@ -8,7 +8,7 @@ use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLocalCoreJSViewResource;
-use Quark\ViewResources\jQuery;
+use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
  * Class Map
@@ -73,8 +73,8 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	 */
 	public function Dependencies () {
 		return array(
+			new jQueryCore(),
 			new QuarkLocalCoreJSViewResource(),
-			new jQuery\Core(),
 			new MapAPI($this->_key)
 		);
 	}

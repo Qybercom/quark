@@ -9,7 +9,7 @@ use Quark\IQuarkViewResourceType;
 use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLocalCoreJSViewResource;
 
-use Quark\ViewResources\jQuery;
+use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
  * Class QuarkUX
@@ -43,8 +43,8 @@ class QuarkUX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	 */
 	public function Dependencies () {
 		return array(
+			new jQueryCore(),
 			new QuarkLocalCoreJSViewResource(),
-			new jQuery\Core(),
 			new QuarkIO()
 		);
 	}
