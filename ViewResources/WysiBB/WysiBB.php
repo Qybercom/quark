@@ -4,8 +4,10 @@ namespace Quark\ViewResources\WysiBB;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
+
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
+
 use Quark\ViewResources\jQuery\jQueryCore;
 use Quark\ViewResources\WysiBB\CSS\DefaultTheme;
 
