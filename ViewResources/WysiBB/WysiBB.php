@@ -70,4 +70,56 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 	public function RequestDTO () {
 		// TODO: Implement RequestDTO() method.
 	}
+
+	/**
+	 * @param string $content
+	 * @param bool   $full
+	 *
+	 * @return string
+	 */
+	public static function ToHTML ($content = '', $full = false) {
+		$pairs = array('b', 'i', 'u', 's');
+		$align = array('left', 'center', 'right');
+
+		foreach ($pairs as $pair)
+			$content = str_replace('[' . $pair . ']', '<' . $pair . '>', str_replace('[/' . $pair . ']', '</' . $pair . '>', $content));
+
+		foreach ($align as $div)
+			$content = preg_replace('#\[' . $div . '\](.*)\[\/' . $div . '\]#Uis', '<div style="text-align:' . $div . ';">$1</div>', $content);
+
+		$content = str_replace("\n", '<br>', str_replace("\n", '<br>', str_replace("\r\n", '<br>', $content)));
+
+		$content = str_replace('[*]', '<li>', str_replace('[/*]', '</li>', $content));
+		$content = preg_replace('#\[list\=1\](.*)\[\/list\]#Uis', '<ol>$1</ol>', $content);
+		$content = str_replace('[list]', '<ul>', str_replace('[/list]', '</ul>', $content));
+
+		return $full ? '<!DOCTYPE html><html><head><title></title></head><body>' . $content . '</body></html>' : $content;
+	}
+
+	/**
+	 * @param string $content
+	 * @param bool   $full
+	 *
+	 * @return string
+	 */
+	public static function ToBB ($content = '', $full = false) {
+		$pairs = array('b', 'i', 'u', 's');
+		$align = array('left', 'center', 'right');
+
+		foreach ($pairs as $pair)
+			$content = str_replace('<' . $pair . '>', '[' . $pair . ']', str_replace('</' . $pair . '>', '[/' . $pair . ']', $content));
+
+		foreach ($align as $div)
+			$content = preg_replace('#\<div style\=\"text\-align\:' . $div . '\;\"\>(.*)\<\/div\>#Uis', '[' . $div . ']$1[/' . $div . ']', $content);
+
+		$content = str_replace('<br>', "\r\n", $content);
+
+		$content = str_replace('<li>', '[*]', str_replace('</li>', '[/*]', $content));
+		$content = preg_replace('#\<ol\>(.*)\<\/ol\>#Uis', '[list=1]$1[/list]', $content);
+		$content = str_replace('<ul>', '[list]', str_replace('</ul>', '[/list]', $content));
+
+		return $full
+			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content)
+			: $content;
+	}
 }
