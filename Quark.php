@@ -1710,13 +1710,13 @@ class QuarkView {
 	}
 
 	/**
-	 * @param string $view
+	 * @param string $html
 	 *
 	 * @return string
 	 */
-	public function View ($view = '') {
+	public function View ($html = '') {
 		if (func_num_args() == 1)
-			$this->_html = $view;
+			$this->_html = $html;
 
 		return $this->_html;
 	}
@@ -1756,6 +1756,18 @@ class QuarkView {
 		ob_start();
 		include $this->_file;
 		return ob_get_clean();
+	}
+
+	/**
+	 * @param IQuarkViewModel $view
+	 *
+	 * @return IQuarkViewModel
+	 */
+	public function ViewModel (IQuarkViewModel $view = null) {
+		if (func_num_args() == 1)
+			$this->_view = $view;
+
+		return $this->_view;
 	}
 }
 
