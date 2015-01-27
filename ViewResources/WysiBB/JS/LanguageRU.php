@@ -28,6 +28,6 @@ class LanguageRU implements IWysiBBLanguage {
 	 * @return bool
 	 */
 	public function CacheControl () {
-		// TODO: Implement CacheControl() method.
+		return true;
 	}
 }

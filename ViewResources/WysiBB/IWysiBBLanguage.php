@@ -9,6 +9,4 @@ use Quark\IQuarkViewResource;
  *
  * @package Quark\ViewResources\WysiBB
  */
-interface IWysiBBLanguage extends IQuarkViewResource, IQuarkLocalViewResource {
-	//function 
-}
+interface IWysiBBLanguage extends IQuarkViewResource, IQuarkLocalViewResource { }

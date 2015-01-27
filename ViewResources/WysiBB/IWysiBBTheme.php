@@ -8,6 +8,4 @@ use Quark\IQuarkViewResource;
  *
  * @package Quark\ViewResources\WysiBB
  */
-interface IWysiBBTheme extends IQuarkViewResource {
-	//function
-}
+interface IWysiBBTheme extends IQuarkViewResource { }
