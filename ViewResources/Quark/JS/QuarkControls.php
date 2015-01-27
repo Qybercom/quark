@@ -44,7 +44,8 @@ class QuarkControls implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	public function Dependencies () {
 		return array(
 			new jQueryCore(),
-			new QuarkLocalCoreJSViewResource()
+			new QuarkLocalCoreJSViewResource(),
+			new QuarkUX()
 		);
 	}
 }

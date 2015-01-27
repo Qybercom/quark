@@ -6,10 +6,8 @@ use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
-use Quark\QuarkLocalCoreCSSViewResource;
 
-use Quark\ViewResources\FontAwesome\FontAwesome;
-use Quark\ViewResources\Google\Font;
+use Quark\ViewResources\Quark\QuarkUI;
 
 /**
  * Class QuarkPlayin
@@ -43,11 +41,7 @@ class QuarkPlayin implements IQuarkViewResource, IQuarkLocalViewResource, IQuark
 	 */
 	public function Dependencies () {
 		return array(
-			new FontAwesome(),
-			new Font('Open Sans', array(
-				Font::OPTION_SIZES => array(Font::N300)
-			)),
-			new QuarkLocalCoreCSSViewResource()
+			new QuarkUI()
 		);
 	}
 }
