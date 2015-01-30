@@ -303,8 +303,7 @@ class Quark {
 	 */
 	public static function WebHost ($full = true, $secure = false) {
 		if (self::$_webHost == '') {
-			if (!isset($_SERVER['SERVER_NAME']))
-				throw new QuarkArchException('Could not determine WebHost because $_SERVER[\'SERVER_NAME\'] is not specified');
+			if (!isset($_SERVER['SERVER_NAME'])) return '';
 
 			if (!isset($_SERVER['SERVER_PROTOCOL']))
 				throw new QuarkArchException('Could not determine WebHost because $_SERVER[\'SERVER_PROTOCOL\'] is not specified');

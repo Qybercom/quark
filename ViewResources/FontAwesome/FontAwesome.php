@@ -14,6 +14,15 @@ use Quark\QuarkDTO;
  * @package Quark\ViewResources\FontAwesome
  */
 class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
+	private $_version = '';
+
+	/**
+	 * @param string $_version
+	 */
+	public function __construct ($_version = '4.3.0') {
+		$this->_version = $_version;
+	}
+
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -25,7 +34,7 @@ class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
 	 * @return string
 	 */
 	public function Location () {
-		return '//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css';
+		return '//maxcdn.bootstrapcdn.com/font-awesome/' . $this->_version . '/css/font-awesome.min.css';
 	}
 
 	/**
