@@ -4437,7 +4437,7 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
 	 * @param $data
 	 * @return mixed
 	 */
-	public function Encode ($data) { return $data; }
+	public function Encode ($data) { return is_scalar($data) ? (string)$data : ''; }
 
 	/**
 	 * @param $raw
