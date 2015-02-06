@@ -3928,7 +3928,7 @@ class QuarkCookie {
 			$item = explode('=', $component);
 
 			$key = trim($item[0]);
-			$value = trim($item[1]);
+			$value = isset($item[1]) ? trim($item[1]) : '';
 
 			if (isset($instance->$key)) $instance->$key = $value;
 			else {
