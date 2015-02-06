@@ -88,13 +88,14 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 				)
 			);
 
-		$this->_payload = Quark::Normalize(array(
+		$this->_payload = array(
 			'aps' => array(
 				'alert' => '',
 				'badge' => 1,
 				'sound' => 'default'
-			)
-		), $payload);
+			),
+			'data' => $payload
+		);
 
 		$client = new QuarkClient($this->_host, $this, $this->_certificate);
 		$client->Action();
