@@ -69,7 +69,7 @@ class PushNotification implements IQuarkExtension {
 			/**
 			 * @var $provider IPushNotificationProvider
 			 */
-
+			print_r($provider);
 			foreach ($this->_devices as $device)
 				if ($device->type == $provider->Type())
 					$provider->Device($device);

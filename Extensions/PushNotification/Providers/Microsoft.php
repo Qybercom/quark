@@ -20,7 +20,7 @@ class Microsoft implements IPushNotificationProvider {
 	const TYPE = 'windows';
 
 	const OPTION_CLIENT_ID = 'client_id';
-	const OPTIONS_CLIENT_SECRET = 'client_secret';
+	const OPTION_CLIENT_SECRET = 'client_secret';
 
 	const HEADER_STATUS = 'X-WNS-STATUS';
 	const HEADER_NOTIFICATION_STATUS = 'X-WNS-NOTIFICATIONSTATUS';

@@ -3200,7 +3200,7 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_client(
+		$this->_socket = stream_socket_client(
 			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -3269,13 +3269,17 @@ class QuarkClient {
 	}
 
 	/**
-	 * @return object
+	 * @param bool $text
+	 *
+	 * @return string|object
 	 */
-	public function Error () {
-		return (object)array(
-			'num' => $this->_errorNumber,
-			'msg' => $this->_errorString
-		);
+	public function Error ($text = false) {
+		return $text
+			? $this->_errorNumber . ':' . $this->_errorString
+			: (object)array(
+				'num' => $this->_errorNumber,
+				'msg' => $this->_errorString
+			);
 	}
 }
 
@@ -4758,12 +4762,12 @@ class QuarkCertificate {
 	private $_content = '';
 
 	/**
-	 * @param string $passphrase
 	 * @param string $location
+	 * @param string $passphrase
 	 */
-	public function __construct ($passphrase = '', $location = '') {
-		$this->Passphrase($passphrase);
+	public function __construct ($location = '', $passphrase = '') {
 		$this->Location($location);
+		$this->Passphrase($passphrase);
 	}
 
 	/**
@@ -4786,10 +4790,10 @@ class QuarkCertificate {
 	 */
 	public function Location ($location = '') {
 		if (func_num_args() == 1)
-			$this->_location = $location;
+			$this->_location = Quark::NormalizePath($location, false);
 		else {
 			if (!is_string($this->_location) || !is_file($this->_location))
-				throw new QuarkArchException('QuarkCertificate: location is not a valid file');
+				throw new QuarkArchException('QuarkCertificate: ' . $this->_location . ' is not a valid file');
 		}
 
 		return $this->_location;

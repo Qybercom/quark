@@ -21,6 +21,7 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';
+	const OPTION_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
 
 	/**
 	 * @var QuarkURI $_uri
@@ -31,6 +32,11 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	 * @var QuarkCertificate $_certificate
 	 */
 	private $_certificate;
+
+	/**
+	 * @var string $_host
+	 */
+	private $_host = 'ssl://gateway.push.apple.com:2195';
 
 	/**
 	 * @var Device[] $_devices
@@ -55,6 +61,9 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	public function Config ($config) {
 		if (isset($config[self::OPTION_CERTIFICATE]) && $config[self::OPTION_CERTIFICATE] instanceof QuarkCertificate)
 			$this->_certificate = $config[self::OPTION_CERTIFICATE];
+
+		if (isset($config[self::OPTION_SANDBOX]) && $config[self::OPTION_SANDBOX] == true)
+			$this->_host = self::OPTION_SANDBOX;
 	}
 
 	/**
@@ -87,7 +96,7 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 			)
 		));
 
-		$client = new QuarkClient('ssl://gateway.push.apple.com:2195', $this, $this->_certificate);
+		$client = new QuarkClient($this->_host, $this, $this->_certificate);
 		$client->Action();
 
 		return true;
@@ -120,7 +129,12 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	 * @return mixed
 	 */
 	public function Action (QuarkClient $client) {
-		if (!$client->Connect()) return false;
+		$conn = $client->Connect();
+
+		if (!$conn) {
+			Quark::Log('PushNotification.Apple. Unable to connect to push server. Error: ' . $client->Error(true));
+			return false;
+		}
 
 		foreach ($this->_devices as $device)
 			$client->Send($this->_msg($device));
