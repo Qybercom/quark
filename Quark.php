@@ -3200,7 +3200,7 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = stream_socket_client(
+		$this->_socket = @stream_socket_client(
 			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
