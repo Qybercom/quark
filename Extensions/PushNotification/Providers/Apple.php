@@ -111,7 +111,7 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	private function _msg (Device $device) {
 		$payload = $this->Encode($this->_payload);
 
-		return chr(0) . pack('n', 32) . pack('H*', $device->id) . pack('n', strlen($payload)) . $payload;
+		return chr(0) . pack('n', 32) . pack('H*', str_replace('<', '', str_replace('>', '', str_replace(' ', '', $device->id)))) . pack('n', strlen($payload)) . $payload;
 	}
 
 	/**
