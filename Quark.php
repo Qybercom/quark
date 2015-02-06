@@ -3160,9 +3160,7 @@ class QuarkClient {
 	public function Transport (IQuarkTransportProvider $transport = null) {
 		if (func_num_args() == 1 && $transport != null) {
 			$this->_transport = $transport;
-
-			if ($this->_certificate != null)
-				$this->_transport->Setup($this->_uri, $this->_certificate);
+			$this->_transport->Setup($this->_uri, $this->_certificate);
 		}
 
 		return $this->_transport;
