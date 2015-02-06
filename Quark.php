@@ -1785,13 +1785,26 @@ class QuarkCollection {
 	/**
 	 * @param $item
 	 *
-	 * @return $this
+	 * @return QuarkCollection
 	 */
 	public function Add ($item) {
 		if ($item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type))
 			$this->_list[] = $item;
 
 		return $this;
+	}
+
+	/**
+	 * @param          $needle
+	 * @param callable $compare
+	 *
+	 * @return bool
+	 */
+	public function In ($needle, callable $compare) {
+		foreach ($this->_list as $item)
+			if ($compare($item, $needle)) return true;
+
+		return false;
 	}
 
 	/**
