@@ -3810,7 +3810,7 @@ interface IQuarkTransportProvider {
 	 *
 	 * @return mixed
 	 */
-	function Setup(QuarkURI $uri, QuarkCertificate $certificate);
+	function Setup(QuarkURI $uri, QuarkCertificate $certificate = null);
 
 	/**
 	 * @param QuarkClient $client

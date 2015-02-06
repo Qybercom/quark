@@ -99,7 +99,7 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	 *
 	 * @return mixed
 	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate) {
+	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
 		$this->_uri = $uri;
 	}
 
