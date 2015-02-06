@@ -3603,7 +3603,7 @@ class QuarkDTO {
 		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
 		$data = $this->_processor->Encode($this->Data());
 
-		if ($all) {
+		if ($all && $this->_uri != null) {
 			$query .= $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
 				. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n"
 				. self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
