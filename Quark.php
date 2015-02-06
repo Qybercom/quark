@@ -756,7 +756,7 @@ class QuarkService {
 		$request->URI(QuarkURI::FromURI($_SERVER['REQUEST_URI']));
 		$request->Headers(Quark::Headers());
 		$request->AttachData($request->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
-		$request->AttachData((object)$_GET);
+		$request->AttachData((object)($_GET + $_POST));
 
 		if (isset($_POST[$type]))
 			unset($_POST[$type]);
@@ -3340,8 +3340,8 @@ class QuarkURI {
 			$out->$key = $value;
 
 		if ($local) {
-			if (!isset($url['scheme'])) $out->scheme = $_SERVER['REQUEST_SCHEME'];
-			if (!isset($url['host'])) $out->host = $_SERVER['SERVER_NAME'];
+			if (!isset($url['scheme'])) $out->scheme = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : '';
+			if (!isset($url['host'])) $out->host = isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '';
 		}
 
 		return $out;

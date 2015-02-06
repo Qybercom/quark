@@ -102,6 +102,7 @@ class Microsoft implements IPushNotificationProvider {
 						<text id="2">' . $payload->comment . '</text>
 					</binding>
 				</visual>
+				<data>' . json_encode($payload) . '</data>
 			</toast>';
 
 		$request->Data($data);
