@@ -114,4 +114,11 @@ class Microsoft implements IPushNotificationProvider {
 			$channel->Action();
 		}
 	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Reset () {
+		$this->_devices = array();
+	}
 }

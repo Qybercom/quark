@@ -4980,7 +4980,7 @@ class QuarkSource {
 	/**
 	 * @param bool $css
 	 *
-	 * @return $this
+	 * @return QuarkSource
 	 */
 	public function Obfuscate ($css = false) {
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';

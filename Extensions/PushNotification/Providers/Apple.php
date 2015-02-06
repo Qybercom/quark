@@ -104,6 +104,13 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	}
 
 	/**
+	 * @return mixed
+	 */
+	public function Reset () {
+		$this->_devices = array();
+	}
+
+	/**
 	 * @param QuarkURI         $uri
 	 * @param QuarkCertificate $certificate
 	 *

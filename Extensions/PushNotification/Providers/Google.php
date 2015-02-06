@@ -63,4 +63,11 @@ class Google implements IPushNotificationProvider {
 
 		return true;
 	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Reset () {
+		$this->_devices = array();
+	}
 }

@@ -26,4 +26,9 @@ interface IPushNotificationProvider {
 	 * @return mixed
 	 */
 	function Send($payload);
+
+	/**
+	 * @return mixed
+	 */
+	function Reset();
 }

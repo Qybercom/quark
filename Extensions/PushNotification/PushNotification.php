@@ -75,6 +75,7 @@ class PushNotification implements IQuarkExtension {
 					$provider->Device($device);
 
 			$ok &= $provider->Send($this->_payload);
+			$provider->Reset();
 		}
 
 		return $ok;
