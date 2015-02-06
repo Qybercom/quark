@@ -25,7 +25,7 @@ class PostgreSQL implements IQuarkDataProvider {
 	 * @return QuarkURI
 	 */
 	public function SourceURI () {
-		// TODO: Implement Credentials() method.
+		// TODO: Implement SourceURI() method.
 	}
 
 	/**

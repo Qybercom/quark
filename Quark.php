@@ -588,17 +588,17 @@ class QuarkConfig {
 	/**
 	 * @param                    $name
 	 * @param IQuarkDataProvider $provider
-	 * @param QuarkURI   $credentials
+	 * @param QuarkURI   $uri
 	 */
-	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkURI $credentials) {
+	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
 		try {
-			QuarkModel::Source($name, $provider)->Connect($credentials);
+			QuarkModel::Source($name, $provider)->Connect($uri);
 		}
 		catch (QuarkConnectionException $e) {
 			Quark::Log('Unable to connect \'' . $name . '\'', Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
 				'name' => $name,
-				'credentials' => $credentials
+				'uri' => $uri
 			));
 		}
 	}
@@ -1880,7 +1880,7 @@ class QuarkModel {
 		$uri = $provider->SourceURI();
 
 		if (!($uri instanceof QuarkURI))
-			throw new QuarkArchException('Data provider ' . get_class($provider) . ' specified invalid QuarkCredentials');
+			throw new QuarkArchException('Data provider ' . get_class($provider) . ' specified invalid QuarkURI');
 
 		return $uri;
 	}
@@ -4352,28 +4352,30 @@ class QuarkHTTPException extends QuarkException {
 
 /**
  * Class QuarkConnectionException
+ *
  * @package Quark
  */
 class QuarkConnectionException extends QuarkException {
 	/**
 	 * @var QuarkURI
 	 */
-	public $credentials;
+	public $uri;
 
 	/**
-	 * @param QuarkURI $credentials
+	 * @param QuarkURI $uri
 	 * @param string $lvl
 	 */
-	public function __construct (QuarkURI $credentials, $lvl = Quark::LOG_WARN) {
+	public function __construct (QuarkURI $uri, $lvl = Quark::LOG_WARN) {
 		$this->lvl = $lvl;
-		$this->message = 'Unable to connect to ' . $credentials->uri();
+		$this->message = 'Unable to connect to ' . $uri->URI();
 
-		$this->credentials = $credentials;
+		$this->uri = $uri;
 	}
 }
 
 /**
  * Interface IQuarkIOProcessor
+ *
  * @package Quark
  */
 interface IQuarkIOProcessor {
