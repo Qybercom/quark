@@ -116,6 +116,8 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	 * @return bool
 	 */
 	public function Reconnect ($request) {
+		if (!isset($request->access)) return false;
+
 		$this->_token = $request->access;
 
 		return true;
