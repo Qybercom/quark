@@ -8,6 +8,7 @@ use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkHTTPTransport;
 use Quark\QuarkArchException;
+use Quark\QuarkPlainIOProcessor;
 
 /**
  * Class SMSCenter
@@ -90,7 +91,7 @@ class SMSCenter implements IQuarkExtension {
 			. '&charset=utf-8'
 			. ($this->_from != '' ? '&sender=' . $this->_from : '')
 			. $append,
-			new QuarkHTTPTransport(QuarkDTO::ForGET(), new QuarkDTO(new QuarkJSONIOProcessor()))
+			new QuarkHTTPTransport(QuarkDTO::ForGET(new QuarkPlainIOProcessor()), new QuarkDTO(new QuarkPlainIOProcessor()))
 		);
 
 		$this->_response = $client->Action();
