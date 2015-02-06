@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Quark\RESTService;
+namespace Quark\Extensions\Quark\REST;
 
 use Quark\IQuarkExtensionConfig;
 
@@ -8,7 +8,7 @@ use Quark\Quark;
 /**
  * Class Config
  *
- * @package Quark\Extensions\Quark\RESTService
+ * @package Quark\Extensions\Quark\REST
  */
 class Config implements IQuarkExtensionConfig {
 	/**

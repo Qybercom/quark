@@ -21,19 +21,9 @@ interface IPushNotificationProvider {
 	function Device(Device $device);
 
 	/**
-	 * @return string
-	 */
-	function URL();
-
-	/**
 	 * @param $payload
 	 *
-*@return \Quark\QuarkDTO
+	 * @return mixed
 	 */
-	function Request($payload);
-
-	/**
-	 * @return \Quark\QuarkDTO
-	 */
-	function Response();
+	function Send($payload);
 }

@@ -1,12 +1,12 @@
 <?php
-namespace Quark\Extensions\Quark\RESTService;
+namespace Quark\Extensions\Quark\REST;
 
 use Quark\IQuarkModel;
 
 /**
  * Interface IQuarkRESTServiceDescriptor
  *
- * @package Quark\Extensions\Quark\RESTService
+ * @package Quark\Extensions\Quark\REST
  */
 interface IQuarkRESTServiceDescriptor {
 	/**

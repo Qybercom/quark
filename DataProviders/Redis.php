@@ -7,11 +7,11 @@ use Quark\IQuarkModel;
 use Quark\QuarkURI;
 
 /**
- * Class PostgreSQL
+ * Class Redis
  *
  * @package Quark\DataProviders
  */
-class PostgreSQL implements IQuarkDataProvider {
+class Redis implements IQuarkDataProvider {
 	/**
 	 * @param QuarkURI $uri
 	 *
@@ -25,7 +25,7 @@ class PostgreSQL implements IQuarkDataProvider {
 	 * @return QuarkURI
 	 */
 	public function SourceURI () {
-		// TODO: Implement Credentials() method.
+		// TODO: Implement SourceURI() method.
 	}
 
 	/**
@@ -69,7 +69,7 @@ class PostgreSQL implements IQuarkDataProvider {
 	 * @param IQuarkModel $model
 	 * @param             $criteria
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria) {
 		// TODO: Implement FindOne() method.
@@ -79,7 +79,7 @@ class PostgreSQL implements IQuarkDataProvider {
 	 * @param IQuarkModel $model
 	 * @param             $id
 	 *
-	 * @return IQuarkModel
+	 * @return mixed
 	 */
 	public function FindOneById (IQuarkModel $model, $id) {
 		// TODO: Implement FindOneById() method.

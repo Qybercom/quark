@@ -1,12 +1,13 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
+use Quark\QuarkClient;
+use Quark\QuarkDTO;
+use Quark\QuarkHTTPTransport;
+use Quark\QuarkJSONIOProcessor;
+
 use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IPushNotificationProvider;
-
-use Quark\QuarkDTO;
-use Quark\QuarkPlainIOProcessor;
-use Quark\QuarkJSONIOProcessor;
 
 /**
  * Class Google
@@ -14,7 +15,9 @@ use Quark\QuarkJSONIOProcessor;
  * @package Quark\Extensions\PushNotification\Providers
  */
 class Google implements IPushNotificationProvider {
-	private $_device = null;
+	const TYPE = 'android';
+
+	private $_devices = array();
 	private $_key = '';
 
 	/**
@@ -29,48 +32,35 @@ class Google implements IPushNotificationProvider {
 	 * @return string
 	 */
 	public function Type () {
-		return 'android';
-	}
-
-	/**
-	 * @return string
-	 */
-	public function URL () {
-		return 'https://android.googleapis.com/gcm/send';
+		return self::TYPE;
 	}
 
 	/**
 	 * @param Device $device
 	 */
 	public function Device (Device $device) {
-		$this->_device = $device;
+		$this->_devices[] = $device->id;
 	}
 
 	/**
 	 * @param $payload
 	 *
-	 * @return QuarkDTO
+	 * @return mixed
 	 */
-	public function Request ($payload) {
-		return new QuarkDTO(
-			array(
-				'Authorization' => 'key='. $this->_key
-			),
-			array(
-				'registration_ids' => array($this->_device->id),
-				'data' => $payload,
-			),
-			new QuarkJSONIOProcessor()
-		);
-	}
+	public function Send ($payload) {
+		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Header('Authorization', 'key=' . $this->_key);
+		$request->Data(array(
+			'registration_ids' => $this->_devices,
+			'data' => $payload,
+		));
 
-	/**
-	 * @return QuarkDTO
-	 */
-	public function Response () {
-		$response = new QuarkDTO();
-		$response->Processor(new QuarkJSONIOProcessor());
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		return $response;
+		$client = new QuarkClient('https://android.googleapis.com/gcm/send', new QuarkHTTPTransport($request, $response));
+
+		$client->Action();
+
+		return true;
 	}
 }

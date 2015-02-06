@@ -4,10 +4,10 @@ namespace Quark\Extensions\SMSCenter;
 use Quark\IQuarkExtension;
 
 use Quark\QuarkClient;
-use Quark\QuarkCredentials;
-use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkHTTPTransport;
+use Quark\QuarkArchException;
 
 /**
  * Class SMSCenter
@@ -81,7 +81,7 @@ class SMSCenter implements IQuarkExtension {
 			throw new QuarkArchException('SMSCenter: message length should be greater than 0');
 
 		$client = new QuarkClient(
-			QuarkCredentials::FromURI('http://smsc.ru/sys/send.php'
+			'http://smsc.ru/sys/send.php'
 			. '?login='. self::$_username
 			. '&psw=' . self::$_password
 			. '&phones=' . implode(',', $this->_phones)
@@ -89,12 +89,11 @@ class SMSCenter implements IQuarkExtension {
 			. '&fmt=3'
 			. '&charset=utf-8'
 			. ($this->_from != '' ? '&sender=' . $this->_from : '')
-			. $append),
-			null,
-			new QuarkDTO(array(), array(), new QuarkJSONIOProcessor())
+			. $append,
+			new QuarkHTTPTransport(QuarkDTO::ForGET(), new QuarkDTO(new QuarkJSONIOProcessor()))
 		);
 
-		$this->_response = $client->Get();
+		$this->_response = $client->Action();
 
 		return !isset($this->_response->error);
 	}

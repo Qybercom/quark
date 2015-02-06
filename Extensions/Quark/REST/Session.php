@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Quark\RESTService;
+namespace Quark\Extensions\Quark\REST;
 
 use Quark\IQuarkAuthorizationProvider;
 
@@ -9,7 +9,7 @@ use Quark\QuarkModel;
 /**
  * Class Session
  *
- * @package Quark\Extensions\Quark\RESTService
+ * @package Quark\Extensions\Quark\REST
  */
 class Session implements IQuarkAuthorizationProvider {
 	/**

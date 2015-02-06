@@ -5,7 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
-use Quark\QuarkCredentials;
+use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 use Quark\QuarkModel;
 
@@ -31,33 +31,33 @@ class FileSystem implements IQuarkDataProvider {
 	private $_root = '';
 
 	/**
-	 * @var QuarkCredentials
+	 * @var QuarkURI
 	 */
-	private $_credentials;
+	private $uri;
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
 	public static function LocalFS () {
-		return QuarkCredentials::FromURI(Quark::Host(), false);
+		return QuarkURI::FromURI(Quark::Host(), false);
 	}
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 * @throws QuarkConnectionException
 	 */
-	public function Connect (QuarkCredentials $credentials) {
-		$this->_credentials = $credentials;
-		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $credentials->uri()))));
+	public function Connect (QuarkURI $uri) {
+		$this->uri = $uri;
+		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $uri->uri()))));
 	}
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	public function Credentials () {
-		return $this->_credentials;
+	public function SourceURI () {
+		return $this->uri;
 	}
 
 	/**

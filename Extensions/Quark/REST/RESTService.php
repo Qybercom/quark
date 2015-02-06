@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Quark\RESTService;
+namespace Quark\Extensions\Quark\REST;
 
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkExtension;
@@ -11,20 +11,25 @@ use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
-use Quark\QuarkCredentials;
+use Quark\QuarkHTTPTransport;
+use Quark\QuarkURI;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkModel;
 
 /**
  * Class RESTService
  *
- * @package Quark\Extensions\Quark\RESTService
+ * @package Quark\Extensions\Quark\REST
  */
 class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigurableExtension {
 	/**
-	 * @var QuarkCredentials
+	 * @var QuarkURI
 	 */
-	private $_connection = null;
+	private $_uri = null;
+
+	/**
+	 * @var string $_token
+	 */
+	private $_token = '';
 
 	/**
 	 * @var IQuarkRESTServiceDescriptor
@@ -39,23 +44,23 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	public function Init (IQuarkExtensionConfig $config) {
 		$this->_descriptor = $config->Descriptor();
 
-		Quark::Config()->DataProvider($config->Source(), $this, QuarkCredentials::FromURI($config->Endpoint()));
+		Quark::Config()->DataProvider($config->Source(), $this, QuarkURI::FromURI($config->Endpoint()));
 	}
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 */
-	public function Connect (QuarkCredentials $credentials) {
-		$this->_connection = $credentials;
+	public function Connect (QuarkURI $uri) {
+		$this->_uri = $uri;
 	}
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	public function Credentials () {
-		return $this->_connection;
+	public function SourceURI () {
+		return $this->_uri;
 	}
 
 	/**
@@ -67,28 +72,19 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	 * @throws QuarkArchException
 	 */
 	private function _api ($method, $action, $data = []) {
-		$request = new QuarkDTO();
-		$request->Processor(new QuarkJSONIOProcessor());
+		$request = new QuarkDTO(new QuarkJSONIOProcessor());
+		$request->Method($method);
 		$request->Data($data);
 
-		$response = new QuarkDTO();
-		$response->Processor(new QuarkJSONIOProcessor());
-		$response->Data(array(
-			'status' => 403
-		));
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$this->_connection->Resource($action . '/?access=' . $this->_connection->token);
+		$this->_uri->path = $action;
+		$this->_uri->query = 'access=' . $this->_token;
 
-		$connection = new QuarkClient($this->_connection, $request, $response);
+		$client = new QuarkClient($this->_uri->URI(true));
+		$client->Transport(new QuarkHTTPTransport($request, $response));
 
-		/**
-		 * @var QuarkDTO $output
-		 */
-		$output = $connection->$method();
-
-		if (!$output) return null;
-
-		$data = $output->Data();
+		$data = $client->Action()->Data();
 
 		if ($data == null || !isset($data->status) || !isset($data->access) || $data->status != 200)
 			throw new QuarkArchException('QuarkRest API is not reachable');
@@ -104,7 +100,8 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	public function Login ($criteria = []) {
 		try {
 			$data = $this->_api('POST', '/user/login', $criteria);
-			$this->_connection->token = $data->access;
+
+			$this->_token = $data->access;
 
 			return $data->profile;
 		}
@@ -114,10 +111,14 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	}
 
 	/**
-	 * @param string $token
+	 * @param $request
+	 *
+	 * @return bool
 	 */
-	public function Reconnect ($token) {
-		$this->_connection->token = $token;
+	public function Reconnect ($request) {
+		$this->_token = $request->access;
+
+		return true;
 	}
 
 	/**

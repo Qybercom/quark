@@ -6,7 +6,7 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
-use Quark\QuarkCredentials;
+use Quark\QuarkURI;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
 
@@ -24,24 +24,24 @@ class MySQL implements IQuarkDataProvider {
 	private $_connection;
 
 	/**
-	 * @var QuarkCredentials $_credentials
+	 * @var QuarkURI $_credentials
 	 */
 	private $_credentials;
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 * @throws QuarkArchException
 	 * @throws QuarkConnectionException
 	 */
-	public function Connect (QuarkCredentials $credentials) {
+	public function Connect (QuarkURI $uri) {
 		$this->_connection = \mysqli_init();
 
 		if (!$this->_connection)
 			throw new QuarkArchException('MySQLi initialization fault');
 
-		$options = $credentials->Options();
+		$options = $uri->options;
 
 		if (is_array($options))
 			foreach ($options as $key => $value) {
@@ -50,21 +50,21 @@ class MySQL implements IQuarkDataProvider {
 			}
 
 		if (!$this->_connection->real_connect(
-			$credentials->host,
-			$credentials->username,
-			$credentials->password,
-			$credentials->suffix,
-			(int)$credentials->port
+			$uri->host,
+			$uri->user,
+			$uri->pass,
+			$uri->path,
+			(int)$uri->port
 		))
-			throw new QuarkConnectionException($credentials, Quark::LOG_FATAL);
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 
-		$this->_credentials = $credentials;
+		$this->_credentials = $uri;
 	}
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	public function Credentials () {
+	public function SourceURI () {
 		return $this->_credentials;
 	}
 

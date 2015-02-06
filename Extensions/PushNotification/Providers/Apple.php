@@ -1,71 +1,130 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
+use Quark\IQuarkTransportProvider;
+
+use Quark\Quark;
+use Quark\QuarkCertificate;
+use Quark\QuarkClient;
+use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkURI;
+
 use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IPushNotificationProvider;
-
-use Quark\QuarkDTO;
-use Quark\QuarkCertificate;
-use Quark\QuarkPlainIOProcessor;
 
 /**
  * Class Apple
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Apple implements IPushNotificationProvider {
-	private $_settings = array();
-	private $_certificate = '';
-	private $_device = '';
+class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, IQuarkTransportProvider {
+	const TYPE = 'ios';
+
+	const OPTION_CERTIFICATE = 'certificate';
+
+	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri;
+
+	/**
+	 * @var QuarkCertificate $_certificate
+	 */
+	private $_certificate;
+
+	/**
+	 * @var Device[] $_devices
+	 */
+	private $_devices = array();
+
+	/**
+	 * @var array $_payload
+	 */
+	private $_payload = array();
 
 	/**
 	 * @return string
 	 */
 	public function Type () {
-		return 'ios';
+		return self::TYPE;
 	}
 
 	/**
 	 * @param $config
 	 */
 	public function Config ($config) {
-		if (isset($config['settings']) && is_array($config['settings']))
-			$this->_settings = $config['settings'];
-
-		if (isset($config['certificate']) && $config['certificate'] instanceof QuarkCertificate)
-			$this->_certificate = $config['certificate'];
-	}
-
-	/**
-	 * @return string
-	 */
-	public function URL () {
-		return 'ssl://gateway.push.apple.com:2195';
+		if (isset($config[self::OPTION_CERTIFICATE]) && $config[self::OPTION_CERTIFICATE] instanceof QuarkCertificate)
+			$this->_certificate = $config[self::OPTION_CERTIFICATE];
 	}
 
 	/**
 	 * @param Device $device
 	 */
 	public function Device (Device $device) {
-		$this->_device = $device;
+		$this->_devices[] = $device;
 	}
 
 	/**
 	 * @param $payload
 	 *
-	 * @return QuarkDTO
+	 * @return mixed
 	 */
-	public function Request ($payload) {
-		// TODO: Implement Request() method.
+	public function Send ($payload) {
+		if (is_scalar($payload))
+			$payload = array(
+				'aps' => array(
+					'alert' => $payload
+				)
+			);
+
+		$this->_payload = Quark::Normalize($payload, array(
+			'aps' => array(
+				'alert' => '',
+				'badge' => 1,
+				'sound' => 'default'
+			)
+		));
+
+		$client = new QuarkClient('ssl://gateway.push.apple.com:2195', $this, $this->_certificate);
+		$client->Action();
+
+		return true;
 	}
 
 	/**
-	 * @return QuarkDTO
+	 * @param QuarkURI         $uri
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return mixed
 	 */
-	public function Response () {
-		$response = new QuarkDTO();
-		$response->Processor(new QuarkPlainIOProcessor());
+	public function Setup (QuarkURI $uri, QuarkCertificate $certificate) {
+		$this->_uri = $uri;
+	}
 
-		return $response;
+	/**
+	 * @param Device $device
+	 *
+	 * @return string
+	 */
+	private function _msg (Device $device) {
+		$payload = $this->Encode($this->_payload);
+
+		return chr(0) . pack('n', 32) . pack('H*', $device->id) . pack('n', strlen($payload)) . $payload;
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return mixed
+	 */
+	public function Action (QuarkClient $client) {
+		if (!$client->Connect()) return false;
+
+		foreach ($this->_devices as $device)
+			$client->Send($this->_msg($device));
+
+		$client->Close();
+
+		return true;
 	}
 }

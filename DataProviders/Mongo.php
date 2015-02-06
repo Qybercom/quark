@@ -5,7 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
-use Quark\QuarkCredentials;
+use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 
 /**
@@ -20,9 +20,9 @@ class Mongo implements IQuarkDataProvider {
 	private $_connection;
 
 	/**
-	 * @var QuarkCredentials
+	 * @var QuarkURI
 	 */
-	private $_credentials;
+	private $_uri;
 
 	/**
 	 * @param object $source
@@ -63,36 +63,37 @@ class Mongo implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 * @throws QuarkConnectionException
 	 */
-	public function Connect (QuarkCredentials $credentials) {
+	public function Connect (QuarkURI $uri) {
 		try {
 			$options = array();
 
-			if (is_array($credentials->Options()))
-				$options = $credentials->Options();
+			if (is_array($uri->options))
+				$options = $uri->options;
 
-			$this->_connection = new \MongoClient($credentials->uri(), $options);
+			$this->_connection = new \MongoClient($uri->URI(), $options);
+			$uri->path = str_replace('/', '', $uri->path);
 
-			if ($credentials->suffix) {
-				$db = $credentials->suffix;
+			if (strlen(trim($uri->path)) != 0) {
+				$db = $uri->path;
 				$this->_connection = $this->_connection->$db;
-				$this->_credentials = $credentials;
+				$this->_uri = $uri;
 			}
 		}
 		catch (\Exception $e) {
-			throw new QuarkConnectionException($credentials, Quark::LOG_FATAL);
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 		}
 	}
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	public function Credentials () {
-		return $this->_credentials;
+	public function SourceURI () {
+		return $this->_uri;
 	}
 
 	/**

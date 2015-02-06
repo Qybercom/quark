@@ -51,7 +51,7 @@ class Quark {
 		self::$_config = $config;
 
 		try {
-			if (PHP_SAPI != 'cli') echo QuarkService::Select()->Invoke();
+			if (PHP_SAPI != 'cli') echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 			else {
 				if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
 					throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration.');
@@ -77,7 +77,7 @@ class Quark {
 						$_SERVER['REQUEST_URI'] = self::NormalizePath($class, false);
 						$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
 
-						$item = QuarkService::Select();
+						$item = QuarkService::Select($_SERVER['REQUEST_URI']);
 
 						if ($item->Service() instanceof IQuarkScheduledTask)
 							$tasks[] = new QuarkTask($item);
@@ -100,7 +100,7 @@ class Quark {
 
 					$_SERVER['REQUEST_URI'] = $_SERVER['argv'][1][0] != '/' ? '/' . $_SERVER['argv'][1] : $_SERVER['argv'][1];
 
-					echo QuarkService::Select()->Invoke();
+					echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 				}
 			}
 		}
@@ -167,14 +167,16 @@ class Quark {
 
 	/**
 	 * @param $interface
+	 * @param callable $filter
+	 *
 	 * @return array
 	 */
-	public static function Implementations ($interface) {
+	public static function Implementations ($interface, callable $filter = null) {
 		$output = array();
 		$classes = get_declared_classes();
 
 		foreach ($classes as $class)
-			if (self::is($class, $interface)) $output[] = $class;
+			if (self::is($class, $interface) && ($filter != null ? $filter($class) : true)) $output[] = $class;
 
 		return $output;
 	}
@@ -586,9 +588,9 @@ class QuarkConfig {
 	/**
 	 * @param                    $name
 	 * @param IQuarkDataProvider $provider
-	 * @param QuarkCredentials   $credentials
+	 * @param QuarkURI   $credentials
 	 */
-	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkCredentials $credentials) {
+	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkURI $credentials) {
 		try {
 			QuarkModel::Source($name, $provider)->Connect($credentials);
 		}
@@ -718,6 +720,8 @@ class QuarkService {
 	 * @throws QuarkArchException
 	 */
 	public function Invoke () {
+		if ($this->_service instanceof IQuarkTask) return $this->_service->Action();
+
 		$request = new QuarkDTO();
 		$request->Processor(Quark::Config()->Processor(QuarkConfig::REQUEST));
 		$response = new QuarkDTO();
@@ -740,92 +744,83 @@ class QuarkService {
 		if ($this->_service instanceof IQuarkServiceWithAccessControl)
 			$response->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $this->_service->AllowOrigin());
 
-		$request->Headers(Quark::Headers());
-
-		$head = (isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '')
-			. (isset($_SERVER['REQUEST_URI']) ? ' ' . $_SERVER['REQUEST_URI'] : '')
-			. (isset($_SERVER['SERVER_PROTOCOL']) ? ' ' . $_SERVER['SERVER_PROTOCOL'] : '')
-			. "\r\nHost: " . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '') . "\r\n\r\n";
-
-		if (substr($request->Header(QuarkDTO::HEADER_CONTENT_TYPE), 0, 19) != 'multipart/form-data') {
-			$request->PopulateFrom($head . file_get_contents('php://input'));
-			$request->AttachData((object)($_GET + $_POST));
-		}
-		else {
-			$key = $request->Processor()->MimeType();
-
-			if (isset($_POST[$key]))
-				$request->PopulateFrom($head . $_POST[$key]);
-
-			$request->AttachData((object)($_GET + $_POST + QuarkFile::FromFiles($_FILES)));
-
-			if (sizeof($_FILES) != 0)
-				$request->Data(Quark::Normalize(new \StdClass(), (object)$request->Data(), function ($item) {
-					return is_scalar($item) && isset($_FILES[$item])
-						? QuarkFile::From($_FILES[$item])
-						: $item;
-				}));
-		}
-
-		if ($this->_service instanceof IQuarkStrongService)
-			$request->Data(Quark::Normalize($request->Data(), (object)$this->_service->InputFilter()));
-
 		ob_start();
 
 		$ok = true;
 		$output = null;
 
-		if ($this->_service instanceof IQuarkTask) $output = $this->_service->Action($request);
-		else {
-			$session = new QuarkSession();
-			$method = $this->_service instanceof IQuarkAnyService
-				? 'Any'
-				: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
+		$type = $request->Processor()->MimeType();
+		$body = file_get_contents('php://input');
 
-			if ($this->_service instanceof IQuarkAuthorizableService) {
-				$session = QuarkSession::Get($this->_service->AuthorizationProvider());
-				$session->Initialize($request);
+		$request->Method($_SERVER['REQUEST_METHOD']);
+		$request->URI(QuarkURI::FromURI($_SERVER['REQUEST_URI']));
+		$request->Headers(Quark::Headers());
+		$request->AttachData($request->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
+		$request->AttachData((object)$_GET);
 
-				$response->AttachData($session->Trail($response));
+		if (isset($_POST[$type]))
+			unset($_POST[$type]);
 
-				if (!$this->_service->AuthorizationCriteria($request, $session)) {
-					$ok = false;
-					$output = $this->_service->AuthorizationFailed();
-				}
-				else {
-					if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
-						/**
-						 * @note some PHP magic - ::Signature in IQuarkSignedService is static, but call is non static
-						 *       explanation - Zend engine translate at compile-time all method calls to static version
-						 *       http://stackoverflow.com/a/15756165/2097055
-						 */
-						$sign = $session->Signature();
+		$files = QuarkFile::FromFiles($_FILES);
 
-						if ($sign == '' || $request->Signature() != $sign) {
-							$action = 'SignatureCheckFailedOn' . $method;
+		$post = Quark::Normalize(new \StdClass(), $request->Data(), function ($item) use ($files) {
+			foreach ($files as $key => $value)
+				if ($key == $item) return $value;
 
-							$ok = false;
-							$output = $this->_service->$action();
-						}
+			return $item;
+		});
+
+		$request->AttachData($post);
+
+		$session = new QuarkSession();
+		$method = $this->_service instanceof IQuarkAnyService
+			? 'Any'
+			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
+
+		if ($this->_service instanceof IQuarkAuthorizableService) {
+			$session = QuarkSession::Get($this->_service->AuthorizationProvider());
+			$session->Initialize($request);
+
+			$response->AttachData($session->Trail($response));
+
+			if (!$this->_service->AuthorizationCriteria($request, $session)) {
+				$ok = false;
+				$output = $this->_service->AuthorizationFailed();
+			}
+			else {
+				if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
+					$sign = $session->Signature();
+
+					if ($sign == '' || $request->Signature() != $sign) {
+						$action = 'SignatureCheckFailedOn' . $method;
+
+						$ok = false;
+						$output = $this->_service->$action();
 					}
 				}
 			}
-
-			if ($ok && Quark::is($this->_service, 'Quark\IQuark' . $method . 'Service'))
-				$output = $this->_service->$method($request, $session);
 		}
 
-		if ($output instanceof QuarkDTO) {
-			$response->Headers($output->Headers());
-			$response->AttachData($output->Data(), true);
-		}
+		if ($ok && Quark::is($this->_service, $a = 'Quark\IQuark' . $method . 'Service'))
+			$output = $this->_service->$method($request, $session);
+
+		if ($output instanceof QuarkDTO) $response = $output;
 		else $response->AttachData($output, true);
 
 		if (!headers_sent()) {
+			$status = $response->Status();
+
+			if (strlen(trim($status)) != 0)
+				header($_SERVER['SERVER_PROTOCOL'] . ' ' . $status);
+
 			$headers = $response->Headers();
+			$cookies = $response->Cookies();
 
 			foreach ($headers as $key => $value)
 				header($key . ': ' . $value);
+
+			foreach ($cookies as $cookie)
+				header(QuarkDTO::HEADER_SET_COOKIE . ': ' . $a = $cookie->Serialize(), false);
 		}
 
 		echo $response->Processor()->Encode($response->Data());
@@ -843,17 +838,22 @@ class QuarkService {
 	}
 
 	/**
+	 * @param string $uri
+	 *
 	 * @return QuarkService
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
 	 */
-	public static function Select () {
-		$route = QuarkDTO::ParseRoute($_SERVER['REQUEST_URI']);
+	public static function Select ($uri) {
+		$route = QuarkURI::FromURI($uri);
+		$route->path = Quark::NormalizePath($route->path, false);
+
+		$path = QuarkURI::ParseRoute($route->path);
 
 		$buffer = array();
-		foreach ($route as $item)
-			$buffer[] = ucfirst($item);
+		foreach ($path as $item)
+			if (strlen(trim($item)) != 0) $buffer[] = ucfirst($item);
 
 		$route = $buffer;
 		unset($buffer);
@@ -925,266 +925,6 @@ interface IQuarkConfigurableExtension {
  * @package Quark
  */
 interface IQuarkExtensionConfig { }
-
-/**
- * Class QuarkCredentials
- * @package Quark
- */
-class QuarkCredentials {
-	private static $_transports = array(
-		'tcp' => 'tcp',
-		'ssl' => 'ssl',
-		'http' => 'tcp',
-		'https' => 'ssl',
-		'ftp' => 'tcp',
-		'ftps' => 'ssl'
-	);
-
-	private static $_ports = array(
-		'http' => '80',
-		'https' => '443',
-		'ftp' => '21',
-		'ftps' => '22'
-	);
-
-	private $_options;
-
-	/**
-	 * @var string
-	 */
-	public $protocol;
-
-	/**
-	 * @var string
-	 */
-	public $username;
-
-	/**
-	 * @var string
-	 */
-	public $password;
-
-	/**
-	 * @var string
-	 */
-	public $host = 'localhost';
-
-	/**
-	 * @var integer
-	 */
-	public $port = 80;
-
-	/**
-	 * @var string
-	 */
-	public $suffix;
-
-	/**
-	 * @var string
-	 */
-	public $token;
-
-	/**
-	 * @param string|null $protocol
-	 */
-	public function __construct ($protocol = null) {
-		$this->protocol = $protocol;
-	}
-
-	/**
-	 * @return QuarkCredentials
-	 */
-	public function Reset () {
-		$this->protocol = null;
-
-		$this->host = 'localhost';
-		$this->port = null;
-
-		$this->username = null;
-		$this->password = null;
-
-		$this->suffix = null;
-
-		return $this;
-	}
-
-	/**
-	 * @param $uri
-	 * @param bool $web
-	 *
-	 * @return QuarkCredentials
-	 */
-	public static function FromURI ($uri, $web = true) {
-		$url = Quark::Normalize(
-			(object)array(
-				'query' => '',
-				'scheme' => '',
-				'host' => $web ? (isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : '') : null,
-				'port' => $web ? (isset($_SERVER['SERVER_PORT']) ? (int)$_SERVER['SERVER_PORT'] : 80) : null,
-				'user' => null,
-				'pass' => null,
-				'path' => '',
-				'fragment' => ''
-			),
-			(object)parse_url($uri)
-		);
-
-		$credentials = new self($url->scheme);
-		$credentials->Endpoint($url->host, $url->port);
-		$credentials->User($url->user, $url->pass);
-		$credentials->Resource(
-			$url->path
-			. (strlen($url->query) != 0 ? '?' . $url->query : '')
-			. $url->fragment
-		);
-
-		return $credentials;
-	}
-
-	/**
-	 * @param $username
-	 * @param $password
-	 *
-	 * @return QuarkCredentials
-	 */
-	public static function ByAuthCriteria ($username, $password) {
-		$credentials = new self();
-
-		$credentials->username = $username;
-		$credentials->password = $password;
-
-		return $credentials;
-	}
-
-	/**
-	 * @param $token
-	 *
-	 * @return QuarkCredentials
-	 */
-	public static function ByToken ($token) {
-		$credentials = new self();
-
-		$credentials->token = $token;
-
-		return $credentials;
-	}
-
-	/**
-	 * @param bool $user
-	 * @return string
-	 */
-	public function uri ($user = true) {
-		return
-			($this->protocol !== null ? $this->protocol : 'http')
-			. '://'
-			. ($user && $this->username !== null ? $this->username : '')
-			. ($user && $this->username !== null && $this->password !== null ? ':' . $this->password : '')
-			. ($user && $this->username !== null ? '@' : '')
-			. $this->host
-			. ($this->port !== null ? ':' . $this->port : '')
-			. ($this->suffix !== null ? Quark::NormalizePath('/' . $this->suffix, false) : '')
-		;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Socket () {
-		return (isset(self::$_transports[$this->protocol])
-					? self::$_transports[$this->protocol]
-					: 'tcp'
-				)
-				. '://'
-				. gethostbyname($this->host)
-				. ':'
-				. ($this->port != 80
-					? (is_int($this->port)
-						? $this->port
-						: 80
-					)
-					: (isset(self::$_ports[$this->protocol])
-						? self::$_ports[$this->protocol]
-						: 80
-					)
-				);
-	}
-
-	/**
-	 * @param string $host
-	 * @param integer|null $port
-	 *
-	 * @return QuarkDTO
-	 */
-	public function Endpoint ($host, $port = null) {
-		$this->host = $host;
-		$this->port = $port;
-
-		return $this;
-	}
-
-	/**
-	 * @param string $username
-	 * @param string|null $password
-	 *
-	 * @return QuarkDTO
-	 */
-	public function User ($username, $password = null) {
-		$this->username = $username;
-		$this->password = $password;
-
-		return $this;
-	}
-
-	/**
-	 * @param string $resource
-	 *
-	 * @return QuarkDTO
-	 */
-	public function Resource ($resource) {
-		$this->suffix = $resource;
-
-		return $this;
-	}
-
-	/**
-	 * @param QuarkCredentials $credentials
-	 *
-	 * @return bool
-	 */
-	public function Equal (QuarkCredentials $credentials) {
-		foreach ($this as $key => $value)
-			if ($credentials->$key != $value) return false;
-
-		return true;
-	}
-
-	/**
-	 * @param array(QuarkCredentials) $credentials
-	 *
-	 * @return bool
-	 */
-	public function Used ($credentials = []) {
-		if (!is_array($credentials)) return false;
-		if (sizeof($credentials) < 2) return false;
-
-		foreach ($credentials as $item)
-			if ($item instanceof QuarkCredentials && $this->Equal($item)) return true;
-
-		return false;
-	}
-
-	/**
-	 * @param mixed $options
-	 *
-	 * @return mixed
-	 */
-	public function Options ($options = []) {
-		if (func_num_args() == 1)
-			$this->_options = $options;
-
-		return $this->_options;
-	}
-}
 
 /**
  * Interface IQuarkAuthProvider
@@ -1476,11 +1216,9 @@ class QuarkTask {
  */
 interface IQuarkTask extends IQuarkService {
 	/**
-	 * @param QuarkDTO $request
-	 *
 	 * @return mixed
 	 */
-	function Action(QuarkDTO $request);
+	function Action();
 }
 
 /**
@@ -2131,20 +1869,20 @@ class QuarkModel {
 	/**
 	 * @param $name
 	 *
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 * @throws QuarkArchException
 	 */
-	public static function SourceCredentials ($name) {
+	public static function SourceURI ($name) {
 		if (!isset(self::$_providers[$name]))
 			throw new QuarkArchException('Data provider ' . print_r($name, true) . ' is not pooled');
 
 		$provider = self::$_providers[$name];
-		$credentials = $provider->Credentials();
+		$uri = $provider->SourceURI();
 
-		if (!($credentials instanceof QuarkCredentials))
+		if (!($uri instanceof QuarkURI))
 			throw new QuarkArchException('Data provider ' . get_class($provider) . ' specified invalid QuarkCredentials');
 
-		return $credentials;
+		return $uri;
 	}
 
 	/**
@@ -2752,16 +2490,16 @@ interface IQuarkModelWithBeforeExtract {
  */
 interface IQuarkDataProvider {
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 */
-	function Connect(QuarkCredentials $credentials);
+	function Connect(QuarkURI $uri);
 
 	/**
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	function Credentials();
+	function SourceURI();
 
 	/**
 	 * @param IQuarkModel $model
@@ -3338,53 +3076,94 @@ class QuarkSession implements IQuarkLinkedModel {
 
 /**
  * Class QuarkClient
- * @package Quark
+ *
+ * @package Quark\Extensions\Quark
  */
 class QuarkClient {
 	/**
-	 * @var QuarkCredentials
+	 * @var IQuarkTransportProvider $_transport
 	 */
-	private $_credentials = null;
-
-	private $_key = null;
-	private $_certificate = null;
-
-	private $_timeout = 3;
+	private $_transport;
 
 	/**
-	 * @var QuarkDTO|null
+	 * @var QuarkURI $_uri
 	 */
-	private $_request = null;
+	private $_uri;
 
 	/**
-	 * @var QuarkDTO|null
+	 * @var QuarkCertificate $_certificate
 	 */
-	private $_response = null;
+	private $_certificate;
 
+	/**
+	 * @var int
+	 */
+	private $_timeout = 30;
+
+	/**
+	 * @var resource $_socket
+	 */
+	private $_socket;
+
+	/**
+	 * @var int
+	 */
 	private $_errorNumber = 0;
+
+	/**
+	 * @var string
+	 */
 	private $_errorString = '';
 
 	/**
-	 * @param QuarkCredentials $credentials
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
+	 * @param string                  $uri
+	 * @param IQuarkTransportProvider $transport
+	 * @param QuarkCertificate        $certificate
+	 * @param int                     $timeout
 	 */
-	public function __construct (QuarkCredentials $credentials = null, QuarkDTO $request = null, QuarkDTO $response = null) {
-		$this->_credentials = $credentials;
-		$this->_request = $request;
-		$this->_response = $response;
+	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
+		$this->URI(QuarkURI::FromURI($uri));
+		$this->Transport($transport);
+		$this->Certificate($certificate);
+		$this->Timeout($timeout);
 	}
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $uri
 	 *
-	 * @return QuarkCredentials
+	 * @return QuarkURI
 	 */
-	public function Credentials (QuarkCredentials $credentials = null) {
-		if ($credentials != null)
-			$this->_credentials = $credentials;
+	public function URI (QuarkURI $uri = null) {
+		if (func_num_args() == 1 && $uri != null)
+			$this->_uri = $uri;
 
-		return $this->_credentials;
+		return $this->_uri;
+	}
+
+	/**
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function Certificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() == 1 && $certificate != null)
+			$this->_certificate = $certificate;
+
+		return $this->_certificate;
+	}
+
+	/**
+	 * @param IQuarkTransportProvider $transport
+	 *
+	 * @return IQuarkTransportProvider
+	 */
+	public function Transport (IQuarkTransportProvider $transport = null) {
+		if (func_num_args() == 1 && $transport != null) {
+			$this->_transport = $transport;
+			$this->_transport->Setup($this->_uri, $this->_certificate);
+		}
+
+		return $this->_transport;
 	}
 
 	/**
@@ -3392,102 +3171,37 @@ class QuarkClient {
 	 *
 	 * @return int
 	 */
-	public function Timeout ($timeout = 10) {
-		if (func_num_args() != 0)
+	public function Timeout ($timeout = 30) {
+		if (func_num_args() == 1 && is_int($timeout))
 			$this->_timeout = $timeout;
 
 		return $this->_timeout;
 	}
 
 	/**
-	 * @param string $key
-	 * @param string $certificate
+	 * @return mixed
 	 */
-	public function Sign ($key, $certificate) {
-		$this->_key = $key;
-		$this->_certificate = $certificate;
+	public function Action () {
+		return $this->_transport->Action($this);
 	}
 
 	/**
-	 * @return int
+	 * @return bool
 	 */
-	public function ErrorNumber () {
-		return $this->_errorNumber;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function ErrorString () {
-		return $this->_errorString;
-	}
-
-	/**
-	 * @param QuarkDTO|null $request
-	 *
-	 * @return QuarkDTO|null
-	 */
-	public function Request ($request = null) {
-		if (func_num_args() == 1)
-			$this->_request = $request;
-
-		return $this->_request;
-	}
-
-	/**
-	 * @param QuarkDTO|null $response
-	 *
-	 * @return QuarkDTO|null
-	 */
-	public function Response ($response = null) {
-		if (func_num_args() == 1)
-			$this->_response = $response;
-
-		return $this->_response;
-	}
-
-	/**
-	 * @return QuarkClient
-	 */
-	public function Reset () {
-		if ($this->_credentials instanceof QuarkCredentials)
-			$this->_credentials->Reset();
-
-		if ($this->_request instanceof QuarkDTO)
-			$this->_request->Reset();
-		if ($this->_response instanceof QuarkDTO)
-			$this->_response->Reset();
-
-		$this->_key = '';
-		$this->_certificate = '';
-
-		$this->_errorNumber = 0;
-		$this->_errorString = '';
-
-		$this->_timeout = 3;
-
-		return $this;
-	}
-
-	/**
-	 * @param $method
-	 *
-	 * @return QuarkDTO
-	 * @throws QuarkArchException
-	 */
-	private function ___request ($method) {
-		if (!($this->_request instanceof QuarkDTO))
-			$this->_request = new QuarkDTO();
-
-		if (!($this->_response instanceof QuarkDTO))
-			$this->_response = new QuarkDTO();
-
+	public function Connect () {
 		$stream = stream_context_create();
-		stream_context_set_option($stream, 'ssl', 'verify_host', false);
-		stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 
-		$socket = @stream_socket_client(
-			$this->_credentials->Socket(),
+		if ($this->_certificate == null) {
+			stream_context_set_option($stream, 'ssl', 'verify_host', false);
+			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+		}
+		else {
+			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
+			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
+		}
+
+		$this->_socket = @stream_socket_client(
+			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
 			$this->_timeout,
@@ -3495,143 +3209,237 @@ class QuarkClient {
 			$stream
 		);
 
-		if (!$socket) {
-			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
-				'num' => $this->_errorNumber,
-				'description' => $this->_errorString
-			));
+		if (!$this->_socket)
+			return self::_err($this->_errorString, $this->_errorNumber);
 
-			return null;
-		}
+		return true;
+	}
 
-		$this->_request->Header(QuarkDTO::HEADER_HOST, $this->_credentials->host);
-		$request = $this->_request->Serialize($method, $this->_credentials->suffix);
-
+	/**
+	 * @param $data
+	 *
+	 * @return bool
+	 */
+	public function Send ($data) {
 		try {
-			fwrite($socket, $request);
-			$content = stream_get_contents($socket);
-			$this->_response->PopulateFrom($content);
-			fclose($socket);
+			return fwrite($this->_socket, $data) !== false;
 		}
 		catch (\Exception $e) {
-			throw new QuarkArchException('QuarkClient connection error: ' . $e->getMessage());
+			return self::_err($e->getMessage(), $e->getCode());
 		}
-
-		return $this->_response;
 	}
 
 	/**
-	 * @return QuarkDTO|null
+	 * @return mixed
 	 */
-	public function Get () {
-		return $this->___request('GET');
+	public function Receive () {
+		try {
+			return stream_get_contents($this->_socket);
+		}
+		catch (\Exception $e) {
+			return self::_err($e->getMessage(), $e->getCode());
+		}
 	}
 
 	/**
-	 * @return QuarkDTO|null
+	 * @return bool
 	 */
-	public function Post () {
-		return $this->___request('POST');
+	public function Close () {
+		try {
+			return fclose($this->_socket);
+		}
+		catch (\Exception $e) {
+			return self::_err($e->getMessage(), $e->getCode());
+		}
+	}
+
+	/**
+	 * @param     $msg
+	 * @param int $number
+	 *
+	 * @return bool
+	 */
+	private static function _err ($msg, $number = 0) {
+		Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
+			'num' => $number,
+			'description' => $msg
+		));
+
+		return false;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function Error () {
+		return (object)array(
+			'num' => $this->_errorNumber,
+			'msg' => $this->_errorString
+		);
 	}
 }
 
 /**
- * Class QuarkDTO
- * @package Quark
+ * Class QuarkURI
+ *
+ * @package Quark\Extensions\Quark
  */
-class QuarkDTO {
-	const HEADER_HOST = 'Host';
-	const HEADER_CACHE_CONTROL = 'Cache-Control';
-	const HEADER_CONTENT_LENGTH = 'Content-Length';
-	const HEADER_CONTENT_TYPE = 'Content-Type';
-	const HEADER_CONTENT_TRANSFER_ENCODING = 'Content-Transfer-Encoding';
-	const HEADER_CONTENT_DISPOSITION = 'Content-Disposition';
-	const HEADER_COOKIE = 'Cookie';
-	const HEADER_SET_COOKIE = 'Set-Cookie';
-	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
+class QuarkURI {
+	const SCHEME_HTTP = 'http';
+	const SCHEME_HTTPS = 'https';
 
-	private $_raw = '';
+	public $scheme;
+	public $user;
+	public $pass;
+	public $host;
+	public $port;
+	public $query;
+	public $path;
+	public $fragment;
+	public $options;
 
-	private $_method = '';
-	private $_version = '';
-	private $_statusCode = 0;
-	private $_statusText = '';
-	private $_query = '';
+	/**
+	 * @var array $_route;
+	 */
 	private $_route = array();
-	private $_headers = array();
-	private $_cookies = array();
-	private $_data = '';
-	private $_files = array();
-	private $_boundary = '';
-	private $_signature = '';
+
+	private static $_transports = array(
+		'tcp' => 'tcp',
+		'ssl' => 'ssl',
+		'ftp' => 'tcp',
+		'ftps' => 'ssl',
+		'ssh' => 'ssl',
+		'scp' => 'ssl',
+		'http' => 'tcp',
+		'https' => 'ssl',
+	);
+
+	private static $_ports = array(
+		'ftp' => '21',
+		'ftps' => '22',
+		'ssh' => '22',
+		'scp' => '22',
+		'http' => '80',
+		'https' => '443'
+	);
 
 	/**
-	 * @var IQuarkIOProcessor
-	 */
-	private $_processor = null;
-
-	/**
-	 * @param array $headers
-	 * @param mixed $data
-	 * @param IQuarkIOProcessor $processor
-	 */
-	public function __construct ($headers = [], $data = '', IQuarkIOProcessor $processor = null) {
-		$this->_headers = $headers;
-		$this->_data = $data;
-		$this->_processor = $processor;
-	}
-
-	/**
-	 * @param $key
+	 * @param string $uri
+	 * @param bool $local
 	 *
-	 * @return mixed
+	 * @return QuarkURI|null
 	 */
-	public function __get ($key) {
-		return isset($this->_data->$key)
-			? $this->_data->$key
-			: null;
+	public static function FromURI ($uri, $local = true) {
+		$url = parse_url($uri);
+
+		if ($url === false) return null;
+
+		$out = new self();
+
+		foreach ($url as $key => $value)
+			$out->$key = $value;
+
+		if ($local) {
+			if (!isset($url['scheme'])) $out->scheme = $_SERVER['REQUEST_SCHEME'];
+			if (!isset($url['host'])) $out->host = $_SERVER['SERVER_NAME'];
+		}
+
+		return $out;
 	}
 
 	/**
-	 * @param $key
-	 * @param $value
+	 * @param bool $full
+	 *
+	 * @return string
 	 */
-	public function __set ($key, $value) {
-		$this->_data = Quark::Normalize(new \StdClass(), (object)$this->_data);
-
-		$this->_data->$key = $value;
+	public function URI ($full = false) {
+		return
+			($this->scheme !== null ? $this->scheme : 'http')
+			. '://'
+			. ($this->user !== null ? $this->user . ($this->pass !== null ? ':' . $this->pass : '') . '@' : '')
+			. $this->host
+			. ($this->port !== null ? ':' . $this->port : '')
+			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+			. ($full ? '/?' . $this->query : '');
 	}
 
 	/**
+	 * @return string|bool
+	 */
+	public function Socket () {
+		$dns = dns_get_record($this->host, DNS_A);
+
+		if ($dns === false) return false;
+
+		return (isset(self::$_transports[$this->scheme]) ? self::$_transports[$this->scheme] : 'tcp')
+		. '://'
+		. gethostbyname($this->host)
+		. ':'
+		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : 80));
+	}
+
+	/**
+	 * @param string $host
+	 * @param integer|null $port
+	 *
 	 * @return QuarkDTO
 	 */
-	public function Reset () {
-		$this->_raw = '';
+	public function Endpoint ($host, $port = null) {
+		$this->host = $host;
 
-		$this->_method = '';
-		$this->_version = '';
-		$this->_statusCode = 0;
-		$this->_statusText = '';
-		$this->_query = '';
-		$this->_route = array();
-		$this->_headers = array();
-		$this->_cookies = array();
-		$this->_data = '';
-
-		$this->_processor = null;
+		if (func_num_args() == 2)
+			$this->port = $port;
 
 		return $this;
 	}
 
 	/**
-	 * @param $http
+	 * @param string $username
+	 * @param string|null $password
 	 *
-	 * @return array
+	 * @return QuarkDTO
 	 */
-	private static function _parseHTTP ($http) {
-		if (preg_match_all('#^(.*)HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $http, $found, PREG_SET_ORDER) == 0) return null;
+	public function User ($username, $password = null) {
+		$this->user = $username;
 
-		return $found[0];
+		if (func_num_args() == 2)
+			$this->pass = $password;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $resource
+	 *
+	 * @return QuarkDTO
+	 */
+	public function Resource ($resource = '') {
+		if (func_num_args() == 1)
+			$this->path= $resource;
+
+		return $this->path;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Query () {
+		return Quark::NormalizePath($this->path . (strlen(trim($this->query)) == 0 ? '' : '/?' . $this->query) . $this->fragment, false);
+	}
+
+	/**
+	 * @param int $id
+	 *
+	 * @return array|string
+	 */
+	public function Route ($id = 0) {
+		if (sizeof($this->_route) == 0)
+			$this->_route = self::ParseRoute($this->path);
+
+		if (func_num_args() == 1)
+			return isset($this->_route[$id]) ? $this->_route[$id] : '';
+
+		return $this->_route;
 	}
 
 	/**
@@ -3644,8 +3452,8 @@ class QuarkDTO {
 
 		$query = preg_replace('#(((\/)*)((\?|\&)(.*)))*#', '', $source);
 		$route = explode('/', trim(Quark::NormalizePath(preg_replace('#\.php$#Uis', '', $query))));
-
 		$buffer = array();
+
 		foreach ($route as $component)
 			if (strlen(trim($component)) != 0) $buffer[] = $component;
 
@@ -3656,172 +3464,193 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param $source
+	 * @param QuarkURI $uri
 	 *
-	 * @return $this
+	 * @return bool
 	 */
-	public function PopulateFrom ($source) {
-		$http = self::_parseHTTP($source);
+	public function Equal (QuarkURI $uri) {
+		foreach ($this as $key => $value)
+			if ($uri->$key != $value) return false;
 
-		$this->Raw($source);
+		return true;
+	}
+}
 
-		$request = explode(' ', $http[1]);
-		$this->Method($request[0]);
-		$this->Query(isset($request[1]) ? $request[1] : '');
+/**
+ * Class QuarkDTO
+ *
+ * @package Quark\Extensions\Quark
+ */
+class QuarkDTO {
+	const METHOD_GET = 'GET';
+	const METHOD_POST = 'POST';
 
-		if ($http[2]) {
-			$head = explode(' ', $http[2]);
+	const HEADER_HOST = 'Host';
+	const HEADER_CACHE_CONTROL = 'Cache-Control';
+	const HEADER_CONTENT_LENGTH = 'Content-Length';
+	const HEADER_CONTENT_TYPE = 'Content-Type';
+	const HEADER_CONTENT_TRANSFER_ENCODING = 'Content-Transfer-Encoding';
+	const HEADER_CONTENT_DISPOSITION = 'Content-Disposition';
+	const HEADER_COOKIE = 'Cookie';
+	const HEADER_SET_COOKIE = 'Set-Cookie';
+	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
+	const HEADER_AUTHORIZATION = 'Authorization';
 
-			$this->_version = $head[0];
-			$this->_statusCode = (int)(isset($head[1]) ? $head[1] : '');
-			$this->_statusText = isset($head[2]) ? $head[2] : '';
-		}
+	/**
+	 * @var IQuarkIOProcessor $_processor
+	 */
+	private $_processor = null;
 
-		$this->Route();
+	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri = null;
 
-		$header = null;
-		$headers = explode("\n", $http[3]);
+	/**
+	 * @var string $_status
+	 */
+	private $_status = '200 OK';
 
-		foreach ($headers as $head) {
-			$header = explode(':', $head);
+	/**
+	 * @var string $_method
+	 */
+	private $_method = '';
 
-			if (isset($header[1]))
-				$this->_header($header[0], $header[1]);
-		}
+	/**
+	 * @var array $_headers
+	 */
+	private $_headers = array();
 
-		$this->AttachData($this->_processor instanceof IQuarkIOProcessor
-			? $this->_processor->Decode($http[4])
-			: $http[4]
-		);
+	/**
+	 * @var QuarkCookie[] $_cookies
+	 */
+	private $_cookies = array();
 
-		return $this;
+	/**
+	 * @var string $_boundary
+	 */
+	private $_boundary = '';
+
+	/**
+	 * @var mixed $_data
+	 */
+	private $_data;
+
+	/**
+	 * @var string $_signature
+	 */
+	private $_signature = '';
+
+	/**
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function &__get ($key) {
+		return $this->_data->$key;
 	}
 
 	/**
 	 * @param $key
 	 * @param $value
 	 */
-	private function _header ($key, $value) {
-		if ($key == QuarkDTO::HEADER_SET_COOKIE) {
-			$this->Cookie(QuarkCookie::FromSetCookie($value));
-
-			return;
-		}
-
-		if ($key == QuarkDTO::HEADER_COOKIE) {
-			$cookie = explode(';', $value);
-
-			foreach ($cookie as $cook)
-				$this->Cookie(QuarkCookie::FromCookie($cook));
-
-			return;
-		}
-
-		if ($key == QuarkDTO::HEADER_CONTENT_TYPE) {
-			preg_match_all('#(.*)\; boundary\=(.*)#', $value, $found, PREG_SET_ORDER);
-
-			$this->_boundary = isset($found[0][2]) ? $found[0][2] : '';
-		}
-
-		if (isset($key) && isset($value))
-			$this->Header(trim($key), trim($value));
+	public function __set ($key, $value) {
+		$this->_data->$key = $value;
 	}
 
 	/**
-	 * @param $method
-	 * @param $path
+	 * @param IQuarkIOProcessor $processor
+	 * @param QuarkURI  $uri
+	 * @param string $method
+	 */
+	public function __construct (IQuarkIOProcessor $processor = null, QuarkURI $uri = null, $method = '') {
+		$this->Processor($processor == null ? new QuarkPlainIOProcessor() : $processor);
+		$this->URI($uri);
+		$this->Method($method);
+		$this->Boundary('QuarkBoundary' . Quark::GuID());
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param QuarkURI          $uri
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForGET (IQuarkIOProcessor $processor = null, QuarkURI $uri = null) {
+		return new self($processor, $uri, self::METHOD_GET);
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param QuarkURI          $uri
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForPOST (IQuarkIOProcessor $processor = null, QuarkURI $uri = null) {
+		return new self($processor, $uri, self::METHOD_POST);
+	}
+
+	/**
+	 * @param bool $all
 	 *
 	 * @return string
 	 */
-	public function Serialize ($method, $path) {
-		$payload = $method . ' ' . $path . ' HTTP/1.0' . "\r\n";
+	public function Serialize ($all = true) {
+		$query = '';
 
-		$data = '';
-		$dataLength = 0;
+		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
+		$data = $this->_processor->Encode($this->Data());
 
-		if ($this->_processor instanceof IQuarkIOProcessor) {
-			$data = $this->_multipart($this->_data);
-			$data = $this->_processor->Encode($data);
+		if ($all) {
+			$query .= $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
+				. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n"
+				. self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
 
-			$this->_headers[QuarkDTO::HEADER_CONTENT_TYPE] = $this->_processor->MimeType();
+			if (sizeof($this->_cookies) != 0)
+				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
 
-			if (sizeof($this->_files) != 0) {
-				$this->_headers[QuarkDTO::HEADER_CONTENT_TYPE] = 'multipart/form-data; boundary=' . $this->_boundary;
+			foreach ($this->_headers as $key => $value)
+				$query .= $key . ': ' . $value . "\r\n";
 
-				$output = $this->_part($this->_processor->MimeType(), $data);
+			$query .= "\r\n";
+		}
 
-				foreach ($this->_files as $file)
-					$output .= $this->_part($file['depth'], $file['file']);
+		return $query . $data;
+	}
 
-				$data = $output . '--' . $this->_boundary . "--";
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function Unserialize ($raw) {
+		if (preg_match_all('#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw, $found, PREG_SET_ORDER) == 0) return null;
+
+		$http = $found[0];
+
+		$status = explode(' ', $http[1]);
+
+		if (sizeof($status) > 1)
+			$this->_status = $status[1];
+
+		if (preg_match_all('#(.*)\: (.*)\n#Uis', $http[2] . "\r\n", $headers, PREG_SET_ORDER) != 0) {
+			$cookies = array();
+
+			foreach ($headers as $header) {
+				$key = trim($header[1]);
+				$value = trim($header[2]);
+
+				if ($key == self::HEADER_SET_COOKIE) $cookies[] = $value;
+				else $this->_headers[$key] = $value;
 			}
 
-			$dataLength = strlen($data);
+			foreach ($cookies as $cookie)
+				$this->_cookies[] = QuarkCookie::FromSetCookie($cookie);
 		}
 
-		if (!isset($this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH]))
-			$this->_headers[QuarkDTO::HEADER_CONTENT_LENGTH] = $dataLength;
+		$this->AttachData($this->_processor->Decode($http[3]));
 
-		if ($this->_processor instanceof IQuarkIOProcessorWithCustomHeaders)
-			$this->_headers = $this->_processor->Headers($this->_headers);
-
-		foreach ($this->_headers as $key => $value)
-			$payload .= $key . ': ' . $value . "\r\n";
-
-		$out = $payload . "\r\n" . $data;
-
-		return $out;
-	}
-
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	private function _multipart ($raw) {
-		if (!is_array($raw) && !is_object($raw)) return $raw;
-
-		$this->_boundary = 'QuarkBoundary' . Quark::GuID();
-		$this->_files = array();
-
-		$output = Quark::Normalize(new \StdClass(), (object)$raw, function ($item, &$def) {
-			if (!($def instanceof QuarkFile)) return $def;
-
-			$def = Quark::GuID();
-
-			$this->_files[] = array(
-				'file' => $item,
-				'depth' => $def
-			);
-
-			return $def;
-		});
-
-		return $output;
-	}
-
-	/**
-	 * @param $key
-	 * @param mixed $value
-	 *
-	 * @return string
-	 */
-	private function _part ($key, $value) {
-		$file = $value instanceof QuarkFile;
-
-		/**
-		 * Attention!
-		 * Here is solution for support custom boundary by Quark: if You does not specify filename to you attachment,
-		 * then PHP parser cannot parse your files
-		 */
-
-		return
-			'--' . $this->_boundary . "\r\n"
-			. QuarkDTO::HEADER_CONTENT_DISPOSITION . ': form-data; name="' . $key . '"' . ($file ? '; filename="' . $value->name . '"' : '') . "\r\n"
-			. QuarkDTO::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
-			. "\r\n"
-			. ($file ? $value->Content() : $value)
-			. "\r\n";
+		return $this;
 	}
 
 	/**
@@ -3830,13 +3659,24 @@ class QuarkDTO {
 	 * @return IQuarkIOProcessor
 	 */
 	public function Processor (IQuarkIOProcessor $processor = null) {
-		if ($processor != null)
+		if (func_num_args() == 1 && $processor != null) {
 			$this->_processor = $processor;
-
-		if (!isset($this->_headers[self::HEADER_CONTENT_TYPE]))
-			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType();
+			$this->_headers[self::HEADER_CONTENT_TYPE] = $processor->MimeType();
+		}
 
 		return $this->_processor;
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 *
+	 * @return QuarkURI
+	 */
+	public function URI (QuarkURI $uri = null) {
+		if (func_num_args() == 1 && $uri != null)
+			$this->_uri = $uri;
+
+		return $this->_uri;
 	}
 
 	/**
@@ -3845,47 +3685,35 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function Method ($method = '') {
-		if (func_num_args() == 1)
-			$this->_method = $method;
+		if (func_num_args() == 1 && is_string($method))
+			$this->_method = strtoupper($method);
 
 		return $this->_method;
 	}
 
 	/**
-	 * @return object
-	 */
-	public function Status () {
-		return (object)array(
-			'code' => (int)$this->_statusCode,
-			'text' => $this->_statusText
-		);
-	}
-
-	/**
-	 * @param string $query
+	 * @param int    $code
+	 * @param string $text
 	 *
 	 * @return string
 	 */
-	public function Query ($query = '') {
-		if (func_num_args() == 1)
-			$this->_query = $query;
+	public function Status ($code = 0, $text = 'OK') {
+		if (func_num_args() != 0 && is_scalar($code))
+			$this->_status = $code . (func_num_args() == 2 && is_scalar($text) ? ' ' . $text : '');
 
-		return $this->_query;
+		return $this->_status;
 	}
 
 	/**
-	 * @param int $id
+	 * @param array $headers
 	 *
-	 * @return array|string
+	 * @return array
 	 */
-	public function Route ($id = 0) {
-		if (sizeof($this->_route) == 0)
-			$this->_route = self::ParseRoute($this->_query);
+	public function Headers ($headers = []) {
+		if (func_num_args() == 1 && is_array($headers))
+			$this->_headers = $headers;
 
-		if (func_num_args() == 1)
-			return isset($this->_route[$id]) ? $this->_route[$id] : '';
-
-		return $this->_route;
+		return $this->_headers;
 	}
 
 	/**
@@ -3902,61 +3730,36 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param array $headers
+	 * @param QuarkCookie[] $cookies
 	 *
-	 * @return array
-	 */
-	public function Headers ($headers = []) {
-		if (func_num_args() != 0) {
-			$this->_headers = $headers;
-
-			foreach ($this->_headers as $key => $value)
-				$this->_header($key, $value);
-		}
-
-		return $this->_headers;
-	}
-
-	/**
-	 * @param $value
-	 *
-	 * @return QuarkCookie
-	 */
-	public function Cookie ($value = null) {
-		if ($value instanceof QuarkCookie) {
-			$this->_cookies[$value->Name()] = $value->Value();
-
-			return $this->_cookies[$value->Name()];
-		}
-
-		return isset($this->_cookies[$value])
-			? $this->_cookies[$value]
-			: null;
-	}
-
-	/**
-	 * @param array $cookies
-	 *
-	 * @return array
+	 * @return QuarkCookie[]
 	 */
 	public function Cookies ($cookies = []) {
-		if (func_num_args() != 0)
+		if (func_num_args() == 1 && is_array($cookies))
 			$this->_cookies = $cookies;
 
 		return $this->_cookies;
 	}
 
 	/**
-	 * @param $key
-	 * @param $value
-	 *
-	 * @return mixed
+	 * @param QuarkCookie $cookie
 	 */
-	public function Field ($key, $value) {
-		if (func_num_args() == 2)
-			$this->_data[$key] = $value;
+	public function Cookie (QuarkCookie $cookie) {
+		if ($cookie == null) return;
 
-		return $this->_data[$key];
+		$this->_cookies[] = $cookie;
+	}
+
+	/**
+	 * @param string $boundary
+	 *
+	 * @return string
+	 */
+	public function Boundary ($boundary = '') {
+		if (func_num_args() == 1 && is_scalar($boundary))
+			$this->_boundary = (string)$boundary;
+
+		return $this->_boundary;
 	}
 
 	/**
@@ -3964,30 +3767,18 @@ class QuarkDTO {
 	 *
 	 * @return mixed
 	 */
-	public function Data ($data = '') {
-		if (func_num_args() != 0)
+	public function Data ($data = []) {
+		if (func_num_args() == 1)
 			$this->_data = $data;
 
 		return $this->_data;
 	}
 
 	/**
-	 * @param array $files
-	 *
-	 * @return array
-	 */
-	public function Files ($files = []) {
-		if (func_num_args() != 0)
-			$this->_files = $files;
-
-		return $this->_files;
-	}
-
-	/**
 	 * @param mixed $data
 	 * @param bool  $string
 	 *
-	 * @return $this
+	 * @return QuarkDTO
 	 */
 	public function AttachData ($data = [], $string = false) {
 		$this->_data = $data instanceof QuarkView
@@ -4005,17 +3796,84 @@ class QuarkDTO {
 	public function Signature () {
 		return $this->_signature;
 	}
+}
+
+/**
+ * Interface IQuarkTransportProvider
+ *
+ * @package Quark\Extensions\Quark
+ */
+interface IQuarkTransportProvider {
+	/**
+	 * @param QuarkURI         $uri
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return mixed
+	 */
+	function Setup(QuarkURI $uri, QuarkCertificate $certificate);
 
 	/**
-	 * @param mixed $raw
+	 * @param QuarkClient $client
 	 *
-	 * @return string
+	 * @return mixed
 	 */
-	public function Raw ($raw = '') {
-		if (func_num_args() != 0)
-			$this->_raw = $raw;
+	function Action(QuarkClient $client);
+}
 
-		return $this->_raw;
+/**
+ * Class QuarkHTTPTransport
+ *
+ * @package Quark\Extensions\Quark
+ */
+class QuarkHTTPTransport implements IQuarkTransportProvider {
+	/**
+	 * @var QuarkDTO $_request
+	 */
+	private $_request;
+
+	/**
+	 * @var QuarkDTO $_response
+	 */
+	private $_response;
+
+	/**
+	 * @param QuarkDTO $request
+	 * @param QuarkDTO $response
+	 */
+	public function __construct (QuarkDTO $request, QuarkDTO $response) {
+		$this->_request = $request;
+		$this->_response = $response;
+	}
+
+	/**
+	 * @param QuarkURI         $uri
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return mixed
+	 */
+	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
+		$this->_request->URI($uri);
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return mixed
+	 */
+	public function Action (QuarkClient $client) {
+		if (!$client->Connect()) return false;
+
+		$this->_response->URI($this->_request->URI());
+		$this->_response->Method($this->_request->Method());
+
+		$client->Send($request = $this->_request->Serialize());
+		$this->_response->Unserialize($response = $client->Receive());
+		$client->Close();
+
+		//var_dump($request);
+		//var_dump($response);
+
+		return $this->_response;
 	}
 }
 
@@ -4023,36 +3881,24 @@ class QuarkDTO {
  * Class QuarkCookie
  *
  * @package Quark
- *
- * @method Name
- * @method Value
- * @method Expires
- * @method MaxAge
- * @method Path
- * @method Domain
- * @method HttpOnly
- * @method Secure
  */
 class QuarkCookie {
-	private $_name = '';
-	private $_value = '';
-
-	private static $__keys = array(
-		'expires',
-		'MaxAge',
-		'path',
-		'domain',
-		'HttpOnly',
-		'secure'
-	);
+	public $name = '';
+	public $value = '';
+	public $expires = '';
+	public $MaxAge = '';
+	public $path = '';
+	public $domain = '';
+	public $HttpOnly = '';
+	public $secure = '';
 
 	/**
 	 * @param string $name
 	 * @param string $value
 	 */
 	public function __construct ($name = '', $value = '') {
-		$this->_name = $name;
-		$this->_value = $value;
+		$this->name = $name;
+		$this->value = $value;
 	}
 
 	/**
@@ -4075,31 +3921,57 @@ class QuarkCookie {
 	 */
 	public static function FromSetCookie ($header) {
 		$cookie = explode(';', $header);
-		$item = null;
 
 		$instance = new QuarkCookie();
 
 		foreach ($cookie as $component) {
 			$item = explode('=', $component);
 
-			if (isset(self::$__keys[$item[0]]))
-				$instance->{ucfirst($item[0])}($item[1]);
+			$key = trim($item[0]);
+			$value = trim($item[1]);
+
+			if (isset($instance->$key)) $instance->$key = $value;
 			else {
-				$instance->Name($item[0]);
-				$instance->Value($item[1]);
+				$instance->name = $key;
+				$instance->value = $value;
 			}
 		}
 
 		return $instance;
 	}
 
-	public function __call ($name, $arguments) {
-		$key = '_' . strtolower($name);
+	/**
+	 * @param array $cookies
+	 *
+	 * @return string
+	 */
+	public static function SerializeCookies ($cookies = []) {
+		$out = '';
 
-		if (sizeof($arguments) == 1)
-			$this->$key = $arguments[0];
+		foreach ($cookies as $cookie)
+			$out .= $cookie->name . '=' . $cookie->value . '; ';
 
-		return $this->$key;
+		return substr($out, 0, strlen($out) - 2);
+	}
+
+	/**
+	 * @param bool $full
+	 *
+	 * @return string
+	 */
+	public function Serialize ($full = false) {
+		$main = $this->name . '=' . $this->value;
+
+		if (!$full) return $main;
+		else {
+			$out = $main;
+
+			foreach ($this as $field => $value)
+				if (strlen(trim($value)) != 0)
+					$out .= '; ' . $field . '=' . $value;
+
+			return $out;
+		}
 	}
 }
 
@@ -4484,15 +4356,15 @@ class QuarkHTTPException extends QuarkException {
  */
 class QuarkConnectionException extends QuarkException {
 	/**
-	 * @var QuarkCredentials
+	 * @var QuarkURI
 	 */
 	public $credentials;
 
 	/**
-	 * @param QuarkCredentials $credentials
+	 * @param QuarkURI $credentials
 	 * @param string $lvl
 	 */
-	public function __construct (QuarkCredentials $credentials, $lvl = Quark::LOG_WARN) {
+	public function __construct (QuarkURI $credentials, $lvl = Quark::LOG_WARN) {
 		$this->lvl = $lvl;
 		$this->message = 'Unable to connect to ' . $credentials->uri();
 
@@ -4632,6 +4504,115 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 		parse_str($raw, $data);
 
 		return $data;
+	}
+}
+
+/**
+ * Class QuarkMultipartProcessor
+ *
+ * @package Quark
+ */
+class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
+	/**
+	 * @var IQuarkIOProcessor $_processor
+	 */
+	private $_processor;
+
+	/**
+	 * @var string $_boundary
+	 */
+	private $_boundary = '';
+
+	/**
+	 * @var bool $_original
+	 */
+	private $_original = true;
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param string $boundary
+	 */
+	public function __construct (IQuarkIOProcessor $processor = null, $boundary = '') {
+		$this->_processor = $processor;
+		$this->_boundary = $boundary;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function MimeType () {
+		return $this->_original ? $this->_processor->MimeType() : 'multipart/form-data; boundary=' . $this->_boundary;
+	}
+
+	/**
+	 * @param $data
+	 *
+	 * @return mixed
+	 */
+	public function Encode ($data) {
+		$files = array();
+
+		$output = is_scalar($data)
+			? $data
+			: Quark::Normalize(new \StdClass(), (object)$data, function ($item, &$def) use (&$files) {
+				if (!($def instanceof QuarkFile)) return $def;
+
+				$def = Quark::GuID();
+
+				$files[] = array(
+					'file' => $item,
+					'depth' => $def
+				);
+
+				return $def;
+			});
+
+		$out = $this->_processor->Encode($output);
+
+		if (sizeof($files) != 0) {
+			$this->_original = false;
+			$output = $this->_part($this->_processor->MimeType(), $out);
+
+			foreach ($files as $file)
+				$output .= $this->_part($file['depth'], $file['file']);
+
+			$out = $output . '--' . $this->_boundary . '--';
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Decode ($raw) {
+		// TODO: Implement Decode() method.
+	}
+
+	/**
+	 * @param $key
+	 * @param mixed $value
+	 *
+	 * @return string
+	 */
+	private function _part ($key, $value) {
+		$file = $value instanceof QuarkFile;
+
+		/**
+		 * Attention!
+		 * Here is solution for support custom boundary by Quark: if You does not specify filename to you attachment,
+		 * then PHP parser cannot parse your files
+		 */
+
+		return
+			'--' . $this->_boundary . "\r\n"
+			. QuarkDTO::HEADER_CONTENT_DISPOSITION . ': form-data; name="' . $key . '"' . ($file ? '; filename="' . $value->name . '"' : '') . "\r\n"
+			. QuarkDTO::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
+			. "\r\n"
+			. ($file ? $value->Content() : $value)
+			. "\r\n";
 	}
 }
 
