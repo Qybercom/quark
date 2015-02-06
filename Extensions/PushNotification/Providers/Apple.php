@@ -70,6 +70,8 @@ class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, I
 	 * @return mixed
 	 */
 	public function Send ($payload) {
+		if ($this->_certificate == null) return false;
+
 		if (is_scalar($payload))
 			$payload = array(
 				'aps' => array(
