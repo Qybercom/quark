@@ -853,7 +853,7 @@ class QuarkService {
 
 		$buffer = array();
 		foreach ($path as $item)
-			if (strlen(trim($item)) != 0) $buffer[] = ucfirst($item);
+			if (strlen(trim($item)) != 0) $buffer[] = ucfirst(trim($item));
 
 		$route = $buffer;
 		unset($buffer);
@@ -3472,7 +3472,7 @@ class QuarkURI {
 		$buffer = array();
 
 		foreach ($route as $component)
-			if (strlen(trim($component)) != 0) $buffer[] = $component;
+			if (strlen(trim($component)) != 0) $buffer[] = trim($component);
 
 		$route = $buffer;
 		unset($buffer);
