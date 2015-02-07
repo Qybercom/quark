@@ -846,9 +846,7 @@ class QuarkService {
 	 * @throws QuarkHTTPException
 	 */
 	public static function Select ($uri) {
-		$route = QuarkURI::FromURI($uri);
-		$route->path = Quark::NormalizePath($route->path, false);
-
+		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
 		$path = QuarkURI::ParseRoute($route->path);
 
 		$buffer = array();
