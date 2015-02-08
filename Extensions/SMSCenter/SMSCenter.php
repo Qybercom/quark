@@ -5,7 +5,6 @@ use Quark\IQuarkExtension;
 
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
-use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkHTTPTransport;
 use Quark\QuarkArchException;
 use Quark\QuarkPlainIOProcessor;

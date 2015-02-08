@@ -3439,7 +3439,7 @@ class QuarkURI {
 	 * @return string
 	 */
 	public function Query () {
-		return Quark::NormalizePath($this->path . (strlen(trim($this->query)) == 0 ? '' : '/?' . $this->query) . $this->fragment, false);
+		return Quark::NormalizePath($this->path . (strlen(trim($this->query)) == 0 ? '' : '?' . $this->query) . $this->fragment, false);
 	}
 
 	/**
