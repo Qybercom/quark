@@ -771,7 +771,7 @@ class QuarkService {
 		});
 
 		$request->AttachData($post);
-		$request->AttachData($files);
+		$request->AttachData((object)$files);
 
 		$session = new QuarkSession();
 		$method = $this->_service instanceof IQuarkAnyService
