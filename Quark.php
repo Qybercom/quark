@@ -1971,6 +1971,16 @@ class QuarkModel {
 	}
 
 	/**
+	 * @param $value
+	 * @param $backbone
+	 *
+	 * @return QuarkModel|null
+	 */
+	public static function Build ($value, $backbone) {
+		return $value === null && $backbone instanceof IQuarkNullableModel ? null : new QuarkModel($backbone);
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return IQuarkDataProvider
@@ -2010,7 +2020,7 @@ class QuarkModel {
 				$output->$key = $model->$key;
 			}
 			else $output->$key = $value instanceof IQuarkModel
-				? new QuarkModel($value)
+				? QuarkModel::Build(empty($model->$key) ? null : $model->$key, $value)
 				: $value;
 		}
 
@@ -2390,6 +2400,13 @@ interface IQuarkLinkedModel {
  * @package Quark
  */
 interface IQuarkStrongModel { }
+
+/**
+ * Interface IQuarkNullableModel
+ *
+ * @package Quark
+ */
+interface IQuarkNullableModel { }
 
 /**
  * Interface IQuarkModelWithCustomPrimaryKey
