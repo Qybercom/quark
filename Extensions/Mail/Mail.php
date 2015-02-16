@@ -34,7 +34,7 @@ class Mail implements IQuarkExtension {
 	 * @param string $to
 	 */
 	public function __construct ($text = '', $to = '') {
-		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor(), self::$_uri);
+		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, 'base64');
 
 		$this->_dto->Data($text);

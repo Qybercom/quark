@@ -3634,10 +3634,13 @@ class QuarkDTO {
 		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
 		$data = $this->_processor->Encode($this->Data());
 
-		if ($all && $this->_uri != null) {
-			$query .= $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
-				. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n"
-				. self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
+		if ($all) {
+			if ($this->_uri != null) {
+				$query .= $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
+					. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n";
+			}
+
+			$query .= self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
 
 			if (sizeof($this->_cookies) != 0)
 				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
