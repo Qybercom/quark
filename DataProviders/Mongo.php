@@ -63,6 +63,25 @@ class Mongo implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public static function CompareIds () {
+		$ids = func_get_args();
+
+		if (sizeof($ids) == 0) return true;
+
+		$prev = $ids[0];
+		$out = true;
+
+		foreach ($ids as $id) {
+			$out = $out && self::_id($id) == self::_id($prev);
+			$prev = $id;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed

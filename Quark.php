@@ -1265,7 +1265,10 @@ class QuarkView {
 		if (!is_file($this->_file))
 			throw new QuarkArchException('Unknown view file ' . $this->_file);
 
-		$this->Vars($vars);
+		$vars = $this->Vars($vars);
+
+		foreach ($vars as $key => $value)
+			$this->_view->$key = $value;
 
 		$this->_resources = $resources;
 	}

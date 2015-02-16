@@ -86,7 +86,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 
 		$data = $client->Action()->Data();
 
-		if ($data == null || !isset($data->status) || !isset($data->access) || $data->status != 200)
+		if ($data == null || !isset($data->status) || $data->status != 200)
 			throw new QuarkArchException('QuarkRest API is not reachable');
 
 		return $data;
