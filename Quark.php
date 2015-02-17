@@ -1942,10 +1942,20 @@ class QuarkModel {
 	 * @param $method
 	 * @param $args
 	 *
+	 * @throws QuarkArchException
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		return call_user_func_array(array($this->_model, $method), $args);
+		if (method_exists($this->_model, $method))
+			return call_user_func_array(array($this->_model, $method), $args);
+
+		$provider = self::_provider($this->_model);
+		array_unshift($args, $this->_model);
+
+		if (method_exists($provider, $method))
+			return call_user_func_array(array($provider, $method), $args);
+
+		throw new QuarkArchException('Method ' . $method . ' not found in model or provider');
 	}
 
 	/**

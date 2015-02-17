@@ -264,4 +264,21 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
 		// TODO: Implement Count() method.
 	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param string $command
+	 *
+	 * @return bool
+	 */
+	public function Command (IQuarkModel $model, $command) {
+		try {
+			$api = $this->_api('GET', '/' . self::_class($model) . '/' . $command . '/' . $this->_descriptor->IdentifyModel($model));
+
+			return isset($api->status) && $api->status == 200;
+		}
+		catch (QuarkArchException $e) {
+			return false;
+		}
+	}
 }
