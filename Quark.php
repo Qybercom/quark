@@ -1942,10 +1942,20 @@ class QuarkModel {
 	 * @param $method
 	 * @param $args
 	 *
+	 * @throws QuarkArchException
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		return call_user_func_array(array($this->_model, $method), $args);
+		if (method_exists($this->_model, $method))
+			return call_user_func_array(array($this->_model, $method), $args);
+
+		$provider = self::_provider($this->_model);
+		array_unshift($args, $this->_model);
+
+		if (method_exists($provider, $method))
+			return call_user_func_array(array($provider, $method), $args);
+
+		throw new QuarkArchException('Method ' . $method . ' not found in model or provider');
 	}
 
 	/**
@@ -2159,10 +2169,12 @@ class QuarkModel {
 	public function Extract ($fields = null, $weak = false) {
 		$output = new \StdClass();
 
-		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
-			$this->_model->BeforeExtract();
+		$model = clone $this->_model;
 
-		foreach ($this->_model as $key => $value) {
+		if ($model instanceof IQuarkModelWithBeforeExtract)
+			$model->BeforeExtract();
+
+		foreach ($model as $key => $value) {
 			$property = Quark::Property($fields, $key, null);
 
 			$output->$key = $value instanceof QuarkModel
@@ -2179,7 +2191,7 @@ class QuarkModel {
 		$buffer = new \StdClass();
 		$property = null;
 
-		$backbone = $weak ? $this->_model->Fields() : $fields;
+		$backbone = $weak ? $model->Fields() : $fields;
 
 		foreach ($backbone as $field => $rule) {
 			if (property_exists($output, $field))
