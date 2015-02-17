@@ -2169,10 +2169,12 @@ class QuarkModel {
 	public function Extract ($fields = null, $weak = false) {
 		$output = new \StdClass();
 
-		if ($this->_model instanceof IQuarkModelWithBeforeExtract)
-			$this->_model->BeforeExtract();
+		$model = clone $this->_model;
 
-		foreach ($this->_model as $key => $value) {
+		if ($model instanceof IQuarkModelWithBeforeExtract)
+			$model->BeforeExtract();
+
+		foreach ($model as $key => $value) {
 			$property = Quark::Property($fields, $key, null);
 
 			$output->$key = $value instanceof QuarkModel
@@ -2189,7 +2191,7 @@ class QuarkModel {
 		$buffer = new \StdClass();
 		$property = null;
 
-		$backbone = $weak ? $this->_model->Fields() : $fields;
+		$backbone = $weak ? $model->Fields() : $fields;
 
 		foreach ($backbone as $field => $rule) {
 			if (property_exists($output, $field))
