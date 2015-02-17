@@ -4211,6 +4211,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function Unlink () {
+		Quark::Log('photo: ' . $this->_location);
 		return $this->location;
 	}
 
