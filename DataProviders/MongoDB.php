@@ -9,11 +9,11 @@ use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 
 /**
- * Class Database
+ * Class MongoDB
  *
  * @package Quark\DataProviders
  */
-class Mongo implements IQuarkDataProvider {
+class MongoDB implements IQuarkDataProvider {
 	/**
 	 * @var \MongoDb $_connection
 	 */
