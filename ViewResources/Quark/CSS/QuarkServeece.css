@@ -41,11 +41,15 @@ body {
 }
 
 #quark-serveece-page {
-    display: inline-block;
+    /*display: inline-block;*/
+    display: block;
     padding: 20px;
 
-    position: absolute;
-    left: 200px;
+    /*position: absolute;
+    left: 200px;*/
+
+    margin-left: 200px;
+    height: 100%;
 
     vertical-align: top;
 }
