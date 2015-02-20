@@ -720,7 +720,7 @@ class QuarkService {
 	 * @throws QuarkArchException
 	 */
 	public function Invoke () {
-		if ($this->_service instanceof IQuarkTask) return $this->_service->Action();
+		if (PHP_SAPI == 'cli' && $this->_service instanceof IQuarkTask) return $this->_service->Action();
 
 		$request = new QuarkDTO();
 		$request->Processor(Quark::Config()->Processor(QuarkConfig::REQUEST));
