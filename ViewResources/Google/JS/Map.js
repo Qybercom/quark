@@ -328,13 +328,17 @@ Map.Tooltip = function (marker, opt) {
 		_copy: {}
 	};
 
+    that._id = 'tooltip' + Quark.GuID();
+
 	/**
 	 * @type {google.maps.InfoWindow}
 	 * @private
 	 */
 	that._tooltip = new google.maps.InfoWindow({
-		content: '&nbsp;'
+		content: '<div id="' + that._id + '">' + opt.content + '</div>'
 	});
+
+    //that._element = $('#' + that._id);
 
 	/**
 	 * Init & open InfoWindow
@@ -389,9 +393,13 @@ Map.Tooltip = function (marker, opt) {
 	};
 
 	google.maps.event.addListener(that._tooltip, 'domready', function () {
-		that.element.inner = $(this.k.contentNode);
-		that.element.outer = that.element.inner.parent().parent();
-		that.element._copy = that.element.outer.html();
+        var elem = $('#' + that._id);
+        that._element = elem.parent().parent().parent().parent();
+        that._element.html('<div id="' + that._id + '" class="quark-map-tooltip">' + elem.html() + '</div>');
+
+		//that.element.inner = $(this.k.contentNode);
+		//that.element.outer = that.element.inner.parent().parent();
+		//that.element._copy = that.element.outer.html();
 
 		if (that.custom) {
 			that.Reset();
