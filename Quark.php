@@ -1851,6 +1851,12 @@ class QuarkCollection {
  */
 class QuarkModel {
 	const OPTION_SORT = 'sort';
+	const OPTION_SKIP = 'skip';
+	const OPTION_LIMIT = 'limit';
+
+	const OPTION_COLLECTION = 'collection';
+	const OPTION_FIELDS = 'fields';
+
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
 

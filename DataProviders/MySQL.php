@@ -6,6 +6,7 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
+use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
@@ -76,8 +77,8 @@ class MySQL implements IQuarkDataProvider {
 	 * @return bool|\mysqli_result
 	 */
 	private function _query ($model ,$options, $query) {
-		$collection = isset($options['collection'])
-			? $options['collection']
+		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
+			? $options[QuarkModel::OPTION_COLLECTION]
 			: Quark::ClassOf($model);
 
 		$i = 1;
@@ -189,16 +190,16 @@ class MySQL implements IQuarkDataProvider {
 	private function _cursor ($options) {
 		$output = '';
 
-		if (isset($options['limit']))
-			$output .= ' LIMIT ' . $this->_connection->real_escape_string($options['limit']);
+		if (isset($options[QuarkModel::OPTION_LIMIT]))
+			$output .= ' LIMIT ' . $this->_connection->real_escape_string($options[QuarkModel::OPTION_LIMIT]);
 
-		if (isset($options['skip']))
-			$output .= ' OFFSET ' . $this->_connection->real_escape_string($options['skip']);
+		if (isset($options[QuarkModel::OPTION_SKIP]))
+			$output .= ' OFFSET ' . $this->_connection->real_escape_string($options[QuarkModel::OPTION_SKIP]);
 
-		if (isset($options['sort']) && is_array($options['sort'])) {
+		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
 			$output .= ' ORDER BY ';
 
-			foreach ($options['sort'] as $key => $order) {
+			foreach ($options[QuarkModel::OPTION_SORT] as $key => $order) {
 				switch ($order) {
 					case 1: $sort = 'ASC'; break;
 					case -1: $sort = 'DESC'; break;
@@ -294,7 +295,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		$records = $this->Find($model, $criteria, $options + array('limit' => 1));
+		$records = $this->Find($model, $criteria, $options + array(QuarkModel::OPTION_LIMIT => 1));
 
 		return sizeof($records) == 0 ? null : $records[0];
 	}
@@ -322,12 +323,12 @@ class MySQL implements IQuarkDataProvider {
 	private function _select ($model, $criteria, $options = []) {
 		$fields = '*';
 
-		if (isset($options['fields']) && is_array($options['fields'])) {
+		if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
 			$fields = '';
-			$count = sizeof($options['fields']);
+			$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
 			$i = 1;
 
-			foreach ($options['fields'] as $field) {
+			foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
 				switch ($field) {
 					case self::FIELD_COUNT_ALL:
 						$key = $field;

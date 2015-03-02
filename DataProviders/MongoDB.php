@@ -6,6 +6,7 @@ use Quark\IQuarkModel;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
+use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 
@@ -124,8 +125,8 @@ class MongoDB implements IQuarkDataProvider {
 	 * @throws QuarkArchException
 	 */
 	private function _collection ($model ,$options) {
-		$collection = isset($options['collection'])
-			? $options['collection']
+		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
+			? $options[QuarkModel::OPTION_COLLECTION]
 			: Quark::ClassOf($model);
 
 		if ($this->_connection == null)
@@ -178,8 +179,8 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return array
 	 */
 	private static function _fields ($options) {
-		return isset($options['fields']) && is_array($options['fields'])
-			? $options['fields']
+		return isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])
+			? $options[QuarkModel::OPTION_FIELDS]
 			: array();
 	}
 
@@ -205,14 +206,14 @@ class MongoDB implements IQuarkDataProvider {
 		 */
 		$raw = $this->_collection($model, $options)->find($criteria, self::_fields($options));
 
-		if (isset($options['sort']))
-			$raw->sort($options['sort']);
+		if (isset($options[QuarkModel::OPTION_SORT]))
+			$raw->sort($options[QuarkModel::OPTION_SORT]);
 
-		if (isset($options['limit']))
-			$raw->limit($options['limit']);
+		if (isset($options[QuarkModel::OPTION_LIMIT]))
+			$raw->limit($options[QuarkModel::OPTION_LIMIT]);
 
-		if (isset($options['skip']))
-			$raw->skip($options['skip']);
+		if (isset($options[QuarkModel::OPTION_SKIP]))
+			$raw->skip($options[QuarkModel::OPTION_SKIP]);
 
 		$buffer = array();
 		$item = null;
