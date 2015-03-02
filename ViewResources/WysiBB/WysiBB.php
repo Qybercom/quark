@@ -92,6 +92,7 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = str_replace('[*]', '<li>', str_replace('[/*]', '</li>', $content));
 		$content = preg_replace('#\[list\=1\](.*)\[\/list\]#Uis', '<ol>$1</ol>', $content);
 		$content = str_replace('[list]', '<ul>', str_replace('[/list]', '</ul>', $content));
+		$content = str_replace('[code]', '<div class="quark-document">', str_replace('[/code]', '</div>', $content));
 
 		return $full ? '<!DOCTYPE html><html><head><title></title></head><body>' . $content . '</body></html>' : $content;
 	}
@@ -117,6 +118,7 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = str_replace('<li>', '[*]', str_replace('</li>', '[/*]', $content));
 		$content = preg_replace('#\<ol\>(.*)\<\/ol\>#Uis', '[list=1]$1[/list]', $content);
 		$content = str_replace('<ul>', '[list]', str_replace('</ul>', '[/list]', $content));
+		$content = preg_replace('#<div class="quark-document">(.*)</div>#Uis', '[code]$1[/code]', $content);
 
 		return $full
 			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content)

@@ -4,34 +4,40 @@ body {
     margin: 0;
     padding: 0;
     position: absolute;
+    width: 100%;
     min-width: 230px;
     min-height: 100%;
 }
 
 .quark-button, .quark-input {
     font-weight: 300;
+    text-decoration: none;
 }
 
 .quark-button.block, .quark-input {
     border: 0;
 }
 
+.quark-button.block {
+    background: rgb(240,240,240);
+}
+
 .quark-button.green {
     background: rgb(139, 220, 90);
+    color: rgb(255, 255, 255);
 }
 
 .quark-button.green:hover {
     background: rgb(139, 250, 90);
-    color: rgb(255, 255, 255);
 }
 
 .quark-button.red {
     background: rgb(255, 192, 0);
+    color: rgb(255, 255, 255);
 }
 
 .quark-button.red:hover {
     background: rgb(255, 192, 100);
-    color: rgb(255, 255, 255);
 }
 
 
@@ -70,8 +76,9 @@ header .left {
 
 header .right {
     display: inline-block;
-    margin: 0 5% 0 5%;
+    margin: 5px 5% 0 5%;
     vertical-align: middle;
+    line-height: 28px;
     float: right;
 }
 
@@ -81,7 +88,7 @@ header .left .quark-button {
     vertical-align: middle;
 }
 
-header .right .quark-input, header .right .quark-button {
+header .right .quark-input, header .right .quark-button.block {
     padding: 6px 8px;
     margin: 2px 1px;
     display: inline-block;
@@ -104,6 +111,7 @@ header .quark-button:hover {
 
 header .right .quark-input, header .right .quark-button.block {
     background: rgba(255,255,255,0.25);
+    color: rgb(255, 255, 255);
 }
 
 header .quark-button.block:hover {
@@ -116,6 +124,7 @@ header .right .avatar {
     max-width: 30px;
     max-height: 30px;
     vertical-align: middle;
+    margin: -6px 0 -6px 5px;
 }
 
 
@@ -161,9 +170,14 @@ header .right .avatar {
     margin: 10px 5% 130px 5%;
 }
 
+#quark-thinkscape-page .quark-input {
+    border: 1px solid rgb(230,230,230);
+    margin: 0 0 5px 0;
+}
+
 section {
     display: inline-block;
-    max-width: 55%;
+    width: 55%;
     margin: 20px 40px 20px 7%;
     vertical-align: top;
 }

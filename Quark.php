@@ -697,7 +697,7 @@ class QuarkService {
 	const ORIGIN_ANY = '*';
 
 	/**
-	 * @var IQuarkService|null
+	 * @var IQuarkService|IQuarkTask|null
 	 */
 	private $_service = null;
 
@@ -778,25 +778,27 @@ class QuarkService {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		if ($this->_service instanceof IQuarkAuthorizableService) {
+		if ($this->_service instanceof IQuarkAuthorizableService || $this->_service instanceof IQuarkAuthorizableLiteService) {
 			$session = QuarkSession::Get($this->_service->AuthorizationProvider());
 			$session->Initialize($request);
 
 			$response->AttachData($session->Trail($response));
 
-			if (!$this->_service->AuthorizationCriteria($request, $session)) {
-				$ok = false;
-				$output = $this->_service->AuthorizationFailed();
-			}
-			else {
-				if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
-					$sign = $session->Signature();
+			if ($this->_service instanceof IQuarkAuthorizableService) {
+				if (!$this->_service->AuthorizationCriteria($request, $session)) {
+					$ok = false;
+					$output = $this->_service->AuthorizationFailed();
+				}
+				else {
+					if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
+						$sign = $session->Signature();
 
-					if ($sign == '' || $request->Signature() != $sign) {
-						$action = 'SignatureCheckFailedOn' . $method;
+						if ($sign == '' || $request->Signature() != $sign) {
+							$action = 'SignatureCheckFailedOn' . $method;
 
-						$ok = false;
-						$output = $this->_service->$action();
+							$ok = false;
+							$output = $this->_service->$action();
+						}
 					}
 				}
 			}
@@ -975,6 +977,7 @@ interface IQuarkAuthorizationProvider {
 
 /**
  * Interface IQuarkAuthorizableService
+ *
  * @package Quark
  */
 interface IQuarkAuthorizableService {
@@ -998,7 +1001,20 @@ interface IQuarkAuthorizableService {
 }
 
 /**
+ * Interface IQuarkAuthorizableLiteService
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableLiteService {
+	/**
+	 * @return string
+	 */
+	function AuthorizationProvider();
+}
+
+/**
  * Interface IQuarkAuthorizableModel
+ *
  * @package Quark
  */
 interface IQuarkAuthorizableModel {
@@ -1244,6 +1260,7 @@ class QuarkView {
 	 * @var IQuarkViewModel|null
 	 */
 	private $_view = null;
+	private $_child = null;
 	private $_file = '';
 	private $_vars = array();
 	private $_resources = array();
@@ -1253,7 +1270,7 @@ class QuarkView {
 
 	/**
 	 * @param IQuarkViewModel $view
-	 * @param array $vars
+	 * @param array|object $vars
 	 * @param array $resources
 	 *
 	 * @throws QuarkArchException
@@ -1436,16 +1453,17 @@ class QuarkView {
 
 	/**
 	 * @param IQuarkViewModel $view
-	 * @param array $vars
+	 * @param array|object $vars
 	 * @param array $resources
 	 *
 	 * @return QuarkView
 	 */
 	public function Layout (IQuarkViewModel $view, $vars = [], $resources = []) {
-		$view = new QuarkView($view, $vars, $resources);
-		$view->View($this->Compile());
+		$layout = new QuarkView($view, $vars, $resources);
+		$layout->View($this->Compile());
+		$layout->Child($this->_view);
 
-		return $view;
+		return $layout;
 	}
 
 	/**
@@ -1463,7 +1481,7 @@ class QuarkView {
 	/**
 	 * @param IQuarkViewModel $view
 	 * @param IQuarkViewModel $layout
-	 * @param array $vars
+	 * @param array|object $vars
 	 *
 	 * @return QuarkView
 	 */
@@ -1507,6 +1525,18 @@ class QuarkView {
 			$this->_view = $view;
 
 		return $this->_view;
+	}
+
+	/**
+	 * @param IQuarkViewModel $view
+	 *
+	 * @return IQuarkViewModel
+	 */
+	public function Child (IQuarkViewModel $view = null) {
+		if (func_num_args() == 1)
+			$this->_child = $view;
+
+		return $this->_child;
 	}
 }
 
@@ -3399,6 +3429,14 @@ class QuarkURI {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param string $scheme
+	 */
+	public function __construct ($scheme = '') {
+		if (func_num_args() == 1)
+			$this->scheme = (string)$scheme;
 	}
 
 	/**
