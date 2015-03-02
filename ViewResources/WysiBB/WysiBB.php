@@ -87,6 +87,7 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		foreach ($align as $div)
 			$content = preg_replace('#\[' . $div . '\](.*)\[\/' . $div . '\]#Uis', '<div style="text-align:' . $div . ';">$1</div>', $content);
 
+		$content = str_replace("    ", '&nbsp;&nbsp;&nbsp;&nbsp;', str_replace("\t", '&nbsp;&nbsp;&nbsp;&nbsp;', $content));
 		$content = str_replace("\n", '<br>', str_replace("\n", '<br>', str_replace("\r\n", '<br>', $content)));
 
 		$content = str_replace('[*]', '<li>', str_replace('[/*]', '</li>', $content));
@@ -119,6 +120,7 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = preg_replace('#\<ol\>(.*)\<\/ol\>#Uis', '[list=1]$1[/list]', $content);
 		$content = str_replace('<ul>', '[list]', str_replace('</ul>', '[/list]', $content));
 		$content = preg_replace('#<div class="quark-document">(.*)</div>#Uis', '[code]$1[/code]', $content);
+		$content = str_replace('&nbsp;--', "\t", $content);
 
 		return $full
 			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content)

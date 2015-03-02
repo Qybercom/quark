@@ -69,21 +69,21 @@ header {
 
 header .left {
     display: inline-block;
-    margin: 5px 5% 10px 5%;
+    margin: 5px 5% 5px 5%;
     vertical-align: middle;
     line-height: 28px;
 }
 
 header .right {
     display: inline-block;
-    margin: 5px 5% 0 5%;
+    margin: 5px 5% 5px 5%;
     vertical-align: middle;
     line-height: 28px;
     float: right;
 }
 
 header .left .quark-button {
-    margin: 5px 2px 0 0;
+    margin: 3px 3px 0 3px;
     display: inline-block;
     vertical-align: middle;
 }
@@ -147,6 +147,10 @@ header .right .avatar {
     margin: 50px 0 0 0;
 }
 
+#quark-thinkscape-poster .title .quark-button:first-of-type {
+    margin: 0 0 0 10px;
+}
+
 #quark-thinkscape-poster .avatar {
     display: inline-block;
     margin: 200px 20px -40px 0;
@@ -198,11 +202,51 @@ article .summary .quark-button {
     margin: 0 10px 0 0;
 }
 
+article .comments form {
+    display: inline-block;
+    width: 100%;
+}
+
 h1 {
     margin: 25px 0 15px 0;
     font-size: 24px;
     font-weight: 300;
     line-height: 26px;
+}
+
+h2 {
+    margin: 5px 0 5px 0;
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 22px;
+}
+
+h3 {
+    margin: 2px 0 2px 0;
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 20px;
+}
+
+h4 {
+    margin: 2px 0 2px 0;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 18px;
+}
+
+h5 {
+    margin: 2px 0 2px 0;
+    font-size: 14px;
+    font-weight: 300;
+    line-height: 16px;
+}
+
+h6 {
+    margin: 2px 0 2px 0;
+    font-size: 12px;
+    font-weight: 300;
+    line-height: 14px;
 }
 
 #quark-thinkscape-menu {
@@ -247,6 +291,41 @@ h1 {
 .quark-button.explore {
     display: block;
     margin: 10px 0 15px 0;
+}
+
+.quark-thinkscape-comment {
+    display: inline-block;
+    margin: 5px 0 5px 0;
+    width: 100%;
+}
+
+.quark-thinkscape-comment .avatar {
+    display: inline-block;
+    margin: 0 10px 0 0;
+}
+
+.quark-thinkscape-comment .avatar img {
+    display: inline-block;
+    max-width: 50px;
+    max-height: 50px;
+    border-radius: 5px;
+}
+
+.quark-thinkscape-comment .content {
+    display: inline-block;
+    vertical-align: top;
+    width: 80%;
+}
+
+
+textarea.post {
+    width: 100%;
+    height: 300px;
+}
+
+textarea.comment {
+    width: 100%;
+    height: 100px;
 }
 
 
