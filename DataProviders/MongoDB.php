@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkArchException;
 use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 
@@ -120,11 +121,15 @@ class MongoDB implements IQuarkDataProvider {
 	 * @param $options
 	 *
 	 * @return mixed
+	 * @throws QuarkArchException
 	 */
 	private function _collection ($model ,$options) {
 		$collection = isset($options['collection'])
 			? $options['collection']
 			: Quark::ClassOf($model);
+
+		if ($this->_connection == null)
+			throw new QuarkArchException('MongoDB connection not pooled');
 
 		return $this->_connection->$collection;
 	}

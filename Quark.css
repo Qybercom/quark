@@ -1,150 +1,101 @@
+/**
+ * Quark default styles
+ */
 body {
     font-family: FontAwesome, Open Sans, sans-serif;
+    font-size: 12px;
+    line-height: 16px;
 }
 
-.qui-button {
+
+/**
+ * .quark-input and .quark-button are base controls
+ */
+.quark-input, .quark-button {
     font-family: FontAwesome, Open Sans, sans-serif;
     font-size: 12px;
-    color: rgb(150, 150, 150);
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.qui-button .label {
-    font-family: FontAwesome, Open Sans, sans-serif;
-    margin-left: 5px;
-}
-
-.qui-label {
-    font-family: FontAwesome, Open Sans, sans-serif;
+    line-height: 14px;
     color: rgb(150, 150, 150);
 }
 
-.qui-button:hover {
-    color: black;
-}
-
-.qui-button.block {
-    background: white;
-    padding: 10px;
-    font-family: FontAwesome, Open Sans, sans-serif;
+.quark-input, .quark-button.block {
     border: 1px solid rgb(230, 230, 230);
     border-radius: 3px;
+    padding: 10px 12px;
 }
 
-.qui-button.block:hover {
+.quark-button:hover {
+    color: rgb(0, 0, 0);
+    cursor: pointer;
+}
+
+.quark-button.block:hover {
     background: rgb(230, 230, 230);
 }
 
-.qui-header .qui-button {
-    font-size: 22px;
-    text-decoration: none;
+.quark-input {
+    width: 150px;
 }
 
-.qui-table td {
-    padding: 5px;
-    border-bottom: 1px solid rgb(230, 230, 230);
-}
 
-.qui-content {
-    margin-top: 75px;
-    margin-right: 15px;
-    margin-left: 75px;
-    min-width: 300px;
-}
-
-.qui-content-column {
-    display: inline-block;
-    vertical-align: top;
-    margin-right: 15px;
-    margin-bottom: 15px;
-}
-
-.qui-message {
+/**
+ * .quark-message represent short notifications from system
+ */
+.quark-message {
     font-family: FontAwesome, Open Sans, sans-serif;
+    font-size: 12px;
+    line-height: 12px;
+
     padding: 10px;
     margin: 3px 1px;
 
-    font-size: 12px;
     border-radius: 5px;
 }
 
-.qui-message .fa {
+.quark-message .fa {
     vertical-align: middle;
     display: inline-block;
     margin-right: 5px;
     float: left;
 }
 
-.qui-message .content {
+.quark-message .content {
     vertical-align: middle;
     display: inline-block;
     margin-left: 5px;
 }
 
-.qui-message.info {
-    border: 1px solid #CDD9FF/*#EFF3FF*/;
+.quark-message.info {
+    border: 1px solid #CDD9FF;
 }
 
-.qui-message.warn {
-    border: 1px solid #E8E8AD /*#EFF3FF*/;
+.quark-message.warn {
+    border: 1px solid #E8E8AD;
 }
 
-.qui-message.fatal {
-    border: 1px solid #ffceaf /*#EFF3FF*/;
+.quark-message.fatal {
+    border: 1px solid #ffceaf;
 }
 
 .qui-message.question {
-    border: 1px solid rgb(230, 230, 230) /*#EFF3FF*/;
+    border: 1px solid rgb(230, 230, 230);
 }
 
-.qui-message.ok {
+.quark-message.ok {
     border: 1px solid rgb(167, 255, 167);
 }
 
-.qui-document {
+
+/**
+ * .quark-document useful for code snippets or other text output
+ */
+.quark-document {
     font-family: Consolas, 'Anonymous Pro', monospace;
     font-size: 12px;
 
     padding: 10px;
-    margin-bottom: 5px;
+    margin: 5px 0;
 
     border-radius: 3px;
     border: 1px solid rgb(230, 230, 230);
-}
-
-.qui-section-header {
-    font-size: 16px;
-    margin-top: 15px;
-    margin-bottom: 5px;
-}
-
-.qui-input {
-    padding: 10px;
-    border: 1px solid rgb(230, 230, 230);
-    border-radius: 3px;
-    font-size: 12px;
-    font-family: Open Sans, Calibri, FontAwesome, sans-serif;
-    margin-bottom: 1px;
-}
-
-.qui-input.select {
-    display: inline-block;
-    min-width: 50px;
-    cursor: pointer;
-    background: white;
-}
-
-.qui-tool-group {
-    display: none;
-    position: absolute;
-    z-index: 10;
-    background: white;
-    min-width: 100px;
-    min-height: 16px;
-    padding: 5px;
-    margin-left: -3px;
-    border: 1px solid rgb(230, 230, 230);
-    border-top: 0;
-    /*line-height: 24px;*/
 }

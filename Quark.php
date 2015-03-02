@@ -1429,7 +1429,7 @@ class QuarkView {
 	 */
 	public function User () {
 		if (!($this->_view instanceof IQuarkAuthorizableViewModel))
-			throw new QuarkArchException('ViewModel ' . get_class($this->_view) . ' need to be IQuarkAuthorizableModel');
+			throw new QuarkArchException('ViewModel ' . get_class($this->_view) . ' need to be IQuarkAuthorizableViewModel');
 
 		return QuarkSession::Get($this->_view->AuthProvider())->User();
 	}
