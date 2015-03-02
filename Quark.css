@@ -2,7 +2,7 @@
  * Quark default styles
  */
 body {
-    font-family: FontAwesome, Open Sans, sans-serif;
+    font-family: FontAwesome, 'Open Sans', sans-serif;
     font-size: 12px;
     line-height: 16px;
 }
@@ -12,7 +12,7 @@ body {
  * .quark-input and .quark-button are base controls
  */
 .quark-input, .quark-button {
-    font-family: FontAwesome, Open Sans, sans-serif;
+    font-family: FontAwesome, 'Open Sans', sans-serif;
     font-size: 12px;
     line-height: 14px;
     color: rgb(150, 150, 150);
@@ -42,7 +42,7 @@ body {
  * .quark-message represent short notifications from system
  */
 .quark-message {
-    font-family: FontAwesome, Open Sans, sans-serif;
+    font-family: FontAwesome, 'Open Sans', sans-serif;
     font-size: 12px;
     line-height: 12px;
 

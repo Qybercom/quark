@@ -10,7 +10,6 @@ body {
 
 .quark-button, .quark-input {
     font-weight: 300;
-    color: rgb(255, 255, 255);
 }
 
 .quark-button.block, .quark-input {
@@ -153,6 +152,7 @@ header .right .avatar {
 
 #quark-thinkscape-poster .title .quark-button {
     vertical-align: middle;
+    color: rgb(255, 255, 255);
 }
 
 
@@ -163,14 +163,25 @@ header .right .avatar {
 
 section {
     display: inline-block;
-    max-width: 60%;
-    margin: 20px 20px 20px 7%;
+    max-width: 55%;
+    margin: 20px 40px 20px 7%;
     vertical-align: top;
 }
 
 article {
     display: inline-block;
     margin: 0 0 20px 0;
+}
+
+article .summary {
+    background: rgb(245,245,245);
+    padding: 10px;
+    margin: 10px 0 0 0;
+    border-radius: 5px;
+}
+
+article .summary .quark-button {
+    margin: 0 10px 0 0;
 }
 
 h1 {
@@ -219,6 +230,11 @@ h1 {
     background: rgb(235,235,235);
 }
 
+.quark-button.explore {
+    display: block;
+    margin: 10px 0 15px 0;
+}
+
 
 
 footer {
@@ -227,6 +243,6 @@ footer {
     left: 5%;
     width: 90%;
     padding: 20px 0;
-    border-top: 1px solid rgb(230, 230, 230);
+    border-top: 1px solid rgb(230,230,230);
     text-align: center;
 }
