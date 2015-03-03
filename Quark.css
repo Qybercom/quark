@@ -16,6 +16,7 @@ body {
     font-size: 12px;
     line-height: 14px;
     color: rgb(150, 150, 150);
+    text-decoration: none;
 }
 
 .quark-input, .quark-button.block {

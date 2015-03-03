@@ -11,7 +11,6 @@ body {
 
 .quark-button, .quark-input {
     font-weight: 300;
-    text-decoration: none;
 }
 
 .quark-button.block, .quark-input {
