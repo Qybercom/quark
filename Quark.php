@@ -1295,7 +1295,7 @@ class QuarkView {
 	 *
 	 * @return mixed
 	 */
-	public function &__get ($key) {
+	public function __get ($key) {
 		return isset($this->_view->$key) ? $this->_view->$key : $this->_null;
 	}
 
@@ -1305,6 +1305,15 @@ class QuarkView {
 	 */
 	public function __set ($key, $value) {
 		$this->_view->$key = $value;
+	}
+
+	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_view->$key);
 	}
 
 	/**
@@ -2126,6 +2135,15 @@ class QuarkModel {
 	}
 
 	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_model->$key);
+	}
+
+	/**
 	 * @param $method
 	 * @param $args
 	 *
@@ -2143,6 +2161,13 @@ class QuarkModel {
 			return call_user_func_array(array($provider, $method), $args);
 
 		throw new QuarkArchException('Method ' . $method . ' not found in model or provider');
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return method_exists($this->_model, '__toString') ? (string)$this->_model : '';
 	}
 
 	/**
@@ -3802,6 +3827,15 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_data->$key);
+	}
+
+	/**
 	 * @param IQuarkIOProcessor $processor
 	 * @param QuarkURI  $uri
 	 * @param string $method
@@ -4404,7 +4438,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkFile($raw);
+		return new QuarkModel(new QuarkFile($raw));
 	}
 
 	/**

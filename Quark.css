@@ -25,6 +25,10 @@ body {
     padding: 10px 12px;
 }
 
+.quark-button.block {
+    white-space: nowrap;
+}
+
 .quark-button:hover {
     color: rgb(0, 0, 0);
     cursor: pointer;
