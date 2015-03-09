@@ -479,6 +479,28 @@ class Quark {
 	}
 
 	/**
+	 * @param string $path
+	 * @param callable $process
+	 *
+	 * @return bool
+	 */
+	public static function Import ($path, callable $process = null) {
+		if (!is_string($path)) return false;
+
+		spl_autoload_register(function ($class) use ($path, $process) {
+			if ($process != null)
+				$class = $process($class);
+
+			$file = Quark::NormalizePath($path . '/' . $class . '.php', false);
+
+			if (is_file($file))
+				include_once $file;
+		});
+
+		return true;
+	}
+
+	/**
 	 * @param $message
 	 * @param string $lvl
 	 * @param string $domain
@@ -499,19 +521,8 @@ class Quark {
 
 spl_autoload_extensions('.php');
 
-spl_autoload_register(function ($class) {
-	$file = Quark::NormalizePath(__DIR__ . '/' . substr($class, 6) . '.php', false);
-
-	if (is_file($file))
-		include_once $file;
-});
-
-spl_autoload_register(function ($class) {
-	$file = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
-
-	if (is_file($file))
-		include_once $file;
-});
+Quark::Import(__DIR__, function ($class) { return substr($class, 6); });
+Quark::Import(Quark::Host());
 
 /**
  * Class QuarkConfig

@@ -9,16 +9,16 @@ use Quark\IQuarkExtensionConfig;
  * @package Quark\Extensions\Facebook
  */
 class Config implements IQuarkExtensionConfig {
-	private $_id;
-	private $_secret;
+	public $appId;
+	public $appSecret;
 
 	/**
 	 * @param $id
 	 * @param $secret
 	 */
 	public function __construct ($id, $secret) {
-		$this->_id = $id;
-		$this->_secret = $secret;
+		$this->appId = $id;
+		$this->appSecret = $secret;
 	}
 
 	/**
@@ -26,8 +26,8 @@ class Config implements IQuarkExtensionConfig {
 	 */
 	public function Credentials () {
 		return array(
-			'appId' => $this->_id,
-			'secret' => $this->_secret
+			'appId' => $this->appId,
+			'secret' => $this->appSecret
 		);
 	}
 }

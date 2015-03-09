@@ -8,6 +8,8 @@ use Quark\IQuarkExtensionConfig;
 use Quark\Quark;
 use Quark\QuarkArchException;
 
+use Facebook\FacebookSession;
+
 /**
  * Class User
  *
@@ -25,6 +27,12 @@ class User implements IQuarkExtension, IQuarkConfigurableExtension {
 	 * @return mixed
 	 */
 	public function Init (IQuarkExtensionConfig $config) {
+		Quark::Import(__DIR__ . '/facebook-php-sdk-v4/src/');
+
+		FacebookSession::setDefaultApplication($config->appId, $config->appSecret);
+	}
+
+	public function in () {
 		$facebook = Quark::NormalizePath(__DIR__ . '/SDK/src/facebook.php', false);
 		$facebook_base = Quark::NormalizePath(__DIR__ . '/SDK/src/base_facebook.php', false);
 
@@ -37,8 +45,8 @@ class User implements IQuarkExtension, IQuarkConfigurableExtension {
 
 		if (!class_exists('Facebook') || !class_exists('BaseFacebook')) throw $arch;
 
-		self::$_facebook = new \Facebook($config->Credentials());
-		self::$_session = self::$_facebook->getUser();
+		//self::$_facebook = new \Facebook($config->Credentials());
+		//self::$_session = self::$_facebook->getUser();
 	}
 
 	/**
