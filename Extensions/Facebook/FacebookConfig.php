@@ -4,11 +4,11 @@ namespace Quark\Extensions\Facebook;
 use Quark\IQuarkExtensionConfig;
 
 /**
- * Class Config
+ * Class FacebookConfig
  *
  * @package Quark\Extensions\Facebook
  */
-class Config implements IQuarkExtensionConfig {
+class FacebookConfig implements IQuarkExtensionConfig {
 	public $appId;
 	public $appSecret;
 

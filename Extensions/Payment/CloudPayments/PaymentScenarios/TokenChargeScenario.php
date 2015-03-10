@@ -1,12 +1,12 @@
 <?php
-namespace Quark\Extensions\CloudPayments\PaymentScenarios;
+namespace Quark\Extensions\Payment\CloudPayments\PaymentScenarios;
 
-use Quark\Extensions\CloudPayments\IPaymentScenario;
+use Quark\Extensions\Payment\IPaymentScenario;
 
 /**
  * Class TokenChargeScenario
  *
- * @package Quark\Extensions\CloudPayments\PaymentScenarios
+ * @package Quark\Extensions\Payment\CloudPayments\PaymentScenarios
  */
 class TokenChargeScenario implements IPaymentScenario {
 	/**

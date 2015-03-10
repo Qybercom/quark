@@ -37,7 +37,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	private $_descriptor = null;
 
 	/**
-	 * @param IQuarkExtensionConfig|Config $config
+	 * @param IQuarkExtensionConfig|RESTConfig $config
 	 *
 	 * @return mixed
 	 */

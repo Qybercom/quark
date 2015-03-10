@@ -21,7 +21,7 @@ class User implements IQuarkExtension, IQuarkConfigurableExtension {
 	private static $_token;
 
 	/**
-	 * @param IQuarkExtensionConfig|Config $config
+	 * @param IQuarkExtensionConfig|FacebookConfig $config
 	 *
 	 * @throws QuarkArchException
 	 * @return mixed

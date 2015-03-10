@@ -1,10 +1,10 @@
 <?php
-namespace Quark\Extensions\CloudPayments;
+namespace Quark\Extensions\Payment;
 
 /**
  * Interface IPaymentScenario
  *
- * @package Quark\Extensions\CloudPayments
+ * @package Quark\Extensions\Payment
  */
 interface IPaymentScenario {
 	/**

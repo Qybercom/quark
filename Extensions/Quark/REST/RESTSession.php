@@ -7,11 +7,11 @@ use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
- * Class Session
+ * Class RESTSession
  *
  * @package Quark\Extensions\Quark\REST
  */
-class Session implements IQuarkAuthorizationProvider {
+class RESTSession implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request

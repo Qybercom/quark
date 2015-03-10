@@ -3459,8 +3459,8 @@ class QuarkClient {
 		$stream = stream_context_create();
 
 		if ($this->_certificate == null) {
-			stream_context_set_option($stream, 'ssl', 'verify_host', false);
-			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+			//stream_context_set_option($stream, 'ssl', 'verify_host', false);
+			//stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 		}
 		else {
 			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
