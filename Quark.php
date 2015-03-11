@@ -3363,7 +3363,7 @@ class QuarkClient {
 	private $_certificate;
 
 	/**
-	 * @var int
+	 * @var int $_timeout
 	 */
 	private $_timeout = 30;
 
@@ -3373,14 +3373,19 @@ class QuarkClient {
 	private $_socket;
 
 	/**
-	 * @var int
+	 * @var int $_errorNumber
 	 */
 	private $_errorNumber = 0;
 
 	/**
-	 * @var string
+	 * @var string $_errorString
 	 */
 	private $_errorString = '';
+
+	/**
+	 * @var bool $ip
+	 */
+	public $ip = true;
 
 	/**
 	 * @param string                  $uri
@@ -3459,8 +3464,8 @@ class QuarkClient {
 		$stream = stream_context_create();
 
 		if ($this->_certificate == null) {
-			//stream_context_set_option($stream, 'ssl', 'verify_host', false);
-			//stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+			stream_context_set_option($stream, 'ssl', 'verify_host', false);
+			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
 		}
 		else {
 			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
@@ -3468,7 +3473,7 @@ class QuarkClient {
 		}
 
 		$this->_socket = @stream_socket_client(
-			$this->_uri->Socket(),
+			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
 			$this->_timeout,
@@ -3643,16 +3648,18 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $ip
+	 *
 	 * @return string|bool
 	 */
-	public function Socket () {
+	public function Socket ($ip = true) {
 		$dns = dns_get_record($this->host, DNS_A);
 
 		if ($dns === false) return false;
 
 		return (isset(self::$_transports[$this->scheme]) ? self::$_transports[$this->scheme] : 'tcp')
 		. '://'
-		. gethostbyname($this->host)
+		. ($ip ? gethostbyname($this->host) : $this->host)
 		. ':'
 		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : 80));
 	}

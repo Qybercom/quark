@@ -39,10 +39,8 @@ class Payment implements IQuarkExtension {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$http = new QuarkClient('https://api.cloudpayments.ru/test', new QuarkHTTPTransport($request, $response));
+		$http->ip = false;
 
-		Quark::On(Quark::EVENT_CONNECTION_EXCEPTION, function ($e) {
-			print_r($e);
-		});
-		print_r($http->Action());
+		return $http->Action();
 	}
 }
