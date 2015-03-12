@@ -14,19 +14,69 @@ use Quark\QuarkJSONIOProcessor;
  * @package Quark\Extensions\Payment
  */
 class Payment implements IQuarkExtension {
+	const CURRENCY_MDL = 'MDL';
+	const CURRENCY_RUB = 'RUB';
+	const CURRENCY_USD = 'USD';
+	const CURRENCY_EUR = 'EUR';
+
 	/**
-	 * @var IPaymentScenario
+	 * @var IPaymentScenario $_scenario
 	 */
 	private $_scenario;
 
 	/**
+	 * @var object $_payload
+	 */
+	private $_payload;
+
+	/**
+	 * @param string $provider
 	 * @param IPaymentScenario $scenario
 	 */
-	public function __construct (IPaymentScenario $scenario) {
+	public function __construct ($provider, IPaymentScenario $scenario) {
 		$this->_scenario = $scenario;
+
+		$fields = $this->_scenario->Fields();
+
+		if (!Quark::isAssociative($fields))
+			$fields = new \StdClass();
+
+		$this->_payload = Quark::Normalize(new \StdClass(), $fields);
 	}
 
-	public function Pay () {
+	/**
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function &__get ($key) {
+		return $this->_scenario->$key;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	public function __set ($key, $value) {
+		$this->_scenario->$key = $value;
+	}
+
+	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_scenario->$key);
+	}
+
+	/**
+	 * @param string $currency
+	 * @param float $amount
+	 *
+	 * @return mixed
+	 */
+	public function Pay ($currency, $amount) {
 		$user = 'pk_99d30b422ee37453692a9c95c521f';
 		$pass = 'f6efa738f6e569fdfbe5e75fd1193a1d';
 
