@@ -8,12 +8,10 @@ namespace Quark\Extensions\Payment;
  */
 interface IPaymentScenario {
 	/**
-	 * @return string
+	 * @param $currency
+	 * @param $amount
+	 *
+	 * @return bool
 	 */
-	function URL();
-
-	/**
-	 * @return array
-	 */
-	function Fields();
+	function Pay($currency, $amount);
 }

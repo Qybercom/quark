@@ -25,23 +25,11 @@ class Payment implements IQuarkExtension {
 	private $_scenario;
 
 	/**
-	 * @var object $_payload
-	 */
-	private $_payload;
-
-	/**
 	 * @param string $provider
 	 * @param IPaymentScenario $scenario
 	 */
 	public function __construct ($provider, IPaymentScenario $scenario) {
 		$this->_scenario = $scenario;
-
-		$fields = $this->_scenario->Fields();
-
-		if (!Quark::isAssociative($fields))
-			$fields = new \StdClass();
-
-		$this->_payload = Quark::Normalize(new \StdClass(), $fields);
 	}
 
 	/**
