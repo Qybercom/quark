@@ -133,6 +133,8 @@ header .right .avatar {
     min-height: 300px;
     width: 100%;
     position: relative;
+    background-position: center center;
+    background-size: cover;
 }
 
 #quark-thinkscape-poster .title {
