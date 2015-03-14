@@ -6,11 +6,11 @@ use Quark\IQuarkExtensionConfig;
 use Quark\Quark;
 
 /**
- * Class Config
+ * Class RESTConfig
  *
  * @package Quark\Extensions\Quark\REST
  */
-class Config implements IQuarkExtensionConfig {
+class RESTConfig implements IQuarkExtensionConfig {
 	/**
 	 * @var IQuarkRESTServiceDescriptor
 	 */

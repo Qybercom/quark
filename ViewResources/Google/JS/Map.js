@@ -338,8 +338,6 @@ Map.Tooltip = function (marker, opt) {
 		content: '<div id="' + that._id + '">' + opt.content + '</div>'
 	});
 
-    //that._element = $('#' + that._id);
-
 	/**
 	 * Init & open InfoWindow
 	 */
@@ -361,12 +359,7 @@ Map.Tooltip = function (marker, opt) {
 		if (!that.element.outer.length) return;
 
 		if (!that.custom) that.element.inner.html(html);
-		else that.element.outer
-			.html(html)
-			.css({
-				'margin-left': '50px',
-				'margin-top': (-that.element.outer.height() + 60) + 'px'
-			});
+		else that.element.outer.html(html);
 	};
 
 	/**
@@ -393,20 +386,16 @@ Map.Tooltip = function (marker, opt) {
 	};
 
 	google.maps.event.addListener(that._tooltip, 'domready', function () {
-        var elem = $('#' + that._id);
-        that._element = elem.parent().parent().parent().parent();
-        that._element.html('<div id="' + that._id + '" class="quark-map-tooltip">' + elem.html() + '</div>');
+        that.element.inner = $('#' + that._id);
+		that.element.outer = that.element.inner.parent().parent().parent().parent();
+		that.element._copy = that.element.outer.html();
 
-		//that.element.inner = $(this.k.contentNode);
-		//that.element.outer = that.element.inner.parent().parent();
-		//that.element._copy = that.element.outer.html();
+        opt.content = '<div id="' + that._id + '" class="quark-map-tooltip">' + opt.content + '</div>';
 
-		if (that.custom) {
-			that.Reset();
-			that.element.outer.html(opt.content);
-		}
+        if (that.custom) that.element.outer.html(opt.content);
+        else that.element.inner.html(opt.content);
 
-		if (that.ready instanceof Function) that.ready(that);
+        if (that.ready instanceof Function) that.ready(that);
 	});
 };
 

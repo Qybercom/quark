@@ -2,6 +2,7 @@
 namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
+
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
 

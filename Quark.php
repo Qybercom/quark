@@ -479,6 +479,28 @@ class Quark {
 	}
 
 	/**
+	 * @param string $path
+	 * @param callable $process
+	 *
+	 * @return bool
+	 */
+	public static function Import ($path, callable $process = null) {
+		if (!is_string($path)) return false;
+
+		spl_autoload_register(function ($class) use ($path, $process) {
+			if ($process != null)
+				$class = $process($class);
+
+			$file = Quark::NormalizePath($path . '/' . $class . '.php', false);
+
+			if (is_file($file))
+				include_once $file;
+		});
+
+		return true;
+	}
+
+	/**
 	 * @param $message
 	 * @param string $lvl
 	 * @param string $domain
@@ -499,19 +521,8 @@ class Quark {
 
 spl_autoload_extensions('.php');
 
-spl_autoload_register(function ($class) {
-	$file = Quark::NormalizePath(__DIR__ . '/' . substr($class, 6) . '.php', false);
-
-	if (is_file($file))
-		include_once $file;
-});
-
-spl_autoload_register(function ($class) {
-	$file = Quark::NormalizePath(Quark::Host() . '/' . $class . '.php', false);
-
-	if (is_file($file))
-		include_once $file;
-});
+Quark::Import(__DIR__, function ($class) { return substr($class, 6); });
+Quark::Import(Quark::Host());
 
 /**
  * Class QuarkConfig
@@ -3352,7 +3363,7 @@ class QuarkClient {
 	private $_certificate;
 
 	/**
-	 * @var int
+	 * @var int $_timeout
 	 */
 	private $_timeout = 30;
 
@@ -3362,14 +3373,19 @@ class QuarkClient {
 	private $_socket;
 
 	/**
-	 * @var int
+	 * @var int $_errorNumber
 	 */
 	private $_errorNumber = 0;
 
 	/**
-	 * @var string
+	 * @var string $_errorString
 	 */
 	private $_errorString = '';
+
+	/**
+	 * @var bool $ip
+	 */
+	public $ip = true;
 
 	/**
 	 * @param string                  $uri
@@ -3457,7 +3473,7 @@ class QuarkClient {
 		}
 
 		$this->_socket = @stream_socket_client(
-			$this->_uri->Socket(),
+			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
 			$this->_timeout,
@@ -3632,16 +3648,18 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $ip
+	 *
 	 * @return string|bool
 	 */
-	public function Socket () {
+	public function Socket ($ip = true) {
 		$dns = dns_get_record($this->host, DNS_A);
 
 		if ($dns === false) return false;
 
 		return (isset(self::$_transports[$this->scheme]) ? self::$_transports[$this->scheme] : 'tcp')
 		. '://'
-		. gethostbyname($this->host)
+		. ($ip ? gethostbyname($this->host) : $this->host)
 		. ':'
 		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : 80));
 	}
