@@ -145,41 +145,13 @@ header .right .avatar {
     margin: 200px 5% 0 5%;
     padding: 20px;
 
+    color: white;
     text-shadow:
-        -1px -1px 20px rgba(255,255,255,1),
-        -1px 1px 20px rgba(255,255,255,1),
-        1px 1px 20px rgba(255,255,255,1),
-        1px -1px 20px rgba(255,255,255,1),
-
-        -2px -2px 20px rgba(255,255,255,1),
-        -2px 2px 20px rgba(255,255,255,1),
-        2px 2px 20px rgba(255,255,255,1),
-        2px -2px 20px rgba(255,255,255,1),
-
-        -3px -3px 20px rgba(255,255,255,1),
-        -3px 3px 20px rgba(255,255,255,1),
-        3px 3px 20px rgba(255,255,255,1),
-        3px -3px 20px rgba(255,255,255,1),
-
-        -4px -4px 20px rgba(255,255,255,1),
-        -4px 4px 20px rgba(255,255,255,1),
-        4px 4px 20px rgba(255,255,255,1),
-        4px -4px 20px rgba(255,255,255,1),
-
-        -5px -5px 20px rgba(255,255,255,1),
-        -5px 5px 20px rgba(255,255,255,1),
-        5px 5px 20px rgba(255,255,255,1),
-        5px -5px 20px rgba(255,255,255,1),
-
-        -6px -6px 20px rgba(255,255,255,1),
-        -6px 6px 20px rgba(255,255,255,1),
-        6px 6px 20px rgba(255,255,255,1),
-        6px -6px 20px rgba(255,255,255,1),
-
-        -7px -7px 20px rgba(255,255,255,1),
-        -7px 7px 20px rgba(255,255,255,1),
-        7px 7px 20px rgba(255,255,255,1),
-        7px -7px 20px rgba(255,255,255,1);
+        -1px -1px 1px rgba(0,0,0,1),
+        -1px 1px 1px rgba(0,0,0,1),
+        1px 1px 1px rgba(0,0,0,1),
+        1px -1px 1px rgba(0,0,0,1),
+        2px 2px 10px rgba(0,0,0,1);
 }
 
 #quark-thinkscape-poster .avatar {
