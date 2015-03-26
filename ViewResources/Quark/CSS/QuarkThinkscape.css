@@ -133,6 +133,8 @@ header .right .avatar {
     min-height: 300px;
     width: 100%;
     position: relative;
+    background-position: center center;
+    background-size: cover;
 }
 
 #quark-thinkscape-poster .title {
@@ -143,41 +145,13 @@ header .right .avatar {
     margin: 200px 5% 0 5%;
     padding: 20px;
 
+    color: white;
     text-shadow:
-        -1px -1px 20px rgba(255,255,255,1),
-        -1px 1px 20px rgba(255,255,255,1),
-        1px 1px 20px rgba(255,255,255,1),
-        1px -1px 20px rgba(255,255,255,1),
-
-        -2px -2px 20px rgba(255,255,255,1),
-        -2px 2px 20px rgba(255,255,255,1),
-        2px 2px 20px rgba(255,255,255,1),
-        2px -2px 20px rgba(255,255,255,1),
-
-        -3px -3px 20px rgba(255,255,255,1),
-        -3px 3px 20px rgba(255,255,255,1),
-        3px 3px 20px rgba(255,255,255,1),
-        3px -3px 20px rgba(255,255,255,1),
-
-        -4px -4px 20px rgba(255,255,255,1),
-        -4px 4px 20px rgba(255,255,255,1),
-        4px 4px 20px rgba(255,255,255,1),
-        4px -4px 20px rgba(255,255,255,1),
-
-        -5px -5px 20px rgba(255,255,255,1),
-        -5px 5px 20px rgba(255,255,255,1),
-        5px 5px 20px rgba(255,255,255,1),
-        5px -5px 20px rgba(255,255,255,1),
-
-        -6px -6px 20px rgba(255,255,255,1),
-        -6px 6px 20px rgba(255,255,255,1),
-        6px 6px 20px rgba(255,255,255,1),
-        6px -6px 20px rgba(255,255,255,1),
-
-        -7px -7px 20px rgba(255,255,255,1),
-        -7px 7px 20px rgba(255,255,255,1),
-        7px 7px 20px rgba(255,255,255,1),
-        7px -7px 20px rgba(255,255,255,1);
+        -1px -1px 1px rgba(0,0,0,1),
+        -1px 1px 1px rgba(0,0,0,1),
+        1px 1px 1px rgba(0,0,0,1),
+        1px -1px 1px rgba(0,0,0,1),
+        2px 2px 10px rgba(0,0,0,1);
 }
 
 #quark-thinkscape-poster .avatar {
@@ -246,48 +220,6 @@ article .summary .quark-button {
 article .comments form {
     display: inline-block;
     width: 100%;
-}
-
-h1 {
-    margin: 25px 0 15px 0;
-    font-size: 24px;
-    font-weight: 300;
-    line-height: 26px;
-}
-
-h2 {
-    margin: 5px 0 5px 0;
-    font-size: 20px;
-    font-weight: 300;
-    line-height: 22px;
-}
-
-h3 {
-    margin: 2px 0 2px 0;
-    font-size: 18px;
-    font-weight: 300;
-    line-height: 20px;
-}
-
-h4 {
-    margin: 2px 0 2px 0;
-    font-size: 16px;
-    font-weight: 300;
-    line-height: 18px;
-}
-
-h5 {
-    margin: 2px 0 2px 0;
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 16px;
-}
-
-h6 {
-    margin: 2px 0 2px 0;
-    font-size: 12px;
-    font-weight: 300;
-    line-height: 14px;
 }
 
 #quark-thinkscape-menu {
