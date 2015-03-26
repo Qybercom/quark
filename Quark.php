@@ -4930,13 +4930,13 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 * @param $data
 	 * @return mixed|string
 	 */
-	public function Encode ($data) { return json_encode($data); }
+	public function Encode ($data) { return \json_encode($data); }
 
 	/**
 	 * @param $raw
 	 * @return mixed
 	 */
-	public function Decode ($raw) { return json_decode($raw); }
+	public function Decode ($raw) { return \json_decode($raw); }
 }
 
 /**
@@ -4948,7 +4948,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * Constructor for QuarkXMLIOProcessor
 	 */
 	public function __construct () {
-		libxml_use_internal_errors(true);
+		\libxml_use_internal_errors(true);
 	}
 
 	/**
@@ -5007,7 +5007,7 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		return wddx_deserialize($raw);
+		return \wddx_deserialize($raw);
 	}
 
 	/**
@@ -5016,7 +5016,7 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Encode ($data) {
-		return wddx_serialize_value($data);
+		return \wddx_serialize_value($data);
 	}
 }
 
