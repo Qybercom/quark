@@ -1,13 +1,15 @@
 <?php
 namespace Quark\Extensions\Payment\CloudPayments\PaymentScenarios;
 
-use Quark\Extensions\Payment\IPaymentScenario;
-use Quark\Extensions\Payment\Payment;
-
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransport;
 use Quark\QuarkJSONIOProcessor;
+
+use Quark\Extensions\Payment\IQuarkPaymentScenario;
+use Quark\Extensions\Payment\IQuarkPaymentConfig;
+
+use Quark\Extensions\Payment\CloudPayments\CloudPaymentsConfig;
 
 /**
  * Class TokenChargeScenario
@@ -23,24 +25,28 @@ use Quark\QuarkJSONIOProcessor;
  *
  * @package Quark\Extensions\Payment\CloudPayments\PaymentScenarios
  */
-class TokenChargeScenario implements IPaymentScenario {
+class TokenChargeScenario implements IQuarkPaymentScenario {
 	/**
-	 * @param $currency
-	 * @param $amount
+	 * @param IQuarkPaymentConfig|CloudPaymentsConfig $config
 	 *
 	 * @return bool
 	 */
-	public function Pay ($currency, $amount) {
-		$this->Currency = $currency;
-		$this->Amount = $amount;
+	public function Pay (IQuarkPaymentConfig $config) {
+		$this->Currency = $config->currency;
+		$this->Amount = $config->amount;
 
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Header(
+			QuarkDTO::HEADER_AUTHORIZATION,
+			'Basic ' . base64_encode($config->user . ':' . $config->pass)
+		);
 		$request->Data($this);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$http = new QuarkClient('https://api.cloudpayments.ru/payments/tokens/charge', new QuarkHTTPTransport($request, $response));
+		$http->ip = false;
 
-		$http->Action();
+		return $http->Action();
 	}
 }

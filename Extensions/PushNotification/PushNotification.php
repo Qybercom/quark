@@ -3,6 +3,8 @@ namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkExtension;
 
+use Quark\Quark;
+
 /**
  * Class PushNotification
  *
@@ -10,9 +12,9 @@ use Quark\IQuarkExtension;
  */
 class PushNotification implements IQuarkExtension {
 	/**
-	 * @var IPushNotificationProvider[] $_providers
+	 * @var PushNotificationConfig $_config
 	 */
-	private static $_providers = array();
+	private $_config;
 
 	/**
 	 * @var $_payload
@@ -25,19 +27,12 @@ class PushNotification implements IQuarkExtension {
 	private $_devices = array();
 
 	/**
+	 * @param string $config
 	 * @param mixed $payload
 	 */
-	public function __construct ($payload = []) {
+	public function __construct ($config, $payload = []) {
+		$this->_config = Quark::Config()->Extension($config);
 		$this->_payload = $payload;
-	}
-
-	/**
-	 * @param IPushNotificationProvider $provider
-	 * @param $config
-	 */
-	public function Provider (IPushNotificationProvider $provider, $config = []) {
-		$provider->Config($config);
-		self::$_providers[] = $provider;
 	}
 
 	/**
@@ -64,12 +59,9 @@ class PushNotification implements IQuarkExtension {
 	 */
 	public function Send () {
 		$ok = true;
+		$providers = $this->_config->Providers();
 
-		foreach (self::$_providers as $provider) {
-			/**
-			 * @var $provider IPushNotificationProvider
-			 */
-
+		foreach ($providers as $provider) {
 			foreach ($this->_devices as $device)
 				if ($device->type == $provider->Type())
 					$provider->Device($device);

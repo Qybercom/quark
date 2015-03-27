@@ -10,5 +10,5 @@ interface IMapComponent {
 	/**
 	 * @return string
 	 */
-	function Compile();
+	public function Compile();
 }

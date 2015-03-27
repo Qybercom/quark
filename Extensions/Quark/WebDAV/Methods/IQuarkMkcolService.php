@@ -13,5 +13,5 @@ interface IQuarkMkcolService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Mkcol(QuarkDTO $request, QuarkSession $session);
+	public function Mkcol(QuarkDTO $request, QuarkSession $session);
 }

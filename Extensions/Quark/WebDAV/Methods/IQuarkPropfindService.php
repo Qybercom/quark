@@ -13,5 +13,5 @@ interface IQuarkPropfindService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Propfind(QuarkDTO $request, QuarkSession $session);
+	public function Propfind(QuarkDTO $request, QuarkSession $session);
 }

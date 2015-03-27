@@ -9,14 +9,14 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkPlainIOProcessor;
 
 use Quark\Extensions\PushNotification\Device;
-use Quark\Extensions\PushNotification\IPushNotificationProvider;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 
 /**
  * Class Microsoft
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Microsoft implements IPushNotificationProvider {
+class Microsoft implements IQuarkPushNotificationProvider {
 	const TYPE = 'windows';
 
 	const OPTION_CLIENT_ID = 'client_id';

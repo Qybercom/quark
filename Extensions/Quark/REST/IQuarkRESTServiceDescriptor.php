@@ -14,5 +14,5 @@ interface IQuarkRESTServiceDescriptor {
 	 *
 	 * @return string
 	 */
-	function IdentifyModel(IQuarkModel $model);
+	public function IdentifyModel(IQuarkModel $model);
 }

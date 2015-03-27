@@ -605,7 +605,7 @@ class QuarkConfig {
 		try {
 			QuarkModel::Source($name, $provider)->Connect($uri);
 		}
-		catch (QuarkConnectionException $e) {
+		catch (\Exception $e) {
 			Quark::Log('Unable to connect \'' . $name . '\'', Quark::LOG_FATAL);
 			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array(
 				'name' => $name,
@@ -615,36 +615,26 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param IQuarkExtension $extension
+	 * @param string $name
 	 * @param IQuarkExtensionConfig $config
 	 *
-	 * @return IQuarkExtension
+	 * @return IQuarkExtensionConfig
 	 */
-	public function Extension (IQuarkExtension $extension, IQuarkExtensionConfig $config = null) {
-		$class = get_class($extension);
-
+	public function Extension ($name, IQuarkExtensionConfig $config = null) {
 		try {
-			if ($extension == null)
-				throw new QuarkArchException(' Provided extension in QuarkConfig is null');
+			if (func_num_args() == 2)
+				$this->_extensions[$name] = $config;
 
-			foreach ($this->_extensions as $item)
-				if (get_class($item) == $class) return $item;
-
-			if ($extension instanceof IQuarkConfigurableExtension)
-				$extension->Init($config);
-
-			$this->_extensions[] = $extension;
+			return isset($this->_extensions[$name]) ? $this->_extensions[$name] : null;
 		}
-		catch (QuarkConnectionException $e) {
-			Quark::Log('Extension connection failure in \'' . $class . '\' ' . $e->message, Quark::LOG_FATAL);
-			Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, array('extension' => $extension));
-		}
-		catch (QuarkArchException $e) {
-			Quark::Log('Extension architecture failure in \'' . $class . '\' ' . $e->message, Quark::LOG_FATAL);
-			Quark::Dispatch(Quark::EVENT_ARCH_EXCEPTION, array('extension' => $extension));
-		}
+		catch (\Exception $e) {
+			Quark::Log('Unable to config extension of \'' . $name . '\'', Quark::LOG_FATAL);
+			Quark::Dispatch(Quark::EVENT_COMMON_EXCEPTION, array(
+				'name' => $name
+			));
 
-		return $extension;
+			return null;
+		}
 	}
 
 	/**
@@ -918,20 +908,6 @@ class QuarkService {
 interface IQuarkExtension { }
 
 /**
- * Interface IQuarkConfigurableExtension
- *
- * @package Quark
- */
-interface IQuarkConfigurableExtension {
-	/**
-	 * @param IQuarkExtensionConfig $config
-	 *
-	 * @return mixed
-	 */
-	function Init(IQuarkExtensionConfig $config);
-}
-
-/**
  * Interface IQuarkExtensionConfig
  *
  * @package Quark
@@ -951,7 +927,7 @@ interface IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	function Initialize($name, QuarkDTO $request, $lifetime);
+	public function Initialize($name, QuarkDTO $request, $lifetime);
 
 	/**
 	 * @param string $name
@@ -960,7 +936,7 @@ interface IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	function Trail($name, QuarkDTO $response, QuarkModel $user);
+	public function Trail($name, QuarkDTO $response, QuarkModel $user);
 
 	/**
 	 * @param string $name
@@ -969,21 +945,21 @@ interface IQuarkAuthorizationProvider {
 	 *
 	 * @return bool
 	 */
-	function Login($name, QuarkModel $model, $criteria);
+	public function Login($name, QuarkModel $model, $criteria);
 
 	/**
 	 * @param string $name
 	 *
 	 * @return bool
 	 */
-	function Logout($name);
+	public function Logout($name);
 
 	/**
 	 * @param string $name
 	 *
 	 * @return string
 	 */
-	function Signature($name);
+	public function Signature($name);
 }
 
 /**
@@ -995,7 +971,7 @@ interface IQuarkAuthorizableService {
 	/**
 	 * @return string
 	 */
-	function AuthorizationProvider();
+	public function AuthorizationProvider();
 
 	/**
 	 * @param QuarkDTO $request
@@ -1003,12 +979,12 @@ interface IQuarkAuthorizableService {
 	 *
 	 * @return bool
 	 */
-	function AuthorizationCriteria(QuarkDTO $request, QuarkSession $session);
+	public function AuthorizationCriteria(QuarkDTO $request, QuarkSession $session);
 
 	/**
 	 * @return mixed
 	 */
-	function AuthorizationFailed();
+	public function AuthorizationFailed();
 }
 
 /**
@@ -1020,7 +996,7 @@ interface IQuarkAuthorizableLiteService {
 	/**
 	 * @return string
 	 */
-	function AuthorizationProvider();
+	public function AuthorizationProvider();
 }
 
 /**
@@ -1034,7 +1010,7 @@ interface IQuarkAuthorizableModel {
 	 *
 	 * @return mixed
 	 */
-	function Authorize($criteria);
+	public function Authorize($criteria);
 
 	/**
 	 * @param IQuarkAuthorizationProvider $provider
@@ -1042,7 +1018,7 @@ interface IQuarkAuthorizableModel {
 	 *
 	 * @return mixed
 	 */
-	function RenewSession(IQuarkAuthorizationProvider $provider, $request);
+	public function RenewSession(IQuarkAuthorizationProvider $provider, $request);
 }
 
 
@@ -1065,7 +1041,7 @@ interface IQuarkAnyService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Any(QuarkDTO $request, QuarkSession $session);
+	public function Any(QuarkDTO $request, QuarkSession $session);
 }
 
 /**
@@ -1080,7 +1056,7 @@ interface IQuarkGetService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Get(QuarkDTO $request, QuarkSession $session);
+	public function Get(QuarkDTO $request, QuarkSession $session);
 }
 
 /**
@@ -1095,7 +1071,7 @@ interface IQuarkPostService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Post(QuarkDTO $request, QuarkSession $session);
+	public function Post(QuarkDTO $request, QuarkSession $session);
 }
 
 /**
@@ -1107,7 +1083,7 @@ interface IQuarkServiceWithCustomProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
-	function Processor();
+	public function Processor();
 }
 
 /**
@@ -1119,7 +1095,7 @@ interface IQuarkServiceWithCustomRequestProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
-	function RequestProcessor();
+	public function RequestProcessor();
 }
 
 /**
@@ -1131,7 +1107,7 @@ interface IQuarkServiceWithCustomResponseProcessor {
 	/**
 	 * @return IQuarkIOProcessor
 	 */
-	function ResponseProcessor();
+	public function ResponseProcessor();
 }
 
 /**
@@ -1143,7 +1119,7 @@ interface IQuarkStrongService {
 	/**
 	 * @return array
 	 */
-	function InputFilter();
+	public function InputFilter();
 }
 
 /**
@@ -1155,7 +1131,7 @@ interface IQuarkServiceWithAccessControl {
 	/**
 	 * @return string
 	 */
-	function AllowOrigin();
+	public function AllowOrigin();
 }
 
 /**
@@ -1167,7 +1143,7 @@ interface IQuarkSignedAnyService {
 	/**
 	 * @return mixed
 	 */
-	function SignatureCheckFailedOnAny();
+	public function SignatureCheckFailedOnAny();
 }
 
 /**
@@ -1179,7 +1155,7 @@ interface IQuarkSignedGetService {
 	/**
 	 * @return mixed
 	 */
-	function SignatureCheckFailedOnGet();
+	public function SignatureCheckFailedOnGet();
 }
 
 /**
@@ -1191,7 +1167,7 @@ interface IQuarkSignedPostService {
 	/**
 	 * @return mixed
 	 */
-	function SignatureCheckFailedOnPost();
+	public function SignatureCheckFailedOnPost();
 }
 
 /**
@@ -1244,7 +1220,7 @@ interface IQuarkTask extends IQuarkService {
 	/**
 	 * @return mixed
 	 */
-	function Action();
+	public function Action();
 }
 
 /**
@@ -1258,7 +1234,7 @@ interface IQuarkScheduledTask {
 	 *
 	 * @return bool
 	 */
-	function LaunchCriteria($previous);
+	public function LaunchCriteria($previous);
 }
 
 /**
@@ -1569,7 +1545,7 @@ interface IQuarkViewModel {
 	/**
 	 * @return string
 	 */
-	function View();
+	public function View();
 }
 
 /**
@@ -1581,7 +1557,7 @@ interface IQuarkAuthorizableViewModel {
 	/**
 	 * @return string
 	 */
-	function AuthProvider();
+	public function AuthProvider();
 }
 
 /**
@@ -1593,7 +1569,7 @@ interface IQuarkViewModelWithResources extends IQuarkViewModel {
 	/**
 	 * @return array
 	 */
-	function Resources();
+	public function Resources();
 }
 
 /**
@@ -1605,7 +1581,7 @@ interface IQuarkViewModelWithCachedResources extends IQuarkViewModel {
 	/**
 	 * @return array
 	 */
-	function CachedResources();
+	public function CachedResources();
 }
 
 /**
@@ -1617,12 +1593,12 @@ interface IQuarkViewResource {
 	/**
 	 * @return string
 	 */
-	function Location();
+	public function Location();
 
 	/**
 	 * @return string
 	 */
-	function Type();
+	public function Type();
 }
 
 /**
@@ -1634,7 +1610,7 @@ interface IQuarkViewResourceWithDependencies {
 	/**
 	 * @return array
 	 */
-	function Dependencies();
+	public function Dependencies();
 }
 
 /**
@@ -1646,7 +1622,7 @@ interface IQuarkLocalViewResource {
 	/**
 	 * @return bool
 	 */
-	function CacheControl();
+	public function CacheControl();
 }
 
 /**
@@ -1658,7 +1634,7 @@ interface IQuarkForeignViewResource {
 	/**
 	 * @return QuarkDTO
 	 */
-	function RequestDTO();
+	public function RequestDTO();
 }
 
 /**
@@ -1772,7 +1748,7 @@ interface IQuarkViewResourceType {
 	 *
 	 * @return string
 	 */
-	function Container($location, $content);
+	public function Container($location, $content);
 }
 
 /**
@@ -2593,12 +2569,12 @@ interface IQuarkModel {
 	/**
 	 * @return mixed
 	 */
-	function Fields();
+	public function Fields();
 
 	/**
 	 * @return mixed
 	 */
-	function Rules();
+	public function Rules();
 }
 
 /**
@@ -2610,7 +2586,7 @@ interface IQuarkModelWithDataProvider {
 	/**
 	 * @return string
 	 */
-	function DataProvider();
+	public function DataProvider();
 }
 
 /**
@@ -2624,12 +2600,12 @@ interface IQuarkLinkedModel {
 	 *
 	 * @return mixed
 	 */
-	function Link($raw);
+	public function Link($raw);
 
 	/**
 	 * @return mixed
 	 */
-	function Unlink();
+	public function Unlink();
 }
 
 /**
@@ -2655,7 +2631,7 @@ interface IQuarkModelWithCustomPrimaryKey {
 	/**
 	 * @return string
 	 */
-	function PrimaryKey();
+	public function PrimaryKey();
 }
 
 /**
@@ -2668,7 +2644,7 @@ interface IQuarkModelWithAfterFind {
 	 *
 	 * @return mixed
 	 */
-	function AfterFind($raw);
+	public function AfterFind($raw);
 }
 
 /**
@@ -2682,7 +2658,7 @@ interface IQuarkModelWithOnPopulate {
 	 *
 	 * @return mixed
 	 */
-	function OnPopulate($raw);
+	public function OnPopulate($raw);
 }
 
 /**
@@ -2696,7 +2672,7 @@ interface IQuarkModelWithBeforeCreate {
 	 *
 	 * @return mixed
 	 */
-	function BeforeCreate($options);
+	public function BeforeCreate($options);
 }
 
 /**
@@ -2710,7 +2686,7 @@ interface IQuarkModelWithBeforeSave {
 	 *
 	 * @return mixed
 	 */
-	function BeforeSave($options);
+	public function BeforeSave($options);
 }
 
 /**
@@ -2724,7 +2700,7 @@ interface IQuarkModelWithBeforeRemove {
 	 *
 	 * @return mixed
 	 */
-	function BeforeRemove($options);
+	public function BeforeRemove($options);
 }
 
 /**
@@ -2736,7 +2712,7 @@ interface IQuarkModelWithBeforeValidate {
 	/**
 	 * @return mixed
 	 */
-	function BeforeValidate();
+	public function BeforeValidate();
 }
 
 /**
@@ -2748,7 +2724,7 @@ interface IQuarkModelWithBeforeExtract {
 	/**
 	 * @return mixed
 	 */
-	function BeforeExtract();
+	public function BeforeExtract();
 }
 
 /**
@@ -2761,33 +2737,33 @@ interface IQuarkDataProvider {
 	 *
 	 * @return mixed
 	 */
-	function Connect(QuarkURI $uri);
+	public function Connect(QuarkURI $uri);
 
 	/**
 	 * @return QuarkURI
 	 */
-	function SourceURI();
+	public function SourceURI();
 
 	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return mixed
 	 */
-	function Create(IQuarkModel $model);
+	public function Create(IQuarkModel $model);
 
 	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return mixed
 	 */
-	function Save(IQuarkModel $model);
+	public function Save(IQuarkModel $model);
 
 	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return mixed
 	 */
-	function Remove(IQuarkModel $model);
+	public function Remove(IQuarkModel $model);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2795,7 +2771,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return array
 	 */
-	function Find(IQuarkModel $model, $criteria);
+	public function Find(IQuarkModel $model, $criteria);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2803,7 +2779,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return mixed
 	 */
-	function FindOne(IQuarkModel $model, $criteria);
+	public function FindOne(IQuarkModel $model, $criteria);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2811,7 +2787,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return mixed
 	 */
-	function FindOneById(IQuarkModel $model, $id);
+	public function FindOneById(IQuarkModel $model, $id);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2820,7 +2796,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return mixed
 	 */
-	function Update(IQuarkModel $model, $criteria, $options);
+	public function Update(IQuarkModel $model, $criteria, $options);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2829,7 +2805,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return mixed
 	 */
-	function Delete(IQuarkModel $model, $criteria, $options);
+	public function Delete(IQuarkModel $model, $criteria, $options);
 
 	/**
 	 * @param IQuarkModel $model
@@ -2839,7 +2815,7 @@ interface IQuarkDataProvider {
 	 *
 	 * @return int
 	 */
-	function Count (IQuarkModel $model, $criteria, $limit, $skip);
+	public function Count (IQuarkModel $model, $criteria, $limit, $skip);
 }
 
 /**
@@ -3783,6 +3759,11 @@ class QuarkDTO {
 	const HEADER_AUTHORIZATION = 'Authorization';
 
 	/**
+	 * @var string $_raw
+	 */
+	private $_raw = '';
+
+	/**
 	 * @var IQuarkIOProcessor $_processor
 	 */
 	private $_processor = null;
@@ -3913,7 +3894,7 @@ class QuarkDTO {
 			$query .= "\r\n";
 		}
 
-		return $query . $data;
+		return $this->_raw = $query . $data;
 	}
 
 	/**
@@ -3922,6 +3903,8 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	public function Unserialize ($raw) {
+		$this->_raw = $raw;
+
 		if (preg_match_all('#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw, $found, PREG_SET_ORDER) == 0) return null;
 
 		$http = $found[0];
@@ -4108,14 +4091,14 @@ interface IQuarkTransportProvider {
 	 *
 	 * @return mixed
 	 */
-	function Setup(QuarkURI $uri, QuarkCertificate $certificate = null);
+	public function Setup(QuarkURI $uri, QuarkCertificate $certificate = null);
 
 	/**
 	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
-	function Action(QuarkClient $client);
+	public function Action(QuarkClient $client);
 }
 
 /**
@@ -4167,9 +4150,6 @@ class QuarkHTTPTransport implements IQuarkTransportProvider {
 		$client->Send($request = $this->_request->Serialize());
 		$this->_response->Unserialize($response = $client->Receive());
 		$client->Close();
-
-		//var_dump($request);
-		//var_dump($response);
 
 		return $this->_response;
 	}
@@ -4541,17 +4521,17 @@ interface IQuarkCulture {
 	/**
 	 * @return string
 	 */
-	function DateTimeFormat();
+	public function DateTimeFormat();
 
 	/**
 	 * @return string
 	 */
-	function DateFormat();
+	public function DateFormat();
 
 	/**
 	 * @return string
 	 */
-	function TimeFormat();
+	public function TimeFormat();
 }
 
 /**
@@ -4680,19 +4660,19 @@ interface IQuarkIOProcessor {
 	/**
 	 * @return string
 	 */
-	function MimeType();
+	public function MimeType();
 
 	/**
 	 * @param $data
 	 * @return mixed
 	 */
-	function Encode($data);
+	public function Encode($data);
 
 	/**
 	 * @param $raw
 	 * @return mixed
 	 */
-	function Decode($raw);
+	public function Decode($raw);
 }
 
 /**
@@ -4706,7 +4686,7 @@ interface IQuarkIOProcessorWithCustomHeaders {
 	 *
 	 * @return array
 	 */
-	function Headers($headers);
+	public function Headers($headers);
 }
 
 /**
@@ -4718,7 +4698,7 @@ interface IQuarkIOProcessorWithMultipartControl {
 	/**
 	 * @return bool
 	 */
-	function MultipartControl();
+	public function MultipartControl();
 }
 
 /**

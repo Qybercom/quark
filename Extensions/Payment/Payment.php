@@ -2,11 +2,8 @@
 namespace Quark\Extensions\Payment;
 
 use Quark\IQuarkExtension;
+
 use Quark\Quark;
-use Quark\QuarkClient;
-use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransport;
-use Quark\QuarkJSONIOProcessor;
 
 /**
  * Class Payment
@@ -20,15 +17,21 @@ class Payment implements IQuarkExtension {
 	const CURRENCY_EUR = 'EUR';
 
 	/**
-	 * @var IPaymentScenario $_scenario
+	 * @var IQuarkPaymentConfig $_config
+	 */
+	private $_config;
+
+	/**
+	 * @var IQuarkPaymentScenario $_scenario
 	 */
 	private $_scenario;
 
 	/**
-	 * @param string $provider
-	 * @param IPaymentScenario $scenario
+	 * @param string $config
+	 * @param IQuarkPaymentScenario $scenario
 	 */
-	public function __construct ($provider, IPaymentScenario $scenario) {
+	public function __construct ($config, IQuarkPaymentScenario $scenario) {
+		$this->_config = Quark::Config()->Extension($config);
 		$this->_scenario = $scenario;
 	}
 
@@ -65,20 +68,10 @@ class Payment implements IQuarkExtension {
 	 * @return mixed
 	 */
 	public function Pay ($currency, $amount) {
-		$user = 'pk_99d30b422ee37453692a9c95c521f';
-		$pass = 'f6efa738f6e569fdfbe5e75fd1193a1d';
+		if ($this->_config == null) return false;
 
-		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
-		$request->Header(
-			QuarkDTO::HEADER_AUTHORIZATION,
-			'Basic ' . base64_encode($user . ':' . $pass)
-		);
+		$this->_config->Money($currency, $amount);
 
-		$response = new QuarkDTO(new QuarkJSONIOProcessor());
-
-		$http = new QuarkClient('https://api.cloudpayments.ru/test', new QuarkHTTPTransport($request, $response));
-		$http->ip = false;
-
-		return $http->Action();
+		return $this->_scenario->Pay($this->_config);
 	}
 }

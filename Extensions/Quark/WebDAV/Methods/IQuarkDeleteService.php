@@ -13,5 +13,5 @@ interface IQuarkDeleteService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Delete(QuarkDTO $request, QuarkSession $session);
+	public function Delete(QuarkDTO $request, QuarkSession $session);
 }

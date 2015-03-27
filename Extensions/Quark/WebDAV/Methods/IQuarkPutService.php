@@ -13,5 +13,5 @@ interface IQuarkPutService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Put(QuarkDTO $request, QuarkSession $session);
+	public function Put(QuarkDTO $request, QuarkSession $session);
 }

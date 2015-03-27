@@ -3,8 +3,6 @@ namespace Quark\Extensions\Facebook;
 
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkExtension;
-use Quark\IQuarkExtensionConfig;
-use Quark\IQuarkConfigurableExtension;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
@@ -18,19 +16,8 @@ use Facebook\FacebookRequestException;
  *
  * @package Quark\Extensions\Facebook
  */
-class Facebook implements IQuarkAuthorizationProvider, IQuarkExtension, IQuarkConfigurableExtension {
+class Facebook implements IQuarkAuthorizationProvider, IQuarkExtension {
 	private $_session;
-
-	/**
-	 * @param IQuarkExtensionConfig $config
-	 *
-	 * @return mixed
-	 */
-	public function Init (IQuarkExtensionConfig $config) {
-		Quark::Import(__DIR__ . '/facebook-php-sdk-v4/src/');
-
-		FacebookSession::setDefaultApplication($config->appId, $config->appSecret);
-	}
 
 	/**
 	 * @param string $name
