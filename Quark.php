@@ -2022,6 +2022,62 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 }
 
 /**
+ * Class QuarkModelBehavior
+ *
+ * @package Quark
+ */
+trait QuarkModelBehavior {
+	/**
+	 * @var QuarkModel $__parent
+	 */
+	private $__parent;
+
+	/**
+	 * @param $method
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	private function _call ($method, $options) {
+		$parent = &$this->__parent;
+		unset($this->__parent);
+
+		$result = call_user_func_array(array($parent, $method), $options);
+
+		$this->__parent = &$parent;
+
+		return $result;
+	}
+
+	/**
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Create ($options = []) {
+		return $this->_call('Create', $options);
+	}
+
+	/**
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Save ($options = []) {
+		return $this->_call('Save', $options);
+	}
+
+	/**
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Remove ($options = []) {
+		return $this->_call('Remove', $options);
+	}
+}
+
+/**
  * Class QuarkModel
  *
  * @package Quark
@@ -2084,7 +2140,7 @@ class QuarkModel {
 	}
 
 	/**
-	 * @var IQuarkModel|null
+	 * @var IQuarkModel|QuarkModelBehavior|null
 	 */
 	private $_model = null;
 
@@ -2102,6 +2158,17 @@ class QuarkModel {
 			$source = $source->Model();
 
 		$this->PopulateWith($source);
+
+		try {
+			$reflection = new \ReflectionObject($this->_model);
+
+			$_parent = $reflection->getProperty('__parent');
+			$_parent->setAccessible(true);
+			$_parent->setValue($this->_model, $this);
+		}
+		catch (\Exception $e) {
+
+		}
 	}
 
 	/**
@@ -2440,9 +2507,9 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param $options
+	 * @param array $options
 	 *
-	 * @return bool
+	 * @return mixed
 	 */
 	public function Create ($options = []) {
 		return $this->_op('Create', $options);
@@ -2458,7 +2525,7 @@ class QuarkModel {
 	}
 
 	/**
-	 * @param $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
