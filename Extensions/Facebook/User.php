@@ -2,7 +2,6 @@
 namespace Quark\Extensions\Facebook;
 
 use Quark\IQuarkExtension;
-use Quark\IQuarkConfigurableExtension;
 use Quark\IQuarkExtensionConfig;
 
 use Quark\Quark;
@@ -15,7 +14,7 @@ use Facebook\FacebookSession;
  *
  * @package Quark\Extensions\Facebook
  */
-class User implements IQuarkExtension, IQuarkConfigurableExtension {
+class User implements IQuarkExtension {
 	private static $_facebook;
 	private static $_session;
 	private static $_token;

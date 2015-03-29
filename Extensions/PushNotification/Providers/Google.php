@@ -7,14 +7,14 @@ use Quark\QuarkHTTPTransport;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\PushNotification\Device;
-use Quark\Extensions\PushNotification\IPushNotificationProvider;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 
 /**
  * Class Google
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Google implements IPushNotificationProvider {
+class Google implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
 
 	private $_devices = array();

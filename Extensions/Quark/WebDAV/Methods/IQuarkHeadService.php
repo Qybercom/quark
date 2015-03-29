@@ -13,5 +13,5 @@ interface IQuarkHeadService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Head(QuarkDTO $request, QuarkSession $session);
+	public function Head(QuarkDTO $request, QuarkSession $session);
 }

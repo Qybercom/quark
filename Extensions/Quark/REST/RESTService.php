@@ -3,8 +3,6 @@ namespace Quark\Extensions\Quark\REST;
 
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkExtension;
-use Quark\IQuarkConfigurableExtension;
-use Quark\IQuarkExtensionConfig;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
@@ -20,7 +18,7 @@ use Quark\QuarkJSONIOProcessor;
  *
  * @package Quark\Extensions\Quark\REST
  */
-class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigurableExtension {
+class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	/**
 	 * @var QuarkURI
 	 */
@@ -35,17 +33,6 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension, IQuarkConfigur
 	 * @var IQuarkRESTServiceDescriptor
 	 */
 	private $_descriptor = null;
-
-	/**
-	 * @param IQuarkExtensionConfig|RESTConfig $config
-	 *
-	 * @return mixed
-	 */
-	public function Init (IQuarkExtensionConfig $config) {
-		$this->_descriptor = $config->Descriptor();
-
-		Quark::Config()->DataProvider($config->Source(), $this, QuarkURI::FromURI($config->Endpoint()));
-	}
 
 	/**
 	 * @param QuarkURI $uri

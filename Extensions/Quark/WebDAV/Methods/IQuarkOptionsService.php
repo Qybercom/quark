@@ -13,5 +13,5 @@ interface IQuarkOptionsService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Options(QuarkDTO $request, QuarkSession $session);
+	public function Options(QuarkDTO $request, QuarkSession $session);
 }

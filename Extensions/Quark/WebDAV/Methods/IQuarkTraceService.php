@@ -13,5 +13,5 @@ interface IQuarkTraceService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Trace(QuarkDTO $request, QuarkSession $session);
+	public function Trace(QuarkDTO $request, QuarkSession $session);
 }

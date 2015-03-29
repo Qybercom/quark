@@ -13,5 +13,5 @@ interface IQuarkCopyService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Copy(QuarkDTO $request, QuarkSession $session);
+	public function Copy(QuarkDTO $request, QuarkSession $session);
 }

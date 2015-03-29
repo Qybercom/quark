@@ -10,14 +10,14 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkURI;
 
 use Quark\Extensions\PushNotification\Device;
-use Quark\Extensions\PushNotification\IPushNotificationProvider;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 
 /**
  * Class Apple
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Apple extends QuarkJSONIOProcessor implements IPushNotificationProvider, IQuarkTransportProvider {
+class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProvider {
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';

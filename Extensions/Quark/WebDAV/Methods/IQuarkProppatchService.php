@@ -13,5 +13,5 @@ interface IQuarkProppatchService extends IQuarkService {
 	 *
 	 * @return mixed
 	 */
-	function Proppatch(QuarkDTO $request, QuarkSession $session);
+	public function Proppatch(QuarkDTO $request, QuarkSession $session);
 }
