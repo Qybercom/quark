@@ -137,6 +137,11 @@ class Microsoft implements IQuarkPushNotificationProvider {
 	}
 }
 
+/**
+ * Class MicrosoftNotificationTemplate
+ *
+ * @package Quark\Extensions\PushNotification\Providers
+ */
 class MicrosoftNotificationTemplate {
 	const TOAST_TEXT_02 = 'ToastText02';
 
