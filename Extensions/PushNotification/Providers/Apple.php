@@ -75,10 +75,11 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 
 	/**
 	 * @param $payload
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Send ($payload) {
+	public function Send($payload, $options = []) {
 		if ($this->_certificate == null) return false;
 
 		if (is_scalar($payload))

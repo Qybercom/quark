@@ -22,6 +22,10 @@ class Microsoft implements IQuarkPushNotificationProvider {
 	const OPTION_CLIENT_ID = 'client_id';
 	const OPTION_CLIENT_SECRET = 'client_secret';
 
+	const OPTION_TYPE = 'type';
+	const OPTION_VALUE = 'value';
+	const OPTION_VISUAL = 'visual';
+
 	const HEADER_STATUS = 'X-WNS-STATUS';
 	const HEADER_NOTIFICATION_STATUS = 'X-WNS-NOTIFICATIONSTATUS';
 	const HEADER_MESSAGE_ID = 'X-WNS-MSG-ID';
@@ -84,28 +88,38 @@ class Microsoft implements IQuarkPushNotificationProvider {
 
 	/**
 	 * @param $payload
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Send ($payload) {
+	public function Send($payload, $options = []) {
+		$type = isset($options[self::OPTION_TYPE]) ? $options[self::OPTION_TYPE] : self::TYPE_TOAST;
+		$badge = isset($options[self::OPTION_VALUE]) ? $options[self::OPTION_VALUE] : null;
+
+		$visual = '';
+		$elems = isset($options[self::OPTION_VISUAL]) && is_array($options[self::OPTION_VISUAL])
+			? $options[self::OPTION_VISUAL]
+			: array();
+
+		foreach ($elems as $elem)
+			if ($elem instanceof MicrosoftNotificationTemplate)
+				$visual .= $elem->Binding();
+
 		$request = new QuarkDTO(new QuarkPlainIOProcessor());
 		$request->Method('POST');
 		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'Bearer ' . $this->_token());
-		$request->Header('X-WNS-Type', 'wns/toast');
+		$request->Header('X-WNS-Type', $type);
 		$request->Header(QuarkDTO::HEADER_CONTENT_TYPE, 'text/xml');
 
-		$data = '<?xml version="1.0" encoding="utf-8"?>
-			<toast>
-				<visual>
-					<binding template="ToastText02">
-						<text id="1">' . $payload->header . '</text>
-						<text id="2">' . $payload->comment . '</text>
-					</binding>
-				</visual>
-				<data>' . json_encode($payload) . '</data>
-			</toast>';
+		$type = str_replace('wns/', '', $type);
 
-		$request->Data($data);
+		$data = '<?xml version="1.0" encoding="utf-8"?>
+			<' . $type . ($badge === null ? '' : ' value="' . $badge . '"') .'>'
+				. ($type == self::TYPE_BADGE ? '' : '<visual>' . $visual . '</visual>')
+				. '<data>' . json_encode($payload) . '</data>
+			</' . $type . '>';
+
+		$request->Data($data);print_r($request);return true;
 
 		$response = new QuarkDTO(new QuarkPlainIOProcessor());
 
@@ -120,5 +134,89 @@ class Microsoft implements IQuarkPushNotificationProvider {
 	 */
 	public function Reset () {
 		$this->_devices = array();
+	}
+}
+
+class MicrosoftNotificationTemplate {
+	const TOAST_TEXT_02 = 'ToastText02';
+
+	/**
+	 * @var string $_name
+	 */
+	private $_name = '';
+
+	/**
+	 * @var string $_fallback
+	 */
+	private $_fallback = '';
+
+	/**
+	 * @var string $_elements
+	 */
+	private $_elements = '';
+
+	/**
+	 * @var int $_images
+	 */
+	private $_images = 1;
+
+	/**
+	 * @var int $_texts
+	 */
+	private $_texts = 1;
+
+	/**
+	 * @param string $name
+	 * @param string $fallback
+	 */
+	public function __construct ($name, $fallback = '') {
+		$this->_name = $name;
+		$this->_fallback = $fallback;
+	}
+
+	/**
+	 * @param $elem
+	 * @param $id
+	 *
+	 * @return mixed
+	 */
+	public function _id ($elem, $id) {
+		$elem = '_' . $elem . 's';
+
+		return $id === null || !is_scalar($id) ? $this->$elem++ : $id;
+	}
+
+	/**
+	 * @param string $contents
+	 * @param string $id
+	 *
+	 * @return MicrosoftNotificationTemplate
+	 */
+	public function Text ($contents, $id = null) {
+		$this->_elements .= '<text id="' . $this->_id('text', $id) . '">' . $contents . '</text>';
+
+		return $this;
+	}
+
+	/**
+	 * @param string $src
+	 * @param string $alt
+	 * @param string $id
+	 *
+	 * @return MicrosoftNotificationTemplate
+	 */
+	public function Image ($src, $alt = '', $id = null) {
+		$this->_elements .= '<image id="' . $this->_id('image', $id) . '" src="' . $src . '" alt="' . $alt . '" />';
+
+		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Binding () {
+		return '<binding template="' . $this->_name . (strlen($this->_fallback) == 0 ? '' : ' fallback="' . $this->_fallback . '"') . '">'
+				. $this->_elements
+			. '</binding>';
 	}
 }

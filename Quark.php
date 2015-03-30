@@ -2030,23 +2030,33 @@ trait QuarkModelBehavior {
 	/**
 	 * @var QuarkModel $__parent
 	 */
-	private $__parent;
+	private $__container;
 
 	/**
 	 * @param $method
-	 * @param $options
+	 * @param $args
 	 *
 	 * @return mixed
 	 */
-	private function _call ($method, $options) {
-		$parent = &$this->__parent;
-		unset($this->__parent);
+	private function _call ($method, $args) {
+		$parent = &$this->__container;
+		unset($this->__container);
 
-		$result = call_user_func_array(array($parent, $method), $options);
+		$result = call_user_func_array(array($parent, $method), $args);
 
-		$this->__parent = &$parent;
+		$this->__container = &$parent;
 
 		return $result;
+	}
+
+	/**
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
+	 */
+	public function __call ($method, $args) {
+		return $this->_call($method, $args);
 	}
 
 	/**
@@ -2055,7 +2065,7 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Create ($options = []) {
-		return $this->_call('Create', $options);
+		return $this->_call('Create', func_get_args());
 	}
 
 	/**
@@ -2064,7 +2074,7 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		return $this->_call('Save', $options);
+		return $this->_call('Save', func_get_args());
 	}
 
 	/**
@@ -2073,7 +2083,26 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		return $this->_call('Remove', $options);
+		return $this->_call('Remove', func_get_args());
+	}
+
+	/**
+	 * @param $source
+	 *
+	 * @return QuarkModel
+	 */
+	public function PopulateWith ($source) {
+		return $this->_call('PopulateWith', func_get_args());
+	}
+
+	/**
+	 * @param array $fields
+	 * @param bool  $weak
+	 *
+	 * @return \StdClass
+	 */
+	public function Extract ($fields = null, $weak = false) {
+		return $this->_call('Extract', func_get_args());
 	}
 }
 
@@ -2159,16 +2188,13 @@ class QuarkModel {
 
 		$this->PopulateWith($source);
 
-		try {
-			$reflection = new \ReflectionObject($this->_model);
+		$reflection = new \ReflectionObject($this->_model);
 
-			$_parent = $reflection->getProperty('__parent');
-			$_parent->setAccessible(true);
-			$_parent->setValue($this->_model, $this);
-		}
-		catch (\Exception $e) {
+		if (!$reflection->hasProperty('__container')) return;
 
-		}
+		$_this = $reflection->getProperty('__container');
+		$_this->setAccessible(true);
+		$_this->setValue($this->_model, $this);
 	}
 
 	/**
@@ -4503,7 +4529,13 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkModel(new QuarkFile($raw));
+		try {
+			return new QuarkModel(new QuarkFile($raw));
+		}
+		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
+			return null;
+		}
 	}
 
 	/**
@@ -5183,6 +5215,314 @@ class QuarkCertificate {
 
 		return $pem;
 	}
+}
+
+/**
+ * Class QuarkSQL
+ *
+ * @package Quark
+ */
+class QuarkSQL {
+	const FIELD_COUNT_ALL = 'COUNT(*)';
+
+	/**
+	 * @var IQuarkSQLDataProvider $_provider
+	 */
+	private $_provider;
+
+	/**
+	 * @param $path
+	 *
+	 * @return string
+	 */
+	public static function DBName ($path) {
+		return !is_string($path) || strlen($path) == 0 ? '' : ($path[0] == '/' ? substr($path, 1) : $path);
+	}
+
+	/**
+	 * @param IQuarkSQLDataProvider $provider
+	 */
+	public function __construct (IQuarkSQLDataProvider $provider) {
+		$this->_provider = $provider;
+	}
+
+	/**
+	 * @param $model
+	 * @param $options
+	 * @param $query
+	 *
+	 * @return mixed
+	 */
+	public function Query ($model ,$options, $query) {
+		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
+			? $options[QuarkModel::OPTION_COLLECTION]
+			: Quark::ClassOf($model);
+
+		$i = 1;
+		$escape = $this->_provider->EscapeChar();
+		$query = str_replace(self::Collection($model), $escape . $collection . $escape, $query, $i);
+
+		return $this->_provider->Query($query, $options);
+	}
+
+	/**
+	 * @param $model
+	 *
+	 * @return string
+	 */
+	public static function Collection ($model) {
+		return '{collection_' . sha1(print_r($model, true)) . '}';
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return string
+	 */
+	public static function Pk (IQuarkModel $model) {
+		return $model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : 'id';
+	}
+
+	/**
+	 * @param string $field
+	 *
+	 * @return string
+	 */
+	public function Field ($field) {
+		if (!is_string($field)) return '';
+
+		return '"' . $this->_provider->Escape($field) . '"';
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return bool|float|int|string
+	 */
+	public function Value ($value) {
+		if (!is_scalar($value)) return null;
+
+		$output = $this->_provider->Escape($value);
+
+		return is_string($value) ? '\'' . $output . '\'' : $output;
+	}
+
+	/**
+	 * @param        $condition
+	 * @param string $glue
+	 *
+	 * @return string
+	 */
+	public function Condition ($condition, $glue = '') {
+		if (!is_array($condition) || sizeof($condition) == 0) return '';
+
+		$output = array();
+
+		foreach ($condition as $key => $rule) {
+			$field = $this->Field($key);
+			$value = $this->Value($rule);
+
+			if (is_array($rule))
+				$value = self::Condition($rule, ' AND ');
+
+			switch ($field) {
+				case '`$lte`': $output[] = '<=' . $value; break;
+				case '`$lt`': $output[] = '<' . $value; break;
+				case '`$gt`': $output[] = '>' . $value; break;
+				case '`$gte`': $output[] = '>=' . $value; break;
+				case '`$ne`': $output[] = '<>' . $value; break;
+
+				case '`$and`':
+					$value = $this->Condition($rule, ' AND ');
+					$output[] = ' (' . $value . ') ';
+					break;
+
+				case '`$or`':
+					$value = $this->Condition($rule, ' OR ');
+					$output[] = ' (' . $value . ') ';
+					break;
+
+				case '`$nor`':
+					$value = $this->Condition($rule, ' NOT OR ');
+					$output[] = ' (' . $value . ') ';
+					break;
+
+				default:
+					$output[] = !$value ? '' : (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
+					break;
+			}
+		}
+
+		return ($glue == '' ? ' WHERE ' : '') . implode($glue == '' ? ' AND ' : $glue, $output);
+	}
+
+	/**
+	 * @param $options
+	 *
+	 * @return string
+	 */
+	private function _cursor ($options) {
+		$output = '';
+
+		if (isset($options[QuarkModel::OPTION_LIMIT]))
+			$output .= ' LIMIT ' . $this->_provider->Escape($options[QuarkModel::OPTION_LIMIT]);
+
+		if (isset($options[QuarkModel::OPTION_SKIP]))
+			$output .= ' OFFSET ' . $this->_provider->Escape($options[QuarkModel::OPTION_SKIP]);
+
+		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
+			$output .= ' ORDER BY ';
+
+			foreach ($options[QuarkModel::OPTION_SORT] as $key => $order) {
+				switch ($order) {
+					case 1: $sort = 'ASC'; break;
+					case -1: $sort = 'DESC'; break;
+					default: $sort = ''; break;
+				}
+
+				$output .= ' ' . $this->Field($key) . ' ' . $sort;
+			}
+		}
+
+		return $output;
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param $criteria
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Select (IQuarkModel $model, $criteria, $options = []) {
+		$fields = '*';
+
+		if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
+			$fields = '';
+			$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
+			$i = 1;
+
+			foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
+				switch ($field) {
+					case self::FIELD_COUNT_ALL:
+						$key = $field;
+						break;
+
+					default:
+						$key = $this->Field($field);
+						break;
+				}
+
+				$fields = $key . ($i == $count || !$key ? '' : ', ');
+				$i++;
+			}
+		}
+
+		return $this->Query(
+			$model,
+			$options,
+			'SELECT ' . $fields . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
+		);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param array       $options
+	 *
+	 * @return mixed
+	 */
+	public function Insert (IQuarkModel $model, $options = []) {
+		$keys = array();
+		$values = array();
+
+		foreach ($model as $key => $value) {
+			$keys[] = $this->Field($key);
+			$values[] = $this->Value($value);
+		}
+
+		return $this->Query(
+			$model,
+			$options,
+			'INSERT INTO ' . self::Collection($model)
+			. ' (' . implode(', ', $keys) . ') '
+			. 'VALUES (' . implode(', ', $values) . ')'
+		);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param             $criteria
+	 * @param array       $options
+	 *
+	 * @return mixed
+	 */
+	public function Update (IQuarkModel $model, $criteria, $options = []) {
+		$fields = array();
+
+		foreach ($model as $key => $value)
+			$fields[] = $this->Field($key) . '=' . '\'' . $this->Value($value) . '\'';
+
+		return $this->Query(
+			$model,
+			$options,
+			'UPDATE ' . self::Collection($model) . ' SET ' . implode(', ', $fields) . $this->Condition($criteria) . $this->_cursor($options)
+		);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param             $criteria
+	 * @param             $options
+	 *
+	 * @return mixed
+	 */
+	public function Delete (IQuarkModel $model, $criteria, $options) {
+		return $this->Query(
+			$model,
+			$options,
+			'DELETE FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
+		);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param             $criteria
+	 * @param array       $options
+	 *
+	 * @return mixed
+	 */
+	public function Count (IQuarkModel $model, $criteria, $options = []) {
+		return $this->Select($model, $criteria, $options + array(
+			'fields' => array(self::FIELD_COUNT_ALL)
+		));
+	}
+}
+
+/**
+ * Interface IQuarkSQLDataProvider
+ *
+ * @package Quark
+ */
+interface IQuarkSQLDataProvider {
+	/**
+	 * @param string $query
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Query($query, $options);
+
+	/**
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Escape($value);
+
+	/**
+	 * @return string
+	 */
+	public function EscapeChar();
 }
 
 /**

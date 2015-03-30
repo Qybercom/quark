@@ -1,13 +1,14 @@
 <?php
 namespace Quark\DataProviders;
 
-use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
-use Quark\IQuarkModelWithCustomPrimaryKey;
+use Quark\IQuarkDataProvider;
+use Quark\IQuarkSQLDataProvider;
 
 use Quark\Quark;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
+use Quark\QuarkSQL;
 use Quark\QuarkArchException;
 use Quark\QuarkConnectionException;
 
@@ -16,9 +17,7 @@ use Quark\QuarkConnectionException;
  *
  * @package Quark\DataProviders
  */
-class MySQL implements IQuarkDataProvider {
-	const FIELD_COUNT_ALL = 'COUNT(*)';
-
+class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	/**
 	 * @var \mysqli $_connection
 	 */
@@ -28,6 +27,11 @@ class MySQL implements IQuarkDataProvider {
 	 * @var QuarkURI $_uri
 	 */
 	private $_uri;
+
+	/**
+	 * @var QuarkSQL $_sql
+	 */
+	private $_sql;
 
 	/**
 	 * @param QuarkURI $uri
@@ -54,12 +58,13 @@ class MySQL implements IQuarkDataProvider {
 			$uri->host,
 			$uri->user,
 			$uri->pass,
-			$uri->path,
+			QuarkSQL::DBName($uri->path),
 			(int)$uri->port
 		))
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 
 		$this->_uri = $uri;
+		$this->_sql = new QuarkSQL($this);
 	}
 
 	/**
@@ -70,171 +75,13 @@ class MySQL implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param $model
-	 * @param $options
-	 * @param $query
-	 *
-	 * @return bool|\mysqli_result
-	 */
-	private function _query ($model ,$options, $query) {
-		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
-			? $options[QuarkModel::OPTION_COLLECTION]
-			: Quark::ClassOf($model);
-
-		$i = 1;
-		$query = str_replace(self::_collection($model), '`' . $collection . '`', $query, $i);
-
-		$mode = isset($options['mode'])
-			? $options['mode']
-			: MYSQLI_STORE_RESULT;
-
-		return $this->_connection->query($query, $mode);
-	}
-
-	/**
-	 * @param $model
-	 *
-	 * @return string
-	 */
-	private static function _collection ($model) {
-		return '{collection_' . sha1(print_r($model, true)) . '}';
-	}
-
-	/**
-	 * @param IQuarkModel $model
-	 *
-	 * @return string|bool
-	 */
-	private static function _pk (IQuarkModel $model) {
-		return $model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : 'id';
-	}
-
-	/**
-	 * @param string $field
-	 *
-	 * @return string
-	 */
-	private function _field ($field) {
-		if (!is_string($field)) return '';
-
-		return '`' . $this->_connection->real_escape_string($field) . '`';
-	}
-
-	/**
-	 * @param $value
-	 *
-	 * @return bool|float|int|string
-	 */
-	private function _value ($value) {
-		if (!is_scalar($value)) return null;
-
-		$output = $this->_connection->real_escape_string($value);
-
-		return is_string($value) ? '\'' . $output . '\'' : $output;
-	}
-
-	/**
-	 * @param        $condition
-	 * @param string $glue
-	 *
-	 * @return string
-	 */
-	private function _condition ($condition, $glue = '') {
-		if (!is_array($condition) || sizeof($condition) == 0) return '';
-
-		$output = array();
-
-		foreach ($condition as $key => $rule) {
-			$field = $this->_field($key);
-			$value = $this->_value($rule);
-
-			if (is_array($rule))
-				$value = self::_condition($rule, ' AND ');
-
-			switch ($field) {
-				case '`$lte`': $output[] = '<=' . $value; break;
-				case '`$lt`': $output[] = '<' . $value; break;
-				case '`$gt`': $output[] = '>' . $value; break;
-				case '`$gte`': $output[] = '>=' . $value; break;
-				case '`$ne`': $output[] = '<>' . $value; break;
-
-				case '`$and`':
-					$value = self::_condition($rule, ' AND ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				case '`$or`':
-					$value = self::_condition($rule, ' OR ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				case '`$nor`':
-					$value = self::_condition($rule, ' NOT OR ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				default:
-					$output[] = !$value ? '' : (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
-					break;
-			}
-		}
-
-		return ($glue == '' ? ' WHERE ' : '') . implode($glue == '' ? ' AND ' : $glue, $output);
-	}
-
-	/**
-	 * @param $options
-	 *
-	 * @return string
-	 */
-	private function _cursor ($options) {
-		$output = '';
-
-		if (isset($options[QuarkModel::OPTION_LIMIT]))
-			$output .= ' LIMIT ' . $this->_connection->real_escape_string($options[QuarkModel::OPTION_LIMIT]);
-
-		if (isset($options[QuarkModel::OPTION_SKIP]))
-			$output .= ' OFFSET ' . $this->_connection->real_escape_string($options[QuarkModel::OPTION_SKIP]);
-
-		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
-			$output .= ' ORDER BY ';
-
-			foreach ($options[QuarkModel::OPTION_SORT] as $key => $order) {
-				switch ($order) {
-					case 1: $sort = 'ASC'; break;
-					case -1: $sort = 'DESC'; break;
-					default: $sort = ''; break;
-				}
-
-				$output .= ' ' . $this->_field($key) . ' ' . $sort;
-			}
-		}
-
-		return $output;
-	}
-
-	/**
 	 * @param IQuarkModel $model
 	 * @param array       $options
 	 *
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		$keys = array();
-		$values = array();
-
-		foreach ($model as $key => $value) {
-			$keys[] = $this->_field($key);
-			$values[] = $this->_value($value);
-		}
-
-		return $this->_query(
-			$model,
-			$options,
-			'INSERT INTO ' . self::_collection($model)
-				. ' (' . implode(', ', $keys) . ') '
-				. 'VALUES (' . implode(', ', $values) . ')'
-		);
+		return $this->_sql->Insert($model, $options);
 	}
 
 	/**
@@ -244,7 +91,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		$pk = self::_pk($model);
+		$pk = $this->_sql->Pk($model);
 
 		if (!isset($model->$pk)) return false;
 
@@ -260,7 +107,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Remove (IQuarkModel $model, $options = []) {
-		$pk = self::_pk($model);
+		$pk = $this->_sql->Pk($model);
 
 		if (!isset($model->$pk)) return false;
 
@@ -278,7 +125,7 @@ class MySQL implements IQuarkDataProvider {
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
 		$output = array();
-		$records = $this->_select($model, $criteria, $options);
+		$records = $this->_sql->Select($model, $criteria, $options);
 
 		if ($records)
 			foreach ($records as $record)
@@ -309,46 +156,8 @@ class MySQL implements IQuarkDataProvider {
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return $this->FindOne($model, array(
-			self::_pk($model) => $id
+			$this->_sql->Pk($model) => $id
 		), $options);
-	}
-
-	/**
-	 * @param       $model
-	 * @param       $criteria
-	 * @param array $options
-	 *
-	 * @return bool|\mysqli_result
-	 */
-	private function _select ($model, $criteria, $options = []) {
-		$fields = '*';
-
-		if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
-			$fields = '';
-			$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
-			$i = 1;
-
-			foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
-				switch ($field) {
-					case self::FIELD_COUNT_ALL:
-						$key = $field;
-						break;
-
-					default:
-						$key = $this->_field($field);
-						break;
-				}
-
-				$fields = $key . ($i == $count || !$key ? '' : ', ');
-				$i++;
-			}
-		}
-
-		return $this->_query(
-			$model,
-			$options,
-			'SELECT ' . $fields . ' FROM ' . self::_collection($model) . $this->_condition($criteria) . $this->_cursor($options)
-		);
 	}
 
 	/**
@@ -359,16 +168,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options) {
-		$fields = array();
-
-		foreach ($model as $key => $value)
-			$fields[] = $this->_field($key) . '=' . '\'' . $this->_value($value) . '\'';
-
-		return $this->_query(
-			$model,
-			$options,
-			'UPDATE ' . self::_collection($model) . ' SET ' . implode(', ', $fields) . $this->_condition($criteria) . $this->_cursor($options)
-		);
+		return $this->_sql->Update($model, $criteria, $options);
 	}
 
 	/**
@@ -379,11 +179,7 @@ class MySQL implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Delete (IQuarkModel $model, $criteria, $options) {
-		return $this->_query(
-			$model,
-			$options,
-			'DELETE FROM ' . self::_collection($model) . $this->_condition($criteria) . $this->_cursor($options)
-		);
+		return $this->_sql->Delete($model, $criteria, $options);
 	}
 
 	/**
@@ -396,10 +192,42 @@ class MySQL implements IQuarkDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
-		$result = $this->_select($model, $criteria, $options + array(
-			'fields' => array(self::FIELD_COUNT_ALL)
-		));
+		$result = $this->_sql->Count($model, $criteria, $options + array(
+				QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
+				QuarkModel::OPTION_SKIP => $skip,
+				QuarkModel::OPTION_LIMIT => $limit
+			));
 
 		return !$result ? 0 : (int)$result->fetch_row()[0];
+	}
+
+	/**
+	 * @param string $query
+	 * @param array  $options
+	 *
+	 * @return mixed
+	 */
+	public function Query ($query, $options) {
+		$mode = isset($options['mode'])
+			? $options['mode']
+			: MYSQLI_STORE_RESULT;
+
+		return $this->_connection->query($query, $mode);
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Escape ($value) {
+		return $this->_connection->real_escape_string($value);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function EscapeChar () {
+		return '`';
 	}
 }

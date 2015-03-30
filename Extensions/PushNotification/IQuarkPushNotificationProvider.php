@@ -22,10 +22,11 @@ interface IQuarkPushNotificationProvider {
 
 	/**
 	 * @param $payload
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Send($payload);
+	public function Send($payload, $options = []);
 
 	/**
 	 * @return mixed

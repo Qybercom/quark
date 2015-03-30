@@ -44,10 +44,11 @@ class Google implements IQuarkPushNotificationProvider {
 
 	/**
 	 * @param $payload
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Send ($payload) {
+	public function Send($payload, $options = []) {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 		$request->Header('Authorization', 'key=' . $this->_key);
 		$request->Data(array(
