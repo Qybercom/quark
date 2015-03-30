@@ -27,9 +27,9 @@ class PushNotification implements IQuarkExtension {
 	private $_devices = array();
 
 	/**
-	 * @var array $_vendors
+	 * @var array $_options
 	 */
-	private $_vendors = array();
+	private $_options = array();
 
 	/**
 	 * @param string $config
@@ -63,8 +63,8 @@ class PushNotification implements IQuarkExtension {
 	 * @param IQuarkPushNotificationProvider $provider
 	 * @param array                          $options
 	 */
-	public function Vendor (IQuarkPushNotificationProvider $provider, $options = []) {
-		$this->_vendors[$provider->Type()] = $options;
+	public function Options (IQuarkPushNotificationProvider $provider, $options = []) {
+		$this->_options[$provider->Type()] = $options;
 	}
 
 	/**
@@ -79,8 +79,8 @@ class PushNotification implements IQuarkExtension {
 				if ($device->type == $provider->Type())
 					$provider->Device($device);
 
-			$ok &= $provider->Send($this->_payload, isset($this->_vendors[$provider->Type()])
-				? $this->_vendors[$provider->Type()]
+			$ok &= $provider->Send($this->_payload, isset($this->_options[$provider->Type()])
+				? $this->_options[$provider->Type()]
 				: array());
 			$provider->Reset();
 		}

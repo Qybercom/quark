@@ -97,11 +97,11 @@ class Microsoft implements IQuarkPushNotificationProvider {
 		$badge = isset($options[self::OPTION_VALUE]) ? $options[self::OPTION_VALUE] : null;
 
 		$visual = '';
-		$elems = isset($options[self::OPTION_VISUAL]) && is_array($options[self::OPTION_VISUAL])
+		$templates = isset($options[self::OPTION_VISUAL]) && is_array($options[self::OPTION_VISUAL])
 			? $options[self::OPTION_VISUAL]
 			: array();
 
-		foreach ($elems as $elem)
+		foreach ($templates as $elem)
 			if ($elem instanceof MicrosoftNotificationTemplate)
 				$visual .= $elem->Binding();
 
@@ -119,7 +119,7 @@ class Microsoft implements IQuarkPushNotificationProvider {
 				. '<data>' . json_encode($payload) . '</data>
 			</' . $type . '>';
 
-		$request->Data($data);print_r($request);return true;
+		$request->Data($data);
 
 		$response = new QuarkDTO(new QuarkPlainIOProcessor());
 
@@ -172,6 +172,9 @@ class MicrosoftNotificationTemplate {
 	public function __construct ($name, $fallback = '') {
 		$this->_name = $name;
 		$this->_fallback = $fallback;
+
+		$this->_images = 1;
+		$this->_texts = 1;
 	}
 
 	/**

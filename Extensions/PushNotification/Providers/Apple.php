@@ -23,6 +23,10 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	const OPTION_CERTIFICATE = 'certificate';
 	const OPTION_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
 
+	const OPTION_ALERT = 'alert';
+	const OPTION_BADGE = 'badge';
+	const OPTION_SOUND = 'sound';
+
 	/**
 	 * @var QuarkURI $_uri
 	 */
@@ -82,20 +86,21 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	public function Send($payload, $options = []) {
 		if ($this->_certificate == null) return false;
 
-		if (is_scalar($payload))
-			$payload = array(
-				'aps' => array(
-					'alert' => $payload
-				)
-			);
+		$alert = isset($options[self::OPTION_ALERT]) ? $options[self::OPTION_ALERT] : '';
+		$data = $payload;
+
+		if (is_scalar($payload)) {
+			$alert = $payload;
+			$data = array();
+		}
 
 		$this->_payload = array(
 			'aps' => array(
-				'alert' => '',
-				'badge' => 1,
-				'sound' => 'default'
+				'alert' => $alert,
+				'badge' => isset($options[self::OPTION_BADGE]) ? $options[self::OPTION_BADGE] : 1,
+				'sound' => isset($options[self::OPTION_SOUND]) ? $options[self::OPTION_SOUND] : 'default'
 			),
-			'data' => $payload
+			'data' => $data
 		);
 
 		$client = new QuarkClient($this->_host, $this, $this->_certificate);
