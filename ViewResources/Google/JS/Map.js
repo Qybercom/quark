@@ -19,6 +19,7 @@ var Map = function (elem, opt) {
 	 */
 	that.Markers = [];
 	that.Routes = [];
+    that.Polygons = [];
 
 	/**
 	 * @type Function
@@ -95,6 +96,16 @@ var Map = function (elem, opt) {
 
 		return that.Routes[that.Routes.length - 1];
 	};
+
+    /**
+     * @param opt
+     * @return Map.Polygon
+     */
+    that.Polygon = function (opt) {
+        that.Polygons.push(new Map.Polygon(that._map, opt));
+
+        return that.Polygons[that.Polygons.length - 1];
+    };
 
 	/**
 	 * @param name
@@ -576,3 +587,187 @@ Map.Route = function (map, opt) {
 };
 
 Map.Route.__key = 'Routes';
+
+/**
+ * @param map
+ * @param opt
+ *
+ * @constructor
+ */
+Map.Polygon = function (map, opt) {
+    opt = opt || {};
+    var that = this;
+
+    that._polygon = null;
+
+    /**
+     * Redraw the polygon on any change
+     */
+    that.redraw = opt.redraw || true;
+
+    /**
+     * @type Number
+     */
+    that.area = 0.0;
+
+    /**
+     * @type Array
+     */
+    that.points = [];
+
+    /**
+     * Route visual settings
+     */
+    that.style = opt.style || {};
+    that.style.geodesic = that.style.geodesic || true;
+    that.style.strokeColor = that.style.strokeColor || 'black';
+    that.style.strokeOpacity = that.style.strokeOpacity || 1.0;
+    that.style.strokeWeight = that.style.strokeWeight || 1;
+    that.style.fillColor = that.style.fillColor || 'lime';
+    that.style.fillOpacity = that.style.fillOpacity || 0.3;
+
+    /**
+     * @param position
+     */
+    that.AddPoint = function (position) {
+        that.points.push(Map.Point(position));
+
+        if (that.redraw)
+            that.Render();
+
+        that.area = that.CalculateArea();
+    };
+
+    /**
+     * @param oldPosition
+     * @param newPosition
+     */
+    that.MovePoint = function (oldPosition, newPosition) {
+        var point = that.GetPoint(oldPosition);
+
+        if (point == null) return;
+
+        that.points[point].lat = newPosition.lat;
+        that.points[point].lng = newPosition.lng;
+
+        if (that.redraw)
+            that.Render();
+
+        that.area = that.CalculateArea();
+    };
+
+    /**
+     * @param position
+     */
+    that.RemovePoint = function (position) {
+        var point = that.GetPoint(position);
+
+        if (point == null) return;
+
+        that.points.splice(point, 1);
+
+        if (that.redraw)
+            that.Render();
+
+        that.area = that.CalculateArea();
+
+    };
+
+    /**
+     * @param position
+     * @return Number|null
+     */
+    that.GetPoint = function (position) {
+        var i = 0;
+
+        while (i < that.points.length) {
+            if (that.points[i].lat == position.lat && that.points[i].lng == position.lng) return i;
+
+            i++;
+        }
+
+        return null;
+    };
+
+    /**
+     * @param points
+     * @return Array
+     */
+    that.Points = function (points) {
+        if (!(points instanceof Array)) points = [];
+
+        that.points = [];
+
+        var i = 0;
+
+        while (i < points.length) {
+            that.points.push(Map.Point(points[i]));
+
+            i++;
+        }
+
+        that.area = that.CalculateArea();
+
+        return that.points;
+    };
+
+    /**
+     * Calculating area of the polygon
+     */
+    that.CalculateArea = function () {
+        try {
+            return google.maps.geometry.spherical.computeArea(that.points);
+        }
+        catch (e) {
+            return 0.0;
+        }
+    };
+
+    /**
+     * Rendering the route
+     */
+    that.Render = function () {
+        that._polygon = new google.maps.Polygon({
+            paths: that.points,
+            geodesic: that.style.geodesic,
+
+            strokeColor: that.style.strokeColor,
+            stokeOpacity: that.style.strokeOpacity,
+            strokeWeight: that.style.strokeWeight,
+
+            fillColor: that.style.fillColor,
+            fillOpacity: that.style.fillOpacity
+        });
+    };
+
+    /**
+     * Hide the route
+     */
+    that.Hide = function () {
+        that._polygon.setMap(null);
+    };
+
+    /**
+     * Show the route
+     */
+    that.Show = function () {
+        if (that._polygon == null) that.Render();
+
+        that._polygon.setMap(map);
+    };
+
+    /**
+     * Reset the route
+     */
+    that.Reset = function () {
+        that.points = [];
+
+        if (that.redraw)
+            that.Render();
+    };
+
+    that.Points(opt.points);
+    that.Render();
+};
+
+Map.Polygon.__key = 'Polygons';

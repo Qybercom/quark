@@ -1793,15 +1793,20 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
  * @package Quark
  */
 class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
+	/**
+	 * @var QuarkModel[]|array $_list
+	 */
 	private $_list = array();
 	private $_type = null;
 	private $_index = 0;
 
 	/**
 	 * @param object $type
+	 * @param array $source
 	 */
-	public function __construct ($type) {
+	public function __construct ($type, $source = []) {
 		$this->_type = $type;
+		$this->PopulateWith($source);
 	}
 
 	/**
@@ -1877,6 +1882,23 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 			$output[] = $iterator($item);
 
 		return $output;
+	}
+
+	/**
+	 * @param $fields
+	 * @param $weak
+	 *
+	 * @return array
+	 */
+	public function Extract ($fields = null, $weak = false) {
+		if (!($this->_type instanceof IQuarkModel)) return $this->_list;
+
+		$out = array();
+
+		foreach ($this->_list as $item)
+			$out[] = $item->Extract($fields, $weak);
+
+		return $out;
 	}
 
 	/**
@@ -2564,19 +2586,19 @@ class QuarkModel {
 	 * @param $criteria
 	 * @param $options
 	 *
-	 * @return array
+	 * @return QuarkCollection
 	 */
 	public static function Find (IQuarkModel $model, $criteria = [], $options = []) {
 		$records = array();
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
-		if ($raw == null)
-			return array();
+		if ($raw != null)
+			foreach ($raw as $item)
+				$records[] = self::_record($model, $item, $options);
 
-		foreach ($raw as $item)
-			$records[] = self::_record($model, $item, $options);
-
-		return $records;
+		return isset($options[self::OPTION_EXTRACT])
+			? $records
+			: new QuarkCollection($model, $records);
 	}
 
 	/**
