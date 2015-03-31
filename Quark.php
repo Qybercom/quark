@@ -1087,7 +1087,7 @@ interface IQuarkServiceWithCustomProcessor {
 }
 
 /**
- * Interface IQuarkServiceWithCustomProcessor
+ * Interface IQuarkServiceWithCustomRequestProcessor
  *
  * @package Quark
  */
@@ -1099,7 +1099,7 @@ interface IQuarkServiceWithCustomRequestProcessor {
 }
 
 /**
- * Interface IQuarkServiceWithCustomProcessor
+ * Interface IQuarkServiceWithCustomResponseProcessor
  *
  * @package Quark
  */

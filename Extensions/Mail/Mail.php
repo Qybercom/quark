@@ -2,7 +2,9 @@
 namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
+use Quark\IQuarkExtensionConfig;
 
+use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkFile;
 use Quark\QuarkHTMLIOProcessor;
@@ -15,9 +17,9 @@ use Quark\QuarkURI;
  */
 class Mail implements IQuarkExtension {
 	/**
-	 * @var QuarkURI $_uri
+	 * @var IQuarkExtensionConfig|IQuarkMailProvider $_config
 	 */
-	private static $_uri;
+	private $_config;
 
 	/**
 	 * @var QuarkDTO $_dto
@@ -30,10 +32,13 @@ class Mail implements IQuarkExtension {
 	private $_receivers = array();
 
 	/**
+	 * @param string $config
 	 * @param string $text
 	 * @param string $to
 	 */
-	public function __construct ($text = '', $to = '') {
+	public function __construct ($config, $text = '', $to = '') {
+		$this->_config = Quark::Config()->Extension($config);
+
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, 'base64');
 
@@ -41,18 +46,6 @@ class Mail implements IQuarkExtension {
 
 		if (func_num_args() == 2)
 			$this->_receivers[] = $to;
-	}
-
-	/**
-	 * @param QuarkURI $uri
-	 *
-	 * @return QuarkURI
-	 */
-	public function Server (QuarkURI $uri = null) {
-		if (func_num_args() == 1)
-			self::$_uri = $uri;
-
-		return self::$_uri;
 	}
 
 	/**
@@ -73,8 +66,8 @@ class Mail implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
-		//print_r($this);
-		echo $this->_dto->Serialize();
+		print_r($this);
+		//echo $this->_dto->Serialize();
 
 		return true;
 	}
