@@ -166,6 +166,15 @@ Map.Point = function (position) {
 };
 
 /**
+ * @param p1
+ * @param p2
+ * @return Number
+ */
+Map.Distance = function (p1, p2) {
+    return google.maps.geometry.spherical.computeDistanceBetween(new Map.Point(p1), new Map.Point(p2));
+};
+
+/**
  * @param map
  * @param opt
  *
