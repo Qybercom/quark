@@ -1,11 +1,12 @@
 <?php
 namespace Quark\Extensions\Mail\Providers;
 
-use Quark\Extensions\Mail\Mail;
 use Quark\IQuarkExtensionConfig;
 use Quark\Extensions\Mail\IQuarkMailProvider;
 
 use Quark\QuarkURI;
+
+use Quark\Extensions\Mail\Mail;
 
 /**
  * Class Google
