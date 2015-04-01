@@ -179,32 +179,32 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 
 		$smtp = $this->_config->SMTP();
 
-		echo 'Connected: ', $client->Receive();
+		echo 'Connected: ', $client->Receive(QuarkClient::MODE_BUCKET);
 		$client->Send("HELO Quark\r\n");
-		echo 'HELO: ', $client->Receive();
+		echo 'HELO: ', $client->Receive(QuarkClient::MODE_BUCKET);
 
 		$client->Send("AUTH LOGIN\r\n");
-		echo 'AUTH LOGIN: ', $client->Receive();
+		echo 'AUTH LOGIN: ', $client->Receive(QuarkClient::MODE_BUCKET);
 		$client->Send(base64_encode($smtp->user) . "\r\n");
-		echo '<LOGIN>: ', $client->Receive();
+		echo '<LOGIN>: ', $client->Receive(QuarkClient::MODE_BUCKET);
 		$client->Send(base64_encode($smtp->pass) . "\r\n");
-		echo '<PASSWORD>: ', $client->Receive();
+		echo '<PASSWORD>: ', $client->Receive(QuarkClient::MODE_BUCKET);
 
 		$client->Send('MAIL FROM: ' . $smtp->user . "\r\n");
-		echo 'MAIL FROM: ', $client->Receive();
+		echo 'MAIL FROM: ', $client->Receive(QuarkClient::MODE_BUCKET);
 
 		foreach ($this->_receivers as $receiver) {
 			$client->Send('RCPT TO: ' . $receiver . "\r\n");
-			echo 'RCPT TO ' . $receiver . ': ', $client->Receive();
+			echo 'RCPT TO ' . $receiver . ': ', $client->Receive(QuarkClient::MODE_BUCKET);
 		}
 
 		$client->Send("DATA\r\n");
-		echo 'DATA: ', $client->Receive();
+		echo 'DATA: ', $client->Receive(QuarkClient::MODE_BUCKET);
 		$client->Send($this->_dto->Serialize() . "\r\n.\r\n");
-		echo '<DATA>: ', $client->Receive();
+		echo '<DATA>: ', $client->Receive(QuarkClient::MODE_BUCKET);
 
 		$client->Send("QUIT\r\n");
-		echo 'QUIT: ', $client->Receive();
+		echo 'QUIT: ', $client->Receive(QuarkClient::MODE_BUCKET);
 
 		return $client->Close();
 	}

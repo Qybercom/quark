@@ -3438,6 +3438,9 @@ class QuarkSession implements IQuarkLinkedModel {
  * @package Quark\Extensions\Quark
  */
 class QuarkClient {
+	const MODE_STREAM = 'stream';
+	const MODE_BUCKET = 'bucket';
+
 	/**
 	 * @var IQuarkTransportProvider $_transport
 	 */
@@ -3601,15 +3604,21 @@ class QuarkClient {
 	}
 
 	/**
+	 * @param string $mode
 	 * @param int $max
 	 * @param int $offset
 	 *
 	 * @return mixed
 	 */
-	public function Receive ($max = -1, $offset = -1) {
+	public function Receive ($mode = self::MODE_STREAM, $max = -1, $offset = -1) {
 		try {
-			return func_num_args() == 0 ? fgets($this->_socket) : fgets($this->_socket, $max);
-			//return stream_get_contents($this->_socket, $max, $offset);
+			if ($mode == self::MODE_STREAM)
+				return stream_get_contents($this->_socket, $max, $offset);
+
+			if ($mode == self::MODE_BUCKET)
+				return func_num_args() == 0 ? fgets($this->_socket) : fgets($this->_socket, $max);
+
+			return false;
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
