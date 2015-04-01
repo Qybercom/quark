@@ -8,11 +8,11 @@ use Quark\Extensions\Mail\IQuarkMailProvider;
 use Quark\QuarkURI;
 
 /**
- * Class Google
+ * Class Yandex
  *
  * @package Quark\Extensions\Mail\Providers
  */
-class Google implements IQuarkMailProvider, IQuarkExtensionConfig {
+class Yandex implements IQuarkMailProvider, IQuarkExtensionConfig {
 	private $_username;
 	private $_password;
 	private $_name;
@@ -32,7 +32,7 @@ class Google implements IQuarkMailProvider, IQuarkExtensionConfig {
 	 * @return QuarkURI
 	 */
 	public function SMTP () {
-		return QuarkURI::FromURI('ssl://smtp.gmail.com:465')->User($this->_username, $this->_password);
+		return QuarkURI::FromURI('ssl://smtp.yandex.ru:465')->User($this->_username, $this->_password);
 	}
 
 	/**

@@ -13,4 +13,9 @@ interface IQuarkMailProvider {
 	 * @return QuarkURI
 	 */
 	public function SMTP();
+
+	/**
+	 * @return string
+	 */
+	public function From();
 }

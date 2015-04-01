@@ -3543,9 +3543,13 @@ class QuarkClient {
 
 	/**
 	 * @return mixed
+	 * @throws QuarkArchException
 	 */
 	public function Action () {
-		return $this->_transport->Action($this);
+		if ($this->_transport != null)
+			return $this->_transport->Action($this);
+
+		throw new QuarkArchException('QuarkClient: Transport is null');
 	}
 
 	/**
@@ -3563,7 +3567,7 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_client(
+		$this->_socket = stream_socket_client(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -3585,7 +3589,11 @@ class QuarkClient {
 	 */
 	public function Send ($data) {
 		try {
-			return fwrite($this->_socket, $data) !== false;
+			$out = fwrite($this->_socket, $data) !== false;
+
+			stream_set_timeout($this->_socket, $this->_timeout);
+
+			return $out;
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -3593,11 +3601,15 @@ class QuarkClient {
 	}
 
 	/**
+	 * @param int $max
+	 * @param int $offset
+	 *
 	 * @return mixed
 	 */
-	public function Receive () {
+	public function Receive ($max = -1, $offset = -1) {
 		try {
-			return stream_get_contents($this->_socket);
+			return func_num_args() == 0 ? fgets($this->_socket) : fgets($this->_socket, $max);
+			//return stream_get_contents($this->_socket, $max, $offset);
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -3638,7 +3650,7 @@ class QuarkClient {
 	 */
 	public function Error ($text = false) {
 		return $text
-			? $this->_errorNumber . ':' . $this->_errorString
+			? $this->_errorNumber . ': ' . $this->_errorString
 			: (object)array(
 				'num' => $this->_errorNumber,
 				'msg' => $this->_errorString
@@ -3697,6 +3709,9 @@ class QuarkURI {
 	 * @return QuarkURI|null
 	 */
 	public static function FromURI ($uri, $local = true) {
+		if ($uri instanceof QuarkURI) return $uri;
+		if (!is_string($uri)) return null;
+
 		$url = parse_url($uri);
 
 		if ($url === false) return null;
@@ -3759,7 +3774,7 @@ class QuarkURI {
 	 * @param string $host
 	 * @param integer|null $port
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkURI
 	 */
 	public function Endpoint ($host, $port = null) {
 		$this->host = $host;
@@ -3774,7 +3789,7 @@ class QuarkURI {
 	 * @param string $username
 	 * @param string|null $password
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkURI
 	 */
 	public function User ($username, $password = null) {
 		$this->user = $username;
@@ -3788,7 +3803,7 @@ class QuarkURI {
 	/**
 	 * @param string $resource
 	 *
-	 * @return QuarkDTO
+	 * @return string
 	 */
 	public function Resource ($resource = '') {
 		if (func_num_args() == 1)
