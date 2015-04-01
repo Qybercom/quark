@@ -4,15 +4,13 @@
  * @version 1.3.0
  * @author Alex Furnica
  *
- * @param elem
+ * @param selector
  * @param opt
  *
  * @constructor
  */
-var Map = function (elem, opt) {
-	var that = this, map = $(elem);
-
-	if (map.length == 0) return;
+var Map = function (selector, opt) {
+	var that = this;
 
 	/**
 	 * @type Array
@@ -29,31 +27,33 @@ var Map = function (elem, opt) {
 	that.mousemove = opt.mousemove || function () {};
 	that.mouseout = opt.mouseout || function () {};
 
-	/**
-	 * Google Maps settings
-	 */
-	that.Settings = {
-		disableDefaultUI: true,
-		disableDoubleClickZoom: true,
-		scrollwheel: false,
-		mapTypeId: google.maps.MapTypeId.ROADMAP,
-		center: Map.Point(opt.center || {
-			lat: 0,
-			lng: 0
-		}),
+    $(selector).each(function () {
+        /**
+         * Google Maps settings
+         */
+        that.Settings = {
+            disableDefaultUI: true,
+            disableDoubleClickZoom: true,
+            scrollwheel: false,
+            mapTypeId: google.maps.MapTypeId[(opt.type || 'ROADMAP')],
+            center: Map.Point(opt.center || {
+                lat: 0,
+                lng: 0
+            }),
 
-		zoom: opt.zoom || 16,
-		zoomControl: false,
-		zoomControlOptions: {
-			style: google.maps.ZoomControlStyle.DEFAULT
-		},
+            zoom: opt.zoom || 16,
+            zoomControl: false,
+            zoomControlOptions: {
+                style: google.maps.ZoomControlStyle.DEFAULT
+            },
 
-		scaleControl: false,
-		streetViewControl: false,
-		overviewMapControl: false
-	};
+            scaleControl: false,
+            streetViewControl: false,
+            overviewMapControl: false
+        };
 
-	that._map = new google.maps.Map(map[0], that.Settings);
+        that._map = new google.maps.Map(map[0], that.Settings);
+    });
 
 	/**
 	 * @param position
