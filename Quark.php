@@ -3892,10 +3892,13 @@ class QuarkDTO {
 	const HEADER_CONTENT_TYPE = 'Content-Type';
 	const HEADER_CONTENT_TRANSFER_ENCODING = 'Content-Transfer-Encoding';
 	const HEADER_CONTENT_DISPOSITION = 'Content-Disposition';
+	const HEADER_CONTENT_DESCRIPTION = 'Content-Description';
 	const HEADER_COOKIE = 'Cookie';
 	const HEADER_SET_COOKIE = 'Set-Cookie';
 	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
 	const HEADER_AUTHORIZATION = 'Authorization';
+	const HEADER_EXPIRES = 'Expires';
+	const HEADER_PRAGMA = 'Pragma';
 
 	/**
 	 * @var string $_raw
@@ -4563,7 +4566,19 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 		return is_file($this->tmp_name) && is_dir(dirname($this->location)) && rename($this->tmp_name, $this->location);
 	}
 
-	public function Download () { }
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Download () {
+		$response = new QuarkDTO(new QuarkPlainIOProcessor());
+
+		$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $this->type);
+		$response->Header(QuarkDTO::HEADER_CONTENT_DISPOSITION, 'attachment; filename="' . $this->name . '"');
+
+		$response->Data($this->_content);
+
+		return $response;
+	}
 
 	/**
 	 * @return array
