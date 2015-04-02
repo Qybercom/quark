@@ -107,11 +107,12 @@ class Quark {
 		catch (QuarkArchException $e) {
 			self::Log($e->message, $e->lvl);
 		}
-		catch (QuarkHTTPException $e) {
-			self::Log($e->message, $e->lvl);
-		}
 		catch (QuarkConnectionException $e) {
 			self::Log($e->message, $e->lvl);
+		}
+		catch (QuarkHTTPException $e) {
+			self::HTTPStatus($config->DefaultNotFoundStatus());
+			self::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $e->message , $e->lvl);
 		}
 		catch (\Exception $e) {
 			self::Log('Common exception: ' . $e->getMessage() . "\r\n at " . $e->getFile() . ':' . $e->getLine(), self::LOG_FATAL);
@@ -403,12 +404,12 @@ class Quark {
 	}
 
 	/**
-	 * @param string $msg
+	 * @param string $status
 	 *
 	 * @return string
 	 */
-	public static function Error401 ($msg = 'Unauthorized') {
-		header('HTTP/1.0 401 ' . $msg);
+	public static function HTTPStatus ($status = QuarkDTO::STATUS_200_OK) {
+		header('HTTP/1.0 ' . $status);
 	}
 
 	/**
@@ -557,6 +558,11 @@ class QuarkConfig {
 	private $_mode = Quark::MODE_DEV;
 
 	/**
+	 * @var string $_defaultNotFoundStatus
+	 */
+	private $_defaultNotFoundStatus = QuarkDTO::STATUS_404_NOT_FOUND;
+
+	/**
 	 * @var array
 	 */
 	private $_extensions = array();
@@ -676,6 +682,18 @@ class QuarkConfig {
 			$this->_location[$component] = $location;
 
 		return isset($this->_location[$component]) ? $this->_location[$component] : '';
+	}
+
+	/**
+	 * @param string $status
+	 *
+	 * @return string
+	 */
+	public function DefaultNotFoundStatus ($status = '') {
+		if (func_num_args() == 1)
+			$this->_defaultNotFoundStatus = $status;
+
+		return $this->_defaultNotFoundStatus;
 	}
 
 	/**
@@ -1028,6 +1046,18 @@ interface IQuarkAuthorizableModel {
 	 * @return mixed
 	 */
 	public function RenewSession(IQuarkAuthorizationProvider $provider, $request);
+}
+
+/**
+ * Interface IQuarkAuthorizableModelWithSessionKey
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableModelWithSessionKey {
+	/**
+	 * @return string
+	 */
+	public function SessionKey();
 }
 
 
@@ -3914,6 +3944,7 @@ class QuarkDTO {
 
 	const STATUS_200_OK = '200 OK';
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
+	const STATUS_404_NOT_FOUND = '404 Not Found';
 
 	/**
 	 * @var string $_raw
@@ -4067,10 +4098,11 @@ class QuarkDTO {
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Unserialize ($raw) {
-		$this->_raw = $raw;
+	public function Unserialize ($raw = '') {
+		if (func_num_args() != 0)
+			$this->_raw = $raw;
 
-		if (preg_match_all('#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw, $found, PREG_SET_ORDER) == 0) return null;
+		if (preg_match_all('#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
 
 		$http = $found[0];
 
@@ -4221,13 +4253,49 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param mixed $textData
+	 *
+	 * @return mixed
+	 */
+	public function TextData ($textData = []) {
+		if (func_num_args() == 1)
+			$this->_textData = $textData;
+
+		return $this->_textData;
+	}
+
+	/**
+	 * @param mixed $raw
+	 *
+	 * @return mixed
+	 */
+	public function Raw ($raw = []) {
+		if (func_num_args() == 1)
+			$this->_raw = $raw;
+
+		return $this->_raw;
+	}
+
+	/**
 	 * @param mixed $data
-	 //* @param bool  $string
 	 *
 	 * @return QuarkDTO
 	 */
-	public function AttachData ($data = []/*, $string = false*/) {
+	public function AttachData ($data = []) {
 		if ($data instanceof QuarkView) $this->_data = $data;
+		elseif ($data instanceof QuarkDTO) {
+			$this->_status = $data->Status();
+			$this->_method = $data->Method();
+			$this->_data = $data->Data();
+			$this->_headers = $data->Headers();
+			$this->_boundary = $data->Boundary();
+			$this->_cookies = $data->Cookies();
+			$this->_processor = $data->Processor();
+			$this->_raw = $data->Raw();
+			$this->_signature = $data->Signature();
+			$this->_textData = $data->TextData();
+			$this->_uri = $data->URI();
+		}
 		else {
 			if (is_string($this->_data)) {
 				if (is_string($data)) $this->_data .= $data;
@@ -4244,12 +4312,6 @@ class QuarkDTO {
 				}
 			}
 		}
-
-		/*$this->_data = $data instanceof QuarkView
-			? $data
-			: ($string && is_string($data) ? $data : Quark::Normalize($this->_data, $data));
-
-		$this->_signature = isset($this->_data->_signature) ? $this->_data->_signature : '';*/
 
 		return $this;
 	}

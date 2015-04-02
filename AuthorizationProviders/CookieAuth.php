@@ -1,6 +1,7 @@
 <?php
 namespace Quark\AuthorizationProviders;
 
+use Quark\IQuarkAuthorizableModelWithSessionKey;
 use Quark\IQuarkAuthorizationProvider;
 
 use Quark\QuarkDTO;
@@ -12,6 +13,8 @@ use Quark\QuarkModel;
  * @package Quark\AuthorizationProviders
  */
 class CookieAuth implements IQuarkAuthorizationProvider {
+	private $_lifetime = 0;
+
 	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request
@@ -20,7 +23,11 @@ class CookieAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		// TODO: Implement Initialize() method.
+		$this->_lifetime = $lifetime;
+
+		return array(
+			'session' => $request->Cookies()[$name]
+		);
 	}
 
 	/**
@@ -31,7 +38,7 @@ class CookieAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		// TODO: Implement Trail() method.
+		return $response;
 	}
 
 	/**
@@ -42,16 +49,23 @@ class CookieAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Login ($name, QuarkModel $model, $criteria) {
-		// TODO: Implement Login() method.
+		$model = $model->Model();
+
+		if (!($model instanceof IQuarkAuthorizableModelWithSessionKey)) return false;
+
+		$key = $model->SessionKey();
+
+		return setcookie($name, $model->$key, $this->_lifetime);
 	}
 
 	/**
+	 * http://stackoverflow.com/a/686166/2097055
 	 * @param string $name
 	 *
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		// TODO: Implement Logout() method.
+		return setcookie($name, '', 1);
 	}
 
 	/**

@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Quark\REST;
 
+use Quark\IQuarkAuthorizableModelWithSessionKey;
 use Quark\IQuarkAuthorizationProvider;
 
 use Quark\QuarkDTO;
@@ -31,7 +32,10 @@ class RESTSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		return $user == null ? array() : array('access' => $user->access);
+		$model = $user->Model();
+		$key = $model instanceof IQuarkAuthorizableModelWithSessionKey ? $model->SessionKey() : 'access';
+
+		return $user == null ? array() : array($key => $user->$key);
 	}
 
 	/**

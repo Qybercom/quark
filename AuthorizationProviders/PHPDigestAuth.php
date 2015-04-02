@@ -82,7 +82,7 @@ class PHPDigestAuth implements IQuarkAuthorizationProvider {
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
 		if (!isset($_SERVER['PHP_AUTH_DIGEST'])) {
-			Quark::Error401();
+			Quark::HTTPStatus(QuarkDTO::STATUS_401_UNAUTHORIZED);
 			header(
 				'WWW-Authenticate: Digest '
 				. 'realm="' . $_SERVER['SERVER_NAME'] . '",'
@@ -123,7 +123,7 @@ class PHPDigestAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		Quark::Error401();
+		Quark::HTTPStatus(QuarkDTO::STATUS_401_UNAUTHORIZED);
 	}
 
 	/**
