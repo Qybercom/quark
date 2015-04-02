@@ -403,6 +403,15 @@ class Quark {
 	}
 
 	/**
+	 * @param string $msg
+	 *
+	 * @return string
+	 */
+	public static function Error401 ($msg = 'Unauthorized') {
+		header('HTTP/1.0 401 ' . $msg);
+	}
+
+	/**
 	 * @param $event
 	 * @param $listener
 	 * @param $unique
@@ -814,7 +823,7 @@ class QuarkService {
 		if (!headers_sent()) {
 			$status = $response->Status();
 
-			if (strlen(trim($status)) != 0)
+			if ($status != QuarkDTO::STATUS_200_OK)
 				header($_SERVER['SERVER_PROTOCOL'] . ' ' . $status);
 
 			$headers = $response->Headers();
@@ -3393,6 +3402,9 @@ class QuarkSession implements IQuarkLinkedModel {
 		$request = $this->_provider->Initialize($this->_name, $request, $lifetime);
 		if (!$request && $request !== null) return null;
 
+		if (is_array($request))
+			$request = Quark::Normalize(new \StdClass(), $request);
+
 		$user = $this->_model->RenewSession($this->_provider, $request);
 		if ($user == null) return null;
 
@@ -3900,6 +3912,9 @@ class QuarkDTO {
 	const HEADER_EXPIRES = 'Expires';
 	const HEADER_PRAGMA = 'Pragma';
 
+	const STATUS_200_OK = '200 OK';
+	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
+
 	/**
 	 * @var string $_raw
 	 */
@@ -3918,7 +3933,7 @@ class QuarkDTO {
 	/**
 	 * @var string $_status
 	 */
-	private $_status = '200 OK';
+	private $_status = self::STATUS_200_OK;
 
 	/**
 	 * @var string $_method

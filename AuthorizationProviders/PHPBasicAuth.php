@@ -3,6 +3,7 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
@@ -12,17 +13,6 @@ use Quark\QuarkModel;
  * @package Quark\AuthorizationProviders
  */
 class PHPBasicAuth implements IQuarkAuthorizationProvider {
-	private static $_user;
-
-	/**
-	 * @param string $msg
-	 *
-	 * @return string
-	 */
-	public static function Error401 ($msg = 'Unauthorized') {
-		header('HTTP/1.0 401 ' . $msg);
-	}
-
 	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request
@@ -31,8 +21,8 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		if (!isset($_SERVER['PHP_AUTH_USER']) && self::$_user == null) {
-			self::Error401();
+		if (!isset($_SERVER['PHP_AUTH_USER'])) {
+			Quark::Error401();
 			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
 			return null;
 		}
@@ -70,7 +60,7 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		self::Error401();
+		Quark::Error401();
 	}
 
 	/**
