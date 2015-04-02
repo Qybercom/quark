@@ -3616,7 +3616,7 @@ class QuarkClient {
 				return stream_get_contents($this->_socket, $max, $offset);
 
 			if ($mode == self::MODE_BUCKET)
-				return func_num_args() == 0 ? fgets($this->_socket) : fgets($this->_socket, $max);
+				return func_num_args() == 1 ? fgets($this->_socket) : fgets($this->_socket, $max);
 
 			return false;
 		}
@@ -3940,7 +3940,12 @@ class QuarkDTO {
 	/**
 	 * @var mixed $_data
 	 */
-	private $_data;
+	private $_data = '';
+
+	/**
+	 * @var mixed $_textData
+	 */
+	private $_textData = '';
 
 	/**
 	 * @var string $_signature
@@ -3977,12 +3982,13 @@ class QuarkDTO {
 	 * @param IQuarkIOProcessor $processor
 	 * @param QuarkURI  $uri
 	 * @param string $method
+	 * @param string $boundary
 	 */
-	public function __construct (IQuarkIOProcessor $processor = null, QuarkURI $uri = null, $method = '') {
+	public function __construct (IQuarkIOProcessor $processor = null, QuarkURI $uri = null, $method = '', $boundary = '') {
 		$this->Processor($processor == null ? new QuarkPlainIOProcessor() : $processor);
 		$this->URI($uri);
 		$this->Method($method);
-		$this->Boundary('QuarkBoundary' . Quark::GuID());
+		$this->Boundary(func_num_args() == 4 ? $boundary : 'QuarkBoundary' . Quark::GuID());
 	}
 
 	/**
@@ -4014,7 +4020,7 @@ class QuarkDTO {
 		$query = '';
 
 		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
-		$data = $this->_processor->Encode($this->Data());
+		$data = $this->_processor->Encode($this->Data(), $this->_textData);
 
 		if ($all) {
 			if ($this->_uri != null) {
@@ -4026,6 +4032,8 @@ class QuarkDTO {
 
 			if (sizeof($this->_cookies) != 0)
 				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
+
+			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType();
 
 			foreach ($this->_headers as $key => $value)
 				$query .= $key . ': ' . $value . "\r\n";
@@ -4196,16 +4204,34 @@ class QuarkDTO {
 
 	/**
 	 * @param mixed $data
-	 * @param bool  $string
+	 //* @param bool  $string
 	 *
 	 * @return QuarkDTO
 	 */
-	public function AttachData ($data = [], $string = false) {
-		$this->_data = $data instanceof QuarkView
+	public function AttachData ($data = []/*, $string = false*/) {
+		if ($data instanceof QuarkView) $this->_data = $data;
+		else {
+			if (is_string($this->_data)) {
+				if (is_string($data)) $this->_data .= $data;
+				else {
+					$this->_textData = $this->_data;
+					$this->_data = Quark::Normalize($this->_data, $data);
+				}
+			}
+			else {
+				if (is_string($data)) $this->_textData .= $data;
+				else {
+					$this->_data = Quark::Normalize($this->_data, $data);
+					$this->_signature = isset($this->_data->_signature) ? $this->_data->_signature : '';
+				}
+			}
+		}
+
+		/*$this->_data = $data instanceof QuarkView
 			? $data
 			: ($string && is_string($data) ? $data : Quark::Normalize($this->_data, $data));
 
-		$this->_signature = isset($this->_data->_signature) ? $this->_data->_signature : '';
+		$this->_signature = isset($this->_data->_signature) ? $this->_data->_signature : '';*/
 
 		return $this;
 	}
@@ -4938,6 +4964,15 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
+	const DISPOSITION_FORM_DATA = 'form-data';
+	const DISPOSITION_ATTACHMENT = 'attachment';
+
+	const MIME_FORM_DATA = 'form-data';
+	const MIME_MIXED = 'mixed';
+
+	const TRANSFER_ENCODING_BINARY = 'binary';
+	const TRANSFER_ENCODING_BASE64 = 'base64';
+
 	/**
 	 * @var IQuarkIOProcessor $_processor
 	 */
@@ -4949,32 +4984,82 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 	private $_boundary = '';
 
 	/**
+	 * @var string $_mime
+	 */
+	private $_mime = '';
+
+	/**
+	 * @var string $_encoding
+	 */
+	private $_encoding = '';
+
+	/**
+	 * @var string $_disposition
+	 */
+	private $_disposition = '';
+
+	/**
 	 * @var bool $_original
 	 */
 	private $_original = true;
 
 	/**
 	 * @param IQuarkIOProcessor $processor
+	 * @param string            $boundary
+	 *
+	 * @return QuarkMultipartIOProcessor
+	 */
+	public static function ForFormData (IQuarkIOProcessor $processor, $boundary = '') {
+		$processor = new self($processor, $boundary);
+		$processor->_mime = self::MIME_FORM_DATA;
+		$processor->_encoding = self::TRANSFER_ENCODING_BINARY;
+		$processor->_disposition = self::DISPOSITION_FORM_DATA;
+
+		return $processor;
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param string            $boundary
+	 *
+	 * @return QuarkMultipartIOProcessor
+	 */
+	public static function ForAttachment (IQuarkIOProcessor $processor, $boundary = '') {
+		$processor = new self($processor, $boundary);
+		$processor->_mime = self::MIME_MIXED;
+		$processor->_encoding = self::TRANSFER_ENCODING_BASE64;
+		$processor->_disposition = self::DISPOSITION_ATTACHMENT;
+
+		return $processor;
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
 	 * @param string $boundary
 	 */
-	public function __construct (IQuarkIOProcessor $processor = null, $boundary = '') {
+	public function __construct (IQuarkIOProcessor $processor, $boundary = '') {
 		$this->_processor = $processor;
-		$this->_boundary = $boundary;
+		$this->_boundary = func_num_args() == 2 ? $boundary : 'QuarkBoundary' . Quark::GuID();
+
+		$this->_mime = $processor instanceof self ? $processor->_mime :  self::MIME_FORM_DATA;
+		$this->_encoding = $processor instanceof self ? $processor->_encoding :  self::TRANSFER_ENCODING_BINARY;
+		$this->_disposition = $processor instanceof self ? $processor->_disposition :  self::DISPOSITION_FORM_DATA;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function MimeType () {
-		return $this->_original ? $this->_processor->MimeType() : 'multipart/form-data; boundary=' . $this->_boundary;
+		return $this->_original ? $this->_processor->MimeType() : 'multipart/' . $this->_mime . '; boundary=' . $this->_boundary;
 	}
 
 	/**
 	 * @param $data
+	 * @param string $text
 	 *
 	 * @return mixed
 	 */
-	public function Encode ($data) {
+	public function Encode ($data, $text = '') {
 		$files = array();
 
 		$output = is_scalar($data)
@@ -4996,7 +5081,11 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 
 		if (sizeof($files) != 0) {
 			$this->_original = false;
-			$output = $this->_part($this->_processor->MimeType(), $out);
+			$output = $this->_part(
+				$this->_processor->MimeType(),
+				func_num_args() == 2 ? $text : $out,
+				$this->_disposition == self::DISPOSITION_ATTACHMENT
+			);
 
 			foreach ($files as $file)
 				$output .= $this->_part($file['depth'], $file['file']);
@@ -5019,11 +5108,13 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 	/**
 	 * @param $key
 	 * @param mixed $value
+	 * @param bool $main
 	 *
 	 * @return string
 	 */
-	private function _part ($key, $value) {
+	private function _part ($key, $value, $main = false) {
 		$file = $value instanceof QuarkFile;
+		$contents = $file ? $value->Content() : $value;
 
 		/**
 		 * Attention!
@@ -5033,10 +5124,15 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 
 		return
 			'--' . $this->_boundary . "\r\n"
-			. QuarkDTO::HEADER_CONTENT_DISPOSITION . ': form-data; name="' . $key . '"' . ($file ? '; filename="' . $value->name . '"' : '') . "\r\n"
+			. ($main ? '' : QuarkDTO::HEADER_CONTENT_DISPOSITION . ': ' . $this->_disposition
+				. ($this->_disposition == self::DISPOSITION_FORM_DATA ? '; name="' . $key . '"' : '')
+				. ($file ? '; filename="' . $value->name . '"' : '')
+				. "\r\n"
+			)
 			. QuarkDTO::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
+			. QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING . ': ' . $this->_encoding . "\r\n"
 			. "\r\n"
-			. ($file ? $value->Content() : $value)
+			. ($this->_encoding == self::TRANSFER_ENCODING_BASE64 ? base64_encode($contents) : $contents)
 			. "\r\n";
 	}
 }

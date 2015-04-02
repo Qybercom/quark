@@ -6,12 +6,14 @@ use Quark\IQuarkExtensionConfig;
 use Quark\IQuarkTransportProvider;
 
 use Quark\Quark;
+use Quark\QuarkArchException;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkField;
 use Quark\QuarkFile;
 use Quark\QuarkHTMLIOProcessor;
+use Quark\QuarkMultipartIOProcessor;
 use Quark\QuarkURI;
 
 /**
@@ -50,6 +52,16 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	private $_receivers = array();
 
 	/**
+	 * @var QuarkFile[] $_files
+	 */
+	private $_files = array();
+
+	/**
+	 * @var string $_log
+	 */
+	private $_log = '';
+
+	/**
 	 * @param $name
 	 * @param $email
 	 *
@@ -68,8 +80,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	public function __construct ($config, $subject, $text, $to = '') {
 		$this->_config = Quark::Config()->Extension($config);
 
-		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
-		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, 'base64');
+		$this->_dto = new QuarkDTO(QuarkMultipartIOProcessor::ForAttachment(new QuarkHTMLIOProcessor()));
 		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());
 
 		$this->Subject($subject);
@@ -85,7 +96,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	 * @return Mail
 	 */
 	public function File (QuarkFile $file) {
-		$this->_dto->AttachData(array('file' => $file));
+		$this->_files[] = $file;
 
 		return $this;
 	}
@@ -99,7 +110,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 		if (func_num_args() == 0)
 			return $this->_receivers;
 
-		if (QuarkField::Email($email))
+		if (QuarkField::Email($email) && !in_array($email, $this->_receivers))
 			$this->_receivers[] = $email;
 
 		return $this;
@@ -143,7 +154,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 		if (func_num_args() == 0)
 			return $this->_dto->Data();
 
-		$this->_dto->Data(base64_encode($text));
+		$this->_dto->Data($text);
 		return $this;
 	}
 
@@ -151,12 +162,20 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	 * @return bool
 	 */
 	public function Send () {
-		print_r($this->_config->SMTP());
-		//echo $this->_dto->Serialize();
+		if (sizeof($this->_files) != 0)
+			$this->_dto->AttachData(array('files' => $this->_files));
+
 		$client = new QuarkClient($this->_config->SMTP(), $this, null, 5);
 		$client->Action();
 
 		return true;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Log () {
+		return $this->_log;
 	}
 
 	/**
@@ -171,6 +190,26 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 
 	/**
 	 * @param QuarkClient $client
+	 * @param int         $expect
+	 * @param string      $cmd
+	 *
+	 * @throws QuarkArchException
+	 */
+	private function _cmd (QuarkClient $client, $expect, $cmd = '') {
+		if (func_num_args() == 3)
+			$client->Send($cmd . "\r\n");
+
+		$response = $client->Receive(QuarkClient::MODE_BUCKET);
+		$code = substr($response, 0, 3);
+
+		$this->_log .= $cmd . ': ' . $response . '<br>';
+
+		if ($code != $expect)
+			throw new QuarkArchException('SMTP server returned unexpected [' . $code . '] for command ' . $cmd);
+	}
+
+	/**
+	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
@@ -179,32 +218,24 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 
 		$smtp = $this->_config->SMTP();
 
-		echo 'Connected: ', $client->Receive(QuarkClient::MODE_BUCKET);
-		$client->Send("HELO Quark\r\n");
-		echo 'HELO: ', $client->Receive(QuarkClient::MODE_BUCKET);
+		try {
+			$this->_cmd($client, 220);
+			$this->_cmd($client, 250, 'HELO Quark');
+			$this->_cmd($client, 334, 'AUTH LOGIN');
+			$this->_cmd($client, 334, base64_encode($smtp->user));
+			$this->_cmd($client, 235, base64_encode($smtp->pass));
+			$this->_cmd($client, 250, 'MAIL FROM: <' . $smtp->user . '>');
 
-		$client->Send("AUTH LOGIN\r\n");
-		echo 'AUTH LOGIN: ', $client->Receive(QuarkClient::MODE_BUCKET);
-		$client->Send(base64_encode($smtp->user) . "\r\n");
-		echo '<LOGIN>: ', $client->Receive(QuarkClient::MODE_BUCKET);
-		$client->Send(base64_encode($smtp->pass) . "\r\n");
-		echo '<PASSWORD>: ', $client->Receive(QuarkClient::MODE_BUCKET);
+			foreach ($this->_receivers as $receiver)
+				$this->_cmd($client, 250, 'RCPT TO: <' . $receiver . '>');
 
-		$client->Send('MAIL FROM: ' . $smtp->user . "\r\n");
-		echo 'MAIL FROM: ', $client->Receive(QuarkClient::MODE_BUCKET);
-
-		foreach ($this->_receivers as $receiver) {
-			$client->Send('RCPT TO: ' . $receiver . "\r\n");
-			echo 'RCPT TO ' . $receiver . ': ', $client->Receive(QuarkClient::MODE_BUCKET);
+			$this->_cmd($client, 354, 'DATA');
+			$this->_cmd($client, 250, $this->_dto->Serialize() . "\r\n.");
+			$this->_cmd($client, 221, 'QUIT');
 		}
-
-		$client->Send("DATA\r\n");
-		echo 'DATA: ', $client->Receive(QuarkClient::MODE_BUCKET);
-		$client->Send($this->_dto->Serialize() . "\r\n.\r\n");
-		echo '<DATA>: ', $client->Receive(QuarkClient::MODE_BUCKET);
-
-		$client->Send("QUIT\r\n");
-		echo 'QUIT: ', $client->Receive(QuarkClient::MODE_BUCKET);
+		catch (QuarkArchException $e) {
+			return false;
+		}
 
 		return $client->Close();
 	}
