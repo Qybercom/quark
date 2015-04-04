@@ -1,7 +1,7 @@
 /**
  * Google Maps abstraction layer
  *
- * @version 1.3.0
+ * @version 1.4.0
  * @author Alex Furnica
  *
  * @param selector
@@ -9,15 +9,10 @@
  *
  * @constructor
  */
-var Map = function (selector, opt) {
+var GoogleMap = function (selector, opt) {
 	var that = this;
 
-	/**
-	 * @type Array
-	 */
-	that.Markers = [];
-	that.Routes = [];
-    that.Polygons = [];
+	that._maps = [];
 
 	/**
 	 * @type Function
@@ -31,12 +26,12 @@ var Map = function (selector, opt) {
         /**
          * Google Maps settings
          */
-        that.Settings = {
+        that.Settings = $.extend(true, {}, opt, {
             disableDefaultUI: true,
             disableDoubleClickZoom: true,
-            scrollwheel: false,
-            mapTypeId: google.maps.MapTypeId[(opt.type || 'ROADMAP')],
-            center: Map.Point(opt.center || {
+            scrollwheel: true,
+            mapTypeId: GoogleMap.Type.Roadmap,
+            center: GoogleMap.Point(opt.center || {
                 lat: 0,
                 lng: 0
             }),
@@ -50,128 +45,89 @@ var Map = function (selector, opt) {
             scaleControl: false,
             streetViewControl: false,
             overviewMapControl: false
-        };
+        });
 
-        that._map = new google.maps.Map(map[0], that.Settings);
+        that._maps.push(new google.maps.Map($(this)[0], that.Settings));
     });
 
 	/**
-	 * @param position
+	 * @param option
+	 * @param value
 	 */
-	that.Center = function (position) {
-		that.Settings.center = Map.Point(position);
+	that.Set = function (option, value) {
+		that.Settings[option] = value;
 
-		that._map.setOptions(that.Settings);
+		var i = 0;
+		while (i < that._maps.length) {
+			that._maps[i].setOptions(that.Settings);
+			i++;
+		}
 	};
-
-	/**
-	 * @param zoom
-	 * @param scroll
-	 */
-	that.Zoom = function (zoom, scroll) {
-		if (scroll != undefined)
-			that.Settings.scrollwheel = scroll;
-
-		that.Settings.zoom = zoom;
-
-		that._map.setOptions(that.Settings);
-	};
-
-	/**
-	 * @param opt
-	 * @return Map.Marker
-	 */
-	that.Marker = function (opt) {
-		that.Markers.push(new Map.Marker(that._map, opt));
-
-		return that.Markers[that.Markers.length - 1];
-	};
-
-	/**
-	 * @param opt
-	 * @return Map.Route
-	 */
-	that.Route = function (opt) {
-		that.Routes.push(new Map.Route(that._map, opt));
-
-		return that.Routes[that.Routes.length - 1];
-	};
-
-    /**
-     * @param opt
-     * @return Map.Polygon
-     */
-    that.Polygon = function (opt) {
-        that.Polygons.push(new Map.Polygon(that._map, opt));
-
-        return that.Polygons[that.Polygons.length - 1];
-    };
 
 	/**
 	 * @param name
-	 * @private
 	 */
-	that._event = function (name) {
-		google.maps.event.addListener(that._map, name, function (e) {
-			if (!(that[name] instanceof Function)) return;
-
-			that[name]({
-				map: that,
-				position: {
-					lat: e.latLng.lat(),
-					lng: e.latLng.lng()
-				}
-			});
-		});
-	};
-
-	/**
-	 * @param component
-	 * @param filter
-	 * @return Array
-	 */
-	that.Find = function (component, filter) {
-		if (component.__key != undefined)
-			component = component.__key;
-
-		if (that[component] == undefined || !(that[component] instanceof Array)) return [];
-
-		if (filter == undefined)
-			return that[component];
-
-		var i = 0, output = [];
-
-		while (i < that[component].length) {
-			if (filter(that[component][i]))
-				output.push(that[component][i]);
-
+	that.Event = function (name) {
+		var i = 0;
+		while (i < that._maps.length) {
+			GoogleMap.On(that._maps[i], name, that[name]);
 			i++;
 		}
-
-		return output;
 	};
 
-	that._event('click');
-	that._event('mouseover');
-	that._event('mousemove');
-	that._event('mouseout');
+	that.Child = function (child) {
+		var i = 0;
+		while (i < that._maps.length) {
+			child.Render(that._maps[i]);
+			i++;
+		}
+	};
+
+	that.Event('click');
+	that.Event('mouseover');
+	that.Event('mousemove');
+	that.Event('mouseout');
 };
 
 /**
  * @param position
+ * @param alt
+ *
  * @return google.maps.LatLng
  */
-Map.Point = function (position) {
+GoogleMap.Point = function (position, alt) {
+	position = alt == undefined ? position : {
+		lat: position,
+		lng: alt
+	};
+
 	return new google.maps.LatLng(position.lat, position.lng);
 };
 
 /**
  * @param p1
  * @param p2
+ *
  * @return Number
  */
-Map.Distance = function (p1, p2) {
-    return google.maps.geometry.spherical.computeDistanceBetween(new Map.Point(p1), new Map.Point(p2));
+GoogleMap.Distance = function (p1, p2) {
+    return google.maps.geometry.spherical.computeDistanceBetween(new GoogleMap.Point(p1), new GoogleMap.Point(p2));
+};
+
+/**
+ * Map types
+ */
+GoogleMap.Type = {
+	Roadmap: google.maps.MapTypeId.ROADMAP
+};
+
+/**
+ * @param  obj
+ * @param name
+ * @param callback
+ */
+GoogleMap.On = function (obj, name, callback) {
+	google.maps.event.addListener(obj, name, callback);
 };
 
 /**
@@ -180,136 +136,50 @@ Map.Distance = function (p1, p2) {
  *
  * @constructor
  */
-Map.Marker = function (map, opt) {
-	opt = opt || {};
-
-	var that = this;
-
-	/**
-	 * Data object
-	 */
-	that.data = opt.data || {};
-
-	/**
-	 * Flag of removing
-	 */
-	that.removed = false;
+GoogleMap.Object = function (map, opt) {
+	this._object = {};
+	this._opt = opt || {};
 
 	/**
 	 * @type Function
 	 */
-	that.click = opt.click || function () {};
-	that.mouseover = opt.mouseover || function () {};
-	that.mousemove = opt.mousemove || function () {};
-	that.mouseout = opt.mouseout || function () {};
-	that.dragstart = opt.dragstart || function () {};
-	that.drag = opt.drag || function () {};
-	that.dragend = opt.dragend || function () {};
+	this.ready = opt.ready || function () {};
+	this.click = opt.click || function () {};
+	this.mouseover = opt.mouseover || function () {};
+	this.mousemove = opt.mousemove || function () {};
+	this.mouseout = opt.mouseout || function () {};
+	this.dragstart = opt.dragstart || function () {};
+	this.drag = opt.drag || function () {};
+	this.dragend = opt.dragend || function () {};
 
-	/**
-	 * @type Array of Map.Tooltip
-	 */
-	that.Tooltips = [];
+	this.Init = function () { };
+	this.Render = function (map) { };
+	this.Set = this._object.setOptions;
 
-	that._map = map;
-	that._marker = null;
-
-	/**
-	 * @type Object {
-     *  lat: number,
-     *  lng: number
-     * }
-	 */
-	that.position = opt.position || {
-		lat: 0,
-		lng: 0
-	};
-
-	/**
-	 * Rendering the marker
-	 */
-	that.Render = function () {
-		that._marker = new google.maps.Marker({
-			position: Map.Point(that.position),
-			icon: opt.icon,
-			map: that._map,
-			visible: false
-		});
-
-		that._event('click');
-		that._event('mouseover');
-		that._event('mousemove');
-		that._event('mouseout');
-		that._event('dragstart');
-		that._event('drag');
-		that._event('dragend');
-	};
-
-	that._event = function (name) {
-		google.maps.event.addListener(that._marker, name, function (e) {
-			if (!(that[name] instanceof Function)) return;
-
-			that[name](that);
-		});
-	};
-
-	/**
-	 * Mark marker as removed
-	 */
-	that.Remove = function () {
-		that.removed = true;
-		that.Hide();
-	};
-
-	/**
-	 * Hide the marker
-	 */
-	that.Hide = function () {
-		that._marker.setVisible(false);
-	};
-
-	/**
-	 * Show the marker
-	 */
-	that.Show = function () {
-		that._marker.setVisible(true);
-	};
-
-	/**
-	 * @param flag
-	 */
-	that.Draggable = function (flag) {
-		that._marker.setDraggable(flag);
-	};
-
-	/**
-	 * @param icon
-	 */
-	that.Icon = function (icon) {
-		that._marker.setIcon(icon);
-	};
-
-	/**
-	 * @param position
-	 */
-	that.Position = function (position) {
-		that._marker.setPosition(Map.Point(position));
-	};
-
-	/**
-	 * @param opt
-	 * @returns {*}
-	 */
-	that.Tooltip = function (opt) {
-		that.Tooltips.push(new Map.Tooltip(that, opt));
-
-		return that.Tooltips[that.Tooltips.length - 1];
-	};
-
-	that.Render();
+	this.Init();
+	GoogleMap.On(this._object, 'domready', this.ready);
+	this.Render(map);
 };
 
-Map.Marker.__key = 'Markers';
+/**
+ * @constructor
+ */
+GoogleMap.Marker = function () {
+	var that = this;
+
+	this.Init = function () {
+		that._object = new google.maps.Marker({
+			position: GoogleMap.Point(that._opt.position),
+			icon: that._opt.icon,
+			visible: false
+		});
+	};
+
+	this.Render = function (map) {
+		that._object.setMap(map);
+	};
+};
+GoogleMap.Marker.prototype = GoogleMap.Object;
 
 /**
  * @param marker
@@ -317,7 +187,7 @@ Map.Marker.__key = 'Markers';
  *
  * @constructor
  */
-Map.Tooltip = function (marker, opt) {
+GoogleMap.Tooltip = function (marker, opt) {
 	opt = opt || {};
 
 	var that = this;
@@ -328,7 +198,7 @@ Map.Tooltip = function (marker, opt) {
 	that.custom = opt.custom || false;
 
 	/**
-	 * @type Map.Marker
+	 * @type GoogleMap.Marker
 	 * @private
 	 */
 	that._marker = marker;
@@ -425,7 +295,7 @@ Map.Tooltip = function (marker, opt) {
  *
  * @constructor
  */
-Map.Route = function (map, opt) {
+GoogleMap.Route = function (map, opt) {
 	var that = this;
 
 	that._line = null;
@@ -595,7 +465,7 @@ Map.Route = function (map, opt) {
 	that.Render();
 };
 
-Map.Route.__key = 'Routes';
+GoogleMap.Route.__key = 'Routes';
 
 /**
  * @param map
@@ -603,7 +473,7 @@ Map.Route.__key = 'Routes';
  *
  * @constructor
  */
-Map.Polygon = function (map, opt) {
+GoogleMap.Polygon = function (map, opt) {
     opt = opt || {};
     var that = this;
 
@@ -779,4 +649,4 @@ Map.Polygon = function (map, opt) {
     that.Render();
 };
 
-Map.Polygon.__key = 'Polygons';
+GoogleMap.Polygon.__key = 'Polygons';

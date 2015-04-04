@@ -100,7 +100,21 @@ class Quark {
 
 					$_SERVER['REQUEST_URI'] = $_SERVER['argv'][1][0] != '/' ? '/' . $_SERVER['argv'][1] : $_SERVER['argv'][1];
 
-					echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
+					if ($_SERVER['argc'] < 3)
+						echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
+					elseif ($_SERVER['argv'][2] == QuarkTask::PREDEFINED) {
+						$class = 'Quark\\Scenarios\\' . $_SERVER['argv'][1];
+						$task = new $class();
+
+						if (!($task instanceof IQuarkTask))
+							throw new QuarkArchException('Class ' . $class . ' is not a IQuarkTask');
+
+						echo (new QuarkService($task))->Invoke();
+					}
+					else throw new QuarkArchException("Unresolved condition of task running.\r\n"
+						. ' ARGC:[' . $_SERVER['argc'] . "]\r\n"
+						. ' ARGV:' . print_r($_SERVER['argv'], true) . "\r\n"
+					);
 				}
 			}
 		}
@@ -1215,6 +1229,8 @@ interface IQuarkSignedPostService {
  * @package Quark
  */
 class QuarkTask {
+	const PREDEFINED = '--quark';
+
 	/**
 	 * @var QuarkService $_service
 	 */
@@ -1283,7 +1299,7 @@ interface IQuarkScheduledTask {
  */
 class QuarkView {
 	/**
-	 * @var IQuarkViewModel|null
+	 * @var IQuarkViewModel|IQuarkViewModelWithResources|IQuarkViewModelWithCachedResources|null
 	 */
 	private $_view = null;
 	private $_child = null;
@@ -2977,6 +2993,17 @@ interface IQuarkDataProvider {
  * @package Quark
  */
 class QuarkField {
+	const TYPE_BOOL = 'bool';
+	const TYPE_INT = 'int';
+	const TYPE_FLOAT = 'float';
+	const TYPE_STRING = 'string';
+
+	const TYPE_ARRAY = 'array';
+	const TYPE_OBJECT = 'object';
+
+	const TYPE_RESOURCE = 'resource';
+	const TYPE_NULL = 'null';
+
 	/**
 	 * @param      $key
 	 * @param bool $nullable
@@ -3286,6 +3313,92 @@ class QuarkField {
 			$ok = $ok && $rule;
 
 		return $ok;
+	}
+}
+
+/**
+ * Class QuarkLocalizedString
+ *
+ * @package Quark
+ */
+class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
+	const LANGUAGE_ANY = '*';
+	const LANGUAGE_EN_US = 'en-US';
+	const LANGUAGE_RU_RU = 'ru-RU';
+	const LANGUAGE_MD = 'md';
+
+	public $values = '';
+	public $default = self::LANGUAGE_ANY;
+
+	/**
+	 * @param string $value
+	 * @param string $language
+	 * @param string $default
+	 */
+	public function __construct ($value = '', $language = self::LANGUAGE_ANY, $default = self::LANGUAGE_ANY) {
+		$this->values = new \StdClass();
+		$this->default = $default;
+
+		if (func_num_args() != 0 && is_scalar($value))
+			$this->values->$language = $value;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return $this->Of($this->default);
+	}
+
+	/**
+	 * @param string $language
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Of ($language, $value = '') {
+		if (func_num_args() == 2 && is_scalar($value))
+			$this->values->$language = (string)$value;
+
+		return isset($this->values->$language) ? (string)$this->values->$language : '';
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Fields () {
+		return array(
+			'values' => '',
+			'default' => ''
+		);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Rules () {
+		return array(
+			QuarkField::Type($this->default, QuarkField::TYPE_STRING)
+		);
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkModel($this, json_decode($raw));
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return json_encode(array(
+			'values' => $this->values,
+			'default' => $this->default
+		));
 	}
 }
 
@@ -4662,10 +4775,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::Type($this->name, 'string'),
-			QuarkField::Type($this->type, 'string'),
-			QuarkField::Type($this->size, 'int'),
-			QuarkField::Type($this->tmp_name, 'string'),
+			QuarkField::Type($this->name, QuarkField::TYPE_STRING),
+			QuarkField::Type($this->type, QuarkField::TYPE_STRING),
+			QuarkField::Type($this->size, QuarkField::TYPE_INT),
+			QuarkField::Type($this->tmp_name, QuarkField::TYPE_STRING),
 			QuarkField::MinLength($this->name, 1),
 			QuarkField::MinLength($this->tmp_name, 2)
 		);
