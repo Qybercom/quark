@@ -26,6 +26,15 @@ use Quark\Extensions\Payment\CloudPayments\CloudPaymentsConfig;
  * @package Quark\Extensions\Payment\CloudPayments\PaymentScenarios
  */
 class TokenChargeScenario implements IQuarkPaymentScenario {
+	private $_token = '';
+
+	/**
+	 * @param $token
+	 */
+	public function __construct ($token) {
+		$this->_token = $token;
+	}
+
 	/**
 	 * @param IQuarkPaymentConfig|CloudPaymentsConfig $config
 	 *
@@ -34,6 +43,7 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 	public function Pay (IQuarkPaymentConfig $config) {
 		$this->Currency = $config->currency;
 		$this->Amount = $config->amount;
+		$this->AccountId = $config->user;
 
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 		$request->Header(

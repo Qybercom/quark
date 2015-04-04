@@ -63,11 +63,11 @@ class Payment implements IQuarkExtension {
 
 	/**
 	 * @param string $currency
-	 * @param float $amount
+	 * @param int|float $amount
 	 *
 	 * @return mixed
 	 */
-	public function Pay ($currency, $amount) {
+	public function Pay ($currency = self::CURRENCY_USD, $amount = 0) {
 		if ($this->_config == null) return false;
 
 		$this->_config->Money($currency, $amount);
