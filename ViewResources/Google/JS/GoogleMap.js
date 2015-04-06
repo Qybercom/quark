@@ -233,14 +233,13 @@ GoogleMap.Object = {
 	 */
 	On: function (name, callback) {
 		var that = this;
-
-		callback = function (e) {
+		var _cb = function (e) {
 			e.that = that;
 			callback(e);
 		};
 
-		if (this._object == null) this._events.push({name:name, callback:callback});
-		else GoogleMap.On(this._object, name, callback);
+		if (this._object == null) this._events.push({name:name, callback:_cb});
+		else GoogleMap.On(this._object, name, _cb);
 	},
 
 	/**
