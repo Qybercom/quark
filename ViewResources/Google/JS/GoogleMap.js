@@ -489,7 +489,8 @@ GoogleMap.Route = function (opt) {
 	 * Rendering the route
 	 */
 	that.Render = function (opt) {
-		that._opt = GoogleMap._extend(opt, {
+        that._opt = GoogleMap._extend(that._opt, opt);
+        that._opt = GoogleMap._extend(that._opt, {
 			path: that.Points(),
 			geodesic: true,
 			style: {
@@ -526,17 +527,16 @@ GoogleMap.Circle = function (opt) {
 	 * Rendering the circle
 	 */
 	that.Render = function (opt) {
-		opt = opt || {};
-
-		that._opt = GoogleMap._extend(opt, {
-			center: GoogleMap.Point(that.points[0] || opt.center),
+		that._opt = GoogleMap._extend(that._opt, opt);
+        that._opt = GoogleMap._extend(that._opt, {
+			center: GoogleMap.Point(that.points[0] || that._opt.center),
 			radius: (that.width / 2) * 1000
 		});
 
 		that._object = new google.maps.Circle(that._opt);
 
 		if (that.points.length == 0)
-			that.points.push(opt.center);
+			that.points.push(that._opt.center);
 	};
 
 	/**
@@ -571,10 +571,11 @@ GoogleMap.Polygon = function (opt) {
      * Rendering the polygon
      */
     that.Render = function (opt) {
-		that._opt = GoogleMap._extend(opt, {
-			paths: that.Points(),
-			geodesic: true
-		});
+		that._opt = GoogleMap._extend(that._opt, opt);
+        that._opt = GoogleMap._extend(that._opt, {
+            paths: that.Points(),
+            geodesic: true
+        });
 
 		that._object =  new google.maps.Polygon(that._opt);
     };
