@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
 
+use Quark\IQuarkModelWithCustomPrimaryKey;
 use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkClient;
@@ -80,6 +81,19 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	}
 
 	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return string
+	 */
+	private function _identify (IQuarkModel $model) {
+		$pk = $model instanceof IQuarkModelWithCustomPrimaryKey
+			? $model->PrimaryKey()
+			: '_id';
+
+		return $model->$pk;
+	}
+
+	/**
 	 * @param mixed $criteria
 	 *
 	 * @return mixed
@@ -142,7 +156,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Save (IQuarkModel $model) {
 		try {
-			$api = $this->_api('POST', '/' . self::_class($model) . '/update/' . $this->_descriptor->IdentifyModel($model), $model);
+			$api = $this->_api('POST', '/' . self::_class($model) . '/update/' . $this->_identify($model), $model);
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -158,7 +172,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Remove (IQuarkModel $model) {
 		try {
-			$api = $this->_api('GET', '/' . self::_class($model) . '/remove/' . $this->_descriptor->IdentifyModel($model));
+			$api = $this->_api('GET', '/' . self::_class($model) . '/remove/' . $this->_identify($model));
 
 			return isset($api->status) && $api->status == 200;
 		}

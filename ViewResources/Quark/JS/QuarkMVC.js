@@ -34,31 +34,23 @@ Quark.MVC.Model = function (data) {
 	 * @param handlers
 	 */
 	that.Form = function (selector, handlers) {
-        $(document).on('click', selector, function (e) {
+        $(document).on('submit', selector, function (e) {
             if (handlers.beforeValidate instanceof Function)
 				handlers.beforeValidate($(this));
 
-			var form = $(this), data = Quark.MVC._form(selector);
+			var form = $(this),
+                data = Quark.MVC._form($(this));
 
 			if (data === false) return false;
-
-			form.notice = {
-				success: form.find('.q-notice.success'),
-				error: form.find('.q-notice.error')
-			};
-
-			var defaults = {
-				success: form.notice.success.html(),
-				error: form.notice.error.html()
-			};
 
 			if (handlers.beforeSubmit instanceof Function)
 				data = handlers.beforeSubmit(form, data) || data;
 
 			Quark.MVC.Request(form.attr('method'), form.attr('action'), data, handlers, form);
 
-			form.notice.success.html(defaults.success);
-			form.notice.error.html(defaults.error);
+            if (handlers.afterSubmit instanceof Function)
+                handlers.afterSubmit(form, data);
+
             e.preventDefault();
 			return false;
 		});
@@ -84,6 +76,7 @@ Quark.MVC.Model = function (data) {
  * @param url
  * @param data
  * @param handlers
+ * @param additional
  */
 Quark.MVC.Request = function (method, url, data, handlers, additional) {
 	handlers = handlers || {};
