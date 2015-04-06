@@ -34,11 +34,11 @@ Quark.MVC.Model = function (data) {
 	 * @param handlers
 	 */
 	that.Form = function (selector, handlers) {
-		$(document).on('submit', selector, function () {
-			if (handlers.beforeValidate instanceof Function)
+        $(document).on('click', selector, function (e) {
+            if (handlers.beforeValidate instanceof Function)
 				handlers.beforeValidate($(this));
 
-			var form = $(this), data = Quark._form(selector);
+			var form = $(this), data = Quark.MVC._form(selector);
 
 			if (data === false) return false;
 
@@ -59,22 +59,23 @@ Quark.MVC.Model = function (data) {
 
 			form.notice.success.html(defaults.success);
 			form.notice.error.html(defaults.error);
-
+            e.preventDefault();
 			return false;
 		});
 	};
 
 	/**
-	 * @param frame
 	 * @param template
+     *
+     * @return string
 	 */
-	that.Frame = function (frame, template) {
+	that.Map = function (template) {
 		if (!that._templates[template])
 			that._templates[template] = new Quark.MVC.Template(template);
 
 		that._templates[template].Tags = that.Data;
 
-		$(frame).html(that._templates[template].Compile());
+		return that._templates[template].Compile();
 	};
 };
 
@@ -175,6 +176,8 @@ Quark.MVC._structure = function (gate, tree, value, i) {
  * @private
  */
 Quark.MVC._tree = function (key) {
+    key = key || '';
+
 	var tree = key.split(/\[(.?)\]/gim), i = 0, spaces = 0, output = [];
 
 	while (i < tree.length) {
@@ -298,14 +301,21 @@ Quark.MVC.Template = function (selector, tags) {
 
 		for (key in tags) {
 			if (tags[key] == undefined) continue;
-
-			append = (prefix ? prefix : '') + key;
+            append = (prefix ? prefix : '') + key;
 
 			content = tags[key].constructor == Object
 				? that._compile(tags[key], content, append + '.')
-				: content.replace(new RegExp('{' + append + '}', 'gim'), tags[key].toString());
+				: content.replace(new RegExp('{' + that._escape(append) + '}', 'gim'), tags[key].toString());
 		}
 
 		return content;
 	};
+
+    /**
+     * http://stackoverflow.com/a/6969486
+     * @private
+     */
+    that._escape = function (str) {
+        return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    };
 };

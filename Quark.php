@@ -2105,9 +2105,21 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
  */
 trait QuarkModelBehavior {
 	/**
-	 * @var QuarkModel $__parent
+	 * @var QuarkModel $_container
 	 */
-	private $__container;
+	private $_container;
+
+	/**
+	 * @param QuarkModel $container
+	 *
+	 * @return QuarkModel
+	 */
+	public function __container (QuarkModel $container = null) {
+		if (func_num_args() != 0)
+			$this->_container = $container;
+
+		return $this->_container;
+	}
 
 	/**
 	 * @param $method
@@ -2116,14 +2128,7 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	private function _call ($method, $args) {
-		$parent = &$this->__container;
-		unset($this->__container);
-
-		$result = call_user_func_array(array($parent, $method), $args);
-
-		$this->__container = &$parent;
-
-		return $result;
+		return call_user_func_array(array($this->_container, $method), $args);
 	}
 
 	/**
@@ -2265,13 +2270,8 @@ class QuarkModel {
 
 		$this->PopulateWith($source);
 
-		$reflection = new \ReflectionObject($this->_model);
-
-		if (!$reflection->hasProperty('__container')) return;
-
-		$_this = $reflection->getProperty('__container');
-		$_this->setAccessible(true);
-		$_this->setValue($this->_model, $this);
+		if (method_exists($this->_model, '__container'))
+			$this->_model->__container($this);
 	}
 
 	/**

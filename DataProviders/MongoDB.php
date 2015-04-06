@@ -47,7 +47,8 @@ class MongoDB implements IQuarkDataProvider {
 	 */
 	public static function _id ($source) {
 		if (self::IsValidId($source)) return $source;
-		if (!is_object($source)) return '';
+		if (!is_object($source))
+			return isset($source['_id']) && self::IsValidId($source['_id']) ? $source['_id'] : '';
 
 		return isset($source->_id->{'$id'})
 			? $source->_id->{'$id'}
@@ -151,6 +152,18 @@ class MongoDB implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 *
+	 * @return mixed
+	 */
+	private function _data (IQuarkModel $model) {
+		$out = json_decode(json_encode($model));
+		$out->_id = new \MongoId(self::_id($model));
+
+		return $out;
+	}
+
+	/**
+	 * @param IQuarkModel $model
 	 * @param $options
 	 *
 	 * @return mixed
@@ -158,7 +171,7 @@ class MongoDB implements IQuarkDataProvider {
 	public function Create (IQuarkModel $model, $options = []) {
 		unset($model->_id);
 
-		return $this->_collection($model, $options)->insert($model, $options);
+		return $this->_collection($model, $options)->insert($this->_data($model), $options);
 	}
 
 	/**
@@ -168,9 +181,7 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		$model->_id = new \MongoId(self::_id($model));
-
-		return $this->_collection($model, $options)->save($model, $options);
+		return $this->_collection($model, $options)->save($this->_data($model), $options);
 	}
 
 	/**
@@ -278,7 +289,7 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options = []) {
-		return $this->_collection($model, $options)->update($criteria, $model, $options);
+		return $this->_collection($model, $options)->update($criteria, $this->_data($model), $options);
 	}
 
 	/**

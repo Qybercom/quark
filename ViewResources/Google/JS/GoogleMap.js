@@ -234,7 +234,9 @@ GoogleMap.Object = {
 	On: function (name, callback) {
 		var that = this;
 		var _cb = function (e) {
-			e.that = that;
+            if (e)
+			    e.that = that;
+
 			callback(e);
 		};
 
@@ -313,10 +315,13 @@ GoogleMap.Marker.prototype = GoogleMap.Object;
  * @constructor
  */
 GoogleMap.Tooltip = function (opt) {
+    opt = opt || {};
+
 	var that = this;
 
 	that._id = 'tooltip' + Quark.GuID();
 	that.custom = opt.custom || false;
+    that.content = opt.content || '';
 
 	/**
 	 * DOM elements of tooltip
@@ -329,8 +334,8 @@ GoogleMap.Tooltip = function (opt) {
 
 	that.Init = function () {
 		that._object = new google.maps.InfoWindow(GoogleMap._extend(opt, {
-			content: '<div id="' + that._id + '">' + opt.content + '</div>'
-		}));
+			content: '<div id="' + that._id + '" class="quark-map-tooltip">' + that.content + '</div>'
+        }));
 	};
 
 	/**
@@ -352,6 +357,8 @@ GoogleMap.Tooltip = function (opt) {
 	 * @param custom
 	 */
 	that.Content = function (html, custom) {
+        that.content = html;
+
 		if (custom != undefined)
 			that.custom = custom;
 
@@ -375,7 +382,7 @@ GoogleMap.Tooltip = function (opt) {
 			that.element._copy = that.element.outer.html();
 		}
 
-		that.Content('<div id="' + that._id + '" class="quark-map-tooltip">' + opt.content + '</div>', opt.custom);
+		that.Content(that.content, that.custom);
 	};
 };
 GoogleMap.Tooltip.prototype = GoogleMap.Object;
