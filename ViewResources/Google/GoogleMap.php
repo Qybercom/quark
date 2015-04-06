@@ -11,11 +11,11 @@ use Quark\QuarkLocalCoreJSViewResource;
 use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
- * Class Map
+ * Class GoogleMap
  *
  * @package Quark\ViewResources\Google
  */
-class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	const FORMAT_PNG = 'png';
 	const FORMAT_PNG8 = 'png8';
 	const FORMAT_PNG32 = 'png32';
@@ -58,7 +58,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/JS/Map.js';
+		return __DIR__ . '/JS/GoogleMap.js';
 	}
 
 	/**
@@ -83,7 +83,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	 * @param float $lat
 	 * @param float $lng
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function CenterByCoordinates ($lat, $lng) {
 		$this->_center = ((float)$lat) . '-' . ((float)$lng);
@@ -93,7 +93,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param string $location
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function CenterByLocation ($location) {
 		$this->_center = (string)$location;
@@ -103,7 +103,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param int $zoom
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Zoom ($zoom) {
 		$this->_zoom = (int)$zoom;
@@ -114,7 +114,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	 * @param int $width
 	 * @param int $height
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Size ($width, $height) {
 		$this->_size = ((int)$width) . 'x' . ((int)$height);
@@ -124,7 +124,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param int $scale
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Scale ($scale) {
 		$this->_scale = (int)$scale;
@@ -134,7 +134,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param string $format
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Format ($format) {
 		$this->_format = (string)$format;
@@ -144,7 +144,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param string $type
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function MapType ($type) {
 		$this->_type = (string)$type;
@@ -154,7 +154,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param bool $sensor
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Sensor ($sensor) {
 		$this->_sensor = (bool)$sensor;
@@ -164,7 +164,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param MapMarker $marker
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Marker (MapMarker $marker) {
 		$this->_markers .= $marker->Compile();
@@ -174,7 +174,7 @@ class Map implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewReso
 	/**
 	 * @param MapPath $path
 	 *
-	 * @return Map
+	 * @return GoogleMap
 	 */
 	public function Path (MapPath $path) {
 		$this->_paths .= $path->Compile();

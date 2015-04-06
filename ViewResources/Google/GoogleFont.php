@@ -10,11 +10,11 @@ use Quark\QuarkCSSViewResourceType;
 use Quark\QuarkDTO;
 
 /**
- * Class Font
+ * Class GoogleFont
  *
  * @package Quark\ViewResources\Google
  */
-class Font implements IQuarkViewResource, IQuarkForeignViewResource {
+class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource {
 	const OPTION_SIZES = 'sizes';
 	const OPTION_SUBSETS = 'subsets';
 

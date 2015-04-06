@@ -8,7 +8,7 @@ use Quark\IQuarkViewResourceWithDependencies;
 use Quark\QuarkLocalCoreCSSViewResource;
 use Quark\QuarkLocalCoreJSViewResource;
 
-use Quark\ViewResources\Google\Font;
+use Quark\ViewResources\Google\GoogleFont;
 use Quark\ViewResources\FontAwesome\FontAwesome;
 
 /**
@@ -19,10 +19,10 @@ use Quark\ViewResources\FontAwesome\FontAwesome;
 class QuarkUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	private $_js = null;
 	private $_sizes = array(
-		Font::N300,
-		Font::N600,
-		Font::I300,
-		Font::I600
+		GoogleFont::N300,
+		GoogleFont::N600,
+		GoogleFont::I300,
+		GoogleFont::I600
 	);
 
 	/**
@@ -43,8 +43,8 @@ class QuarkUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	public function Dependencies () {
 		return array(
 			new FontAwesome(),
-			new Font('Open Sans', array(
-				Font::OPTION_SIZES => $this->_sizes
+			new GoogleFont('Open Sans', array(
+				GoogleFont::OPTION_SIZES => $this->_sizes
 			)),
 			new QuarkLocalCoreCSSViewResource(),
 			$this->_js

@@ -103,7 +103,7 @@ class Quark {
 					if ($_SERVER['argc'] < 3)
 						echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 					elseif ($_SERVER['argv'][2] == QuarkTask::PREDEFINED) {
-						$class = 'Quark\\Scenarios\\' . $_SERVER['argv'][1];
+						$class = /*'Quark\\Scenarios\\' .*/ $_SERVER['argv'][1];
 						$task = new $class();
 
 						if (!($task instanceof IQuarkTask))
