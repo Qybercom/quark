@@ -236,6 +236,7 @@ GoogleMap.Object = {
 
 		callback = function (e) {
 			e.that = that;
+			callback(e);
 		};
 
 		if (this._object == null) this._events.push({name:name, callback:callback});
