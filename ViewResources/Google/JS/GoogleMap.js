@@ -198,6 +198,9 @@ GoogleMap.DeltaBetween = function (a, b) {
  * 	}}
  */
 GoogleMap.Edge = function (width, position) {
+	width = width || 0;
+	position = position || {};
+
 	return {
 		n: {lat: position.lat + GoogleMap.Delta(width,	0),	lng: position.lng -GoogleMap.Delta(0, 0)},
 		e: {lat: position.lat + GoogleMap.Delta(0,		0),	lng: position.lng +GoogleMap.Delta(width, position.lat)},
@@ -229,6 +232,12 @@ GoogleMap.Object = {
 	 * @param callback
 	 */
 	On: function (name, callback) {
+		var that = this;
+
+		callback = function (e) {
+			e.that = that;
+		};
+
 		if (this._object == null) this._events.push({name:name, callback:callback});
 		else GoogleMap.On(this._object, name, callback);
 	},
@@ -239,14 +248,6 @@ GoogleMap.Object = {
 	 */
 	Trigger: function (name, opt) {
 		GoogleMap.Trigger(this._object, name, opt);
-	},
-
-	/**
-	 * @param name
-	 * @param callback
-	 */
-	Off: function (name, callback) {
-		GoogleMap.Off(this._object, name, callback);
 	},
 
 	/**
