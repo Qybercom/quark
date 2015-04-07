@@ -821,15 +821,17 @@ class QuarkService {
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
 		if ($this->_service instanceof IQuarkAuthorizableService || $this->_service instanceof IQuarkAuthorizableLiteService) {
-			$session = QuarkSession::Get($this->_service->AuthorizationProvider());
+			$session = QuarkSession::Get($this->_service->AuthorizationProvider($request));
 			$session->Initialize($request);
 
 			$response->AttachData($session->Trail($response));
 
 			if ($this->_service instanceof IQuarkAuthorizableService) {
-				if (!$this->_service->AuthorizationCriteria($request, $session)) {
+				$criteria = $this->_service->AuthorizationCriteria($request, $session);
+
+				if ($criteria !== true) {
 					$ok = false;
-					$output = $this->_service->AuthorizationFailed();
+					$output = $this->_service->AuthorizationFailed($request, $criteria);
 				}
 				else {
 					if (Quark::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) {
@@ -839,7 +841,7 @@ class QuarkService {
 							$action = 'SignatureCheckFailedOn' . $method;
 
 							$ok = false;
-							$output = $this->_service->$action();
+							$output = $this->_service->$action($request);
 						}
 					}
 				}
@@ -1010,22 +1012,27 @@ interface IQuarkAuthorizationProvider {
  */
 interface IQuarkAuthorizableService {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return string
 	 */
-	public function AuthorizationProvider();
+	public function AuthorizationProvider(QuarkDTO $request);
 
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
 	 *
-	 * @return bool
+	 * @return bool|mixed
 	 */
 	public function AuthorizationCriteria(QuarkDTO $request, QuarkSession $session);
 
 	/**
+	 * @param QuarkDTO $request
+	 * @param $criteria
+	 *
 	 * @return mixed
 	 */
-	public function AuthorizationFailed();
+	public function AuthorizationFailed(QuarkDTO $request, $criteria);
 }
 
 /**
@@ -1035,9 +1042,11 @@ interface IQuarkAuthorizableService {
  */
 interface IQuarkAuthorizableLiteService {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return string
 	 */
-	public function AuthorizationProvider();
+	public function AuthorizationProvider(QuarkDTO $request);
 }
 
 /**
@@ -1194,9 +1203,11 @@ interface IQuarkServiceWithAccessControl {
  */
 interface IQuarkSignedAnyService {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return mixed
 	 */
-	public function SignatureCheckFailedOnAny();
+	public function SignatureCheckFailedOnAny(QuarkDTO $request);
 }
 
 /**
@@ -1206,9 +1217,11 @@ interface IQuarkSignedAnyService {
  */
 interface IQuarkSignedGetService {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return mixed
 	 */
-	public function SignatureCheckFailedOnGet();
+	public function SignatureCheckFailedOnGet(QuarkDTO $request);
 }
 
 /**
@@ -1218,9 +1231,11 @@ interface IQuarkSignedGetService {
  */
 interface IQuarkSignedPostService {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return mixed
 	 */
-	public function SignatureCheckFailedOnPost();
+	public function SignatureCheckFailedOnPost(QuarkDTO $request);
 }
 
 /**
