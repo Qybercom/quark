@@ -23,11 +23,6 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	private $_connection;
 
 	/**
-	 * @var QuarkURI $_uri
-	 */
-	private $_uri;
-
-	/**
 	 * @var QuarkSQL $_sql
 	 */
 	private $_sql;
@@ -36,6 +31,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
+	 *
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
@@ -51,15 +47,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (!$this->_connection)
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 
-		$this->_uri = $uri;
 		$this->_sql = new QuarkSQL($this);
-	}
-
-	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		return $this->_uri;
 	}
 
 	/**
@@ -187,10 +175,14 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$result = $this->_sql->Count($model, $criteria, $options + array(
 			QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
 			QuarkModel::OPTION_SKIP => $skip,
-			QuarkModel::OPTION_LIMIT => $limit
+			QuarkModel::OPTION_LIMIT => $limit == 0 ? 'ALL' : $limit
 		));
 
-		return $result === false ? 0 : (int)pg_fetch_result($result, 0, 0);
+		if (!$result) return 0;
+
+		$out = pg_fetch_assoc($result);
+
+		return isset($out['count']) ? (int)$out['count'] : 0;
 	}
 
 	/**
@@ -200,7 +192,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Query ($query, $options) {
-		return \pg_query_params($this->_connection, $query . ';', $options);
+		return \pg_query($this->_connection, $query . ';');
 	}
 
 	/**

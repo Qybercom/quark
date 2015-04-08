@@ -31,11 +31,6 @@ class FileSystem implements IQuarkDataProvider {
 	private $_root = '';
 
 	/**
-	 * @var QuarkURI
-	 */
-	private $uri;
-
-	/**
 	 * @return QuarkURI
 	 */
 	public static function LocalFS () {
@@ -46,18 +41,11 @@ class FileSystem implements IQuarkDataProvider {
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
+	 *
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
-		$this->uri = $uri;
 		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $uri->URI()))));
-	}
-
-	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		return $this->uri;
 	}
 
 	/**

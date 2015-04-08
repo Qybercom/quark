@@ -22,11 +22,6 @@ class MongoDB implements IQuarkDataProvider {
 	private $_connection;
 
 	/**
-	 * @var QuarkURI
-	 */
-	private $_uri;
-
-	/**
 	 * @param $id
 	 *
 	 * @return bool
@@ -102,6 +97,7 @@ class MongoDB implements IQuarkDataProvider {
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
+	 *
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
@@ -117,19 +113,11 @@ class MongoDB implements IQuarkDataProvider {
 			if (strlen(trim($uri->path)) != 0) {
 				$db = $uri->path;
 				$this->_connection = $this->_connection->$db;
-				$this->_uri = $uri;
 			}
 		}
 		catch (\Exception $e) {
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 		}
-	}
-
-	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		return $this->_uri;
 	}
 
 	/**

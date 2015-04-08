@@ -632,7 +632,7 @@ class QuarkConfig {
 	 */
 	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
 		try {
-			QuarkModel::Source($name, $provider)->Connect($uri);
+			QuarkModel::Source($name, new QuarkModelSource($provider, $uri));
 		}
 		catch (\Exception $e) {
 			Quark::Log('Unable to connect \'' . $name . '\'', Quark::LOG_FATAL);
@@ -2204,6 +2204,40 @@ trait QuarkModelBehavior {
 }
 
 /**
+ * Class QuarkModelSource
+ *
+ * @package Quark
+ */
+class QuarkModelSource {
+	/**
+	 * @var IQuarkDataProvider $_provider
+	 */
+	private $_provider;
+
+	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri;
+
+	/**
+	 * @param IQuarkDataProvider $provider
+	 * @param QuarkURI           $uri
+	 */
+	public function __construct (IQuarkDataProvider $provider, QuarkURI $uri) {
+		$this->_provider = $provider;
+		$this->_uri = $uri;
+	}
+
+	/**
+	 * @return IQuarkDataProvider
+	 */
+	public function Connect () {
+		$this->_provider->Connect($this->_uri);
+		return $this->_provider;
+	}
+}
+
+/**
  * Class QuarkModel
  *
  * @package Quark
@@ -2220,22 +2254,22 @@ class QuarkModel {
 	const OPTION_VALIDATE = 'validate';
 
 	/**
-	 * @var IQuarkDataProvider[]
+	 * @var QuarkModelSource[]
 	 */
 	private static $_providers = array();
 
 	/**
-	 * @param                    $name
-	 * @param IQuarkDataProvider $provider
+	 * @param string $name
+	 * @param QuarkModelSource $source
 	 *
-	 * @return IQuarkDataProvider
+	 * @return QuarkModelSource
 	 * @throws QuarkArchException
 	 */
-	public static function Source ($name, IQuarkDataProvider $provider = null) {
+	public static function Source ($name, QuarkModelSource $source = null) {
 		$args = func_num_args();
 
 		if ($args == 2)
-			self::$_providers[$name] = $provider;
+			self::$_providers[$name] = $source;
 
 		if (!is_scalar($name))
 			throw new QuarkArchException('Value [' . print_r($name, true) . '] is not valid data provider name');
@@ -2244,25 +2278,6 @@ class QuarkModel {
 			throw new QuarkArchException('Data provider ' . print_r($name, true) . ' is not pooled');
 
 		return self::$_providers[$name];
-	}
-
-	/**
-	 * @param $name
-	 *
-	 * @return QuarkURI
-	 * @throws QuarkArchException
-	 */
-	public static function SourceURI ($name) {
-		if (!isset(self::$_providers[$name]))
-			throw new QuarkArchException('Data provider ' . print_r($name, true) . ' is not pooled');
-
-		$provider = self::$_providers[$name];
-		$uri = $provider->SourceURI();
-
-		if (!($uri instanceof QuarkURI))
-			throw new QuarkArchException('Data provider ' . get_class($provider) . ' specified invalid QuarkURI');
-
-		return $uri;
 	}
 
 	/**
@@ -2387,12 +2402,13 @@ class QuarkModel {
 		if (!($model instanceof IQuarkModelWithDataProvider))
 			throw new QuarkArchException('Attempt to get data provider of model ' . get_class($model) . ' which is not defined as IQuarkModelWithDataProvider');
 
-		$provider = self::Source($model->DataProvider());
+		$name = $model->DataProvider();
+		$source = self::Source($name);
 
-		if (!($provider instanceof IQuarkDataProvider))
-			throw new QuarkArchException('Model ' . get_class($model) . ' specified ' . (is_object($provider) ? get_class($provider) : gettype($provider)) . ', which is not a valid IQuarkDataProvider');
+		if ($source == null)
+			throw new QuarkArchException('Model source for model ' . get_class($model) . ' is not connected');
 
-		return $provider;
+		return $source->Connect();
 	}
 
 	/**
@@ -2925,11 +2941,6 @@ interface IQuarkDataProvider {
 	public function Connect(QuarkURI $uri);
 
 	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI();
-
-	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return mixed
@@ -3295,6 +3306,16 @@ class QuarkField {
 		if ($nullable && $key === null) return true;
 
 		return in_array($key, $values);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param             $field
+	 *
+	 * @return bool
+	 */
+	public static function Unique (IQuarkModel $model, $field) {
+		return QuarkModel::Count($model, array($field => $model->$field)) == 0;
 	}
 
 	/**
@@ -4210,7 +4231,7 @@ class QuarkDTO {
 			if (sizeof($this->_cookies) != 0)
 				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
 
-			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType();
+			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType() . '; charset=utf-8';
 
 			foreach ($this->_headers as $key => $value)
 				$query .= $key . ': ' . $value . "\r\n";
@@ -5585,6 +5606,8 @@ class QuarkCertificate {
  * @package Quark
  */
 class QuarkSQL {
+	const OPTION_AS = 'option.as';
+
 	const FIELD_COUNT_ALL = 'COUNT(*)';
 
 	/**
@@ -5783,7 +5806,7 @@ class QuarkSQL {
 		return $this->Query(
 			$model,
 			$options,
-			'SELECT ' . $fields . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
+			'SELECT ' . $fields . (isset($options[self::OPTION_AS]) ? ' AS ' . $options[self::OPTION_AS] : '') . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
 		);
 	}
 

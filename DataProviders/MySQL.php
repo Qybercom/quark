@@ -24,11 +24,6 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	private $_connection;
 
 	/**
-	 * @var QuarkURI $_uri
-	 */
-	private $_uri;
-
-	/**
 	 * @var QuarkSQL $_sql
 	 */
 	private $_sql;
@@ -37,6 +32,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
+	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkConnectionException
 	 */
@@ -63,15 +59,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		))
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
 
-		$this->_uri = $uri;
 		$this->_sql = new QuarkSQL($this);
-	}
-
-	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		return $this->_uri;
 	}
 
 	/**

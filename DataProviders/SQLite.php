@@ -2,16 +2,18 @@
 namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
+use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\QuarkURI;
 
 /**
- * Class Oracle
+ * Class SQLite
  *
  * @package Quark\DataProviders
  */
-class Oracle implements IQuarkDataProvider {
+class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
+
 	/**
 	 * @param QuarkURI $uri
 	 *
@@ -110,5 +112,31 @@ class Oracle implements IQuarkDataProvider {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
 		// TODO: Implement Count() method.
+	}
+
+	/**
+	 * @param string $query
+	 * @param array  $options
+	 *
+	 * @return mixed
+	 */
+	public function Query ($query, $options) {
+		// TODO: Implement Query() method.
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Escape ($value) {
+		// TODO: Implement Escape() method.
+	}
+
+	/**
+	 * @return string
+	 */
+	public function EscapeChar () {
+		// TODO: Implement EscapeChar() method.
 	}
 }

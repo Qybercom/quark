@@ -22,13 +22,6 @@ class Memcache implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		// TODO: Implement SourceURI() method.
-	}
-
-	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return mixed
