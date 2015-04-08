@@ -45,13 +45,6 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	}
 
 	/**
-	 * @return QuarkURI
-	 */
-	public function SourceURI () {
-		return $this->_uri;
-	}
-
-	/**
 	 * @param string $method
 	 * @param string $action
 	 * @param mixed $data
@@ -67,7 +60,6 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$this->_uri->path = $action;
-		$this->_uri->query = 'access=' . $this->_token;
 
 		$client = new QuarkClient($this->_uri->URI(true));
 		$client->Transport(new QuarkHTTPTransport($request, $response));
@@ -81,6 +73,20 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	}
 
 	/**
+	 * @param mixed $criteria
+	 *
+	 * @return mixed
+	 */
+	public function Login ($criteria = []) {
+		try {
+			return $this->_api('POST', '/user/login', $criteria)->profile;
+		}
+		catch (QuarkArchException $e) {
+			return false;
+		}
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return string
@@ -91,37 +97,6 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			: '_id';
 
 		return $model->$pk;
-	}
-
-	/**
-	 * @param mixed $criteria
-	 *
-	 * @return mixed
-	 */
-	public function Login ($criteria = []) {
-		try {
-			$data = $this->_api('POST', '/user/login', $criteria);
-
-			$this->_token = $data->access;
-
-			return $data->profile;
-		}
-		catch (QuarkArchException $e) {
-			return false;
-		}
-	}
-
-	/**
-	 * @param $request
-	 *
-	 * @return bool
-	 */
-	public function Reconnect ($request) {
-		if (!isset($request->access)) return false;
-
-		$this->_token = $request->access;
-
-		return true;
 	}
 
 	/**

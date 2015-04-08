@@ -2213,6 +2213,7 @@ class QuarkModelSource {
 	 * @var IQuarkDataProvider $_provider
 	 */
 	private $_provider;
+	private $_connection;
 
 	/**
 	 * @var QuarkURI $_uri
@@ -2229,18 +2230,53 @@ class QuarkModelSource {
 	}
 
 	/**
-	 * @return IQuarkDataProvider
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
 	 */
-	public function Connect () {
-		$this->_provider->Connect($this->_uri);
-		return $this->_provider;
+	public function __call ($method, $args) {
+		return call_user_func_array(array($this->_provider, $method), $args);
 	}
 
 	/**
 	 * @return IQuarkDataProvider
 	 */
-	public function Provider () {
+	public function Connect () {
+		$this->_connection = $this->_provider->Connect($this->_uri);
+
 		return $this->_provider;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Connection () {
+		return $this->_connection;
+	}
+
+	/**
+	 * @param IQuarkDataProvider $provider
+	 *
+	 * @return IQuarkDataProvider
+	 */
+	public function Provider (IQuarkDataProvider $provider = null) {
+		if (func_num_args() != 0)
+			$this->_provider = $provider;
+
+		return $this->_provider;
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 *
+	 * @return QuarkURI
+	 */
+	public function URI (QuarkURI $uri = null) {
+		if (func_num_args() != 0)
+			$this->_uri = $uri;
+
+		return $this->_uri;
 	}
 }
 
@@ -4060,6 +4096,13 @@ class QuarkURI {
 		unset($buffer);
 
 		return $route;
+	}
+
+	/**
+	 * @param array $query
+	 */
+	public function Params ($query = []) {
+		$this->query = http_build_query((array)$query);
 	}
 
 	/**
