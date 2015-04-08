@@ -2235,6 +2235,13 @@ class QuarkModelSource {
 		$this->_provider->Connect($this->_uri);
 		return $this->_provider;
 	}
+
+	/**
+	 * @return IQuarkDataProvider
+	 */
+	public function Provider () {
+		return $this->_provider;
+	}
 }
 
 /**
