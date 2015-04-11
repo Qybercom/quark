@@ -919,7 +919,7 @@ class QuarkService {
 			}
 
 			$length--;
-			$service = preg_replace('#\/' . ucfirst(trim($route[$length])) . '$#Uis', '', $service);
+			$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
 			$path = self::_bundle($service);
 		}
 

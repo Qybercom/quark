@@ -34,6 +34,10 @@ Quark.MVC.Model = function (data) {
 	 * @param handlers
 	 */
 	that.Form = function (selector, handlers) {
+        if (Quark.MVC.Model._selectors.indexOf(selector) + 1) return;
+
+        Quark.MVC.Model._selectors.push(selector);
+
         $(document).on('submit', selector, function (e) {
             if (handlers.beforeValidate instanceof Function)
 				handlers.beforeValidate($(this));
@@ -70,6 +74,8 @@ Quark.MVC.Model = function (data) {
 		return that._templates[template].Compile();
 	};
 };
+
+Quark.MVC.Model._selectors = [];
 
 /**
  * @param method

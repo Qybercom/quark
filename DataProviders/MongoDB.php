@@ -140,12 +140,15 @@ class MongoDB implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param bool $_id
 	 *
 	 * @return mixed
 	 */
-	private function _data (IQuarkModel $model) {
+	private function _data (IQuarkModel $model, $_id = true) {
 		$out = json_decode(json_encode($model));
-		$out->_id = new \MongoId(self::_id($model));
+
+		if ($_id) $out->_id = new \MongoId(self::_id($model));
+		else unset($out->_id);
 
 		return $out;
 	}
@@ -157,9 +160,12 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		unset($model->_id);
+		$data = $this->_data($model, false);
+		$out = $this->_collection($model, $options)->insert($data, $options);
 
-		return $this->_collection($model, $options)->insert($this->_data($model), $options);
+		$model->_id = $data->_id;
+
+		return $out;
 	}
 
 	/**
@@ -232,6 +238,9 @@ class MongoDB implements IQuarkDataProvider {
 		$item = null;
 
 		foreach ($raw as $document) {
+			/**
+			 * @var \StdClass $document->_id
+			 */
 			$item = $document;
 
 			if (isset($options['getId']) && $options['getId'] == true)
@@ -277,7 +286,7 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options = []) {
-		return $this->_collection($model, $options)->update($criteria, $this->_data($model), $options);
+		return $this->_collection($model, $options)->update($criteria, $this->_data($model, false), $options);
 	}
 
 	/**

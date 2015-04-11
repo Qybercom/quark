@@ -99,17 +99,15 @@ h6 {
     border-radius: 5px;
 }
 
-.quark-message .fa {
+.quark-message:before {
     vertical-align: middle;
     display: inline-block;
-    margin-right: 5px;
-    float: left;
+    margin-right: 10px;
 }
 
 .quark-message .content {
     vertical-align: middle;
     display: inline-block;
-    margin-left: 5px;
 }
 
 .quark-message.info {
@@ -117,7 +115,8 @@ h6 {
 }
 
 .quark-message.warn {
-    border: 1px solid #E8E8AD;
+    /*border: 1px solid #E8E8AD;*/
+    border: 1px solid rgb(211, 190, 2);
 }
 
 .quark-message.fatal {
@@ -129,7 +128,8 @@ h6 {
 }
 
 .quark-message.ok {
-    border: 1px solid rgb(167, 255, 167);
+    /*border: 1px solid rgb(167, 255, 167);*/
+    border: 1px solid rgb(1, 165, 1);
 }
 
 

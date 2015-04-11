@@ -91,10 +91,19 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 *
 	 * @return string
 	 */
-	private function _identify (IQuarkModel $model) {
-		$pk = $model instanceof IQuarkModelWithCustomPrimaryKey
+	private function _pk (IQuarkModel $model) {
+		return $model instanceof IQuarkModelWithCustomPrimaryKey
 			? $model->PrimaryKey()
 			: '_id';
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return string
+	 */
+	private function _identify (IQuarkModel $model) {
+		$pk = $this->_pk($model);
 
 		return $model->$pk;
 	}
@@ -115,9 +124,18 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Create (IQuarkModel $model) {
 		try {
-			$api = $this->_api('POST', '/' . self::_class($model) . '/create', $model);
+			$class = self::_class($model);
+			$pk = $this->_pk($model);
 
-			return isset($api->status) && $api->status == 200;
+			$api = $this->_api('POST', '/' . $class . '/create', $model);
+
+			if (!isset($api->status) || $api->status != 200) return false;
+
+			$model->$pk = $model->$pk instanceof \MongoId
+				? new \MongoId($api->$class->$pk)
+				: $api->$class->$pk;
+
+			return true;
 		}
 		catch (QuarkArchException $e) {
 			return false;
