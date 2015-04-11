@@ -5383,6 +5383,10 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 
 			$out = $output . '--' . $this->_boundary . '--';
 		}
+		else {
+			if (func_num_args() == 1 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
+				$out = base64_encode($out);
+		}
 
 		return $out;
 	}

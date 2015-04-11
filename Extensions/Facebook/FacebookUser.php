@@ -22,13 +22,14 @@ class FacebookUser implements IQuarkModel, IQuarkLinkedModel, IQuarkAuthorizable
 	}
 
 	/**
-	 * @param IQuarkAuthorizationProvider $provider
+	 * @param IQuarkAuthorizationProvider|Facebook $provider
 	 * @param $request
 	 *
 	 * @return mixed
 	 */
 	public function RenewSession (IQuarkAuthorizationProvider $provider, $request) {
-		// TODO: Implement RenewSession() method.
+		print_r($provider);
+		print_r($provider->API('GET', '/me'));
 	}
 
 	/**

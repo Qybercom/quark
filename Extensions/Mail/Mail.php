@@ -217,6 +217,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 		if (!$client->Connect()) return false;
 
 		$smtp = $this->_config->SMTP();
+		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkMultipartIOProcessor::TRANSFER_ENCODING_BASE64);
 
 		try {
 			$this->_cmd($client, 220);
