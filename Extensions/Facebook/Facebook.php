@@ -1,41 +1,85 @@
 <?php
 namespace Quark\Extensions\Facebook;
 
-use Facebook\FacebookRequest;
-use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
-use Quark\QuarkDTO;
-use Quark\QuarkModel;
 
+use Facebook\GraphUser;
 use Facebook\FacebookSession;
+use Facebook\FacebookRequest;
 use Facebook\FacebookRequestException;
+use Facebook\FacebookRedirectLoginHelper;
+use Facebook\FacebookCanvasLoginHelper;
+use Facebook\FacebookJavaScriptLoginHelper;
 
 /**
  * Class FacebookSession
  *
  * @package Quark\Extensions\Facebook
  */
-class Facebook implements IQuarkAuthorizationProvider, IQuarkExtension {
+class Facebook implements IQuarkExtension {
 	/**
 	 * @var FaceBookConfig $_config
 	 */
 	private $_config;
+
+	/**
+	 * @var FacebookSession $_session
+	 */
 	private $_session;
+
+	/**
+	 * @param string $config
+	 * @param FacebookSession $session
+	 */
+	public function __construct ($config, $session = null) {
+		if (session_status() == PHP_SESSION_NONE)
+			session_start();
+
+		$this->_config = Quark::Config()->Extension($config);
+		$this->_session = func_num_args() == 1 ? FacebookSession::newAppSession() : $session;
+	}
+
+	/**
+	 * @param string $to
+	 * @param array  $permissions
+	 *
+	 * @return string
+	 */
+	public function LoginURL ($to, $permissions = []) {
+		return (new FacebookRedirectLoginHelper($to))->getLoginUrl($permissions);
+	}
+
+	/**
+	 * @param string $to
+	 *
+	 * @return string
+	 */
+	public function LogoutURL ($to) {
+		return (new FacebookRedirectLoginHelper(''))->getLogoutUrl($this->_session, $to);
+	}
+
+	/**
+	 * @return FacebookAccessToken
+	 */
+	public function Session () {
+		return $this->_session != null ? new FacebookAccessToken($this->_session->getAccessToken()) : null;
+	}
 
 	/**
 	 * @param        $method
 	 * @param        $url
+	 * @param array  $data
 	 * @param string $type
 	 *
 	 * @return bool|mixed
 	 */
-	public function API ($method, $url, $type = 'Facebook\GraphObject') {
+	public function API ($method, $url, $data = [], $type = 'Facebook\GraphObject') {
 		try {
 			if ($this->_session == null) return null;
 
-			$request = new FacebookRequest($this->_session, $method, $url);
+			$request = new FacebookRequest($this->_session, $method, $url, $data);
 
 			return $request->execute()->getGraphObject($type);
 		}
@@ -50,81 +94,63 @@ class Facebook implements IQuarkAuthorizationProvider, IQuarkExtension {
 	}
 
 	/**
-	 * @param string $name
-	 * @param QuarkDTO $request
-	 * @param $lifetime
-	 *
-	 * @return mixed
+	 * @return bool|mixed
 	 */
-	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		$this->_config = Quark::Config()->Extension($name);
-		$this->_session = FacebookSession::newAppSession();
+	public function Profile () {
+		return $this->API('GET', '/me', array(), GraphUser::className());
 	}
 
 	/**
-	 * @param string $name
-	 * @param QuarkDTO $response
-	 * @param QuarkModel $user
+	 * @param FacebookRedirectLoginHelper|FacebookCanvasLoginHelper|FacebookJavaScriptLoginHelper $helper
+	 * @param string $method
 	 *
-	 * @return mixed
+	 * @return FacebookSession
 	 */
-	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		// TODO: Implement Trail() method.
-	}
-
-	/**
-	 * @param string     $name
-	 * @param QuarkModel $model
-	 * @param            $criteria
-	 *
-	 * @return bool
-	 */
-	public function Login ($name, QuarkModel $model, $criteria) {
-		// TODO: Implement Login() method.
-	}
-
-	/**
-	 * @param string $name
-	 * @param QuarkModel $model
-	 * @param $criteria
-	 *
-	 * @return bool
-	 */
-	public function Login1 ($name, QuarkModel $model, $criteria) {
+	private static function _session ($helper, $method = 'getSession') {
 		try {
-		$this->_session = $criteria === null
-			? FacebookSession::newAppSession()
-			: new FacebookSession($criteria);
-
-			$this->_session->validate();
-		}
-		catch (FacebookRequestException $e) {
-			Quark::Log('FacebookRequestException: ' . $e->getMessage(), Quark::LOG_WARN);
-			return false;
+			return $helper->$method();
 		}
 		catch (\Exception $e) {
 			Quark::Log('Facebook.Exception: ' . $e->getMessage(), Quark::LOG_WARN);
-			return false;
+			return null;
 		}
-
-		return true;
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $config
+	 * @param string $to
 	 *
-	 * @return bool
+	 * @return Facebook
 	 */
-	public function Logout ($name) {
-		// TODO: Implement Logout() method.
+	public static function SessionFromRedirect ($config, $to) {
+		return new self($config, self::_session(new FacebookRedirectLoginHelper($to), 'getSessionFromRedirect'));
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $config
 	 *
-	 * @return string
+	 * @return Facebook
 	 */
-	public function Signature ($name) {
-		// TODO: Implement Signature() method.
+	public static function SessionFromCanvas ($config) {
+		return new self($config, self::_session(new FacebookCanvasLoginHelper()));
+	}
+
+	/**
+	 * @param string $config
+	 *
+	 * @return Facebook
+	 */
+	public static function SessionFromJavaScript ($config) {
+		return new self($config, self::_session(new FacebookJavaScriptLoginHelper()));
+	}
+
+	/**
+	 * @param string $config
+	 * @param string $token
+	 *
+	 * @return Facebook
+	 */
+	public static function SessionFromToken ($config, $token) {
+		return new self($config, new FacebookSession($token));
 	}
 }

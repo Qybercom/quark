@@ -1398,9 +1398,14 @@ class QuarkView {
 		$this->ResourceList();
 
 		/**
-		 * @var IQuarkViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource $resource
+		 * @var IQuarkViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource $resource
 		 */
 		foreach ($this->_resources as $resource) {
+			if ($resource instanceof IQuarkInlineViewResource) {
+				$out .= $resource->HTML();
+				continue;
+			}
+
 			$type = $resource->Type();
 
 			if (!($type instanceof IQuarkViewResourceType)) continue;
@@ -1705,6 +1710,18 @@ interface IQuarkForeignViewResource {
 	 * @return QuarkDTO
 	 */
 	public function RequestDTO();
+}
+
+/**
+ * Interface IQuarkInlineViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkInlineViewResource {
+	/**
+	 * @return string
+	 */
+	public function HTML();
 }
 
 /**
