@@ -49,8 +49,6 @@ var GoogleMap = function (selector, opt) {
 	that.Set = function (option, value) {
 		that.Settings[option] = value;
 
-        console.log(option, value);
-
 		var i = 0;
 		while (i < that._maps.length) {
 			that._maps[i].setOptions({option: value});
