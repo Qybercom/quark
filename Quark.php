@@ -527,7 +527,7 @@ class Quark {
 	/**
 	 * @param $message
 	 * @param string $lvl
-	 * @param string $domain
+	 * @param string $domain = 'application'
 	 * @return int|bool
 	 */
 	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
@@ -3428,8 +3428,8 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 
 	/**
 	 * @param string $value
-	 * @param string $language
-	 * @param string $default
+	 * @param string $language self::LANGUAGE_ANY
+	 * @param string $default self::LANGUAGE_ANY
 	 */
 	public function __construct ($value = '', $language = self::LANGUAGE_ANY, $default = self::LANGUAGE_ANY) {
 		$this->values = new \StdClass();
@@ -3736,7 +3736,7 @@ class QuarkClient {
 	 * @param string                  $uri
 	 * @param IQuarkTransportProvider $transport
 	 * @param QuarkCertificate        $certificate
-	 * @param int                     $timeout
+	 * @param int                     $timeout = 30
 	 */
 	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
 		$this->URI(QuarkURI::FromURI($uri));
@@ -4386,8 +4386,8 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param int    $code
-	 * @param string $text
+	 * @param int    $code = 0
+	 * @param string $text = 'OK'
 	 *
 	 * @return string
 	 */
@@ -5096,7 +5096,7 @@ class QuarkHTTPException extends QuarkException {
 	public $status = 500;
 
 	/**
-	 * @param int $status
+	 * @param int $status = 500
 	 * @param string $message
 	 */
 	public function __construct ($status = 500, $message = '') {
@@ -6080,8 +6080,8 @@ class QuarkSource {
 	}
 
 	/**
-	 * @param string $dim
-	 * @param int    $precision
+	 * @param string $dim = 'k'
+	 * @param int    $precision = 3
 	 */
 	private function _size ($dim = 'k', $precision = 3) {
 		$size = strlen($this->_source);

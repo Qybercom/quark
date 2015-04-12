@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Facebook;
+namespace Quark\Extensions\SocialNetwork\Facebook;
 
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
@@ -12,7 +12,7 @@ use Facebook\Entities\AccessToken;
 /**
  * Class FacebookAccessToken
  *
- * @package Quark\Extensions\Facebook
+ * @package Quark\Extensions\SocialNetwork\Facebook
  */
 class FacebookAccessToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	/**

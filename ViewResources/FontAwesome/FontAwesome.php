@@ -17,7 +17,7 @@ class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
 	private $_version = '';
 
 	/**
-	 * @param string $_version
+	 * @param string $_version = '4.3.0'
 	 */
 	public function __construct ($_version = '4.3.0') {
 		$this->_version = $_version;

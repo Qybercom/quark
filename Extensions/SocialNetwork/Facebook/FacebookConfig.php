@@ -1,16 +1,14 @@
 <?php
-namespace Quark\Extensions\Facebook;
+namespace Quark\Extensions\SocialNetwork\Facebook;
 
 use Quark\IQuarkExtensionConfig;
 
 use Quark\Quark;
 
-use Facebook\FacebookSession;
-
 /**
  * Class FacebookConfig
  *
- * @package Quark\Extensions\Facebook
+ * @package Quark\Extensions\SocialNetwork\Facebook
  */
 class FacebookConfig implements IQuarkExtensionConfig {
 	public $appId;
@@ -25,8 +23,6 @@ class FacebookConfig implements IQuarkExtensionConfig {
 		$this->appSecret = $secret;
 
 		Quark::Import(__DIR__ . '/facebook-php-sdk-v4/src/');
-
-		FacebookSession::setDefaultApplication($id, $secret);
 	}
 
 	/**

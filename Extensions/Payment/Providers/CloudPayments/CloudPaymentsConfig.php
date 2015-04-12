@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Payment\CloudPayments;
+namespace Quark\Extensions\Payment\Providers\CloudPayments;
 
 use Quark\IQuarkExtensionConfig;
 use Quark\Extensions\Payment\IQuarkPaymentConfig;
@@ -7,7 +7,7 @@ use Quark\Extensions\Payment\IQuarkPaymentConfig;
 /**
  * Class CloudPaymentsConfig
  *
- * @package Quark\Extensions\Payment
+ * @package Quark\Extensions\Payment\Providers
  */
 class CloudPaymentsConfig implements IQuarkExtensionConfig, IQuarkPaymentConfig {
 	public $user;

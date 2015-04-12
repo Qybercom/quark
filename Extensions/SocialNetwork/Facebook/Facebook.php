@@ -1,10 +1,11 @@
 <?php
-namespace Quark\Extensions\Facebook;
+namespace Quark\Extensions\SocialNetwork\Facebook;
 
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
 
+use Facebook\GraphObject;
 use Facebook\GraphUser;
 use Facebook\FacebookSession;
 use Facebook\FacebookRequest;
@@ -16,11 +17,11 @@ use Facebook\FacebookJavaScriptLoginHelper;
 /**
  * Class FacebookSession
  *
- * @package Quark\Extensions\Facebook
+ * @package Quark\Extensions\SocialNetwork\Facebook
  */
 class Facebook implements IQuarkExtension {
 	/**
-	 * @var FaceBookConfig $_config
+	 * @var FacebookConfig $_config
 	 */
 	private $_config;
 
@@ -39,6 +40,8 @@ class Facebook implements IQuarkExtension {
 
 		$this->_config = Quark::Config()->Extension($config);
 		$this->_session = func_num_args() == 1 ? FacebookSession::newAppSession() : $session;
+
+		FacebookSession::setDefaultApplication($this->_config->appId, $this->_config->appSecret);
 	}
 
 	/**
@@ -71,9 +74,9 @@ class Facebook implements IQuarkExtension {
 	 * @param        $method
 	 * @param        $url
 	 * @param array  $data
-	 * @param string $type
+	 * @param string $type = 'Facebook\GraphObject'
 	 *
-	 * @return bool|mixed
+	 * @return GraphObject
 	 */
 	public function API ($method, $url, $data = [], $type = 'Facebook\GraphObject') {
 		try {
@@ -85,24 +88,26 @@ class Facebook implements IQuarkExtension {
 		}
 		catch (FacebookRequestException $e) {
 			Quark::Log('FacebookRequestException: ' . $e->getMessage(), Quark::LOG_WARN);
-			return false;
+			return null;
 		}
 		catch (\Exception $e) {
 			Quark::Log('Facebook.Exception: ' . $e->getMessage(), Quark::LOG_WARN);
-			return false;
+			return null;
 		}
 	}
 
 	/**
-	 * @return bool|mixed
+	 * @param string $user = 'me'
+	 *
+	 * @return GraphObject
 	 */
-	public function Profile () {
-		return $this->API('GET', '/me', array(), GraphUser::className());
+	public function Profile ($user = 'me') {
+		return $this->API('GET', '/' . $user, array(), GraphUser::className());
 	}
 
 	/**
 	 * @param FacebookRedirectLoginHelper|FacebookCanvasLoginHelper|FacebookJavaScriptLoginHelper $helper
-	 * @param string $method
+	 * @param string $method = 'getSession'
 	 *
 	 * @return FacebookSession
 	 */

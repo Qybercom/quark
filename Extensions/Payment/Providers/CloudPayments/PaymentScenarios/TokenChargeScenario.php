@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Payment\CloudPayments\PaymentScenarios;
+namespace Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios;
 
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
@@ -9,7 +9,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 use Quark\Extensions\Payment\IQuarkPaymentConfig;
 
-use Quark\Extensions\Payment\CloudPayments\CloudPaymentsConfig;
+use Quark\Extensions\Payment\Providers\CloudPayments\CloudPaymentsConfig;
 
 /**
  * Class TokenChargeScenario
@@ -23,7 +23,7 @@ use Quark\Extensions\Payment\CloudPayments\CloudPaymentsConfig;
  * @property $JsonData		Json	Необязательный	Произвольные данные
  * @property $Token			String	Обязательный	Токен
  *
- * @package Quark\Extensions\Payment\CloudPayments\PaymentScenarios
+ * @package Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios
  */
 class TokenChargeScenario implements IQuarkPaymentScenario {
 	private $_token = '';
