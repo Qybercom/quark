@@ -578,6 +578,11 @@ class QuarkConfig {
 	private $_culture;
 
 	/**
+	 * @var int $_alloc
+	 */
+	private $_alloc = 5;
+
+	/**
 	 * @var string
 	 */
 	private $_mode = Quark::MODE_DEV;
@@ -626,6 +631,18 @@ class QuarkConfig {
 	 */
 	public function Culture (IQuarkCulture $culture = null) {
 		return $this->_culture = ($culture === null) ? $this->_culture : $culture;
+	}
+
+	/**
+	 * @param int $mb
+	 *
+	 * @return int
+	 */
+	public function Alloc ($mb = 0) {
+		if (func_num_args() != 0)
+			$this->_alloc = $mb;
+
+		return $this->_alloc;
 	}
 
 	/**
@@ -4824,7 +4841,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		$this->_content = file_get_contents($this->location);
+		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
+			$this->_content = file_get_contents($this->location);
 
 		return $this;
 	}
