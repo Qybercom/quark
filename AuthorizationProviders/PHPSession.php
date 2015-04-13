@@ -21,7 +21,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		@session_start();
+		if (session_status() == PHP_SESSION_NONE)
+			session_start();
 
 		if (!isset($_SESSION) || !isset($_SESSION[$name]) || !isset($_SESSION[$name]['user'])) return null;
 
@@ -51,7 +52,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Login ($name, QuarkModel $model, $credentials) {
-		@session_start();
+		if (session_status() == PHP_SESSION_NONE)
+			session_start();
 
 		$_SESSION[$name]['user'] = $model->Model();
 		$_SESSION[$name]['signature'] = Quark::GuID();
@@ -65,7 +67,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		@session_start();
+		if (session_status() == PHP_SESSION_NONE)
+			session_start();
 
 		if (!isset($_SESSION[$name])) return false;
 

@@ -340,6 +340,17 @@ class Quark {
 	}
 
 	/**
+	 * @param string $path
+	 *
+	 * @return string
+	 */
+	public static function URLOf ($path) {
+		$path = self::NormalizePath($path, false);
+
+		return self::WebHost() . (strlen($path) != 0 && $path[0] == '/' ? substr($path, 1) : $path);
+	}
+
+	/**
 	 * @param $source
 	 *
 	 * @return bool
@@ -2350,7 +2361,7 @@ class QuarkModel {
 		 * Attention!
 		 * Cloning need to opposite non-controlled passing by reference
 		 */
-		$this->_model = new $model();
+		$this->_model = clone $model;
 
 		if (func_num_args() == 1)
 			$source = $model;

@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SocialNetwork\Facebook;
+namespace Quark\Extensions\SocialNetwork;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkInlineViewResource;
@@ -7,11 +7,11 @@ use Quark\IQuarkInlineViewResource;
 use Quark\Quark;
 
 /**
- * Class FacebookSharedResource
+ * Class OpenGraphResource
  *
- * @package Quark\Extensions\SocialNetwork\Facebook
+ * @package Quark\Extensions\SocialNetwork
  */
-class FacebookSharedResource implements IQuarkViewResource, IQuarkInlineViewResource {
+class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource {
 	const PROPERTY_FB_APP_ID = 'fb:app_id';
 	const PROPERTY_OG_URL = 'og:url';
 	const PROPERTY_OG_TYPE = 'og:type';
@@ -79,7 +79,7 @@ class FacebookSharedResource implements IQuarkViewResource, IQuarkInlineViewReso
 	 * @param string $property
 	 * @param string $content
 	 *
-	 * @return FacebookSharedResource
+	 * @return OpenGraphResource
 	 */
 	public function Property ($property, $content) {
 		$this->_html .= '<meta property="' . $property . '" content="' . $content . '" />';
@@ -89,7 +89,7 @@ class FacebookSharedResource implements IQuarkViewResource, IQuarkInlineViewReso
 	/**
 	 * @param $config
 	 *
-	 * @return FacebookSharedResource
+	 * @return OpenGraphResource
 	 */
 	public function App ($config) {
 		return $this->Property(self::PROPERTY_FB_APP_ID, Quark::Config()->Extension($config)->appId);
@@ -108,7 +108,7 @@ class FacebookSharedResource implements IQuarkViewResource, IQuarkInlineViewReso
 	 * @param string $image
 	 * @param string $description
 	 *
-	 * @return FacebookSharedResource
+	 * @return OpenGraphResource
 	 */
 	public static function Article ($url, $title, $image, $description = '') {
 		$og = new self(self::TYPE_ARTICLE);
