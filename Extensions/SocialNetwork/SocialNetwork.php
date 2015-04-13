@@ -127,6 +127,13 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @return mixed
+	 */
+	public function API () {
+		return call_user_func_array(array($this->_config->SocialNetwork()), func_get_args());
+	}
+
+	/**
 	 * @param $user
 	 *
 	 * @return mixed

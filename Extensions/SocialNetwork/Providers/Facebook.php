@@ -43,7 +43,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 *
 	 * @return GraphObject
 	 */
-	public function API ($method, $url, $data = [], $type = 'Facebook\GraphObject') {
+	public function API ($method = '', $url = '', $data = [], $type = 'Facebook\GraphObject') {
 		try {
 			if ($this->_session == null) return null;
 

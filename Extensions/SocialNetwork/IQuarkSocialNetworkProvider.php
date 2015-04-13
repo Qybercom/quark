@@ -50,4 +50,9 @@ interface IQuarkSocialNetworkProvider {
 	 * @return mixed
 	 */
 	public function Profile($user);
+
+	/**
+	 * @return mixed
+	 */
+	public function API();
 }

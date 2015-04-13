@@ -137,7 +137,7 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 *
 	 * @return mixed
 	 */
-	public function API ($method, $url, $data = []) {
+	public function API ($method = '', $url = '', $data = []) {
 		$request = new QuarkDTO(new QuarkFormIOProcessor());
 		$request->Method($method);
 		$request->Data($data);
