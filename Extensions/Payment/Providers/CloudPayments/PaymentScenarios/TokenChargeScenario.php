@@ -26,13 +26,13 @@ use Quark\Extensions\Payment\Providers\CloudPayments\CloudPaymentsConfig;
  * @package Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios
  */
 class TokenChargeScenario implements IQuarkPaymentScenario {
-	private $_token = '';
+	public $Token = '';
 
 	/**
 	 * @param $token
 	 */
 	public function __construct ($token) {
-		$this->_token = $token;
+		$this->Token = $token;
 	}
 
 	/**
