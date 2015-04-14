@@ -74,4 +74,11 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 
 		return true;
 	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Response () {
+		return $this->_response;
+	}
 }

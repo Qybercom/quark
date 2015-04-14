@@ -4,6 +4,7 @@ namespace Quark\Extensions\Payment;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
+use Quark\QuarkDTO;
 
 /**
  * Class Payment
@@ -73,5 +74,12 @@ class Payment implements IQuarkExtension {
 		$this->_config->Money($currency, $amount);
 
 		return $this->_scenario->Pay($this->_config);
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Response () {
+		return $this->_scenario->Response();
 	}
 }

@@ -1,6 +1,8 @@
 <?php
 namespace Quark\Extensions\Payment;
 
+use Quark\QuarkDTO;
+
 /**
  * Interface IQuarkPaymentScenario
  *
@@ -13,4 +15,9 @@ interface IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Pay(IQuarkPaymentConfig $config);
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Response();
 }
