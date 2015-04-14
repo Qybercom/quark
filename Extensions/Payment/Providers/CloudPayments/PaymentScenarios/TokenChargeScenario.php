@@ -63,7 +63,7 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 		$this->_response = $http->Action();
 
 		if (!isset($this->_response->Success) || !$this->_response->Success) {
-			Quark::Log(print_r($this->_response, true));
+			Quark::Log(print_r($this, true));
 			return false;
 		}
 
