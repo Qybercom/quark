@@ -2229,6 +2229,13 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function Validate () {
+		return $this->_call('Validate', func_get_args());
+	}
+
+	/**
 	 * @param $source
 	 *
 	 * @return QuarkModel
