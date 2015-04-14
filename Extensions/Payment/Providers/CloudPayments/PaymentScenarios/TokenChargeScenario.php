@@ -32,7 +32,7 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 	private $_response;
 
 	/**
-	 * @param $token
+	 * @param string $token
 	 */
 	public function __construct ($token) {
 		$this->Token = $token;
