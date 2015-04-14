@@ -1,12 +1,13 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
-use Quark\IQuarkTransportProvider;
+use Quark\IQuarkTransportProviderClient;
 
 use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkServer;
 use Quark\QuarkURI;
 
 use Quark\Extensions\PushNotification\Device;
@@ -17,7 +18,7 @@ use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProvider {
+class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProviderClient {
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';
@@ -142,7 +143,7 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	 *
 	 * @return mixed
 	 */
-	public function Action (QuarkClient $client) {
+	public function Client (QuarkClient $client) {
 		$conn = $client->Connect();
 
 		if (!$conn) {

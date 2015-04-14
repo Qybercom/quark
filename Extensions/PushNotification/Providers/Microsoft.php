@@ -4,7 +4,7 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
-use Quark\QuarkHTTPTransport;
+use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkPlainIOProcessor;
 
@@ -81,7 +81,7 @@ class Microsoft implements IQuarkPushNotificationProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$client = new QuarkClient('https://login.live.com/accesstoken.srf', new QuarkHTTPTransport($request, $response));
+		$client = new QuarkClient('https://login.live.com/accesstoken.srf', new QuarkHTTPTransportClient($request, $response));
 
 		return $client->Action()->access_token;
 	}
@@ -124,7 +124,7 @@ class Microsoft implements IQuarkPushNotificationProvider {
 		$response = new QuarkDTO(new QuarkPlainIOProcessor());
 
 		foreach ($this->_devices as $device) {
-			$channel = new QuarkClient($device->id, new QuarkHTTPTransport($request, $response));
+			$channel = new QuarkClient($device->id, new QuarkHTTPTransportClient($request, $response));
 			$channel->Action();
 		}
 	}

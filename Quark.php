@@ -3719,16 +3719,13 @@ class QuarkSession implements IQuarkLinkedModel {
 }
 
 /**
- * Class QuarkClient
+ * Trait QuarkNetwork
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
-class QuarkClient {
-	const MODE_STREAM = 'stream';
-	const MODE_BUCKET = 'bucket';
-
+trait QuarkNetwork {
 	/**
-	 * @var IQuarkTransportProvider $_transport
+	 * @var IQuarkTransportProviderClient|IQuarkTransportProviderServer $_transport
 	 */
 	private $_transport;
 
@@ -3766,19 +3763,6 @@ class QuarkClient {
 	 * @var bool $ip
 	 */
 	public $ip = true;
-
-	/**
-	 * @param string                  $uri
-	 * @param IQuarkTransportProvider $transport
-	 * @param QuarkCertificate        $certificate
-	 * @param int                     $timeout = 30
-	 */
-	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
-		$this->URI(QuarkURI::FromURI($uri));
-		$this->Transport($transport);
-		$this->Certificate($certificate);
-		$this->Timeout($timeout);
-	}
 
 	/**
 	 * @param QuarkURI $uri
@@ -3819,7 +3803,7 @@ class QuarkClient {
 	}
 
 	/**
-	 * @param int $timeout
+	 * @param int $timeout = 30
 	 *
 	 * @return int
 	 */
@@ -3831,56 +3815,28 @@ class QuarkClient {
 	}
 
 	/**
+	 * @param $socket
+	 *
 	 * @return mixed
-	 * @throws QuarkArchException
 	 */
-	public function Action () {
-		if ($this->_transport != null)
-			return $this->_transport->Action($this);
+	public function Socket ($socket = null) {
+		if (func_num_args() == 1)
+			$this->_socket = $socket;
 
-		throw new QuarkArchException('QuarkClient: Transport is null');
+		return $this->_socket;
 	}
 
 	/**
-	 * @return bool
-	 */
-	public function Connect () {
-		$stream = stream_context_create();
-
-		if ($this->_certificate == null) {
-			stream_context_set_option($stream, 'ssl', 'verify_host', false);
-			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
-		}
-		else {
-			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
-			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
-		}
-
-		$this->_socket = stream_socket_client(
-			$this->_uri->Socket($this->ip),
-			$this->_errorNumber,
-			$this->_errorString,
-			$this->_timeout,
-			STREAM_CLIENT_CONNECT,
-			$stream
-		);
-
-		if (!$this->_socket)
-			return self::_err($this->_errorString, $this->_errorNumber);
-
-		return true;
-	}
-
-	/**
-	 * @param $data
+	 * @param resource $socket
+	 * @param string $data
 	 *
 	 * @return bool
 	 */
-	public function Send ($data) {
+	private function _send ($socket, $data) {
 		try {
-			$out = fwrite($this->_socket, $data) !== false;
+			$out = fwrite($socket, $data) !== false;
 
-			stream_set_timeout($this->_socket, $this->_timeout);
+			stream_set_timeout($socket, $this->_timeout);
 
 			return $out;
 		}
@@ -3890,21 +3846,18 @@ class QuarkClient {
 	}
 
 	/**
-	 * @param string $mode
+	 * @param resource $socket
+	 * @param bool $stream
 	 * @param int $max
 	 * @param int $offset
 	 *
 	 * @return mixed
 	 */
-	public function Receive ($mode = self::MODE_STREAM, $max = -1, $offset = -1) {
+	private function _receive ($socket, $stream = true, $max = -1, $offset = -1) {
 		try {
-			if ($mode == self::MODE_STREAM)
-				return stream_get_contents($this->_socket, $max, $offset);
-
-			if ($mode == self::MODE_BUCKET)
-				return func_num_args() == 1 ? fgets($this->_socket) : fgets($this->_socket, $max);
-
-			return false;
+			return $stream
+				? stream_get_contents($socket, $max, $offset)
+				: $max == -1 ? fgets($socket) : fgets($this->_socket, $max);
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -3912,11 +3865,14 @@ class QuarkClient {
 	}
 
 	/**
+	 * @param resource $socket
+	 * http://php.net/manual/ru/function.stream-socket-shutdown.php#109982
+	 *
 	 * @return bool
 	 */
-	public function Close () {
+	private function _close ($socket) {
 		try {
-			return fclose($this->_socket);
+			return stream_socket_shutdown($socket, STREAM_SHUT_RDWR); //fclose($socket);
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -3950,6 +3906,233 @@ class QuarkClient {
 				'num' => $this->_errorNumber,
 				'msg' => $this->_errorString
 			);
+	}
+}
+
+/**
+ * Class QuarkClient
+ *
+ * @package Quark\Extensions\Quark
+ */
+class QuarkClient {
+	const MODE_STREAM = 'stream';
+	const MODE_BUCKET = 'bucket';
+
+	use QuarkNetwork;
+
+	/**
+	 * @param string                  $uri
+	 * @param IQuarkTransportProviderClient $transport
+	 * @param QuarkCertificate        $certificate
+	 * @param int                     $timeout = 30
+	 */
+	public function __construct ($uri = '', IQuarkTransportProviderClient $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
+		$this->URI(QuarkURI::FromURI($uri));
+		$this->Transport($transport);
+		$this->Certificate($certificate);
+		$this->Timeout($timeout);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Connect () {
+		$stream = stream_context_create();
+
+		if ($this->_certificate == null) {
+			stream_context_set_option($stream, 'ssl', 'verify_host', false);
+			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+		}
+		else {
+			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
+			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
+		}
+
+		$this->_socket = stream_socket_client(
+			$this->_uri->Socket($this->ip),
+			$this->_errorNumber,
+			$this->_errorString,
+			$this->_timeout,
+			STREAM_CLIENT_CONNECT,
+			$stream
+		);
+
+		if (!$this->_socket)
+			return self::_err($this->_errorString, $this->_errorNumber);
+
+		return true;
+	}
+
+	/**
+	 * @param string $data
+	 *
+	 * @return bool
+	 */
+	public function Send ($data) {
+		return $this->_send($this->_socket, $data);
+	}
+
+	/**
+	 * @param string $mode
+	 * @param int $max
+	 * @param int $offset
+	 *
+	 * @return mixed
+	 */
+	public function Receive ($mode = self::MODE_STREAM, $max = -1, $offset = -1) {
+		return $this->_receive($this->_socket, $mode == self::MODE_STREAM, $max, $offset);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Close () {
+		return $this->_close($this->_socket);
+	}
+
+	/**
+	 * @return mixed
+	 * @throws QuarkArchException
+	 */
+	public function Action () {
+		if ($this->_transport != null)
+			return $this->_transport->Client($this);
+
+		throw new QuarkArchException('QuarkClient: Transport is null');
+	}
+
+	/**
+	 * @param $socket
+	 * @param $address
+	 *
+	 * @return QuarkClient
+	 */
+	public static function ForServer ($socket, $address) {
+		$client = new self();
+
+		$client->Socket($socket);
+		$client->URI(QuarkURI::FromURI($address));
+
+		return $client;
+	}
+}
+
+/**
+ * Class QuarkServer
+ *
+ * @package Quark
+ */
+class QuarkServer {
+	const MODE_STREAM = 'stream';
+	const MODE_BUCKET = 'bucket';
+
+	use QuarkNetwork;
+
+	/**
+	 * @param string                        $uri
+	 * @param IQuarkTransportProviderServer $transport
+	 * @param QuarkCertificate              $certificate
+	 * @param int                           $timeout
+	 */
+	public function __construct ($uri = '', IQuarkTransportProviderServer $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
+		$this->URI(QuarkURI::FromURI($uri));
+		$this->Transport($transport);
+		$this->Certificate($certificate);
+		$this->Timeout($timeout);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Bind () {
+		$stream = stream_context_create();
+
+		if ($this->_certificate == null) {
+			stream_context_set_option($stream, 'ssl', 'verify_host', false);
+			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+		}
+		else {
+			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
+			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
+		}
+
+		$this->_socket = stream_socket_server(
+			$this->_uri->Socket($this->ip),
+			$this->_errorNumber,
+			$this->_errorString,
+			STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,
+			$stream
+		);
+
+		stream_set_blocking($this->_socket, 0);
+
+		if (!$this->_socket)
+			return self::_err($this->_errorString, $this->_errorNumber);
+
+		return true;
+	}
+
+	/**
+	 *
+	 */
+	public function Listen () {
+		/**
+		 * @var QuarkClient[] $clients
+		 */
+		$clients = array();
+
+		$read = array($this->_socket);
+		$write = array();
+		$except = array();
+
+		while (true) {
+			if (stream_select($read, $write, $except, $this->_timeout) === false) continue;
+
+			if (in_array($this->_socket, $read)) {
+				$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
+				$client = QuarkClient::ForServer($socket, $address);
+				$accept = $this->_transport->OnConnect($client, $clients);
+
+				if ($accept || $accept === null) {
+					$clients[] = $client;
+					unset($read[array_search($this->_socket, $read, true)]);
+				}
+			}
+
+			$read = array();
+
+			foreach ($clients as $key => &$client) {
+				$data = $client->Receive(QuarkClient::MODE_BUCKET);
+
+				if (feof($client->Socket())) {
+					$this->_transport->OnClose($client, $clients);
+					$client->Close();
+
+					unset($clients[$key]);
+					continue;
+				}
+
+				if ($data !== false)
+					$this->_transport->OnData($client, $data);
+
+				$read[] = $client->Socket();
+			}
+
+			unset($key, $client);
+
+			$read[] = $this->_socket;
+		}
+	}
+
+	/**
+	 * @return mixed
+	 * @throws QuarkArchException
+	 */
+	public function Action () {
+		if ($this->_transport != null)
+			return $this->_transport->Server($this);
+
+		throw new QuarkArchException('QuarkServer: Transport is null');
 	}
 }
 
@@ -4575,11 +4758,6 @@ class QuarkDTO {
 	}
 }
 
-/**
- * Interface IQuarkTransportProvider
- *
- * @package Quark\Extensions\Quark
- */
 interface IQuarkTransportProvider {
 	/**
 	 * @param QuarkURI         $uri
@@ -4588,13 +4766,58 @@ interface IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function Setup(QuarkURI $uri, QuarkCertificate $certificate = null);
+}
 
+/**
+ * Interface IQuarkTransportProviderClient
+ *
+ * @package Quark\Extensions\Quark
+ */
+interface IQuarkTransportProviderClient extends IQuarkTransportProvider {
 	/**
 	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
-	public function Action(QuarkClient $client);
+	public function Client(QuarkClient $client);
+}
+
+/**
+ * Interface IQuarkTransportProviderServer
+ *
+ * @package Quark
+ */
+interface IQuarkTransportProviderServer extends IQuarkTransportProvider {
+	/**
+	 * @param QuarkServer $server
+	 *
+	 * @return mixed
+	 */
+	public function Server(QuarkServer $server);
+
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 *
+	 * @return bool
+	 */
+	public function OnConnect($client, $clients);
+
+	/**
+	 * @param QuarkClient $client
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function OnData($client, $data);
+
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 *
+	 * @return mixed
+	 */
+	public function OnClose($client, $clients);
 }
 
 /**
@@ -4602,7 +4825,7 @@ interface IQuarkTransportProvider {
  *
  * @package Quark\Extensions\Quark
  */
-class QuarkHTTPTransport implements IQuarkTransportProvider {
+class QuarkHTTPTransportClient implements IQuarkTransportProviderClient {
 	/**
 	 * @var QuarkDTO $_request
 	 */
@@ -4637,7 +4860,7 @@ class QuarkHTTPTransport implements IQuarkTransportProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Action (QuarkClient $client) {
+	public function Client (QuarkClient $client) {
 		if (!$client->Connect()) return false;
 
 		$this->_response->URI($this->_request->URI());
@@ -4648,6 +4871,15 @@ class QuarkHTTPTransport implements IQuarkTransportProvider {
 		$client->Close();
 
 		return $this->_response;
+	}
+
+	/**
+	 * @param QuarkServer $server
+	 *
+	 * @return mixed
+	 */
+	public function Server (QuarkServer $server) {
+		// TODO: Implement Server() method.
 	}
 }
 

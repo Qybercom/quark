@@ -6,7 +6,7 @@ use Quark\IQuarkExtension;
 use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransport;
+use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkArchException;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkPlainIOProcessor;
@@ -129,7 +129,7 @@ class SMS implements IQuarkExtension {
 			. '&charset=utf-8'
 			. ($this->_config->sender != '' ? '&sender=' . $this->_config->sender : '')
 			. $append,
-			new QuarkHTTPTransport(
+			new QuarkHTTPTransportClient(
 				QuarkDTO::ForGET(new QuarkPlainIOProcessor()),
 				new QuarkDTO(new QuarkJSONIOProcessor())
 			)

@@ -5,7 +5,7 @@ use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
-use Quark\QuarkHTTPTransport;
+use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
@@ -95,7 +95,7 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 				'code' => $_GET['code'],
 				'redirect_uri' => $to,
 			)),
-			new QuarkHTTPTransport(
+			new QuarkHTTPTransportClient(
 				QuarkDTO::ForGET(),
 				new QuarkDTO(new QuarkJSONIOProcessor())
 			));
@@ -148,7 +148,7 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 			'https://api.vk.com/method/' . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
 				'access_token' => $this->_session
 			)),
-			new QuarkHTTPTransport($request, $response)
+			new QuarkHTTPTransportClient($request, $response)
 		);
 
 		$out = $client->Action();

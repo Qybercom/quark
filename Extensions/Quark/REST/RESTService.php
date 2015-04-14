@@ -10,7 +10,7 @@ use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransport;
+use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkURI;
 use Quark\QuarkJSONIOProcessor;
 
@@ -24,16 +24,6 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @var QuarkURI
 	 */
 	private $_uri = null;
-
-	/**
-	 * @var string $_token
-	 */
-	private $_token = '';
-
-	/**
-	 * @var IQuarkRESTServiceDescriptor
-	 */
-	private $_descriptor = null;
 
 	/**
 	 * @param QuarkURI $uri
@@ -62,7 +52,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$this->_uri->path = $action;
 
 		$client = new QuarkClient($this->_uri->URI(true));
-		$client->Transport(new QuarkHTTPTransport($request, $response));
+		$client->Transport(new QuarkHTTPTransportClient($request, $response));
 
 		$data = $client->Action()->Data();
 

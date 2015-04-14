@@ -4,7 +4,7 @@ namespace Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios;
 use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransport;
+use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
@@ -57,7 +57,7 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$http = new QuarkClient('https://api.cloudpayments.ru/payments/tokens/charge', new QuarkHTTPTransport($request, $response));
+		$http = new QuarkClient('https://api.cloudpayments.ru/payments/tokens/charge', new QuarkHTTPTransportClient($request, $response));
 		$http->ip = false;
 
 		$this->_response = $http->Action();

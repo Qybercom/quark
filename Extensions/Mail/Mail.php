@@ -3,7 +3,7 @@ namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
-use Quark\IQuarkTransportProvider;
+use Quark\IQuarkTransportProviderClient;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
@@ -14,6 +14,7 @@ use Quark\QuarkField;
 use Quark\QuarkFile;
 use Quark\QuarkHTMLIOProcessor;
 use Quark\QuarkMultipartIOProcessor;
+use Quark\QuarkServer;
 use Quark\QuarkURI;
 
 /**
@@ -21,7 +22,7 @@ use Quark\QuarkURI;
  *
  * @package Quark\Extensions\Mail
  */
-class Mail implements IQuarkExtension, IQuarkTransportProvider {
+class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 	const HEADER_SUBJECT = 'Subject';
 	const HEADER_TO = 'To';
 	const HEADER_FROM = 'From';
@@ -213,8 +214,13 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Action (QuarkClient $client) {
-		if (!$client->Connect()) return false;
+	public function Client (QuarkClient $client) {
+		$conn = $client->Connect();
+
+		if (!$conn) {
+			Quark::Log('Mail. Unable to connect to mail server. Error: ' . $client->Error(true));
+			return false;
+		}
 
 		$smtp = $this->_config->SMTP();
 		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkMultipartIOProcessor::TRANSFER_ENCODING_BASE64);
