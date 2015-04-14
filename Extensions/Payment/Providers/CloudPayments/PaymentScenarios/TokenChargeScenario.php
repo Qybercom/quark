@@ -28,6 +28,8 @@ use Quark\Extensions\Payment\Providers\CloudPayments\CloudPaymentsConfig;
 class TokenChargeScenario implements IQuarkPaymentScenario {
 	public $Token = '';
 
+	private $_response;
+
 	/**
 	 * @param $token
 	 */
@@ -57,6 +59,8 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 		$http = new QuarkClient('https://api.cloudpayments.ru/payments/tokens/charge', new QuarkHTTPTransport($request, $response));
 		$http->ip = false;
 
-		return $http->Action();
+		$this->_response = $http->Action();
+
+		return isset($this->_response->Success) && $this->_response->Success === true;
 	}
 }
