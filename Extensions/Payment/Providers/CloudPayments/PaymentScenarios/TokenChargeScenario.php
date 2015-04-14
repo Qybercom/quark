@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios;
 
+use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransport;
@@ -61,6 +62,11 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 
 		$this->_response = $http->Action();
 
-		return isset($this->_response->Success) && $this->_response->Success === true;
+		if (!isset($this->_response->Success) || !$this->_response->Success) {
+			Quark::Log(print_r($this->_response, true));
+			return false;
+		}
+
+		return true;
 	}
 }
