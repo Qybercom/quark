@@ -3921,6 +3921,12 @@ class QuarkClient {
 	use QuarkNetwork;
 
 	/**
+	 * @var bool $_connected
+	 */
+	private $_connected = false;
+	private $_send;
+
+	/**
 	 * @param string                  $uri
 	 * @param IQuarkTransportProviderClient $transport
 	 * @param QuarkCertificate        $certificate
@@ -3960,6 +3966,8 @@ class QuarkClient {
 		if (!$this->_socket)
 			return self::_err($this->_errorString, $this->_errorNumber);
 
+		$this->_connected = true;
+
 		return true;
 	}
 
@@ -3969,6 +3977,11 @@ class QuarkClient {
 	 * @return bool
 	 */
 	public function Send ($data) {
+		if (is_callable($this->_send)) {
+			$send = $this->_send;
+			$data = $send($data);
+		}
+
 		return $this->_send($this->_socket, $data);
 	}
 
@@ -3987,6 +4000,7 @@ class QuarkClient {
 	 * @return bool
 	 */
 	public function Close () {
+		$this->_connected = false;
 		return $this->_close($this->_socket);
 	}
 
@@ -4014,6 +4028,25 @@ class QuarkClient {
 		$client->URI(QuarkURI::FromURI($address));
 
 		return $client;
+	}
+
+	/**
+	 * @param bool $connected
+	 *
+	 * @return bool
+	 */
+	public function Connected ($connected = true) {
+		if (func_num_args() != 0)
+			$this->_connected = $connected;
+
+		return $this->_connected;
+	}
+
+	/**
+	 * @param callable $send
+	 */
+	public function BeforeSend (callable $send) {
+		$this->_send = $send;
 	}
 }
 
@@ -4056,7 +4089,7 @@ class QuarkServer {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = stream_socket_server(
+		$this->_socket = @stream_socket_server(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -4064,10 +4097,10 @@ class QuarkServer {
 			$stream
 		);
 
-		stream_set_blocking($this->_socket, 0);
-
 		if (!$this->_socket)
 			return self::_err($this->_errorString, $this->_errorNumber);
+
+		stream_set_blocking($this->_socket, 0);
 
 		return true;
 	}
@@ -4370,15 +4403,26 @@ class QuarkDTO {
 	const HEADER_CONTENT_DISPOSITION = 'Content-Disposition';
 	const HEADER_CONTENT_DESCRIPTION = 'Content-Description';
 	const HEADER_COOKIE = 'Cookie';
+	const HEADER_CONNECTION = 'Connection';
 	const HEADER_SET_COOKIE = 'Set-Cookie';
 	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
 	const HEADER_AUTHORIZATION = 'Authorization';
 	const HEADER_EXPIRES = 'Expires';
 	const HEADER_PRAGMA = 'Pragma';
+	const HEADER_UPGRADE = 'Upgrade';
+	const HEADER_SEC_WEBSOCKET_KEY = 'Sec-WebSocket-Key';
+	const HEADER_SEC_WEBSOCKET_EXTENSIONS = 'Sec-WebSocket-Extensions';
+	const HEADER_SEC_WEBSOCKET_ACCEPT = 'Sec-WebSocket-Accept';
+	const HEADER_SEC_WEBSOCKET_PROTOCOL = 'Sec-WebSocket-Protocol';
 
 	const STATUS_200_OK = '200 OK';
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
 	const STATUS_404_NOT_FOUND = '404 Not Found';
+
+	const CONNECTION_KEEP_ALIVE = 'keep-alive';
+	const CONNECTION_UPGRADE = 'Upgrade';
+
+	const UPGRADE_WEBSOCKET = 'websocket';
 
 	/**
 	 * @var string $_raw
@@ -4545,24 +4589,82 @@ class QuarkDTO {
 		if (sizeof($status) > 1)
 			$this->_status = $status[1];
 
-		if (preg_match_all('#(.*)\: (.*)\n#Uis', $http[2] . "\r\n", $headers, PREG_SET_ORDER) != 0) {
-			$cookies = array();
-
-			foreach ($headers as $header) {
-				$key = trim($header[1]);
-				$value = trim($header[2]);
-
-				if ($key == self::HEADER_SET_COOKIE) $cookies[] = $value;
-				else $this->_headers[$key] = $value;
-			}
-
-			foreach ($cookies as $cookie)
-				$this->_cookies[] = QuarkCookie::FromSetCookie($cookie);
-		}
-
+		$this->ParseHeaders($http[2]);
 		$this->AttachData($this->_processor->Decode($http[3]));
 
 		return $this;
+	}
+
+	/**
+	 * @param bool $all
+	 *
+	 * @return string
+	 */
+	public function SerializeResponse ($all = true) {
+		$query = '';
+
+		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
+		$data = $this->_processor->Encode($this->Data(), $this->_textData);
+
+		if ($all) {
+			if ($this->_uri != null)
+				$query .= 'HTTP/1.0 ' . $this->_status . "\r\n";
+
+			$query .= self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
+
+			if (sizeof($this->_cookies) != 0)
+				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
+
+			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType() . '; charset=utf-8';
+
+			foreach ($this->_headers as $key => $value)
+				$query .= $key . ': ' . $value . "\r\n";
+
+			$query .= "\r\n";
+		}
+
+		return $this->_raw = $query . $data;
+	}
+
+	/**
+	 * @param string $raw
+	 * @param bool   $secure
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeRequest ($raw = '', $secure = false) {
+		$this->_raw = $raw;
+
+		if (preg_match_all('#^(.*) (.*) HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw, $found, PREG_SET_ORDER) == 0) return null;
+
+		$http = $found[0];
+
+		$this->Method($http[1]);
+		$this->ParseHeaders($http[4]);
+		$this->URI(QuarkURI::FromURI('http' . ($secure ? 's' : '') . '://' . $this->Header(QuarkDTO::HEADER_HOST) . $http[2]));
+		$this->Data($http[5]);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $source
+	 */
+	public function ParseHeaders ($source = '') {
+		if (preg_match_all('#(.*)\: (.*)\n#Uis', $source . "\r\n", $headers, PREG_SET_ORDER) == 0) return;
+
+		$cookies = array();
+
+		foreach ($headers as $header) {
+			$key = trim($header[1]);
+			$value = trim($header[2]);
+
+			if ($key == self::HEADER_SET_COOKIE) $cookies[] = $value;
+			else $this->_headers[$key] = $value;
+		}
+
+		foreach ($cookies as $cookie)
+			$this->_cookies[] = QuarkCookie::FromSetCookie($cookie);
 	}
 
 	/**
