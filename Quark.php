@@ -4059,6 +4059,11 @@ class QuarkServer {
 	use QuarkNetwork;
 
 	/**
+	 * @var bool $_run
+	 */
+	private $_run = false;
+
+	/**
 	 * @param string                        $uri
 	 * @param IQuarkTransportProviderServer $transport
 	 * @param QuarkCertificate              $certificate
@@ -4099,6 +4104,8 @@ class QuarkServer {
 
 		stream_set_blocking($this->_socket, 0);
 
+		$this->_run = true;
+
 		return true;
 	}
 
@@ -4115,7 +4122,7 @@ class QuarkServer {
 		$write = array();
 		$except = array();
 
-		while (true) {
+		while ($this->_run) {
 			if (stream_select($read, $write, $except, $this->_timeout) === false) continue;
 
 			if (in_array($this->_socket, $read)) {
@@ -4152,6 +4159,15 @@ class QuarkServer {
 
 			$read[] = $this->_socket;
 		}
+	}
+
+	/**
+	 * @return QuarkServer
+	 */
+	public function Stop () {
+		$this->_run = false;
+
+		return $this;
 	}
 
 	/**
