@@ -4121,7 +4121,7 @@ class QuarkServer {
 			if (in_array($this->_socket, $read)) {
 				$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
 				$client = QuarkClient::ForServer($socket, $address);
-				$accept = $this->_transport->OnConnect($client, $clients);
+				$accept = $this->_transport->OnConnect($client, $clients + array($client));
 
 				if ($accept || $accept === null) {
 					$clients[] = $client;
@@ -4143,7 +4143,7 @@ class QuarkServer {
 				}
 
 				if ($data !== false)
-					$this->_transport->OnData($client, $data);
+					$this->_transport->OnData($client, $clients, $data);
 
 				$read[] = $client->Socket();
 			}
@@ -4888,11 +4888,12 @@ interface IQuarkTransportProviderServer extends IQuarkTransportProvider {
 
 	/**
 	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
 	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData($client, $data);
+	public function OnData($client, $clients, $data);
 
 	/**
 	 * @param QuarkClient $client

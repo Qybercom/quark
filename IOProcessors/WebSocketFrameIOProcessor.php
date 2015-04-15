@@ -55,8 +55,8 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 
 		// set mask and payload length (using 1, 3 or 9 bytes)
 		if ($length > 65535) {
-			$lengthBin = str_split(self::_byte($length, '%064b'), 8);
-			$head[1] = ($masked === true) ? 255 : 127;
+			$lengthBin = self::_lengthBin($length, '%064b');
+			$head[1] = $masked ? 255 : 127;
 
 			$i = 0;
 
@@ -73,18 +73,17 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 			}
 		}
 		elseif ($length > 125) {
-			$lengthBin = str_split(self::_byte($length, '%016b'), 8);
-			$head[1] = ($masked === true) ? 254 : 126;
+			$lengthBin = self::_lengthBin($length, '%016b');
+			$head[1] = $masked ? 254 : 126;
 
 			$head[2] = bindec($lengthBin[0]);
 			$head[3] = bindec($lengthBin[1]);
 		}
-		else $head[1] = ($masked === true) ? $length + 128 : $length;
+		else $head[1] = $masked ? $length + 128 : $length;
 
 		// convert frame-head to string:
-		foreach (array_keys($head) as $i) {
+		foreach (array_keys($head) as $i)
 			$head[$i] = chr($head[$i]);
-		}
 
 		$mask = array();
 
@@ -203,5 +202,15 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	 */
 	private static function _byte ($source, $format = '%08b') {
 		return sprintf($format, ord($source));
+	}
+
+	/**
+	 * @param string $source
+	 * @param string $format
+	 *
+	 * @return array
+	 */
+	private static function _lengthBin ($source, $format) {
+		return str_split(sprintf($format, $source), 8);
 	}
 }

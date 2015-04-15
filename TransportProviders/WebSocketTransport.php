@@ -89,20 +89,18 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 	 */
 	public function OnConnect ($client, $clients) {
 		$this->_clients = $clients;
-		$client->BeforeSend(function ($data) {
-			return $this->_processor->Encode($data);
-		});
 	}
 
 	/**
 	 * @param QuarkClient $client
-	 * @param string      $data
+	 * @param QuarkClient[] $clients
+	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData ($client, $data) {
+	public function OnData ($client, $clients, $data) {
 		if ($client->Connected())
-			$this->_protocol->OnData($client, $this->_processor->Decode($data));
+			$this->_protocol->OnData($client, $clients, $this->_processor->Decode($data));
 		else {
 			if ($data != "\r\n") {
 				$this->_buffer .= $data;
@@ -128,6 +126,10 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 			$client->Send($response->SerializeResponse());
 
 			$client->Connected(true);
+			$client->BeforeSend(function ($data) {
+				return $this->_processor->Encode($data);
+			});
+
 			$this->_protocol->OnConnect($client, $this->_clients);
 		}
 	}
