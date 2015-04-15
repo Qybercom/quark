@@ -3872,7 +3872,7 @@ trait QuarkNetwork {
 	 */
 	private function _close ($socket) {
 		try {
-			return stream_socket_shutdown($socket, STREAM_SHUT_RDWR); //fclose($socket);
+			return stream_socket_shutdown($socket, STREAM_SHUT_RDWR);
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -4056,9 +4056,6 @@ class QuarkClient {
  * @package Quark
  */
 class QuarkServer {
-	const MODE_STREAM = 'stream';
-	const MODE_BUCKET = 'bucket';
-
 	use QuarkNetwork;
 
 	/**
@@ -4538,22 +4535,14 @@ class QuarkDTO {
 		return new self($processor, $uri, self::METHOD_POST);
 	}
 
-	/**
-	 * @param bool $all
-	 *
-	 * @return string
-	 */
-	public function Serialize ($all = true) {
+	private function _serialize ($all = true, callable $head) {
 		$query = '';
 
 		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
 		$data = $this->_processor->Encode($this->Data(), $this->_textData);
 
 		if ($all) {
-			if ($this->_uri != null) {
-				$query .= $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
-					. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n";
-			}
+			if ($this->_uri != null) $query .= $head();
 
 			$query .= self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
 
@@ -4569,6 +4558,18 @@ class QuarkDTO {
 		}
 
 		return $this->_raw = $query . $data;
+	}
+
+	/**
+	 * @param bool $all
+	 *
+	 * @return string
+	 */
+	public function Serialize ($all = true) {
+		return $this->_serialize($all, function () {
+			return $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n"
+				. self::HEADER_HOST . ': ' . $this->_uri->host . "\r\n";
+		});
 	}
 
 	/**
@@ -4601,29 +4602,9 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function SerializeResponse ($all = true) {
-		$query = '';
-
-		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
-		$data = $this->_processor->Encode($this->Data(), $this->_textData);
-
-		if ($all) {
-			if ($this->_uri != null)
-				$query .= 'HTTP/1.0 ' . $this->_status . "\r\n";
-
-			$query .= self::HEADER_CONTENT_LENGTH. ': ' . strlen($data) . "\r\n";
-
-			if (sizeof($this->_cookies) != 0)
-				$query .= self::HEADER_COOKIE . ': ' . QuarkCookie::SerializeCookies($this->_cookies) . "\r\n";
-
-			$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType() . '; charset=utf-8';
-
-			foreach ($this->_headers as $key => $value)
-				$query .= $key . ': ' . $value . "\r\n";
-
-			$query .= "\r\n";
-		}
-
-		return $this->_raw = $query . $data;
+		return $this->_serialize($all, function () {
+			return 'HTTP/1.0 ' . $this->_status . "\r\n";
+		});
 	}
 
 	/**

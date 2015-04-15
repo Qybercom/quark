@@ -4,7 +4,6 @@ namespace Quark\TransportProviders;
 use Quark\IOProcessors\WebSocketFrameIOProcessor;
 use Quark\IQuarkTransportProviderServer;
 
-use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkServer;
@@ -78,6 +77,8 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 
 		$server->Listen();
 		$this->_protocol->Server($server);
+
+		return true;
 	}
 
 	/**
