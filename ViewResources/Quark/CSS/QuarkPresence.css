@@ -1,10 +1,17 @@
 body {
     position: absolute;
-    min-width: 100%;
+    width: 100%;
+    min-width: 320px;
     height: 100%;
     margin: 0;
     padding: 0;
     color: rgb(255,255,255);
+    text-shadow:
+        -1px -1px 1px rgba(0,0,0,1),
+        -1px 1px 1px rgba(0,0,0,1),
+        1px 1px 1px rgba(0,0,0,1),
+        1px -1px 1px rgba(0,0,0,1),
+        2px 2px 10px rgba(0,0,0,1);
 }
 
 .quark-presence-screen {
@@ -13,20 +20,19 @@ body {
     min-height: 100%;
 }
 
-.quark-presence-nav {
-    position: relative;
-    display: inline-block;
-    margin: 30px 5% 30px 5%;
-}
-
-.quark-presence-nav .quark-button {
+.quark-button {
     color: rgb(255,255,255);
     font-size: 16px;
     line-height: 24px;
+    margin: 0 0 0 5px;
 }
 
-.quark-presence-nav .quark-button:hover {
+.quark-button:hover {
     color: rgb(230,230,230);
+}
+
+.quark-button.block {
+    line-height: 50px;
 }
 
 .quark-button.block.ok {
@@ -40,38 +46,53 @@ body {
     background: rgb(0,225,80);
 }
 
-.quark-presence-nav .quark-button.block.ok {
-    padding: 10px 25px;
-}
-
 .quark-presence-logo {
+    display: block;
     font-size: 92px;
     margin: 50px 5%;
-    text-align: center;
 }
 
 .quark-presence-call {
-    text-align: center;
+    display: block;
     font-size: 16px;
     margin: 50px 5%;
 }
 
 .quark-presence-section {
-    text-align: center;
+    display: block;
     font-size: 24px;
     margin: 25px 5%;
 }
 
+
+
 .quark-presence-container {
+    display: inline-block;
+    text-align: center;
+    width: 100%;
+}
+
+.quark-presence-column {
+    display: inline-block;
+    text-align: left;
+}
+
+.quark-presence-container.c2 .quark-presence-column {
+    width: 50%;
+    min-width: 240px;
+}
+
+.quark-presence-container.c3 .quark-presence-column {
+    width: 33%;
+    min-width: 240px;
+}
+
+.quark-presence-column.quark-presence-stand {
+    font-size: 80px;
     text-align: center;
 }
 
-.quark-presence-stand {
-    display: inline-block;
-    font-size: 80px;
-}
-
-.quark-presence-stand p {
+.quark-presence-column.quark-presence-stand p {
     font-size: 16px;
     font-family: FontAwesome, 'Open Sans', sans-serif;
     font-weight: 300;
