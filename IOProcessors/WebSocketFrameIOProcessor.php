@@ -9,6 +9,7 @@ use Quark\Quark;
  * Class WebSocketFrameIOProcessor
  *
  * http://habrahabr.ru/company/ifree/blog/209864/
+ * http://www.iana.org/assignments/websocket/websocket.xml
  *
  * @package Quark\IOProcessors
  */
