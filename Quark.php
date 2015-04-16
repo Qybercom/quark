@@ -3857,7 +3857,7 @@ trait QuarkNetwork {
 		try {
 			return $stream
 				? stream_get_contents($socket, $max, $offset)
-				: $max == -1 ? fgets($socket) : fgets($this->_socket, $max);
+				: ($max == -1 ? fgets($socket) : fgets($this->_socket, $max));
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());

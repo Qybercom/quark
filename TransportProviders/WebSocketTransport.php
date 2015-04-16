@@ -32,6 +32,11 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 	private $_protocol;
 
 	/**
+	 * @var string $_subprotocol
+	 */
+	private $_subprotocol = '';
+
+	/**
 	 * @var WebSocketFrameIOProcessor $_processor
 	 */
 	private $_processor;
@@ -43,9 +48,11 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 
 	/**
 	 * @param IQuarkTransportProviderServer $protocol
+	 * @param string $subprotocol
 	 */
-	public function __construct (IQuarkTransportProviderServer $protocol = null) {
+	public function __construct (IQuarkTransportProviderServer $protocol = null, $subprotocol = '') {
 		$this->_protocol = $protocol;
+		$this->_subprotocol = $subprotocol;
 		$this->_processor = new WebSocketFrameIOProcessor();
 	}
 
@@ -120,8 +127,8 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 				QuarkDTO::HEADER_SEC_WEBSOCKET_ACCEPT => base64_encode(sha1($request->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_KEY) . self::GuID, true)),
 			));
 
-			//if (strlen($this->_protocol) != 0)
-				//$response->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_PROTOCOL, $this->_protocol);
+			if (strlen($this->_subprotocol) != 0)
+				$response->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_PROTOCOL, $this->_subprotocol);
 
 			$client->Send($response->SerializeResponse());
 
