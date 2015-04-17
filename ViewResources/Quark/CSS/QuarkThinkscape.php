@@ -8,6 +8,7 @@ use Quark\IQuarkViewResourceWithDependencies;
 use Quark\QuarkCSSViewResourceType;
 
 use Quark\ViewResources\Google\GoogleFont;
+use Quark\ViewResources\Quark\QuarkResponsiveUI;
 use Quark\ViewResources\Quark\QuarkUI;
 
 /**
@@ -43,6 +44,7 @@ class QuarkThinkscape implements IQuarkViewResource, IQuarkLocalViewResource, IQ
 	public function Dependencies () {
 		return array(
 			new QuarkUI(),
+			new QuarkResponsiveUI(),
 			new GoogleFont('Anonymous Pro')
 		);
 	}

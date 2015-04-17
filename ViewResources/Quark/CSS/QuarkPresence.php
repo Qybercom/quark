@@ -7,6 +7,7 @@ use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
 
+use Quark\ViewResources\Quark\QuarkResponsiveUI;
 use Quark\ViewResources\Quark\QuarkUI;
 
 /**
@@ -41,7 +42,8 @@ class QuarkPresence implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkUI()
+			new QuarkUI(),
+			new QuarkResponsiveUI()
 		);
 	}
 }
