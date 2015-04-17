@@ -261,6 +261,9 @@ class Quark {
 			$size = sizeof($backbone);
 			$output = array();
 
+			if (!is_array($source))
+				$source = array();
+
 			while ($i < $size) {
 				$def = !empty($source[$i]) ? $source[$i] : $backbone[$i];
 				$output[] = self::Normalize($iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i), $def, $iterator);
