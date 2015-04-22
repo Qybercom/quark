@@ -68,9 +68,13 @@ var GoogleMap = function (selector, opt) {
 		}
 	};
 
+    /**
+     * @param child
+     */
 	that.Child = function (child) {
 		var i = 0;
 		while (i < that._maps.length) {
+            child._parent = that;
 			child._init(that._maps[i]);
 			i++;
 		}
@@ -270,6 +274,9 @@ GoogleMap.Object = {
 		this.Init();
 		this.Set = function (opt) {
 			this._object.setOptions(opt);
+
+            if (map)
+                this._object.setMap(map);
 		};
 		this.On('domready', this.ready);
 
@@ -449,11 +456,11 @@ GoogleMap.PointObject = GoogleMap._extend(GoogleMap.Object, {
 	},
 
 	Redraw: function () {
-		var show = this.redraw && this._object != null && this._object.getMap() != null;
+		var show = this.redraw && this._object != null;
 
 		if (show) this.Set({map: null});
 		this.Render();
-		if (show) this.Set({map: this._parent._map});
+		if (show) this.Set({map: this._parent._map || this._map});
 	},
 
 	Points: function () {
