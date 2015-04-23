@@ -2383,6 +2383,10 @@ class QuarkModel {
 	 */
 	private $_model = null;
 
+	/**
+	 * @param IQuarkModel $model
+	 * @param $source
+	 */
 	public function __construct (IQuarkModel $model, $source = null) {
 		/**
 		 * Attention!

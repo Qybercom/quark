@@ -191,7 +191,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$class = self::_class($model);
 
 		try {
-			return @$this->_api('Get', '/' . $class, $criteria)->$class;
+			return $this->_api('Get', '/' . $class, $criteria)->$class;
 		}
 		catch (QuarkArchException $e) {
 			return null;
@@ -200,15 +200,19 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $id
+	 * @param $id
 	 *
-	 * @return IQuarkModel|null
+	 * @return null
+	 * @throws QuarkArchException
 	 */
 	public function FindOneById (IQuarkModel $model, $id) {
+		if (!is_scalar($id))
+			throw new QuarkArchException('Parameter $id must have scalar value, Given: ' . print_r($id, true));
+
 		$class = self::_class($model);
 
 		try {
-			return @$this->_api('Get', '/' . $class . '/' . $id)->$class;
+			return $this->_api('Get', '/' . $class . '/' . $id)->$class;
 		}
 		catch (QuarkArchException $e) {
 			return null;

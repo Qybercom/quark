@@ -51,7 +51,7 @@ var GoogleMap = function (selector, opt) {
 
 		var i = 0;
 		while (i < that._maps.length) {
-			that._maps[i].setOptions({option: value});
+			that._maps[i].setOptions(that.Settings);
 			i++;
 		}
 	};

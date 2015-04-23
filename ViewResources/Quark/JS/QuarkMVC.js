@@ -36,6 +36,14 @@ Quark.MVC.Model = function (data) {
 	that.Form = function (selector, handlers) {
         if (Quark.MVC.Model._selectors.indexOf(selector) + 1) return;
 
+        handlers = Quark.Extend(handlers, {
+            beforeValidate: false,
+            beforeSubmit: false,
+            afterSubmit: false,
+            beforeRemove: false,
+            afterRemove: false
+        });
+
         Quark.MVC.Model._selectors.push(selector);
 
         $(document).on('submit', selector, function (e) {
@@ -58,6 +66,22 @@ Quark.MVC.Model = function (data) {
             e.preventDefault();
 			return false;
 		});
+
+        $(document).on('click', selector + ' .quark-mvc-remove', function (e) {
+            var button = $(this);
+            var method = 'GET';
+
+            if (handlers.beforeRemove instanceof Function)
+                method = handlers.beforeRemove(button) || method;
+
+            Quark.MVC.Request(method, button.attr('href'), data, handlers);
+
+            if (handlers.afterRemove instanceof Function)
+                handlers.afterRemove(button);
+
+            e.preventDefault();
+            return false;
+        });
 	};
 
 	/**
