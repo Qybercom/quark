@@ -1,12 +1,12 @@
 <?php
-namespace Quark\Extensions\SMSCenter;
+namespace Quark\Extensions\SMS;
 
 use Quark\IQuarkExtensionConfig;
 
 /**
  * Class SMSCenterConfig
  *
- * @package Quark\Extensions\SMSCenter
+ * @package Quark\Extensions\SMS
  */
 class SMSCenterConfig implements IQuarkExtensionConfig {
 	public $username = '';

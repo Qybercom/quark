@@ -701,10 +701,15 @@ class QuarkConfig {
 	 * @param                             $name
 	 * @param IQuarkAuthorizationProvider $provider
 	 * @param IQuarkAuthorizableModel     $user
+	 *
+	 * @return QuarkSession
 	 */
-	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider, IQuarkAuthorizableModel $user) {
+	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
 		try {
-			QuarkSession::Init($name, $provider, $user);
+			if (func_num_args() == 3)
+				QuarkSession::Init($name, $provider, $user);
+
+			return QuarkSession::Get($name);
 		}
 		catch (\Exception $e) {
 			Quark::Log('Unable to init session \'' . $name . '\' with ' . get_class($provider) . ' and ' . get_class($user), Quark::LOG_FATAL);
