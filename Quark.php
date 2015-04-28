@@ -1293,7 +1293,7 @@ class QuarkTask {
 	 */
 	public function __construct (QuarkService $service) {
 		$this->_service = $service;
-		$this->_launched = date('Y-m-d H:i:s');
+		$this->_launched = gmdate('Y-m-d H:i:s');
 	}
 
 	/**
