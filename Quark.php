@@ -3590,14 +3590,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return \DateTime
 	 */
 	public function Value ($value = '') {
-		if (func_num_args() != 0) {
-			if (!is_string($value)) {
-				Quark::Log(print_r($value, true));
-				$value = 'now';
-			}
-
+		if (func_num_args() != 0 && is_string($value))
 			$this->_date = new \DateTime($value);
-		}
 
 		return $this->_date;
 	}
@@ -3734,7 +3728,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return mixed
 	 */
 	public function OnPopulate ($raw) {
-		$this->Value($raw);
+		//$this->Value($raw);
 	}
 
 	/**
