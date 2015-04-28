@@ -1308,7 +1308,7 @@ class QuarkTask {
 		if (!$service->LaunchCriteria($this->_launched)) return true;
 
 		$out = $this->_service->Invoke();
-		$this->_launched = date('Y-m-d H:i:s');
+		$this->_launched = gmdate('Y-m-d H:i:s');
 
 		if (is_bool($out)) return $out;
 
