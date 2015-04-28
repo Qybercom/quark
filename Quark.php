@@ -1321,11 +1321,11 @@ interface IQuarkTask extends IQuarkService {
  */
 interface IQuarkScheduledTask {
 	/**
-	 * @param string $previous
+	 * @param QuarkDate $previous
 	 *
 	 * @return bool
 	 */
-	public function LaunchCriteria($previous);
+	public function LaunchCriteria(QuarkDate $previous);
 }
 
 /**
