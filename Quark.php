@@ -3343,6 +3343,7 @@ class QuarkField {
 		 * code snippet from http://php.net/manual/ru/function.checkdate.php#113205
 		 */
 		$date = \DateTime::createFromFormat($culture->$format(), $key);
+		$date->setTimezone(new \DateTimeZone('UTC'));
 
 		return $date && $date->format($culture->$format()) == $key;
 	}
