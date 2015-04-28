@@ -513,7 +513,7 @@ class Quark {
 
 		$duration = $end - $start;
 
-		return func_num_args() == 2 ? $duration : date($duration, $format);
+		return func_num_args() == 2 ? $duration : gmdate($duration, $format);
 	}
 
 	/**
