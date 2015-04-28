@@ -3539,7 +3539,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
  *
  * @package Quark
  */
-class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate, IQuarkModelWithBeforeExtract {
+class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBeforeExtract {
 	const NOW = 'now';
 	const GMT = 'UTC';
 	const CURRENT = '';
@@ -3720,15 +3720,6 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 */
 	public function Unlink () {
 		return $this->DateTime();
-	}
-
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	public function OnPopulate ($raw) {
-		//$this->Value($raw);
 	}
 
 	/**
