@@ -513,7 +513,7 @@ class Quark {
 
 		$duration = $end - $start;
 
-		return func_num_args() == 2 ? $duration : gmdate($duration, $format);
+		return func_num_args() == 2 ? $duration : date($duration, $format);
 	}
 
 	/**
@@ -1293,7 +1293,7 @@ class QuarkTask {
 	 */
 	public function __construct (QuarkService $service) {
 		$this->_service = $service;
-		$this->_launched = gmdate('Y-m-d H:i:s');
+		$this->_launched = date('Y-m-d H:i:s');
 	}
 
 	/**
@@ -1308,7 +1308,7 @@ class QuarkTask {
 		if (!$service->LaunchCriteria($this->_launched)) return true;
 
 		$out = $this->_service->Invoke();
-		$this->_launched = gmdate('Y-m-d H:i:s');
+		$this->_launched = date('Y-m-d H:i:s');
 
 		if (is_bool($out)) return $out;
 
@@ -3343,7 +3343,7 @@ class QuarkField {
 		 * code snippet from http://php.net/manual/ru/function.checkdate.php#113205
 		 */
 		$date = \DateTime::createFromFormat($culture->$format(), $key);
-		$date->setTimezone(new \DateTimeZone('UTC'));
+		//$date->setTimezone(new \DateTimeZone('UTC'));
 
 		return $date && $date->format($culture->$format()) == $key;
 	}
