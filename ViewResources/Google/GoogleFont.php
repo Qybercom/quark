@@ -68,7 +68,7 @@ class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource {
 		return str_replace(' ', '+', '//fonts.googleapis.com/css?family='
 			. $this->_family
 			. (sizeof($this->_sizes) != 0 ? ':' . implode(',', $this->_sizes) : '')
-			. (sizeof($this->_subsets) != 0 ? '&subset=' . implode(',', $this->_subsets) : ''));
+			. (sizeof($this->_subsets) != 0 ? '&amp;subset=' . implode(',', $this->_subsets) : ''));
 	}
 
 	/**

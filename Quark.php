@@ -295,6 +295,15 @@ class Quark {
 	}
 
 	/**
+	 * @param IQuarkContainer $container
+	 * @param                 $child
+	 */
+	public static function Container (IQuarkContainer $container, $child) {
+		if (method_exists($child, '__container'))
+			$child->__container($container);
+	}
+
+	/**
 	 * @return string
 	 *
 	 * @throws QuarkArchException
@@ -699,6 +708,8 @@ class QuarkConfig {
 				'provider' => $provider,
 				'user' => $user
 			));
+
+			return null;
 		}
 	}
 
@@ -1329,11 +1340,103 @@ interface IQuarkScheduledTask {
 }
 
 /**
+ * Class QuarkBehavior
+ *
+ * @package Quark
+ */
+trait QuarkBehavior {
+	/**
+	 * @var IQuarkContainer $_container
+	 */
+	private $_container;
+
+	/**
+	 * @param IQuarkContainer $container
+	 *
+	 * @return IQuarkContainer
+	 */
+	public function __container (IQuarkContainer $container = null) {
+		if (func_num_args() != 0)
+			$this->_container = $container;
+
+		return $this->_container;
+	}
+
+	/**
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
+	 */
+	private function _call ($method, $args) {
+		return call_user_func_array(array($this->_container, $method), $args);
+	}
+
+	/**
+	 * @param $method
+	 * @param $args
+	 *
+	 * @return mixed
+	 */
+	public function __call ($method, $args) {
+		return $this->_call($method, $args);
+	}
+}
+
+/**
+ * Interface IQuarkContainer
+ *
+ * @package Quark
+ */
+interface IQuarkContainer { }
+
+/**
+ * Class QuarkViewBehavior
+ *
+ * @package Quark
+ */
+trait QuarkViewBehavior {
+	use QuarkBehavior;
+
+	/**
+	 * @param IQuarkViewModel $view = null
+	 *
+	 * @return mixed
+	 */
+	public function Child (IQuarkViewModel $view = null) {
+		return $this->_call('Child', func_get_args());
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function User () {
+		return $this->_call('User', func_get_args());
+	}
+
+	/**
+	 * @param bool $field = true
+	 *
+	 * @return mixed
+	 */
+	public function Signature ($field = true) {
+		return $this->_call('Signature', func_get_args());
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Compile () {
+		return $this->_call('Compile', func_get_args());
+	}
+}
+
+/**
  * Class QuarkView
  *
  * @package Quark
  */
-class QuarkView {
+class QuarkView implements IQuarkContainer {
 	/**
 	 * @var IQuarkViewModel|IQuarkViewModelWithResources|IQuarkViewModelWithCachedResources|null
 	 */
@@ -1366,6 +1469,8 @@ class QuarkView {
 			$this->_view->$key = $value;
 
 		$this->_resources = $resources;
+
+		Quark::Container($this, $this->_view);
 	}
 
 	/**
@@ -1514,7 +1619,7 @@ class QuarkView {
 	}
 
 	/**
-	 * @param bool $field
+	 * @param bool $field = true
 	 *
 	 * @return string
 	 * @throws QuarkArchException
@@ -2157,42 +2262,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
  * @package Quark
  */
 trait QuarkModelBehavior {
-	/**
-	 * @var QuarkModel $_container
-	 */
-	private $_container;
-
-	/**
-	 * @param QuarkModel $container
-	 *
-	 * @return QuarkModel
-	 */
-	public function __container (QuarkModel $container = null) {
-		if (func_num_args() != 0)
-			$this->_container = $container;
-
-		return $this->_container;
-	}
-
-	/**
-	 * @param $method
-	 * @param $args
-	 *
-	 * @return mixed
-	 */
-	private function _call ($method, $args) {
-		return call_user_func_array(array($this->_container, $method), $args);
-	}
-
-	/**
-	 * @param $method
-	 * @param $args
-	 *
-	 * @return mixed
-	 */
-	public function __call ($method, $args) {
-		return $this->_call($method, $args);
-	}
+	use QuarkBehavior;
 
 	/**
 	 * @param array $options
@@ -2330,7 +2400,7 @@ class QuarkModelSource {
  *
  * @package Quark
  */
-class QuarkModel {
+class QuarkModel implements IQuarkContainer {
 	const OPTION_SORT = 'sort';
 	const OPTION_SKIP = 'skip';
 	const OPTION_LIMIT = 'limit';
@@ -2392,8 +2462,7 @@ class QuarkModel {
 
 		$this->PopulateWith($source);
 
-		if (method_exists($this->_model, '__container'))
-			$this->_model->__container($this);
+		Quark::Container($this, $this->_model);
 	}
 
 	/**

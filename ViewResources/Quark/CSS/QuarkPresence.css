@@ -97,6 +97,10 @@ body {
     max-width: 180px;
 }
 
+.quark-presence-column.fill {
+    width: 100%;
+}
+
 .quark-presence-column.left {
     text-align: left;
     float: left;
