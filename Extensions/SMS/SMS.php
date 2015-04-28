@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SMSCenter;
+namespace Quark\Extensions\SMS;
 
 use Quark\IQuarkExtension;
 
@@ -14,7 +14,7 @@ use Quark\QuarkPlainIOProcessor;
 /**
  * Class SMS
  *
- * @package Quark\Extensions\SMSCenter
+ * @package Quark\Extensions\SMS
  */
 class SMS implements IQuarkExtension {
 	/**
@@ -117,7 +117,7 @@ class SMS implements IQuarkExtension {
 	 */
 	private function _main ($append = '') {
 		if (strlen($this->_message) == 0)
-			throw new QuarkArchException('SMSCenter: message length should be greater than 0');
+			throw new QuarkArchException('SMS: message length should be greater than 0');
 
 		$client = new QuarkClient(
 			'http://smsc.ru/sys/send.php'

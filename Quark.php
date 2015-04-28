@@ -498,25 +498,6 @@ class Quark {
 	}
 
 	/**
-	 * @param string $start
-	 * @param string $end
-	 * @param string $format
-	 *
-	 * @return bool|int|string
-	 */
-	public static function DateInterval ($start, $end, $format = '') {
-		if (!QuarkField::DateTime($start)) return false;
-		if (!QuarkField::DateTime($end)) return false;
-
-		$start = strtotime($start);
-		$end = strtotime($end);
-
-		$duration = $end - $start;
-
-		return func_num_args() == 2 ? $duration : date($duration, $format);
-	}
-
-	/**
 	 * @param string $path
 	 * @param callable $process
 	 *
@@ -551,7 +532,7 @@ class Quark {
 
 		return file_put_contents(
 			$logs . $domain . '.log',
-			'[' . $lvl . '] ' . date(self::Config()->Culture()->DateTimeFormat()) . ' ' . $message . "\r\n",
+			'[' . $lvl . '] ' . QuarkDate::Now() . ' ' . $message . "\r\n",
 			FILE_APPEND | LOCK_EX
 		);
 	}
@@ -701,10 +682,15 @@ class QuarkConfig {
 	 * @param                             $name
 	 * @param IQuarkAuthorizationProvider $provider
 	 * @param IQuarkAuthorizableModel     $user
+	 *
+	 * @return QuarkSession
 	 */
-	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider, IQuarkAuthorizableModel $user) {
+	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
 		try {
-			QuarkSession::Init($name, $provider, $user);
+			if (func_num_args() == 3)
+				QuarkSession::Init($name, $provider, $user);
+
+			return QuarkSession::Get($name);
 		}
 		catch (\Exception $e) {
 			Quark::Log('Unable to init session \'' . $name . '\' with ' . get_class($provider) . ' and ' . get_class($user), Quark::LOG_FATAL);
@@ -1281,6 +1267,10 @@ class QuarkTask {
 	 * @var QuarkService $_service
 	 */
 	private $_service = null;
+
+	/**
+	 * @var QuarkDate $_launched
+	 */
 	private $_launched = '';
 
 	/**
@@ -1288,7 +1278,7 @@ class QuarkTask {
 	 */
 	public function __construct (QuarkService $service) {
 		$this->_service = $service;
-		$this->_launched = date('Y-m-d H:i:s');
+		$this->_launched = QuarkDate::Now();
 	}
 
 	/**
@@ -1303,7 +1293,7 @@ class QuarkTask {
 		if (!$service->LaunchCriteria($this->_launched)) return true;
 
 		$out = $this->_service->Invoke();
-		$this->_launched = date('Y-m-d H:i:s');
+		$this->_launched = QuarkDate::Now();
 
 		if (is_bool($out)) return $out;
 
@@ -1331,11 +1321,11 @@ interface IQuarkTask extends IQuarkService {
  */
 interface IQuarkScheduledTask {
 	/**
-	 * @param string $previous
+	 * @param QuarkDate $previous
 	 *
 	 * @return bool
 	 */
-	public function LaunchCriteria($previous);
+	public function LaunchCriteria(QuarkDate $previous);
 }
 
 /**
@@ -2673,8 +2663,12 @@ class QuarkModel {
 
 		$model = clone $this->_model;
 
-		if ($model instanceof IQuarkModelWithBeforeExtract)
-			$model->BeforeExtract();
+		if ($model instanceof IQuarkModelWithBeforeExtract) {
+			$out = $model->BeforeExtract();
+
+			if ($out !== null)
+				return $out;
+		}
 
 		foreach ($model as $key => $value) {
 			$property = Quark::Property($fields, $key, null);
@@ -3139,7 +3133,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Valid ($key, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $key instanceof QuarkModel ? $key->Validate() : false;
 	}
@@ -3151,7 +3145,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Type ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		$comparator = 'is_' . $value;
 
@@ -3167,7 +3161,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Eq ($key, $value, $sever = false, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $sever ? $key === $value : $key == $value;
 	}
@@ -3181,7 +3175,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Ne ($key, $value, $sever = false, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $sever ? $key !== $value : $key != $value;
 	}
@@ -3193,7 +3187,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Lt ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $key < $value;
 	}
@@ -3205,7 +3199,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Gt ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $key > $value;
 	}
@@ -3217,7 +3211,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Lte ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $key <= $value;
 	}
@@ -3229,7 +3223,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Gte ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return $key >= $value;
 	}
@@ -3241,7 +3235,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function MinLengthInclusive ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($key) ? sizeof($key) >= $value : strlen((string)$key) >= $value;
 	}
@@ -3253,7 +3247,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function MinLength ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($key) ? sizeof($key) > $value : strlen((string)$key) > $value;
 	}
@@ -3265,7 +3259,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Length ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($key) ? sizeof($key) == $value : strlen((string)$key) == $value;
 	}
@@ -3277,7 +3271,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function MaxLength ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($key) ? sizeof($key) < $value : strlen((string)$key) < $value;
 	}
@@ -3289,7 +3283,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function MaxLengthInclusive ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($key) ? sizeof($key) <= $value : strlen((string)$key) <= $value;
 	}
@@ -3301,7 +3295,7 @@ class QuarkField {
 	 * @return bool|int
 	 */
 	public static function Match ($key, $value, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return preg_match($value, $key);
 	}
@@ -3314,7 +3308,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Enum ($key, $values = [], $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return is_array($values) && in_array($key, $values);
 	}
@@ -3327,7 +3321,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	private static function _dateTime ($type, $key, $nullable = false, $culture = null) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		if ($culture == null)
 			$culture = Quark::Config()->Culture();
@@ -3379,7 +3373,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Email ($key, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
 		return preg_match('#(.*)\@(.*)#Uis', $key);
@@ -3392,7 +3386,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Phone ($key, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
 		return preg_match('#^\+[0-9]#', $key);
@@ -3405,7 +3399,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function In ($key, $values, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		return in_array($key, $values);
 	}
@@ -3428,7 +3422,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function CollectionOf ($key, $model, $nullable = false) {
-		if ($nullable && $key === null) return true;
+		if ($nullable && $key == null) return true;
 
 		if (!is_array($key)) return false;
 
@@ -3443,7 +3437,7 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Rules ($rules) {
-		if (!is_array($rules)) return $rules === null ? true : (bool)$rules;
+		if (!is_array($rules)) return $rules == null ? true : (bool)$rules;
 
 		$ok = true;
 
@@ -3537,6 +3531,211 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 			'values' => $this->values,
 			'default' => $this->default
 		));
+	}
+}
+
+/**
+ * Class QuarkDate
+ *
+ * @package Quark
+ */
+class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate, IQuarkModelWithBeforeExtract {
+	const NOW = 'now';
+	const GMT = 'UTC';
+	const CURRENT = '';
+
+	/**
+	 * @var IQuarkCulture|QuarkCultureISO $_culture
+	 */
+	private $_culture;
+
+	/**
+	 * @var \DateTime $_date
+	 */
+	private $_date;
+
+	/**
+	 * @param IQuarkCulture $culture
+	 * @param string $value = self::NOW
+	 * @param string $timezone = self::CURRENT
+	 */
+	public function __construct (IQuarkCulture $culture = null, $value = self::NOW, $timezone = self::CURRENT) {
+		$this->_culture = $culture ? $culture : Quark::Config()->Culture();
+		$this->Value($value);
+		$this->Timezone($timezone);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return $this->DateTime();
+	}
+
+	/**
+	 * @param IQuarkCulture $culture
+	 *
+	 * @return IQuarkCulture|QuarkCultureISO
+	 */
+	public function Culture (IQuarkCulture $culture = null) {
+		if (func_num_args() != 0)
+			$this->_culture = $culture;
+
+		return $this->_culture;
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return \DateTime
+	 */
+	public function Value ($value = '') {
+		if (func_num_args() != 0 && is_string($value))
+			$this->_date = new \DateTime($value);
+
+		return $this->_date;
+	}
+
+	/**
+	 * @param string $timezone
+	 *
+	 * @return string
+	 */
+	public function Timezone ($timezone = '') {
+		if (func_num_args() != 0 && $timezone != self::CURRENT)
+			$this->_date->setTimezone(new \DateTimeZone($timezone));
+
+		return $this->_date->getTimezone()->getName();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function DateTime () {
+		return $this->_date->format($this->_culture->DateTimeFormat());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Date () {
+		return $this->_date->format($this->_culture->DateFormat());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Time () {
+		return $this->_date->format($this->_culture->TimeFormat());
+	}
+
+	/**
+	 * @param QuarkDate $with
+	 *
+	 * @return int
+	 */
+	public function Interval (QuarkDate $with = null) {
+		if ($with == null) return $this;
+
+		$start = strtotime($this->DateTime());
+		$end = strtotime($with->DateTime());
+
+		return $end - $start;
+	}
+
+	/**
+	 * @param string $offset
+	 *
+	 * @return QuarkDate
+	 */
+	public function Offset ($offset) {
+		$this->_date->modify($offset);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $format
+	 *
+	 * @return QuarkDate
+	 */
+	public static function Now ($format = '') {
+		return self::FromFormat($format);
+	}
+
+	/**
+	 * @param string $format
+	 *
+	 * @return QuarkDate
+	 */
+	public static function GMTNow ($format = '') {
+		return self::FromFormat($format, self::NOW, self::GMT);
+	}
+
+	/**
+	 * @param string $date
+	 *
+	 * @return QuarkDate
+	 */
+	public static function GMTOf ($date) {
+		return new self(null, $date, self::GMT);
+	}
+
+	/**
+	 * @param string $format
+	 * @param string $value = self::NOW
+	 * @param string $timezone = self::CURRENT
+	 *
+	 * @return QuarkDate
+	 */
+	public static function FromFormat ($format, $value = self::NOW, $timezone = self::CURRENT) {
+		return new self(QuarkCultureCustom::Format($format), $value, $timezone);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Fields () {
+		// TODO: Implement Fields() method.
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Rules () {
+		// TODO: Implement Rules() method.
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkModel($this, $raw);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->DateTime();
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function OnPopulate ($raw) {
+		$this->Value($raw);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function BeforeExtract () {
+		return $this->DateTime();
 	}
 }
 
@@ -5428,6 +5627,63 @@ class QuarkCultureRU implements IQuarkCulture {
 	 * @return string
 	 */
 	public function TimeFormat () { return 'H:i:s'; }
+}
+
+/**
+ * Class QuarkCultureCustom
+ *
+ * @package Quark
+ */
+class QuarkCultureCustom implements IQuarkCulture {
+	private $_dateTime;
+	private $_date;
+	private $_time;
+
+	/**
+	 * @param string $dateTime
+	 * @param string $date
+	 * @param string $time
+	 */
+	public function __construct ($dateTime = '', $date = '', $time = '') {
+		$this->_dateTime = $dateTime;
+		$this->_date = $date;
+		$this->_time = $time;
+	}
+
+	/**
+	 * @param $format
+	 *
+	 * @return QuarkCultureCustom
+	 */
+	public static function Format ($format) {
+		if ($format == null)
+			return new QuarkCultureISO();
+
+		$dateTime = explode(' ', $format);
+
+		return new self($format, $dateTime[0], array_reverse($dateTime)[0]);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function DateTimeFormat () {
+		return $this->_dateTime;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function DateFormat () {
+		return $this->_date;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function TimeFormat () {
+		return $this->_time;
+	}
 }
 
 /**
