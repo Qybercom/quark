@@ -12,6 +12,10 @@ use Quark\Quark;
  * @package Quark\Extensions\SocialNetwork
  */
 class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource {
+	const KEY_PROPERTY = 'property';
+	const KEY_NAME = 'name';
+
+	const PROPERTY_AUTHOR = 'author';
 	const PROPERTY_FB_APP_ID = 'fb:app_id';
 	const PROPERTY_OG_URL = 'og:url';
 	const PROPERTY_OG_TYPE = 'og:type';
@@ -78,11 +82,12 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	/**
 	 * @param string $property
 	 * @param string $content
+	 * @param string $key = self::KEY_PROPERTY
 	 *
 	 * @return OpenGraphResource
 	 */
-	public function Property ($property, $content) {
-		$this->_html .= '<meta property="' . $property . '" content="' . $content . '" />';
+	public function Property ($property, $content, $key = self::KEY_PROPERTY) {
+		$this->_html .= '<meta ' . $key . '="' . $property . '" content="' . $content . '" />';
 		return $this;
 	}
 
@@ -93,6 +98,18 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	 */
 	public function App ($config) {
 		return $this->Property(self::PROPERTY_FB_APP_ID, Quark::Config()->Extension($config)->appId);
+	}
+
+	/**
+	 * @param $author
+	 *
+	 * @return OpenGraphResource
+	 */
+	public function Author ($author) {
+		return $this
+			->Property(self::PROPERTY_AUTHOR, $author, self::KEY_NAME)
+			->Property(self::PROPERTY_ARTICLE_AUTHOR, $author)
+		;
 	}
 
 	/**
