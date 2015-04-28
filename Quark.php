@@ -3593,7 +3593,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 		if (func_num_args() != 0) {
 			if (!is_string($value)) {
 				Quark::Log(print_r($value, true));
-				$value = 'Y-m-d H:i:s';
+				$value = 'now';
 			}
 
 			$this->_date = new \DateTime($value);
