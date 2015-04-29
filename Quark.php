@@ -843,6 +843,9 @@ class QuarkService {
 		$request->AttachData($post);
 		$request->AttachData((object)$files);
 
+		if ($this->_service instanceof IQuarkServiceWithRequestBackbone)
+			$request->Data(Quark::Normalize($request->Data(), $this->_service->RequestBackbone()));
+
 		$session = new QuarkSession();
 		$method = $this->_service instanceof IQuarkAnyService
 			? 'Any'
@@ -1201,16 +1204,23 @@ interface IQuarkServiceWithCustomResponseProcessor {
 }
 
 /**
+ * Interface IQuarkServiceWithRequestBackbone
+ *
+ * @package Quark
+ */
+interface IQuarkServiceWithRequestBackbone {
+	/**
+	 * @return array
+	 */
+	public function RequestBackbone();
+}
+
+/**
  * Interface IQuarkStrongService
  *
  * @package Quark
  */
-interface IQuarkStrongService {
-	/**
-	 * @return array
-	 */
-	public function InputFilter();
-}
+interface IQuarkStrongService { }
 
 /**
  * Interface IQuarkServiceWithAccessControl
@@ -5424,7 +5434,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public function Location ($location = '') {
 		if (func_num_args() == 1) {
-			$this->location = Quark::NormalizePath($location, false);
+			$this->location = Quark::NormalizePath(realpath($location), false);
 			$this->name = array_reverse(explode('/', $this->location))[0];
 
 			if ($this->Exists()) {
