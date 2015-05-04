@@ -2,6 +2,7 @@
 namespace Quark\ViewResources\Quark;
 
 use Quark\IQuarkViewResource;
+use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkInlineViewResource;
 
 /**
@@ -9,7 +10,7 @@ use Quark\IQuarkInlineViewResource;
  *
  * @package Quark\ViewResources\Quark
  */
-class QuarkResponsiveUI implements IQuarkViewResource, IQuarkInlineViewResource {
+class QuarkResponsiveUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
 	const DEVICE_WIDTH = 'device-width';
 	const DEVICE_HEIGHT = 'device-height';
 	const SCALE1 = 1.0;
@@ -46,5 +47,12 @@ class QuarkResponsiveUI implements IQuarkViewResource, IQuarkInlineViewResource 
 	 */
 	public function HTML () {
 		return '<meta name="viewport" content="width=' . $this->_width . ', initial-scale=' . $this->_scale . '" />';
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
 	}
 }

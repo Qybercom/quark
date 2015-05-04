@@ -1538,7 +1538,10 @@ class QuarkView implements IQuarkContainer {
 		 */
 		foreach ($this->_resources as $resource) {
 			if ($resource instanceof IQuarkInlineViewResource) {
-				$out .= $resource->HTML();
+				$out .= $obfuscate && $resource instanceof IQuarkLocalViewResource && $resource->CacheControl()
+					? QuarkSource::ObfuscateString($resource->HTML())
+					: $resource->HTML();
+
 				continue;
 			}
 
@@ -1956,6 +1959,78 @@ class QuarkLocalCoreCSSViewResource implements IQuarkViewResource, IQuarkLocalVi
 	 */
 	public function CacheControl () {
 		return true;
+	}
+}
+
+/**
+ * Class QuarkInlineViewResource
+ *
+ * @package Quark
+ */
+trait QuarkInlineViewResource {
+	/**
+	 * @var string $_code
+	 */
+	private $_code = '';
+
+	/**
+	 * @param string $code
+	 */
+	public function __construct ($code = '') {
+		$this->_code = $code;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		// TODO: Implement Location() method.
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Type () {
+		// TODO: Implement Type() method.
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
+	}
+}
+
+/**
+ * Class QuarkInlineCSSViewResource
+ *
+ * @package Quark
+ */
+class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+	use QuarkInlineViewResource;
+
+	/**
+	 * @return string
+	 */
+	public function HTML () {
+		return '<style type="text/css">' . $this->_code . '</style>';
+	}
+}
+
+/**
+ * Class QuarkInlineJSViewResource
+ *
+ * @package Quark
+ */
+class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+	use QuarkInlineViewResource;
+
+	/**
+	 * @return string
+	 */
+	public function HTML () {
+		return '<script type="text/javascript">' . $this->_code . '</script>';
 	}
 }
 
@@ -6701,8 +6776,12 @@ class QuarkSource {
 	private $_type = '';
 	private $_source = '';
 	private $_size = 0;
+	private $_trim = array();
 
-	private $_trim = array(
+	/**
+	 * @var array $__trim
+	 */
+	private static $__trim = array(
 		'.',',',';','\'','?',':',
 		'(',')','{','}','[',']',
 		'-','+','*','/',
@@ -6713,9 +6792,11 @@ class QuarkSource {
 
 	/**
 	 * @param string $source
+	 * @param array $trim
 	 */
-	public function __construct ($source = '') {
+	public function __construct ($source = '', $trim = array()) {
 		$this->Load($source);
+		$this->_trim = func_num_args() == 2 ? $trim : self::$__trim;
 	}
 
 	/**
@@ -6817,27 +6898,40 @@ class QuarkSource {
 	 * @return QuarkSource
 	 */
 	public function Obfuscate ($css = false) {
-		$slash = ':\\\\' . Quark::GuID() . '\\\\';
-
-		$this->_source = str_replace('://', $slash, $this->_source);
-		$this->_source = preg_replace('#\/\/(.*)\\n#Uis', '', $this->_source);
-		$this->_source = str_replace($slash, '://', $this->_source);
-		$this->_source = preg_replace('#\/\*(.*)\*\/#Uis', '', $this->_source);
-		$this->_source = str_replace("\r\n", '', $this->_source);
-		$this->_source = preg_replace('/\s+/', ' ', $this->_source);
-		$this->_source = trim(str_replace('<?phpn', '<?php n', $this->_source));
-
-		foreach ($this->_trim as $rule) {
-			$this->_source = str_replace(' ' . $rule . ' ', $rule, $this->_source);
-
-			if (!$css)
-				$this->_source = str_replace(' ' . $rule, $rule, $this->_source);
-
-			$this->_source = str_replace($rule . ' ', $rule, $this->_source);
-		}
-
+		$this->_source = self::ObfuscateString($this->_source, $css, $this->_trim);
 		$this->_size();
 
 		return $this;
+	}
+
+	/**
+	 * @param string $source
+	 * @param bool   $css
+	 * @param array  $trim
+	 *
+	 * @return string
+	 */
+	public static function ObfuscateString ($source = '', $css = false, $trim = array()) {
+		$trim = func_num_args() == 3 ? $trim : self::$__trim;
+		$slash = ':\\\\' . Quark::GuID() . '\\\\';
+
+		$source = str_replace('://', $slash, $source);
+		$source = preg_replace('#\/\/(.*)\\n#Uis', '', $source);
+		$source = str_replace($slash, '://', $source);
+		$source = preg_replace('#\/\*(.*)\*\/#Uis', '', $source);
+		$source = str_replace("\r\n", '', $source);
+		$source = preg_replace('/\s+/', ' ', $source);
+		$source = trim(str_replace('<?phpn', '<?php n', $source));
+
+		foreach ($trim as $rule) {
+			$source = str_replace(' ' . $rule . ' ', $rule, $source);
+
+			if (!$css)
+				$source = str_replace(' ' . $rule, $rule, $source);
+
+			$source = str_replace($rule . ' ', $rule, $source);
+		}
+
+		return $source;
 	}
 }

@@ -120,13 +120,26 @@ textarea.quark-input {
     border: 1px solid #CDD9FF;
 }
 
+.quark-message.info:before {
+    color: #A7BCFF;
+}
+
 .quark-message.warn {
     /*border: 1px solid #E8E8AD;*/
     border: 1px solid rgb(211, 190, 2);
 }
 
+.quark-message.warn:before {
+    color: rgb(211, 190, 2);
+}
+
 .quark-message.fatal {
-    border: 1px solid #ffceaf;
+    border: 1px solid #ff9960;
+}
+
+.quark-message.fatal:before {
+    /*border: 1px solid #ffceaf;*/
+    color: #ff9960;
 }
 
 .qui-message.question {
@@ -136,6 +149,11 @@ textarea.quark-input {
 .quark-message.ok {
     /*border: 1px solid rgb(167, 255, 167);*/
     border: 1px solid rgb(1, 165, 1);
+}
+
+.quark-message.ok:before {
+    /*border: 1px solid rgb(167, 255, 167);*/
+    color: rgb(1, 165, 1);
 }
 
 
