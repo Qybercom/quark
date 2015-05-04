@@ -40,8 +40,8 @@ Quark.MVC.Model = function (data) {
             beforeValidate: false,
             beforeSubmit: false,
             afterSubmit: false,
-            beforeRemove: false,
-            afterRemove: false
+            beforeAction: false,
+            afterAction: false
         });
 
         Quark.MVC.Model._selectors.push(selector);
@@ -67,17 +67,26 @@ Quark.MVC.Model = function (data) {
 			return false;
 		});
 
-        $(document).on('click', selector + ' .quark-mvc-remove', function (e) {
+        console.log(selector + ' .quark-mvc-action');
+
+        $(document).on('click', selector + ' .quark-mvc-action', function (e) {
+            console.log('test');
+
             var button = $(this);
             var method = 'GET';
 
-            if (handlers.beforeRemove instanceof Function)
-                method = handlers.beforeRemove(button) || method;
+            if (handlers.beforeAction instanceof Function)
+                method = handlers.beforeAction(button) || method;
+
+            console.log('test');
+
+            e.preventDefault();
+            return false;
 
             Quark.MVC.Request(method, button.attr('href'), data, handlers);
 
-            if (handlers.afterRemove instanceof Function)
-                handlers.afterRemove(button);
+            if (handlers.afterAction instanceof Function)
+                handlers.afterAction(button);
 
             e.preventDefault();
             return false;

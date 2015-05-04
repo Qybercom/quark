@@ -1452,6 +1452,10 @@ class QuarkView implements IQuarkContainer {
 	 */
 	private $_view = null;
 	private $_child = null;
+	/**
+	 * @var QuarkView $_layout
+	 */
+	private $_layout = null;
 	private $_file = '';
 	private $_vars = array();
 	private $_resources = array();
@@ -1489,7 +1493,9 @@ class QuarkView implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public function __get ($key) {
-		return isset($this->_view->$key) ? $this->_view->$key : $this->_null;
+		return isset($this->_view->$key)
+			? $this->_view->$key
+			: (isset($this->_layout->$key) ? $this->_layout->$key : $this->_null);
 	}
 
 	/**
@@ -1506,7 +1512,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return bool
 	 */
 	public function __isset ($key) {
-		return isset($this->_view->$key);
+		return isset($this->_view->$key) || isset($this->_layout->$key);
 	}
 
 	/**
@@ -1514,9 +1520,16 @@ class QuarkView implements IQuarkContainer {
 	 * @param $args
 	 *
 	 * @return mixed
+	 * @throws QuarkArchException
 	 */
 	public function __call ($method, $args) {
-		return call_user_func_array(array($this->_view, $method), $args);
+		if (method_exists($this->_view, $method))
+			return call_user_func_array(array($this->_view, $method), $args);
+
+		if (method_exists($this->_layout->ViewModel(), $method))
+			return call_user_func_array(array($this->_layout, $method), $args);
+
+		throw new QuarkArchException('Method ' . $method . ' not exists in ' . get_class($this->_view) . ' environment');
 	}
 
 	/**
@@ -1668,12 +1681,14 @@ class QuarkView implements IQuarkContainer {
 	 *
 	 * @return QuarkView
 	 */
-	public function Layout (IQuarkViewModel $view, $vars = [], $resources = []) {
-		$layout = new QuarkView($view, $vars, $resources);
-		$layout->View($this->Compile());
-		$layout->Child($this->_view);
+	public function Layout (IQuarkViewModel $view = null, $vars = [], $resources = []) {
+		if (func_num_args() != 0) {
+			$this->_layout = new QuarkView($view, $vars, $resources);
+			$this->_layout->View($this->Compile());
+			$this->_layout->Child($this->_view);
+		}
 
-		return $layout;
+		return $this->_layout;
 	}
 
 	/**
