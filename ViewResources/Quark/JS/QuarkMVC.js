@@ -67,26 +67,17 @@ Quark.MVC.Model = function (data) {
 			return false;
 		});
 
-        console.log(selector + ' .quark-mvc-action');
-
         $(document).on('click', selector + ' .quark-mvc-action', function (e) {
-            console.log('test');
-
             var button = $(this);
             var method = 'GET';
 
             if (handlers.beforeAction instanceof Function)
-                method = handlers.beforeAction(button) || method;
-
-            console.log('test');
-
-            e.preventDefault();
-            return false;
+                method = handlers.beforeAction(that, button) || method;
 
             Quark.MVC.Request(method, button.attr('href'), data, handlers);
 
             if (handlers.afterAction instanceof Function)
-                handlers.afterAction(button);
+                handlers.afterAction(that, button);
 
             e.preventDefault();
             return false;

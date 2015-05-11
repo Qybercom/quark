@@ -99,6 +99,21 @@ GoogleMap.Point = function (position, alt) {
 };
 
 /**
+ * @param point
+ * @param offset
+ *
+ * @return {{lat: number, lng: number}}
+ */
+GoogleMap.PointOffset = function (point, offset) {
+    offset = offset || {};
+
+    return {
+        lat: point.lat + (offset.lat || 0),
+        lng: point.lng + (offset.lng || 0)
+    };
+};
+
+/**
  * @param p1
  * @param p2
  *

@@ -1350,11 +1350,11 @@ interface IQuarkScheduledTask {
 }
 
 /**
- * Class QuarkBehavior
+ * Class QuarkContainerBehavior
  *
  * @package Quark
  */
-trait QuarkBehavior {
+trait QuarkContainerBehavior {
 	/**
 	 * @var IQuarkContainer $_container
 	 */
@@ -1401,12 +1401,81 @@ trait QuarkBehavior {
 interface IQuarkContainer { }
 
 /**
+ * Class QuarkContainer
+ *
+ * @package Quark
+ */
+class QuarkContainer {
+	private $_source;
+
+	private $_min;
+	private $_max;
+
+	/**
+	 * @param object|array $source
+	 * @param object|array $min
+	 * @param object|array $max
+	 */
+	public function __construct ($source = null, $min = null, $max = null) {
+		$this->Source($source);
+
+		$this->Minimal($min);
+		$this->Maximal($max);
+	}
+
+	/**
+	 * @param object|array $source
+	 *
+	 * @return object|array
+	 */
+	public function Source ($source = null) {
+		if (func_num_args() != 0)
+			$this->_source = $source;
+
+		return $this->_source;
+	}
+
+	/**
+	 * @param object|array $min
+	 *
+	 * @return object|array
+	 */
+	public function Minimal ($min = null) {
+		if (func_num_args() != 0)
+			$this->_min = $min;
+
+		return $this->_min;
+	}
+
+	/**
+	 * @param object|array $max
+	 *
+	 * @return object|array
+	 */
+	public function Maximal ($max = null) {
+		if (func_num_args() != 0)
+			$this->_max = $max;
+
+		return $this->_max;
+	}
+
+	/**
+	 * @param callable $builder
+	 *
+	 * @return object
+	 */
+	public function Build ($builder = null) {
+		return new \StdClass();
+	}
+}
+
+/**
  * Class QuarkViewBehavior
  *
  * @package Quark
  */
 trait QuarkViewBehavior {
-	use QuarkBehavior;
+	use QuarkContainerBehavior;
 
 	/**
 	 * @param IQuarkViewModel $view = null
@@ -1571,7 +1640,7 @@ class QuarkView implements IQuarkContainer {
 				$res = QuarkSource::FromFile($location);
 
 				if ($obfuscate && $resource->CacheControl())
-					$res->Obfuscate(true);
+					$res->Obfuscate();
 
 				$content = $res->Source();
 
@@ -2362,7 +2431,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
  * @package Quark
  */
 trait QuarkModelBehavior {
-	use QuarkBehavior;
+	use QuarkContainerBehavior;
 
 	/**
 	 * @param array $options
@@ -6797,7 +6866,7 @@ class QuarkSource {
 	 * @var array $__trim
 	 */
 	private static $__trim = array(
-		'.',',',';','\'','?',':',
+		',',';','?',':',
 		'(',')','{','}','[',']',
 		'-','+','*','/',
 		'>','<','>=','<=','!=','==',
@@ -6908,12 +6977,10 @@ class QuarkSource {
 	}
 
 	/**
-	 * @param bool $css
-	 *
 	 * @return QuarkSource
 	 */
-	public function Obfuscate ($css = false) {
-		$this->_source = self::ObfuscateString($this->_source, $css, $this->_trim);
+	public function Obfuscate () {
+		$this->_source = self::ObfuscateString($this->_source, $this->_trim);
 		$this->_size();
 
 		return $this;
@@ -6921,12 +6988,11 @@ class QuarkSource {
 
 	/**
 	 * @param string $source
-	 * @param bool   $css
 	 * @param array  $trim
 	 *
 	 * @return string
 	 */
-	public static function ObfuscateString ($source = '', $css = false, $trim = array()) {
+	public static function ObfuscateString ($source = '', $trim = array()) {
 		$trim = func_num_args() == 3 ? $trim : self::$__trim;
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';
 
@@ -6940,10 +7006,7 @@ class QuarkSource {
 
 		foreach ($trim as $rule) {
 			$source = str_replace(' ' . $rule . ' ', $rule, $source);
-
-			if (!$css)
-				$source = str_replace(' ' . $rule, $rule, $source);
-
+			$source = str_replace(' ' . $rule, $rule, $source);
 			$source = str_replace($rule . ' ', $rule, $source);
 		}
 
