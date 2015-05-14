@@ -119,6 +119,8 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($data) {
+		if (strlen($data) < 1) return '';
+
 		$first = self::_byte($data[0]);
 		$second = self::_byte($data[1]);
 
