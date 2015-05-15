@@ -106,8 +106,17 @@ class WebSocketTransport implements IQuarkTransportProviderServer {
 	 * @return mixed
 	 */
 	public function OnData ($client, $clients, $data) {
-		if ($client->Connected())
-			$this->_protocol->OnData($client, $clients, $this->_processor->Decode($data));
+		if ($client->Connected()) {
+			$out = $this->_processor->Decode(strlen($this->_buffer) == 0 ? $data : $this->_buffer . $data);
+
+			if ($out === false) {
+				$this->_buffer .= $data;
+			}
+			else {
+				$this->_protocol->OnData($client, $clients, $out);
+				$this->_buffer = '';
+			}
+		}
 		else {
 			if ($data != "\r\n") {
 				$this->_buffer .= $data;

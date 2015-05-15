@@ -119,8 +119,6 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($data) {
-		if (strlen($data) < 1) return '';
-
 		$first = self::_byte($data[0]);
 		$second = self::_byte($data[1]);
 
@@ -171,10 +169,7 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 		 * so if WebSocket-frame is > 1024 bytes we have to wait until whole
 		 * data is transferred.
 		 */
-		if (strlen($data) < $dataLength) {
-			Quark::Log('WebSocket error. Unmatched data length ' . strlen($data) . '/' .$dataLength);
-			return '';
-		}
+		if (strlen($data) < $dataLength) return false;
 
 		$payload = '';
 
