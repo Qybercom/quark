@@ -3895,6 +3895,15 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	/**
 	 * @param string $format
 	 *
+	 * @return string
+	 */
+	public function Format ($format = '') {
+		return $this->_date->format($format);
+	}
+
+	/**
+	 * @param string $format
+	 *
 	 * @return QuarkDate
 	 */
 	public static function Now ($format = '') {
