@@ -127,7 +127,7 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 		$length = ord($data[1]) & 127;
 
 		if (!$masked) {
-			Quark::Log('WebSocket error 1002');
+			Quark::Log('WebSocket error 1002. Data applied for Decode must not be masked.');
 			return '';
 		}
 
