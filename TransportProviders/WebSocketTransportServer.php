@@ -12,11 +12,11 @@ use Quark\QuarkDTO;
 use Quark\QuarkHTMLIOProcessor;
 
 /**
- * Class WebSocketTransport
+ * Class WebSocketTransportServer
  *
  * @package Quark\TransportProviders
  */
-class WebSocketTransport implements IQuarkTransportProviderServer {
+class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	const GuID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 	/**

@@ -82,15 +82,15 @@ Quark.Controls.Select = function (selector, opt) {
 			if (i == 0)
 				selected = key;
 
-			html +='<a class="qui-button block"><span style="display:none;">' + opt.values[key] + '</span>' + key + '</a>';
+			html +='<a class="quark-button block"><span style="display:none;">' + opt.values[key] + '</span>' + key + '</a>';
 
 			i++;
 		}
 
 		if (!opt.default)
-			selected = '<a class="qui-button block"><span style="display:none;">' + opt.values[selected] + '</span>' + selected + '</a>';
+			selected = '<a class="quark-button block"><span style="display:none;">' + opt.values[selected] + '</span>' + selected + '</a>';
 
-		$(this).append(selected + '<span class="qui-tool-group">' + html + '</span>');
+		$(this).append(selected + '<span class="quark-tool-group">' + html + '</span>');
 	});
 
 	that.Tool = function (html) {
@@ -98,15 +98,15 @@ Quark.Controls.Select = function (selector, opt) {
 	};
 
 	that.Elem.on('click', function (e) {
-		that.Elem.children('.qui-tool-group').css({
+		that.Elem.children('.quark-tool-group').css({
 			display: 'block'
 		});
 
 		e.stopPropagation();
 	});
 
-	that.Elem.children('.qui-tool-group').on('click', function (e) {
-		that.Elem.children('.qui-tool-group').css({
+	that.Elem.children('.quark-tool-group').on('click', function (e) {
+		that.Elem.children('.quark-tool-group').css({
 			display: 'none'
 		});
 
@@ -128,9 +128,9 @@ Quark.Controls.File = function (selector, opt) {
 };
 
 Quark.Controls.File._send = function (e) {
-	Quark.Controls.File.To($(this).attr('qui-url'), $(this).attr('qui-name'), Quark.Extend(e.data, {
+	Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(e.data, {
 		data: {
-			_signature: $(this).attr('qui-signature')
+			_signature: $(this).attr('quark-signature')
 		}
 	}));
 };

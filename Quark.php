@@ -879,7 +879,7 @@ class QuarkService {
 			}
 		}
 
-		if ($ok && Quark::is($this->_service, $a = 'Quark\IQuark' . $method . 'Service'))
+		if ($ok && strlen(trim($method)) != 0 && Quark::is($this->_service, $a = 'Quark\IQuark' . $method . 'Service'))
 			$output = $this->_service->$method($request, $session);
 
 		if ($output instanceof QuarkDTO) $response = $output;
@@ -971,6 +971,40 @@ class QuarkService {
 			throw new QuarkArchException('Class ' . $class . ' is not an IQuarkService');
 
 		return new QuarkService($bundle);
+	}
+}
+
+interface IQuarkEnvironmentProvider {
+
+}
+
+class QuarkFPMEnvironmentProvider {
+	/**
+	 * @return string
+	 */
+	public function Host () {
+
+	}
+
+	/**
+	 * @return string
+	 */
+	public function WebHost () {
+
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Request () {
+
+	}
+
+	/**
+	 * @param QuarkDTO $response
+	 */
+	public function Response (QuarkDTO $response) {
+
 	}
 }
 
@@ -4380,10 +4414,10 @@ class QuarkClient {
 	private $_send;
 
 	/**
-	 * @param string                  $uri
+	 * @param string                  		$uri
 	 * @param IQuarkTransportProviderClient $transport
-	 * @param QuarkCertificate        $certificate
-	 * @param int                     $timeout = 30
+	 * @param QuarkCertificate        		$certificate
+	 * @param int                     		$timeout = 30
 	 */
 	public function __construct ($uri = '', IQuarkTransportProviderClient $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
 		$this->URI(QuarkURI::FromURI($uri));
@@ -5602,7 +5636,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public function Location ($location = '') {
 		if (func_num_args() == 1) {
-			$this->location = Quark::NormalizePath(realpath($location), false);
+			$real = realpath($location);
+
+			$this->location = Quark::NormalizePath($real ? $real : $location, false);
 			$this->name = array_reverse(explode('/', $this->location))[0];
 
 			if ($this->Exists()) {
