@@ -119,9 +119,11 @@ class Quark {
 			}
 		}
 		catch (QuarkArchException $e) {
+			self::HTTPStatus($config->DefaultServerErrorStatus());
 			self::Log($e->message, $e->lvl);
 		}
 		catch (QuarkConnectionException $e) {
+			self::HTTPStatus($config->DefaultServerErrorStatus());
 			self::Log($e->message, $e->lvl);
 		}
 		catch (QuarkHTTPException $e) {
@@ -586,6 +588,11 @@ class QuarkConfig {
 	private $_defaultNotFoundStatus = QuarkDTO::STATUS_404_NOT_FOUND;
 
 	/**
+	 * @var string $_defaultServerErrorStatus
+	 */
+	private $_defaultServerErrorStatus = QuarkDTO::STATUS_500_SERVER_ERROR;
+
+	/**
 	 * @var array
 	 */
 	private $_extensions = array();
@@ -736,6 +743,18 @@ class QuarkConfig {
 			$this->_defaultNotFoundStatus = $status;
 
 		return $this->_defaultNotFoundStatus;
+	}
+
+	/**
+	 * @param string $status
+	 *
+	 * @return string
+	 */
+	public function DefaultServerErrorStatus ($status = '') {
+		if (func_num_args() == 1)
+			$this->_defaultServerErrorStatus = $status;
+
+		return $this->_defaultServerErrorStatus;
 	}
 
 	/**
@@ -974,37 +993,161 @@ class QuarkService {
 	}
 }
 
+/**
+ * Interface IQuarkEnvironmentProvider
+ *
+ * @package Quark
+ */
 interface IQuarkEnvironmentProvider {
-
-}
-
-class QuarkFPMEnvironmentProvider {
 	/**
 	 * @return string
 	 */
-	public function Host () {
+	public function Host();
 
+	/**
+	 * @param bool $full = true
+	 * @param bool $secure = false
+	 *
+	 * @return mixed
+	 */
+	public function WebHost($full = true, $secure = false);
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Request();
+
+	/**
+	 * @param QuarkDTO $response
+	 *
+	 * @return mixed
+	 */
+	public function Response(QuarkDTO $response);
+}
+
+/**
+ * Class QuarkFPMEnvironmentProvider
+ *
+ * @package Quark
+ */
+class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
+	/**
+	 * @return string
+	 * @throws QuarkArchException
+	 */
+	public function Host () {
+		if (!isset($_SERVER['DOCUMENT_ROOT']))
+			throw new QuarkArchException('Cannot determine document root. Please check Your PHP and web server configuration');
+
+		return Quark::NormalizePath($_SERVER['DOCUMENT_ROOT']);
 	}
 
 	/**
-	 * @return string
+	 * @param bool $full = true
+	 * @param bool $secure = false
+	 *
+	 * @return mixed
 	 */
-	public function WebHost () {
+	public function WebHost ($full = true, $secure = false) {
+		if (!isset($_SERVER['SERVER_NAME'])) return '';
 
+		$protocol = isset($_SERVER['SERVER_PROTOCOL'])
+			? strtolower(explode('/', $_SERVER['SERVER_PROTOCOL'])[0])
+			: 'http';
+
+		$offset = str_replace('index.php', '', $_SERVER['PHP_SELF']);
+
+		return $full ? ($protocol . ($secure ? 's' : '') . '://' . $_SERVER['SERVER_NAME'] . $offset) : $offset;
 	}
 
 	/**
 	 * @return QuarkDTO
 	 */
 	public function Request () {
+		$processor = Quark::Config()->Processor(QuarkConfig::REQUEST);
+		$type = $processor->MimeType();
+		$headers = array();
+		$body = file_get_contents('php://input');
 
+		foreach ($_SERVER as $name => $value) {
+			$add = false;
+
+			if (substr($name, 0, 5) == 'HTTP_') {
+				$name = substr($name, 5);
+				$add = true;
+			}
+
+			if (substr($name, 0, 8) == 'CONTENT_')
+				$add = true;
+
+			if ($add)
+				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $name))))] = $value;
+		}
+
+		$request = new QuarkDTO($processor);
+
+		$request->Method($_SERVER['REQUEST_METHOD']);
+		$request->URI(QuarkURI::FromURI($_SERVER['REQUEST_URI']));
+		$request->Headers($headers);
+		$request->Cookies($_COOKIE);
+		$request->AttachData($request->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
+		$request->AttachData((object)($_GET + $_POST));
+
+		if (isset($_POST[$type]))
+			unset($_POST[$type]);
 	}
 
 	/**
 	 * @param QuarkDTO $response
+	 *
+	 * @return string
 	 */
 	public function Response (QuarkDTO $response) {
+		$processor = Quark::Config()->Processor(QuarkConfig::RESPONSE);
 
+		$response = new QuarkDTO($processor);
+
+		//return $response->SerializeResponse();
+	}
+}
+
+/**
+ * Class QuarkCLIEnvironmentProvider
+ *
+ * @package Quark
+ */
+class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
+	/**
+	 * @return string
+	 */
+	public function Host () {
+		return Quark::NormalizePath(dirname($_SERVER['PHP_SELF']));
+	}
+
+	/**
+	 * @param bool $full = true
+	 * @param bool $secure = false
+	 *
+	 * @return mixed
+	 */
+	public function WebHost ($full = true, $secure = false) {
+		return '';
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Request () {
+		return null;
+	}
+
+	/**
+	 * @param QuarkDTO $response
+	 *
+	 * @return string
+	 */
+	public function Response (QuarkDTO $response) {
+		return null;
 	}
 }
 
@@ -4918,6 +5061,7 @@ class QuarkDTO {
 	const STATUS_200_OK = '200 OK';
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
 	const STATUS_404_NOT_FOUND = '404 Not Found';
+	const STATUS_500_SERVER_ERROR = '500 Server Error';
 
 	const CONNECTION_KEEP_ALIVE = 'keep-alive';
 	const CONNECTION_UPGRADE = 'Upgrade';
