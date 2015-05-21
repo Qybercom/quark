@@ -2,7 +2,9 @@
 namespace Quark\TransportProviders;
 
 use Quark\IOProcessors\WebSocketFrameIOProcessor;
+use Quark\IQuarkIOProcessor;
 use Quark\IQuarkTransportProviderServer;
+use Quark\IQuarkTransportProtocol;
 
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
@@ -27,7 +29,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_connected = false;
 
 	/**
-	 * @var IQuarkTransportProviderServer
+	 * @var IQuarkTransportProtocol
 	 */
 	private $_protocol;
 
@@ -37,7 +39,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_subprotocol = '';
 
 	/**
-	 * @var WebSocketFrameIOProcessor $_processor
+	 * @var WebSocketFrameIOProcessor|IQuarkIOProcessor $_processor
 	 */
 	private $_processor;
 
@@ -47,19 +49,51 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_clients = array();
 
 	/**
-	 * @param IQuarkTransportProviderServer $protocol
+	 * @param IQuarkTransportProtocol $protocol
 	 * @param string $subprotocol
+	 * @param IQuarkIOProcessor $processor
 	 */
-	public function __construct (IQuarkTransportProviderServer $protocol = null, $subprotocol = '') {
+	public function __construct (IQuarkTransportProtocol $protocol = null, $subprotocol = '', IQuarkIOProcessor $processor = null) {
 		$this->_protocol = $protocol;
 		$this->_subprotocol = $subprotocol;
-		$this->_processor = new WebSocketFrameIOProcessor();
+
+		if ($processor == null)
+			$this->_processor = new WebSocketFrameIOProcessor();
 	}
 
 	/**
-	 * @return WebSocketFrameIOProcessor
+	 * @param IQuarkTransportProtocol $protocol
+	 *
+	 * @return IQuarkTransportProtocol
 	 */
-	public function Processor () {
+	public function Protocol (IQuarkTransportProtocol $protocol = null) {
+		if (func_num_args() != 0)
+			$this->_protocol = $protocol;
+
+		return $this->_protocol;
+	}
+
+	/**
+	 * @param string $subprotocol
+	 *
+	 * @return string
+	 */
+	public function Subprotocol ($subprotocol = '') {
+		if (func_num_args() != 0)
+			$this->_subprotocol = $subprotocol;
+
+		return $this->_subprotocol;
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 *
+	 * @return WebSocketFrameIOProcessor|IQuarkIOProcessor
+	 */
+	public function Processor (IQuarkIOProcessor $processor = null) {
+		if (func_num_args() != 0)
+			$this->_processor = $processor;
+
 		return $this->_processor;
 	}
 
@@ -71,7 +105,6 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	 */
 	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
 		$this->_uri = $uri;
-		$this->_protocol->Setup($uri, $certificate);
 	}
 
 	/**
@@ -83,7 +116,6 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 		if (!$server->Bind()) return false;
 
 		$server->Listen();
-		$this->_protocol->Server($server);
 
 		return true;
 	}
