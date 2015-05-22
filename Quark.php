@@ -57,6 +57,28 @@ class Quark {
 	public static function Run (QuarkConfig $config) {
 		self::$_config = $config;
 
+		if (!self::CLI()) (new QuarkFPMEnvironmentProvider())->Turn();
+		else {
+			/**
+			 * @var IQuarkEnvironmentProvider[] $streams
+			 */
+			$streams = $config->StreamEnvironment();
+			$streams[] = new QuarkCLIEnvironmentProvider();
+
+			$run = true;
+
+			while ($run)
+				foreach ($streams as $stream)
+					$run = $stream->Turn();
+		}
+	}
+
+	/**
+	 * @param QuarkConfig $config
+	 */
+	public static function Run1 (QuarkConfig $config) {
+		self::$_config = $config;
+
 		try {
 			if (PHP_SAPI != 'cli') echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 			else {
@@ -588,9 +610,14 @@ class QuarkConfig {
 	private $_defaultServerErrorStatus = QuarkDTO::STATUS_500_SERVER_ERROR;
 
 	/**
-	 * @var array
+	 * @var IQuarkExtension[] $_extensions
 	 */
 	private $_extensions = array();
+
+	/**
+	 * @var IQuarkEnvironmentProvider[] $_streams
+	 */
+	private $_streams = array();
 
 	/**
 	 * @var IQuarkIOProcessor
@@ -713,6 +740,19 @@ class QuarkConfig {
 
 			return null;
 		}
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 * @param IQuarkTransportProviderServer $protocol
+	 *
+	 * @return IQuarkEnvironmentProvider[]
+	 */
+	public function StreamEnvironment ($uri = null, IQuarkTransportProviderServer $protocol = null) {
+		if (func_num_args() != 0)
+			$this->_streams[] = new QuarkStreamEnvironmentProvider($uri, $protocol);
+
+		return $this->_streams;
 	}
 
 	/**
@@ -1013,16 +1053,9 @@ interface IQuarkEnvironmentProvider {
 	 * @return mixed
 	 */
 	public function Response(QuarkDTO $response);
-}
 
-/**
- * Interface IQuarkCLIEnvironmentProvider
- *
- * @package Quark
- */
-interface IQuarkCLIEnvironmentProvider {
 	/**
-	 * @return mixed
+	 * @return bool
 	 */
 	public function Turn();
 }
@@ -1086,6 +1119,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 
 		if (isset($_POST[$type]))
 			unset($_POST[$type]);
+
+		return $request;
 	}
 
 	/**
@@ -1100,6 +1135,13 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 
 		//return $response->SerializeResponse();
 	}
+
+	/**
+	 * @return bool
+	 */
+	public function Turn () {
+		echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
+	}
 }
 
 /**
@@ -1107,7 +1149,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
  *
  * @package Quark
  */
-class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkCLIEnvironmentProvider {
+class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	/**
 	 * @param bool $full = true
 	 * @param bool $secure = false
@@ -1135,10 +1177,42 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkCL
 	}
 
 	/**
-	 * @return mixed
+	 * @return bool
+	 * @throws QuarkArchException
 	 */
 	public function Turn () {
-		// TODO: Implement Turn() method.
+		if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
+			throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration.');
+
+		//if ($_SERVER['argc'] == 1) {
+			$tasks = array();
+
+			$dir = new \RecursiveDirectoryIterator(Quark::Host());
+			$fs = new \RecursiveIteratorIterator($dir);
+
+			foreach ($fs as $file) {
+				/**
+				 * @var \FilesystemIterator $file
+				 */
+
+				if ($file->isDir() || !strstr($file->getFilename(), 'Service.php')) continue;
+
+				$location = $file->getPathname();
+				include_once $location;
+				$class = Quark::ClassIn($location);
+				if (!Quark::is($class, 'Quark\IQuarkScheduledTask', true)) continue;
+				echo $class,"\r\n";
+				/*$_SERVER['REQUEST_URI'] = Quark::NormalizePath($class, false);
+				$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
+
+				$item = QuarkService::Select($_SERVER['REQUEST_URI']);
+
+				if ($item->Service() instanceof IQuarkScheduledTask)
+					$tasks[] = new QuarkTask($item);*/
+			}
+		//}
+
+		return true;
 	}
 }
 
@@ -1147,19 +1221,23 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkCL
  *
  * @package Quark
  */
-class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkCLIEnvironmentProvider,  IQuarkTransportProtocol {
+class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkTransportProtocol {
 	/**
 	 * @var QuarkServer $_server
 	 */
 	private $_server;
 
 	/**
-	 * @param string $uri
+	 * @param QuarkURI $uri
 	 * @param IQuarkTransportProviderServer $protocol
 	 */
-	public function __construct ($uri = '', IQuarkTransportProviderServer $protocol) {
+	public function __construct (QuarkURI $uri, IQuarkTransportProviderServer $protocol) {
+		if (!Quark::CLI()) return;
+
 		$protocol->Protocol($this);
-		$this->_server = new QuarkServer($uri, $protocol);
+
+		$this->_server = new QuarkServer($uri, $protocol, null, 0);
+		$this->_server->Bind();
 	}
 
 	/**
@@ -1189,10 +1267,10 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	}
 
 	/**
-	 * @return mixed
+	 * @return bool
 	 */
 	public function Turn () {
-		$this->_server->Pipe();
+		return $this->_server->Pipe();
 	}
 
 	/**
@@ -1202,7 +1280,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return bool
 	 */
 	public function OnConnect ($client, $clients) {
-		// TODO: Implement OnConnect() method.
+		echo "connected\r\n";
 	}
 
 	/**
@@ -1213,7 +1291,20 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function OnData ($client, $clients, $data) {
-		// TODO: Implement OnData() method.
+		echo 'data: ', $data, "\r\n";
+		$json = json_decode($data);
+
+		if (!$json) {
+			echo "invalid json\r\n";
+			return;
+		}
+
+		if (!isset($json->url)) {
+			echo "unknown url\r\n";
+			return;
+		}
+
+		echo QuarkService::Select($json->url)->Invoke();
 	}
 
 	/**
@@ -1223,7 +1314,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function OnClose ($client, $clients) {
-		// TODO: Implement OnClose() method.
+		echo "disconnected\r\n";
 	}
 }
 
@@ -4822,7 +4913,7 @@ class QuarkServer {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_server(
+		$this->_socket = stream_socket_server(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -4835,6 +4926,7 @@ class QuarkServer {
 
 		stream_set_blocking($this->_socket, 0);
 
+		$this->_read = array($this->_socket);
 		$this->_run = true;
 
 		return true;
@@ -4849,13 +4941,12 @@ class QuarkServer {
 	}
 
 	/**
-	 * Step method for socket processing
+	 * @return bool
 	 */
 	public function Pipe () {
-		if (sizeof($this->_read) == 0)
-			$this->_read = array($this->_socket);
+		if ($this->_socket == null) return true;
 
-		if (stream_select($this->_read, $this->_write, $this->_except, $this->_timeout) === false) return;
+		if (stream_select($this->_read, $this->_write, $this->_except, $this->_timeout) === false) return true;
 
 		if (in_array($this->_socket, $this->_read)) {
 			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
@@ -4890,6 +4981,8 @@ class QuarkServer {
 		unset($key, $client);
 
 		$this->_read[] = $this->_socket;
+
+		return true;
 	}
 
 	/**
