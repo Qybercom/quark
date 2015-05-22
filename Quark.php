@@ -53,11 +53,17 @@ class Quark {
 
 	/**
 	 * @param QuarkConfig $config
+	 *
+	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config) {
 		self::$_config = $config;
 
-		if (!self::CLI()) (new QuarkFPMEnvironmentProvider())->Turn();
+		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
+		$argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
+
+		if (!self::CLI()) (new QuarkFPMEnvironmentProvider())->Turn($argc, $argv);
+		elseif($argc > 1) (new QuarkCLIEnvironmentProvider())->Turn($argc, $argv);
 		else {
 			/**
 			 * @var IQuarkEnvironmentProvider[] $streams
@@ -65,11 +71,11 @@ class Quark {
 			$streams = $config->StreamEnvironment();
 			$streams[] = new QuarkCLIEnvironmentProvider();
 
-			$run = true;
+			echo $run = true;
 
 			while ($run)
 				foreach ($streams as $stream)
-					$run = $stream->Turn();
+					$run = $stream->Turn($argc, $argv);
 		}
 	}
 
@@ -1055,9 +1061,12 @@ interface IQuarkEnvironmentProvider {
 	public function Response(QuarkDTO $response);
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return bool
 	 */
-	public function Turn();
+	public function Turn($argc, $argv);
 }
 
 /**
@@ -1137,9 +1146,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	}
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return bool
 	 */
-	public function Turn () {
+	public function Turn ($argc, $argv) {
 		echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 	}
 }
@@ -1177,14 +1189,13 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	}
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return bool
-	 * @throws QuarkArchException
 	 */
-	public function Turn () {
-		if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
-			throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration.');
-
-		//if ($_SERVER['argc'] == 1) {
+	public function Turn ($argc, $argv) {
+		if ($_SERVER['argc'] == 1) {
 			$tasks = array();
 
 			$dir = new \RecursiveDirectoryIterator(Quark::Host());
@@ -1210,7 +1221,7 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 				if ($item->Service() instanceof IQuarkScheduledTask)
 					$tasks[] = new QuarkTask($item);*/
 			}
-		//}
+		}
 
 		return true;
 	}
@@ -1267,9 +1278,12 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	}
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return bool
 	 */
-	public function Turn () {
+	public function Turn ($argc, $argv) {
 		return $this->_server->Pipe();
 	}
 
