@@ -29,7 +29,6 @@ class Quark {
 	 * @var QuarkConfig
 	 */
 	private static $_config;
-	private static $_host = '';
 	private static $_webHost = '';
 	private static $_events = array();
 	private static $_gUID = array();
@@ -69,9 +68,9 @@ class Quark {
 			 * @var IQuarkEnvironmentProvider[] $streams
 			 */
 			$streams = $config->StreamEnvironment();
-			$streams[] = new QuarkCLIEnvironmentProvider();
+			$streams[] = new QuarkCLIEnvironmentProvider($argc, $argv);
 
-			echo $run = true;
+			$run = true;
 
 			while ($run)
 				foreach ($streams as $stream)
@@ -80,94 +79,64 @@ class Quark {
 	}
 
 	/**
-	 * @param QuarkConfig $config
+	 * @param $service
+	 *
+	 * @return string
 	 */
-	public static function Run1 (QuarkConfig $config) {
-		self::$_config = $config;
+	private static function _bundle ($service) {
+		return Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::SERVICES) . '/' . $service . 'Service.php', false);
+	}
 
-		try {
-			if (PHP_SAPI != 'cli') echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
-			else {
-				if (!isset($_SERVER['argv']) || !isset($_SERVER['argc']))
-					throw new QuarkArchException('Quark CLI mode need $argv and $argc, which are missing. Check your PHP configuration.');
+	/**
+	 * @param string $uri
+	 *
+	 * @return IQuarkService
+	 *
+	 * @throws QuarkArchException
+	 * @throws QuarkHTTPException
+	 */
+	public static function SelectService ($uri) {
+		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
+		$path = QuarkURI::ParseRoute($route->path);
 
-				if ($_SERVER['argc'] == 1) {
-					$tasks = array();
+		$buffer = array();
+		foreach ($path as $item)
+			if (strlen(trim($item)) != 0) $buffer[] = ucfirst(trim($item));
 
-					$dir = new \RecursiveDirectoryIterator(self::Host());
-					$fs = new \RecursiveIteratorIterator($dir);
+		$route = $buffer;
+		unset($buffer);
 
-					foreach ($fs as $file) {
-						/**
-						 * @var \FilesystemIterator $file
-						 */
+		$length = sizeof($route);
+		$service = $length == 0 ? 'Index' : implode('/', $route);
+		$path = self::_bundle($service);
 
-						if ($file->isDir() || !strstr($file->getFilename(), '.php')) continue;
+		while ($length > 0) {
+			if (is_file($path)) break;
 
-						$location = $file->getPathname();
-						include_once $location;
-						$class = self::ClassIn($location);
-						if (!self::is($class, 'Quark\IQuarkScheduledTask', true)) continue;
+			$index = self::_bundle($service . '\\Index');
 
-						$_SERVER['REQUEST_URI'] = self::NormalizePath($class, false);
-						$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
-
-						$item = QuarkService::Select($_SERVER['REQUEST_URI']);
-
-						if ($item->Service() instanceof IQuarkScheduledTask)
-							$tasks[] = new QuarkTask($item);
-					}
-
-					$work = true;
-
-					self::Log('Start scheduled tasks. Tasks in queue: ' . sizeof($tasks));
-
-					/**
-					 * @var QuarkTask $task
-					 */
-					while ($work)
-						foreach ($tasks as $task)
-							$work = $task->Launch();
-				}
-				else {
-					if ($_SERVER['argc'] <= 1 || strlen(trim($_SERVER['argv'][1])) == 0)
-						$_SERVER['argv'][1] = '/';
-
-					$_SERVER['REQUEST_URI'] = $_SERVER['argv'][1][0] != '/' ? '/' . $_SERVER['argv'][1] : $_SERVER['argv'][1];
-
-					if ($_SERVER['argc'] < 3)
-						echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
-					elseif ($_SERVER['argv'][2] == QuarkTask::PREDEFINED) {
-						$class = /*'Quark\\Scenarios\\' .*/ $_SERVER['argv'][1];
-						$task = new $class();
-
-						if (!($task instanceof IQuarkTask))
-							throw new QuarkArchException('Class ' . $class . ' is not a IQuarkTask');
-
-						echo (new QuarkService($task))->Invoke();
-					}
-					else throw new QuarkArchException("Unresolved condition of task running.\r\n"
-						. ' ARGC:[' . $_SERVER['argc'] . "]\r\n"
-						. ' ARGV:' . print_r($_SERVER['argv'], true) . "\r\n"
-					);
-				}
+			if (is_file($index)) {
+				$service .= '\\Index';
+				$path = $index;
+				break;
 			}
+
+			$length--;
+			$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
+			$path = self::_bundle($service);
 		}
-		catch (QuarkArchException $e) {
-			self::HTTPStatus($config->DefaultServerErrorStatus());
-			self::Log($e->message, $e->lvl);
-		}
-		catch (QuarkConnectionException $e) {
-			self::HTTPStatus($config->DefaultServerErrorStatus());
-			self::Log($e->message, $e->lvl);
-		}
-		catch (QuarkHTTPException $e) {
-			self::HTTPStatus($config->DefaultNotFoundStatus());
-			self::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $e->message , $e->lvl);
-		}
-		catch (\Exception $e) {
-			self::Log('Common exception: ' . $e->getMessage() . "\r\n at " . $e->getFile() . ':' . $e->getLine(), self::LOG_FATAL);
-		}
+
+		if (!file_exists($path))
+			throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
+
+		$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
+
+		$bundle = new $class();
+
+		if (!($bundle instanceof IQuarkService))
+			throw new QuarkArchException('Class ' . $class . ' is not an IQuarkService');
+
+		return $bundle;
 	}
 
 	/**
@@ -749,12 +718,12 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param QuarkURI $uri
+	 * @param QuarkURI|string $uri
 	 * @param IQuarkTransportProviderServer $protocol
 	 *
 	 * @return IQuarkEnvironmentProvider[]
 	 */
-	public function StreamEnvironment ($uri = null, IQuarkTransportProviderServer $protocol = null) {
+	public function StreamEnvironment ($uri = '', IQuarkTransportProviderServer $protocol = null) {
 		if (func_num_args() != 0)
 			$this->_streams[] = new QuarkStreamEnvironmentProvider($uri, $protocol);
 
@@ -1152,6 +1121,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return bool
 	 */
 	public function Turn ($argc, $argv) {
+		$service = Quark::SelectService($_SERVER['REQUEST_URI']);
 		echo QuarkService::Select($_SERVER['REQUEST_URI'])->Invoke();
 	}
 }
@@ -1162,6 +1132,42 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
  * @package Quark
  */
 class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
+	/**
+	 * @var QuarkTask[] $_tasks
+	 */
+	private $_tasks = array();
+
+	/**
+	 * @param int   $argc = 0
+	 * @param array $argv = []
+	 */
+	public function __construct ($argc = 0, $argv = []) {
+		if (!Quark::CLI() || $argc > 1) return;
+
+		$dir = new \RecursiveDirectoryIterator(Quark::Host());
+		$fs = new \RecursiveIteratorIterator($dir);
+
+		foreach ($fs as $file) {
+			/**
+			 * @var \FilesystemIterator $file
+			 */
+
+			if ($file->isDir() || !strstr($file->getFilename(), 'Service.php')) continue;
+
+			$class = Quark::ClassIn($file->getPathname());
+
+			/**
+			 * @var IQuarkService $service
+			 */
+			$service = new $class();
+
+			if ($service instanceof IQuarkScheduledTask)
+				$this->_tasks[] = new QuarkTask($service);
+
+			unset($service);
+		}
+	}
+
 	/**
 	 * @param bool $full = true
 	 * @param bool $secure = false
@@ -1195,33 +1201,9 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return bool
 	 */
 	public function Turn ($argc, $argv) {
-		if ($_SERVER['argc'] == 1) {
-			$tasks = array();
-
-			$dir = new \RecursiveDirectoryIterator(Quark::Host());
-			$fs = new \RecursiveIteratorIterator($dir);
-
-			foreach ($fs as $file) {
-				/**
-				 * @var \FilesystemIterator $file
-				 */
-
-				if ($file->isDir() || !strstr($file->getFilename(), 'Service.php')) continue;
-
-				$location = $file->getPathname();
-				include_once $location;
-				$class = Quark::ClassIn($location);
-				if (!Quark::is($class, 'Quark\IQuarkScheduledTask', true)) continue;
-				echo $class,"\r\n";
-				/*$_SERVER['REQUEST_URI'] = Quark::NormalizePath($class, false);
-				$_SERVER['REQUEST_URI'] = substr($_SERVER['REQUEST_URI'], 9, strlen($_SERVER['REQUEST_URI']) - 16);
-
-				$item = QuarkService::Select($_SERVER['REQUEST_URI']);
-
-				if ($item->Service() instanceof IQuarkScheduledTask)
-					$tasks[] = new QuarkTask($item);*/
-			}
-		}
+		if ($argc > 1) echo 'select';
+		else foreach ($this->_tasks as $task)
+			$task->Launch();
 
 		return true;
 	}
@@ -1239,10 +1221,10 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_server;
 
 	/**
-	 * @param QuarkURI $uri
+	 * @param QuarkURI|string $uri
 	 * @param IQuarkTransportProviderServer $protocol
 	 */
-	public function __construct (QuarkURI $uri, IQuarkTransportProviderServer $protocol) {
+	public function __construct ($uri, IQuarkTransportProviderServer $protocol) {
 		if (!Quark::CLI()) return;
 
 		$protocol->Protocol($this);
@@ -1305,7 +1287,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function OnData ($client, $clients, $data) {
-		echo 'data: ', $data, "\r\n";
 		$json = json_decode($data);
 
 		if (!$json) {
@@ -1318,7 +1299,14 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			return;
 		}
 
-		echo QuarkService::Select($json->url)->Invoke();
+		$service = Quark::SelectService($json->url);
+
+		if (!($service instanceof IQuarkStream)) {
+			echo "requested service is not a stream\r\n";
+			return;
+		}
+
+		$service->OnCall($client, $clients, $json);
 	}
 
 	/**
@@ -1643,7 +1631,7 @@ class QuarkTask {
 	const PREDEFINED = '--quark';
 
 	/**
-	 * @var QuarkService $_service
+	 * @var IQuarkService|IQuarkTask|IQuarkScheduledTask $_service
 	 */
 	private $_service = null;
 
@@ -1653,9 +1641,9 @@ class QuarkTask {
 	private $_launched = '';
 
 	/**
-	 * @param QuarkService $service
+	 * @param IQuarkService $service
 	 */
-	public function __construct (QuarkService $service) {
+	public function __construct (IQuarkService $service) {
 		$this->_service = $service;
 		$this->_launched = QuarkDate::Now();
 	}
@@ -1664,19 +1652,11 @@ class QuarkTask {
 	 * @return bool
 	 */
 	public function Launch () {
-		/**
-		 * @var IQuarkTask|IQuarkScheduledTask $service
-		 */
-		$service = $this->_service->Service();
+		if (!$this->_service->LaunchCriteria($this->_launched)) return true;
 
-		if (!$service->LaunchCriteria($this->_launched)) return true;
-
-		$out = $this->_service->Invoke();
+		$this->_service->Action();
 		$this->_launched = QuarkDate::Now();
 
-		if (is_bool($out)) return $out;
-
-		echo $out;
 		return true;
 	}
 }
@@ -4202,8 +4182,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return \DateTime
 	 */
 	public function Value ($value = '') {
-		if (func_num_args() != 0 && is_string($value))
-			$this->_date = new \DateTime($value);
+		if (func_num_args() != 0 && is_string($value)) {
+			try {
+				$this->_date = new \DateTime($value);
+			}
+			catch (\Exception $e) {
+				$this->_date = new \DateTime($value, new \DateTimeZone('UTC'));
+			}
+		}
 
 		return $this->_date;
 	}
@@ -4213,7 +4199,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 *
 	 * @return string
 	 */
-	public function Timezone ($timezone = '') {
+	public function Timezone ($timezone = self::CURRENT) {
 		if (func_num_args() != 0 && $timezone != self::CURRENT)
 			$this->_date->setTimezone(new \DateTimeZone($timezone));
 
@@ -4249,8 +4235,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	public function Interval (QuarkDate $with = null) {
 		if ($with == null) return $this;
 
-		$start = strtotime($this->DateTime());
-		$end = strtotime($with->DateTime());
+		$start = $this->_date->getTimestamp();
+		$end = $with->Value()->getTimestamp();
 
 		return $end - $start;
 	}
@@ -4900,7 +4886,7 @@ class QuarkServer {
 	private $_clients = array();
 
 	/**
-	 * @param string                        $uri
+	 * @param QuarkURI|string               $uri
 	 * @param IQuarkTransportProviderServer $transport
 	 * @param QuarkCertificate              $certificate
 	 * @param int                           $timeout
