@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
 use Quark\QuarkModel;
@@ -54,7 +55,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model) {
-		$location = Quark::Property($model, self::LOCATION);
+		$location = QuarkObject::Property($model, self::LOCATION);
 
 		return is_file($location) ? true : file_put_contents($location, '');
 	}
@@ -65,8 +66,8 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model) {
-		$_location = Quark::Property($model, self::FIRST_LOCATION);
-		$location = Quark::Property($model, self::LOCATION);
+		$_location = QuarkObject::Property($model, self::FIRST_LOCATION);
+		$location = QuarkObject::Property($model, self::LOCATION);
 
 		return rename($_location, $location);
 	}
@@ -77,7 +78,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Remove (IQuarkModel $model) {
-		$location = Quark::Property($model, self::LOCATION);
+		$location = QuarkObject::Property($model, self::LOCATION);
 
 		return is_file($location) ? unlink($location) : false;
 	}
@@ -217,7 +218,7 @@ class FileSystem implements IQuarkDataProvider {
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
 		$buffer = self::_find($criteria);
 
-		if (isset($options[QuarkModel::OPTION_SORT]) && Quark::isAssociative($options[QuarkModel::OPTION_SORT])) {
+		if (isset($options[QuarkModel::OPTION_SORT]) && QuarkObject::isAssociative($options[QuarkModel::OPTION_SORT])) {
 			$sort = $options[QuarkModel::OPTION_SORT];
 
 			foreach ($sort as $key => $rule) {

@@ -22,9 +22,12 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
 		if (!isset($_SERVER['PHP_AUTH_USER'])) {
-			Quark::HTTPStatus(QuarkDTO::STATUS_401_UNAUTHORIZED);
-			header('WWW-Authenticate: Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
-			return null;
+			$response = new QuarkDTO();
+
+			$response->Status(QuarkDTO::STATUS_401_UNAUTHORIZED);
+			$response->Header(QuarkDTO::HEADER_WWW_AUTHENTICATE, 'Basic realm="' . $_SERVER['SERVER_NAME'] . '"');
+
+			return $response;
 		}
 		else return array(
 			'username' => $_SERVER['PHP_AUTH_USER'],
@@ -60,7 +63,9 @@ class PHPBasicAuth implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		Quark::HTTPStatus(QuarkDTO::STATUS_401_UNAUTHORIZED);
+		$response = new QuarkDTO();
+		$response->Status(QuarkDTO::STATUS_401_UNAUTHORIZED);
+		return $response;
 	}
 
 	/**

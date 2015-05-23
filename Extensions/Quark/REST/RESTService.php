@@ -4,13 +4,13 @@ namespace Quark\Extensions\Quark\REST;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
-
 use Quark\IQuarkModelWithCustomPrimaryKey;
-use Quark\Quark;
+
 use Quark\QuarkArchException;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkJSONIOProcessor;
 
@@ -104,7 +104,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @return string
 	 */
 	private static function _class (IQuarkModel $model) {
-		return strtolower(Quark::ClassOf($model));
+		return strtolower(QuarkObject::ClassOf($model));
 	}
 
 	/**
