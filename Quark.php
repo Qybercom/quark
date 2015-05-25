@@ -244,7 +244,7 @@ class Quark {
 	 * @return string
 	 */
 	public static function GuID ($salt = '') {
-		$hash = sha1(rand(1, 1000) . date('Y-m-d H:i:s') . rand(1000, 1000000) . $salt);
+		$hash = sha1(rand(1, 1000) . QuarkDate::Now()->DateTime() . rand(1000, 1000000) . $salt);
 
 		if (in_array($hash, self::$_gUID)) return self::GuID($salt);
 
@@ -267,7 +267,7 @@ class Quark {
 
 			$file = Quark::NormalizePath($path . '/' . $class . '.php', false);
 
-			if (is_file($file))
+			if (file_exists($file))
 				include_once $file;
 		});
 
@@ -569,6 +569,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return bool
 	 */
 	public function Turn ($argc, $argv) {
+		/**
+		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
+		 */
 		$service = Quark::SelectService($_SERVER['REQUEST_URI']);
 
 		$request = new QuarkDTO();
@@ -752,9 +755,32 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return bool
 	 */
 	public function Turn ($argc, $argv) {
-		if ($argc > 1) echo 'select';
-		else foreach ($this->_tasks as $task)
-			$task->Launch();
+		if ($argc > 1) {
+			if ($argv[1] == QuarkTask::PREDEFINED) {
+				if (!isset($argv[2])) {
+					Quark::Log('Predefined scenario not selected', Quark::LOG_FATAL);
+					return false;
+				}
+				else {
+					$class = '\\Quark\\Scenarios\\' . $argv[2];
+
+					if (!class_exists($class)) {
+						Quark::Log('Unknown predefined scenario ' . $class, Quark::LOG_FATAL);
+						return false;
+					}
+
+					$service = new $class();
+				}
+			}
+			else $service = Quark::SelectService('/' . $argv[1]);
+
+			if ($service instanceof IQuarkTask)
+				$service->Task($argc, $argv);
+		}
+		else {
+			foreach ($this->_tasks as $task)
+				$task->Launch($argc, $argv);
+		}
 
 		return true;
 	}
@@ -788,7 +814,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @param string $close = ''
 	 */
 	public function __construct ($uri, IQuarkTransportProviderServer $protocol, $connect = '', $close = '') {
-		if (!Quark::CLI()) return;
+		if (!Quark::CLI() || $_SERVER['argc'] > 1) return;
 
 		$protocol->Protocol($this);
 
@@ -1190,12 +1216,15 @@ class QuarkTask {
 	}
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return bool
 	 */
-	public function Launch () {
+	public function Launch ($argc, $argv) {
 		if (!$this->_service->LaunchCriteria($this->_launched)) return true;
 
-		$this->_service->Action();
+		$this->_service->Task($argc, $argv);
 		$this->_launched = QuarkDate::Now();
 
 		return true;
@@ -1209,9 +1238,12 @@ class QuarkTask {
  */
 interface IQuarkTask extends IQuarkService {
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return mixed
 	 */
-	public function Action();
+	public function Task($argc, $argv);
 }
 
 /**
@@ -1578,6 +1610,7 @@ class QuarkObject {
 	 * @return object
 	 */
 	public function Build ($builder = null) {
+		$builder();
 		return new \StdClass();
 	}
 }
@@ -5247,7 +5280,7 @@ class QuarkDTO {
 	public function UnserializeRequest ($raw = '', $secure = false) {
 		$this->_raw = $raw;
 
-		if (preg_match_all('#^(.*) (.*) HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw, $found, PREG_SET_ORDER) == 0) return null;
+		if (preg_match_all('#^(.*) (.*) HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw . "\r\n", $found, PREG_SET_ORDER) == 0) return null;
 
 		$http = $found[0];
 
