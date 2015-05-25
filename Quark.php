@@ -61,8 +61,8 @@ class Quark {
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
 		$argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
 
-		if (!self::CLI()) (new QuarkFPMEnvironmentProvider())->Turn($argc, $argv);
-		elseif($argc > 1) (new QuarkCLIEnvironmentProvider())->Turn($argc, $argv);
+		if (!self::CLI()) self::_environment(new QuarkFPMEnvironmentProvider(), $argc, $argv);
+		elseif($argc > 1) self::_environment(new QuarkCLIEnvironmentProvider(), $argc, $argv);
 		else {
 			/**
 			 * @var IQuarkEnvironmentProvider[] $streams
@@ -74,8 +74,26 @@ class Quark {
 
 			while ($run)
 				foreach ($streams as $stream)
-					$run = $stream->Turn($argc, $argv);
+					$run = self::_environment($stream, $argc, $argv);
 		}
+	}
+
+	/**
+	 * @param IQuarkEnvironmentProvider $provider
+	 * @param $argc
+	 * @param $argv
+	 *
+	 * @return bool
+	 */
+	private static function _environment (IQuarkEnvironmentProvider $provider, $argc, $argv) {
+		try {
+			return $provider->Turn($argc, $argv);
+		}
+		catch (\Exception $e) {
+			$provider->ExceptionHandler($e);
+		}
+
+		return true;
 	}
 
 	/**
@@ -474,12 +492,13 @@ class QuarkConfig {
 	 * @param IQuarkTransportProviderServer $protocol
 	 * @param string $connect = ''
 	 * @param string $close = ''
+	 * @param string $unknown = ''
 	 *
 	 * @return IQuarkEnvironmentProvider[]
 	 */
-	public function StreamEnvironment ($uri = '', IQuarkTransportProviderServer $protocol = null, $connect = '', $close = '') {
+	public function StreamEnvironment ($uri = '', IQuarkTransportProviderServer $protocol = null, $connect = '', $close = '', $unknown = '') {
 		if (func_num_args() != 0)
-			$this->_streams[] = new QuarkStreamEnvironmentProvider($uri, $protocol, $connect, $close);
+			$this->_streams[] = new QuarkStreamEnvironmentProvider($uri, $protocol, $connect, $close, $unknown);
 
 		return $this->_streams;
 	}
@@ -554,6 +573,13 @@ interface IQuarkEnvironmentProvider {
 	 * @return bool
 	 */
 	public function Turn($argc, $argv);
+
+	/**
+	 * @param \Exception $exception
+	 *
+	 * @return mixed
+	 */
+	public function ExceptionHandler(\Exception $exception);
 }
 
 /**
@@ -704,6 +730,32 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 		echo $response->Processor()->Encode($response->Data());
 		echo ob_get_clean();
 	}
+
+	/**
+	 * @param \Exception $exception
+	 *
+	 * @return mixed
+	 */
+	public function ExceptionHandler (\Exception $exception) {
+		if ($exception instanceof QuarkArchException)
+			return Quark::Log($exception->message, $exception->lvl, Quark::LOG_FATAL);
+
+		if ($exception instanceof QuarkConnectionException)
+			return Quark::Log($exception->message, $exception->lvl, Quark::LOG_WARN);
+
+		if ($exception instanceof QuarkHTTPException) {
+			ob_start();
+			header($_SERVER['SERVER_PROTOCOL'] . ' ' . Quark::Config()->DefaultNotFoundStatus());
+			echo ob_get_clean();
+
+			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
+		}
+
+		if ($exception instanceof QuarkArchException)
+			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
+
+		return true;
+	}
 }
 
 /**
@@ -753,29 +805,29 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @param array $argv
 	 *
 	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 * @throws QuarkHTTPException
 	 */
 	public function Turn ($argc, $argv) {
 		if ($argc > 1) {
 			if ($argv[1] == QuarkTask::PREDEFINED) {
-				if (!isset($argv[2])) {
-					Quark::Log('Predefined scenario not selected', Quark::LOG_FATAL);
-					return false;
-				}
-				else {
-					$class = '\\Quark\\Scenarios\\' . $argv[2];
+				if (!isset($argv[2]))
+					throw new QuarkArchException('Predefined scenario not selected');
 
-					if (!class_exists($class)) {
-						Quark::Log('Unknown predefined scenario ' . $class, Quark::LOG_FATAL);
-						return false;
-					}
+				$class = '\\Quark\\Scenarios\\' . $argv[2];
 
-					$service = new $class();
-				}
+				if (!class_exists($class))
+					throw new QuarkArchException('Unknown predefined scenario ' . $class);
+
+				$service = new $class();
 			}
 			else $service = Quark::SelectService('/' . $argv[1]);
 
-			if ($service instanceof IQuarkTask)
-				$service->Task($argc, $argv);
+			if (!($service instanceof IQuarkTask))
+				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
+
+			$service->Task($argc, $argv);
 		}
 		else {
 			foreach ($this->_tasks as $task)
@@ -783,6 +835,16 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 		}
 
 		return true;
+	}
+
+	/**
+	 * @param \Exception $exception
+	 *
+	 * @return mixed
+	 */
+	public function ExceptionHandler (\Exception $exception) {
+		if ($exception instanceof QuarkException)
+			Quark::Log($exception->message, $exception->lvl);
 	}
 }
 
@@ -798,22 +860,28 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_server;
 
 	/**
-	 * @var IQuarkService $_connect
+	 * @var IQuarkStreamConnect $_connect
 	 */
 	private $_connect;
 
 	/**
-	 * @var IQuarkService $_close
+	 * @var IQuarkStreamClose $_close
 	 */
 	private $_close;
+
+	/**
+	 * @var IQuarkStreamUnknown $_unknown
+	 */
+	private $_unknown;
 
 	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkTransportProviderServer $protocol
 	 * @param string $connect = ''
 	 * @param string $close = ''
+	 * @param string $unknown = ''
 	 */
-	public function __construct ($uri, IQuarkTransportProviderServer $protocol, $connect = '', $close = '') {
+	public function __construct ($uri, IQuarkTransportProviderServer $protocol, $connect = '', $close = '', $unknown = '') {
 		if (!Quark::CLI() || $_SERVER['argc'] > 1) return;
 
 		$protocol->Protocol($this);
@@ -823,6 +891,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		$this->_connect = Quark::SelectService($connect);
 		$this->_close = Quark::SelectService($close);
+		$this->_unknown = Quark::SelectService($unknown);
 	}
 
 	/**
@@ -836,14 +905,52 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	}
 
 	/**
+	 * @param \Exception $exception
+	 *
+	 * @return mixed
+	 */
+	public function ExceptionHandler (\Exception $exception) {
+		if ($exception instanceof QuarkException)
+			Quark::Log($exception->message, $exception->lvl);
+	}
+
+	/**
+	 * @param IQuarkService $stream
+	 * @param string $hook
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 * @param $data
+	 *
+	 * @throws QuarkArchException
+	 */
+	private function _send ($stream, $hook, QuarkClient $client, $clients, $data = null) {
+		$message = func_num_args() == 5
+			? $stream->$hook($client, $clients, $data)
+			: $stream->$hook($client, $clients);
+
+		if ($message === null) return;
+		$message = json_encode($message);
+
+		if (!$message || strlen($message) == 0)
+			throw new QuarkArchException('Stream of ' . get_class($stream) . ' returned invalid json: ' . $message);
+
+		$client->Send($message);
+	}
+
+	/**
 	 * @param QuarkClient $client
 	 * @param QuarkClient[] $clients
 	 *
+	 * @throws QuarkArchException
 	 * @return bool
 	 */
 	public function OnConnect ($client, $clients) {
-		if ($this->_connect instanceof IQuarkStreamConnect)
-			$this->_connect->StreamConnect($client, $clients);
+		$connect = get_class($this->_connect);
+
+		if (!($this->_connect instanceof IQuarkStreamConnect))
+			throw new QuarkArchException('Class ' . $connect . ' is not an IQuarkStreamConnect');
+
+		$this->_send($this->_connect, 'StreamConnect', $client, $clients);
 	}
 
 	/**
@@ -851,40 +958,53 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @param QuarkClient[] $clients
 	 * @param string $data
 	 *
+	 * @throws QuarkArchException
+	 * @throws QuarkHTTPException
 	 * @return mixed
 	 */
 	public function OnData ($client, $clients, $data) {
 		$json = json_decode($data);
+		$endpoint = $client->URI()->URI();
 
-		if (!$json) {
-			echo "invalid json\r\n";
+		if (!$json)
+			throw new QuarkArchException('Client ' . $endpoint . ' sent invalid json: ' . $json);
+
+		if (!isset($json->url))
+			throw new QuarkArchException('Client ' . $endpoint . ' sent unknown url');
+
+		try {
+			$service = Quark::SelectService($json->url);
+		}
+		catch (QuarkHTTPException $e) {
+			if ($this->_unknown instanceof IQuarkStreamUnknown)
+				$this->_send($this->_unknown, 'StreamUnknown', $client, $clients, $json->url);
+			else throw $e;
+
 			return;
 		}
 
-		if (!isset($json->url)) {
-			echo "unknown url\r\n";
-			return;
-		}
+		$class = get_class($service);
 
-		$service = Quark::SelectService($json->url);
+		if (!($service instanceof IQuarkStream))
+			throw new QuarkArchException('Class ' . $class . '  is not a stream');
 
-		if (!($service instanceof IQuarkStream)) {
-			echo "requested service is not a stream\r\n";
-			return;
-		}
-
-		$service->Stream($client, $clients, new QuarkObject($json));
+		$this->_send($service, 'Stream', $client, $clients, new QuarkObject(isset($json->data) ? $json->data : null));
 	}
 
 	/**
 	 * @param QuarkClient $client
 	 * @param QuarkClient[] $clients
 	 *
+	 * @throws QuarkArchException
 	 * @return mixed
 	 */
 	public function OnClose ($client, $clients) {
-		if ($this->_connect instanceof IQuarkStreamClose)
-			$this->_connect->StreamClose($client, $clients);
+		$close = get_class($this->_close);
+
+		if (!($this->_close instanceof IQuarkStreamClose))
+			throw new QuarkArchException('Class ' . $close . ' is not an IQuarkStreamClose');
+
+		$this->_send($this->_close, 'StreamClose', $client, $clients);
 	}
 }
 
@@ -1307,6 +1427,22 @@ interface IQuarkStreamClose extends IQuarkService {
 }
 
 /**
+ * Interface IQuarkStreamUnknown
+ *
+ * @package Quark
+ */
+interface IQuarkStreamUnknown extends IQuarkService {
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 * @param string $url
+	 *
+	 * @return mixed
+	 */
+	public function StreamUnknown(QuarkClient $client, $clients, $url);
+}
+
+/**
  * Class QuarkContainerBehavior
  *
  * @package Quark
@@ -1368,6 +1504,8 @@ class QuarkObject {
 	private $_min;
 	private $_max;
 
+	private $_null = null;
+
 	/**
 	 * @param object|array $source
 	 * @param object|array $min
@@ -1378,6 +1516,32 @@ class QuarkObject {
 
 		$this->Minimal($min);
 		$this->Maximal($max);
+	}
+
+	/**
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function __get ($key) {
+		return isset($this->_source->$key) ? $this->_source->$key : $this->_null;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	public function __set ($key, $value) {
+		$this->_source->$key = $value;
+	}
+
+	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_source->$key);
 	}
 
 	/**
@@ -4737,6 +4901,9 @@ class QuarkServer {
 	 */
 	public function Pipe () {
 		if ($this->_socket == null) return true;
+
+		if (sizeof($this->_read) == 0)
+			$this->_read = array($this->_socket);
 
 		if (stream_select($this->_read, $this->_write, $this->_except, $this->_timeout) === false) return true;
 
