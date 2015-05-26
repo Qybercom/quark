@@ -17,7 +17,7 @@ use Quark\QuarkURI;
  * @package Quark\Scenarios
  */
 class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
-	const PORT = 25800;
+	const DEFAULT_PORT = 25800;
 
 	/**
 	 * @param int   $argc
@@ -26,7 +26,9 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		$server = new QuarkServer('tcp://0.0.0.0:' . self::PORT, $this);
+		$port = isset($argv[3]) && (int)$argv[3] != 0 ? (int)$argv[3] : false;
+
+		$server = new QuarkServer('tcp://0.0.0.0:' . ($port ? $port : self::DEFAULT_PORT), $this);
 		$server->Action();
 	}
 
