@@ -79,6 +79,14 @@ class Quark {
 	}
 
 	/**
+	 * @param string $url
+	 * @param array  $params
+	 */
+	public static function Cluster ($url = '', $params = []) {
+
+	}
+
+	/**
 	 * @param IQuarkEnvironmentProvider $provider
 	 * @param $argc
 	 * @param $argv
@@ -371,6 +379,8 @@ class QuarkConfig {
 	private $_processorResponse = null;
 	private $_processorBoth = null;
 
+	private $_cluster = null;
+
 	/**
 	 * @var array
 	 */
@@ -418,6 +428,20 @@ class QuarkConfig {
 	 */
 	public function Mode ($mode = null) {
 		return $this->_mode = ($mode === null) ? $this->_mode : $mode;
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 * @param string   $key
+	 * @param int      $weight
+	 *
+	 * @return QuarkCluster
+	 */
+	public function ClusterController (QuarkURI $uri = null, $key = '', $weight = 1) {
+		if (func_num_args() != 0)
+			$this->_cluster = new QuarkCluster($uri, $key, $weight);
+
+		return $this->_cluster;
 	}
 
 	/**
@@ -875,6 +899,11 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_unknown;
 
 	/**
+	 * @var QuarkClient $_cluster
+	 */
+	private $_cluster;
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkTransportProviderServer $protocol
 	 * @param string $connect = ''
@@ -892,6 +921,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->_connect = Quark::SelectService($connect);
 		$this->_close = Quark::SelectService($close);
 		$this->_unknown = Quark::SelectService($unknown);
+
+		$this->_cluster = new QuarkClient();
 	}
 
 	/**
@@ -1005,6 +1036,43 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			throw new QuarkArchException('Class ' . $close . ' is not an IQuarkStreamClose');
 
 		$this->_send($this->_close, 'StreamClose', $client, $clients);
+	}
+}
+
+/**
+ * Class QuarkCluster
+ *
+ * @package Quark
+ */
+class QuarkCluster {
+	/**
+	 * @var QuarkURI $_controller
+	 */
+	private $_controller;
+
+	/**
+	 * @var string $_key = ''
+	 */
+	private $_key = '';
+
+	/**
+	 * @var int $_weight = 1
+	 */
+	private $_weight = 1;
+
+	/**
+	 * @param QuarkURI $controller
+	 * @param string   $key
+	 * @param string   $weight
+	 */
+	public function __construct (QuarkURI $controller, $key = '', $weight = '') {
+		$this->_controller = $controller;
+		$this->_key = $key;
+		$this->_weight = $weight;
+	}
+
+	public function Broadcast ($url, $params) {
+
 	}
 }
 
