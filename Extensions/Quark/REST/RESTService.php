@@ -95,7 +95,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	private function _identify (IQuarkModel $model) {
 		$pk = $this->_pk($model);
 
-		return $model->$pk;
+		return isset($model->$pk) ? $model->$pk : null;
 	}
 
 	/**

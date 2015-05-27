@@ -704,10 +704,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 
 			$s = $session->Initialize($request);
 
-			if ($s !== null) {
-				$response->AttachData($s);
-				$ok = false;
-			}
+			if ($s !== null) $response->AttachData($s);
 			else {
 				$response->AttachData($session->Trail($response));
 
@@ -732,6 +729,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 				}
 			}
 		}
+
 		if ($ok && strlen(trim($method)) != 0 && QuarkObject::is($service, $a = 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->$method($request, $session);
 
