@@ -4275,6 +4275,19 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @param QuarkDate $from
+	 * @param int $offset = 0
+	 *
+	 * @return bool
+	 */
+	public function Expired (QuarkDate $from = null, $offset = 0) {
+		if ($from == null)
+			$from = new self();
+
+		return $this->Interval($from) > $offset;
+	}
+
+	/**
 	 * @param string $format
 	 *
 	 * @return string
