@@ -73,11 +73,12 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 
 	/**
 	 * @param string $content
-	 * @param bool   $full
+	 * @param bool   $full = false
+	 * @param string $css = ''
 	 *
 	 * @return string
 	 */
-	public static function ToHTML ($content = '', $full = false) {
+	public static function ToHTML ($content = '', $full = false, $css = '') {
 		$pairs = array('b', 'i', 'u', 's');
 		$align = array('left', 'center', 'right');
 
@@ -98,12 +99,12 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = preg_replace('#\[img\](.*)\[/img\]#Uis', '<img src="$1" class="wysibb-image" alt="image" />', $content);
 		$content = preg_replace('#\[video\](.*)\[/video\]#Uis', '<iframe src="//www.youtube.com/embed/$1" class="wysibb-video" frameborder="0" allowfullscreen></iframe>', $content);
 
-		return $full ? '<!DOCTYPE html><html><head><title></title></head><body>' . $content . '</body></html>' : $content;
+		return $full ? '<!DOCTYPE html><html><head><title></title><style type="text/css">' . $css . '</style></head><body>' . $content . '</body></html>' : $content;
 	}
 
 	/**
 	 * @param string $content
-	 * @param bool   $full
+	 * @param bool   $full = false
 	 *
 	 * @return string
 	 */
@@ -129,7 +130,16 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = preg_replace('#<iframe src\=\"\/\/www\.youtube\.com\/embed\/(.*)\" class\=\"wysibb\-video\" frameborder\=\"0\" allowfullscreen\>\<\/iframe\>#Uis', '[video]$1[/video]', $content);
 
 		return $full
-			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content)
+			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$2', $content)
 			: $content;
+	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public static function Styles ($content = '') {
+		return preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content);
 	}
 }
