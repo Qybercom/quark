@@ -44,11 +44,6 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_processor;
 
 	/**
-	 * @var QuarkClient[] $_clients
-	 */
-	private $_clients = array();
-
-	/**
 	 * @param IQuarkTransportProtocol $protocol
 	 * @param string $subprotocol
 	 * @param IQuarkIOProcessor $processor
@@ -121,13 +116,13 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	}
 
 	/**
-	 * @param QuarkClient   $client
+	 * @param QuarkClient $client
 	 * @param QuarkClient[] $clients
 	 *
 	 * @return bool
 	 */
-	public function OnConnect ($client, $clients) {
-		$this->_clients = $clients;
+	public function OnConnect (QuarkClient $client, $clients) {
+		// TODO: Implement OnConnect() method.
 	}
 
 	/**
@@ -137,7 +132,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	 *
 	 * @return mixed
 	 */
-	public function OnData ($client, $clients, $data) {
+	public function OnData (QuarkClient $client, $clients, $data) {
 		if ($client->Connected()) {
 			$out = $this->_processor->Decode(strlen($this->_buffer) == 0 ? $data : $this->_buffer . $data);
 
@@ -178,7 +173,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 				return $this->_processor->Encode($data);
 			});
 
-			$this->_protocol->OnConnect($client, $this->_clients);
+			$this->_protocol->OnConnect($client, $clients);
 		}
 	}
 
@@ -188,7 +183,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	 *
 	 * @return mixed
 	 */
-	public function OnClose ($client, $clients) {
+	public function OnClose (QuarkClient $client, $clients) {
 		if ($this->_connected)
 			$this->_protocol->OnClose($client, $clients);
 	}
