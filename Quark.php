@@ -1048,7 +1048,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			));
 		}
 
-		return $this->_cluster->Pipe($this->_server) && $this->_server->Pipe();
+		return ($this->_cluster == null ? true : $this->_cluster->Pipe($this->_server))
+			&& $this->_server->Pipe();
 	}
 
 	/**
@@ -1089,6 +1090,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @param array $data
 	 */
 	private function _cluster ($cmd = '', $data = []) {
+		if ($this->_cluster == null) return;
+
 		$this->_cluster->Send(json_encode($data + array(
 			'cmd' => $cmd
 		)));
@@ -4915,9 +4918,12 @@ trait QuarkNetwork {
 	 */
 	private function _receive ($socket, $stream = true, $max = -1, $offset = -1) {
 		try {
-			return $stream
-				? stream_get_contents($socket, $max, $offset)
-				: ($max == -1 ? fgets($socket) : fgets($this->_socket, $max));
+			return $socket
+				? ($stream
+					? stream_get_contents($socket, $max, $offset)
+					: ($max == -1 ? fgets($socket) : fgets($this->_socket, $max))
+				)
+				: false;
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
