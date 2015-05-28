@@ -72,9 +72,12 @@ class Quark {
 
 			$run = true;
 
-			while ($run)
+			while ($run) {
 				foreach ($streams as $stream)
 					$run = self::_environment($stream, $argc, $argv);
+
+				usleep(1);
+			}
 		}
 	}
 
