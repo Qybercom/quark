@@ -6,6 +6,7 @@ use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
+use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
@@ -57,7 +58,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$data = $client->Action()->Data();
 
 		if ($data == null || !isset($data->status) || $data->status != 200)
-			throw new QuarkArchException('QuarkRest API is not reachable');
+			throw new QuarkArchException('QuarkRest API is not reachable. Response: ' . print_r($data, true));
 
 		return $data;
 	}
@@ -72,6 +73,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return $this->_api('POST', '/user/login', $criteria)->profile;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return false;
 		}
 	}

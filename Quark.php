@@ -1042,6 +1042,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		if ($cluster != null && $this->_cluster == null) {
 			$this->_cluster = new QuarkClient($cluster->Controller(), $cluster);
+			$this->_cluster->Blocking(false);
 			$this->_cluster->Action();
 			$this->_cluster('state', array(
 				'state' => array('address' => $this->_server->URI()->URI())
@@ -4990,6 +4991,7 @@ class QuarkClient {
 	 * @var bool $_connected
 	 */
 	private $_connected = false;
+	private $_blocking = true;
 	private $_send;
 
 	/**
@@ -4997,12 +4999,14 @@ class QuarkClient {
 	 * @param IQuarkTransportProviderClient $transport
 	 * @param QuarkCertificate        		$certificate
 	 * @param int                     		$timeout = 30
+	 * @param bool							$block = true
 	 */
-	public function __construct ($uri = '', IQuarkTransportProviderClient $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
+	public function __construct ($uri = '', IQuarkTransportProviderClient $transport = null, QuarkCertificate $certificate = null, $timeout = 30, $block = true) {
 		$this->URI(QuarkURI::FromURI($uri));
 		$this->Transport($transport);
 		$this->Certificate($certificate);
 		$this->Timeout($timeout);
+		$this->Blocking($block);
 	}
 
 	/**
@@ -5032,7 +5036,7 @@ class QuarkClient {
 		if (!$this->_socket)
 			return self::_err($this->_errorString, $this->_errorNumber);
 
-		stream_set_blocking($this->_socket, 0);
+		stream_set_blocking($this->_socket, (int)$this->_blocking);
 
 		$this->_connected = true;
 
@@ -5113,7 +5117,7 @@ class QuarkClient {
 	}
 
 	/**
-	 * @param bool $connected
+	 * @param bool $connected = true
 	 *
 	 * @return bool
 	 */
@@ -5122,6 +5126,18 @@ class QuarkClient {
 			$this->_connected = $connected;
 
 		return $this->_connected;
+	}
+
+	/**
+	 * @param bool $block = true
+	 *
+	 * @return bool
+	 */
+	public function Blocking ($block = true) {
+		if (func_num_args() != 0)
+			$this->_blocking = $block;
+
+		return $this->_blocking;
 	}
 
 	/**

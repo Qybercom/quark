@@ -94,6 +94,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	public function OnConnect (QuarkClient $client, $clients) {
 		$client->node = new ClusterNode($client);
 		$this->_event('nodes', $this->Nodes());
+		echo "connect\r\n";
 	}
 
 	/**
@@ -106,8 +107,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	public function OnData (QuarkClient $client, $clients, $data) {
 		$json = json_decode($data);
 
-		if (!$json || !isset($json->cmd)) {
-			$client->Send("ok\r\n"); return true;}
+		if (!$json || !isset($json->cmd)) return true;
 
 		switch ($json->cmd) {
 			case 'auth':
