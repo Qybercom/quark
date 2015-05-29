@@ -34,11 +34,6 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	private $_control;
 
 	/**
-	 * @var ClusterNode[] $_nodes
-	 */
-	private $_nodes = array();
-
-	/**
 	 * @param int   $argc
 	 * @param array $argv
 	 *
@@ -94,7 +89,6 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	public function OnConnect (QuarkClient $client, $clients) {
 		$client->node = new ClusterNode($client);
 		$this->_event('nodes', $this->Nodes());
-		echo "connect\r\n";
 	}
 
 	/**
