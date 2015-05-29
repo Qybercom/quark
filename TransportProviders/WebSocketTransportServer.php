@@ -26,7 +26,6 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	 */
 	private $_uri;
 	private $_buffer = '';
-	private $_connected = false;
 
 	/**
 	 * @var IQuarkTransportProtocol
@@ -184,7 +183,6 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	 * @return mixed
 	 */
 	public function OnClose (QuarkClient $client, $clients) {
-		if ($this->_connected)
-			$this->_protocol->OnClose($client, $clients);
+		$this->_protocol->OnClose($client, $clients);
 	}
 }

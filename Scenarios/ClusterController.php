@@ -9,7 +9,7 @@ use Quark\QuarkArchException;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkServer;
-use Quark\QuarkTask;
+use Quark\QuarkThreadPool;
 use Quark\QuarkURI;
 
 use Quark\TransportProviders\WebSocketTransportServer;
@@ -55,7 +55,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 		if (!$this->_control->Bind())
 			throw new QuarkArchException('Cannot start Quark ClusterMonitor at ' . $this->_control->URI()->URI());
 
-		QuarkTask::Queue(function () {
+		QuarkThreadPool::Queue(function () {
 			$this->_cluster->Pipe();
 			$this->_control->Pipe();
 		});
@@ -118,6 +118,9 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 				break;
 
 			case 'broadcast':
+				if (!isset($json->service)) break;
+
+				$this->_event('broadcast', $json->service);
 				break;
 
 			default:
