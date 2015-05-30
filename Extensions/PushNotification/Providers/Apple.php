@@ -7,7 +7,6 @@ use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkServer;
 use Quark\QuarkURI;
 
 use Quark\Extensions\PushNotification\Device;
