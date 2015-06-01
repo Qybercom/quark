@@ -2,14 +2,13 @@
 namespace Quark\Scenarios;
 
 use Quark\IQuarkTask;
-use Quark\IQuarkTransportProtocol;
-use Quark\IQuarkTransportProviderServer;
+use Quark\IQuarkTransportProvider;
 
 use Quark\QuarkArchException;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkServer;
-use Quark\QuarkThreadPool;
+use Quark\QuarkThreadSet;
 use Quark\QuarkURI;
 
 use Quark\TransportProviders\WebSocketTransportServer;
@@ -19,7 +18,7 @@ use Quark\TransportProviders\WebSocketTransportServer;
  *
  * @package Quark\Scenarios
  */
-class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
+class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 	const PORT_CLUSTER = 25800;
 	const PORT_CONTROL = 25900;
 
@@ -44,8 +43,14 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 		$cluster = isset($argv[3]) && (int)$argv[3] != 0 ? (int)$argv[3] : false;
 		$control = isset($argv[4]) && (int)$argv[4] != 0 ? (int)$argv[4] : false;
 
-		$this->_cluster = new QuarkServer('tcp://0.0.0.0:' . ($cluster ? $cluster : self::PORT_CLUSTER), $this);
-		$this->_control = new QuarkServer('ws://0.0.0.0:' . ($control ? $control : self::PORT_CONTROL),
+		$cluster = 'tcp://0.0.0.0:' . ($cluster ? $cluster : self::PORT_CLUSTER);
+		$control = 'ws://0.0.0.0:' . ($control ? $control : self::PORT_CONTROL);
+
+		//$cluster = 'tcp://0.0.0.0:0';
+		//$control = 'ws://0.0.0.0:0';
+
+		$this->_cluster = new QuarkServer($cluster, $this);
+		$this->_control = new QuarkServer($control,
 			new WebSocketTransportServer(new ClusterMonitor($this))
 		);
 
@@ -55,7 +60,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 		if (!$this->_control->Bind())
 			throw new QuarkArchException('Cannot start Quark ClusterMonitor at ' . $this->_control->URI()->URI());
 
-		QuarkThreadPool::Queue(function () {
+		QuarkThreadSet::Queue(function () {
 			$this->_cluster->Pipe();
 			$this->_control->Pipe();
 		});
@@ -69,15 +74,6 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	 */
 	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
 		// TODO: Implement Setup() method.
-	}
-
-	/**
-	 * @param QuarkServer $server
-	 *
-	 * @return mixed
-	 */
-	public function Server (QuarkServer $server) {
-		// TODO: Implement Server() method.
 	}
 
 	/**
@@ -99,6 +95,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	 * @return mixed
 	 */
 	public function OnData (QuarkClient $client, $clients, $data) {
+		echo $data;
 		$json = json_decode($data);
 
 		if (!$json || !isset($json->cmd)) return true;
@@ -141,20 +138,20 @@ class ClusterController implements IQuarkTask, IQuarkTransportProviderServer {
 	}
 
 	/**
-	 * @param IQuarkTransportProtocol $protocol
-	 *
-	 * @return IQuarkTransportProtocol
-	 */
-	public function Protocol (IQuarkTransportProtocol $protocol) {
-		// TODO: Implement Protocol() method.
-	}
-
-	/**
 	 * @param string $name
 	 * @param array $data
 	 */
 	private function _event ($name, $data) {
+		echo '[cluster] event ', $name, ' ', print_r($data, true), "\r\n";
 		$this->_control->Transport()->Protocol()->Event($name, $data);
+
+		$clients = $this->_cluster->Clients();
+
+		foreach ($clients as $client)
+			$client->Send(json_encode(array(
+				'event' => $name,
+				'data' => $data
+			)));
 	}
 
 	/**
@@ -208,7 +205,7 @@ class ClusterNode {
  *
  * @package Quark\Scenarios
  */
-class ClusterMonitor implements IQuarkTransportProtocol {
+class ClusterMonitor implements IQuarkTransportProvider {
 	/**
 	 * @var ClusterController $_cluster
 	 */
@@ -219,6 +216,16 @@ class ClusterMonitor implements IQuarkTransportProtocol {
 	 */
 	public function __construct (ClusterController $cluster = null) {
 		$this->_cluster = $cluster;
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return mixed
+	 */
+	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
+		// TODO: Implement Setup() method.
 	}
 
 	/**

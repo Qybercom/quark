@@ -3,8 +3,9 @@ namespace Quark\TransportProviders;
 
 use Quark\IOProcessors\WebSocketFrameIOProcessor;
 use Quark\IQuarkIOProcessor;
+use Quark\IQuarkTransportProvider;
 use Quark\IQuarkTransportProviderServer;
-use Quark\IQuarkTransportProtocol;
+use Quark\IQuarkIntermediateTransportProvider;
 
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
@@ -18,7 +19,7 @@ use Quark\QuarkHTMLIOProcessor;
  *
  * @package Quark\TransportProviders
  */
-class WebSocketTransportServer implements IQuarkTransportProviderServer {
+class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkIntermediateTransportProvider {
 	const GuID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 	/**
@@ -28,7 +29,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_buffer = '';
 
 	/**
-	 * @var IQuarkTransportProtocol
+	 * @var IQuarkTransportProvider
 	 */
 	private $_protocol;
 
@@ -43,11 +44,11 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	private $_processor;
 
 	/**
-	 * @param IQuarkTransportProtocol $protocol
+	 * @param IQuarkTransportProvider $protocol
 	 * @param string $subprotocol
 	 * @param IQuarkIOProcessor $processor
 	 */
-	public function __construct (IQuarkTransportProtocol $protocol = null, $subprotocol = '', IQuarkIOProcessor $processor = null) {
+	public function __construct (IQuarkTransportProvider $protocol = null, $subprotocol = '', IQuarkIOProcessor $processor = null) {
 		$this->_protocol = $protocol;
 		$this->_subprotocol = $subprotocol;
 
@@ -56,11 +57,11 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer {
 	}
 
 	/**
-	 * @param IQuarkTransportProtocol $protocol
+	 * @param IQuarkTransportProvider $protocol
 	 *
-	 * @return IQuarkTransportProtocol
+	 * @return IQuarkTransportProvider
 	 */
-	public function Protocol (IQuarkTransportProtocol $protocol = null) {
+	public function Protocol (IQuarkTransportProvider $protocol = null) {
 		if (func_num_args() != 0)
 			$this->_protocol = $protocol;
 

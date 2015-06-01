@@ -157,4 +157,35 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 
 		return true;
 	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 *
+	 * @return bool
+	 */
+	public function OnConnect (QuarkClient $client, $clients) {
+		// TODO: Implement OnConnect() method.
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function OnData (QuarkClient $client, $clients, $data) {
+		// TODO: Implement OnData() method.
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param QuarkClient[] $clients
+	 *
+	 * @return mixed
+	 */
+	public function OnClose (QuarkClient $client, $clients) {
+		// TODO: Implement OnClose() method.
+	}
 }
