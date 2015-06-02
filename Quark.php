@@ -1002,14 +1002,15 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	/**
 	 * @param QuarkClient $controller
 	 * @param QuarkServer $server
+	 * @param QuarkPeer $network
 	 *
 	 * @return mixed
 	 */
-	public function ControllerConnect (QuarkClient $controller, QuarkServer $server) {
-		$this->_cluster->Control(json_encode(array(
-			'cmd' => 'state',
-			'state' => array('address' => $server->URI()->URI())
-		)));
+	public function ControllerConnect (QuarkClient $controller, QuarkServer $server, QuarkPeer $network) {
+		$this->_cmd('state', array(
+			'address' => $network->Server()->ConnectionURI(),
+			'frontend' => $server->URI()->URI()
+		));
 	}
 
 	/**
@@ -1032,18 +1033,19 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 			}
 		}
 
-		switch ($json->cmd) {
-			case 'broadcast':
-				print_r($json->service);
-				break;
+		if (isset($json->cmd))
+			switch ($json->cmd) {
+				case 'broadcast':
+					print_r($json->service);
+					break;
 
-			case 'stop':
-				break;
+				case 'stop':
+					break;
 
-			default:
-				var_dump($data);
-				break;
-		}
+				default:
+					var_dump($data);
+					break;
+			}
 	}
 
 	/**
@@ -1085,6 +1087,17 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	}
 
 	/**
+	 * @param string $name
+	 * @param array $data
+	 */
+	private function _cmd ($name = '', $data = []) {
+		$this->_cluster->Control(json_encode(array(
+			'cmd' => $name,
+			'state' => $data
+		)));
+	}
+
+	/**
 	 * @param IQuarkService $stream
 	 * @param string $hook
 	 * @param QuarkClient $client
@@ -1105,17 +1118,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 			throw new QuarkArchException('Stream of ' . get_class($stream) . ' returned invalid json: ' . $message);
 
 		$client->Send($message);
-	}
-
-	/**
-	 * @param string $name
-	 * @param array $data
-	 */
-	private function _cmd ($name = '', $data = []) {
-		$this->_cluster->Control(json_encode(array(
-			'cmd' => $name,
-			'state' => $data
-		)));
 	}
 
 	/**
@@ -4571,6 +4573,41 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @param string $timezone
+	 *
+	 * @return int
+	 */
+	public static function TimezoneOffset ($timezone) {
+		return (new \DateTimeZone($timezone))->getOffset(self::GMTNow()->Value());
+	}
+
+	/**
+	 * @param int $time
+	 *
+	 * @return string
+	 */
+	public static function FancyTime ($time) {
+		$offset = $time / 3600;
+
+		$hours = floor($offset);
+		$minutes = ($offset - $hours) * 60;
+		$seconds = ($minutes - floor($minutes)) * 60;
+
+		$dir = $hours >= 0;
+		$one = abs($hours) < 10;
+
+		$hours = ($dir ? '+' : '-') . ($one ? '0' : '') . abs($hours);
+
+		if ($minutes < 10)
+			$minutes = '0' . $minutes;
+
+		if ($seconds < 10)
+			$seconds = '0' . $seconds;
+
+		return $hours . ':' . $minutes . ':' . $seconds;
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function Fields () {
@@ -4858,6 +4895,15 @@ trait QuarkNetwork {
 			$this->_uri = $uri;
 
 		return $this->_uri;
+	}
+
+	/**
+	 * @param bool $remote = false
+	 *
+	 * @return string
+	 */
+	public function ConnectionURI ($remote = false) {
+		return stream_socket_get_name($this->_socket, $remote);
 	}
 
 	/**
@@ -5435,6 +5481,13 @@ class QuarkPeer {
 
 		return false;
 	}
+
+	/**
+	 * @return QuarkServer
+	 */
+	public function Server () {
+		return $this->_server;
+	}
 }
 
 /**
@@ -5539,7 +5592,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 			$run &= $this->_controller->Connect();
 
 			if ($run)
-				$this->_node->ControllerConnect($this->_controller, $this->_server);
+				$this->_node->ControllerConnect($this->_controller, $this->_server, $this->_network);
 		}
 
 		return $run;
@@ -5578,7 +5631,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		echo "cluster.setup\r\n";
+		echo 'cluster.setup: ', $uri, "\r\n";
 	}
 
 	/**
@@ -5641,10 +5694,11 @@ interface IQuarkClusterNode {
 	/**
 	 * @param QuarkClient $controller
 	 * @param QuarkServer $server
+	 * @param QuarkPeer $network
 	 *
 	 * @return mixed
 	 */
-	public function ControllerConnect(QuarkClient $controller, QuarkServer $server);
+	public function ControllerConnect(QuarkClient $controller, QuarkServer $server, QuarkPeer $network);
 
 	/**
 	 * @param QuarkClient $controller
@@ -5723,6 +5777,13 @@ class QuarkURI {
 		'http' => '80',
 		'https' => '443'
 	);
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return $this->URI();
+	}
 
 	/**
 	 * @param string $uri
