@@ -413,9 +413,9 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param                    $name
+	 * @param $name
 	 * @param IQuarkDataProvider $provider
-	 * @param QuarkURI   $uri
+	 * @param QuarkURI $uri
 	 */
 	public function DataProvider ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
 		try {
@@ -1031,6 +1031,19 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 					$this->_cluster->Node(QuarkURI::FromURI($node->address));
 			}
 		}
+
+		switch ($json->cmd) {
+			case 'broadcast':
+				print_r($json->service);
+				break;
+
+			case 'stop':
+				break;
+
+			default:
+				var_dump($data);
+				break;
+		}
 	}
 
 	/**
@@ -1131,9 +1144,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 			throw new QuarkArchException('Class ' . $connect . ' is not an IQuarkStreamConnect');
 
 		$this->_send($this->_connect, 'StreamConnect', $client, $clients);
-		/*$this->_broadcast('state', array(
-			'state' => array('clients' => sizeof($clients))
-		));*/
 	}
 
 	/**
@@ -1191,36 +1201,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 		$this->_broadcast('state', array(
 			'state' => array('clients' => sizeof($clients))
 		));
-	}
-
-	/**
-	 * @param QuarkClient $transport
-	 * @param string $data
-	 *
-	 * @return mixed
-	 */
-	public function OnPush (QuarkClient $transport, $data) {
-		$json = json_decode($data);
-
-		if (!$json || !isset($json->cmd) || !isset($args[2])) return;
-
-		/**
-		 * @var QuarkServer $stream
-		 */
-		//$stream = $args[2];
-
-		switch ($json->cmd) {
-			case 'broadcast':
-				print_r($json->service);
-				break;
-
-			case 'stop':
-				break;
-
-			default:
-				var_dump($data);
-				break;
-		}
 	}
 }
 
@@ -4334,8 +4314,8 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 
 	/**
 	 * @param string $value
-	 * @param string $language self::LANGUAGE_ANY
-	 * @param string $default self::LANGUAGE_ANY
+	 * @param string $language = self::LANGUAGE_ANY
+	 * @param string $default = self::LANGUAGE_ANY
 	 */
 	public function __construct ($value = '', $language = self::LANGUAGE_ANY, $default = self::LANGUAGE_ANY) {
 		$this->values = new \StdClass();
@@ -4671,7 +4651,7 @@ class QuarkSession implements IQuarkLinkedModel {
 	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizationProvider $provider
-	 * @param IQuarkAuthorizableModel     $model
+	 * @param IQuarkAuthorizableModel $model
 	 */
 	public function __construct ($name = '', IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $model = null) {
 		$this->_name = $name;
@@ -4682,7 +4662,7 @@ class QuarkSession implements IQuarkLinkedModel {
 	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizationProvider $provider
-	 * @param IQuarkAuthorizableModel     $user
+	 * @param IQuarkAuthorizableModel $user
 	 */
 	public static function Init ($name, IQuarkAuthorizationProvider $provider, IQuarkAuthorizableModel $user) {
 		self::$_pool[$name] = new self($name, $provider, $user);
@@ -4770,7 +4750,7 @@ class QuarkSession implements IQuarkLinkedModel {
 
 	/**
 	 * @param QuarkDTO $request
-	 * @param int      $lifetime
+	 * @param int $lifetime
 	 *
 	 * @return mixed
 	 */
@@ -5340,10 +5320,10 @@ class QuarkServer {
 	 * @throws QuarkArchException
 	 */
 	public function Action () {
-		if ($this->_transport != null)
+		if ($this->_transport instanceof IQuarkTransportProviderServer)
 			return $this->_transport->Server($this);
 
-		throw new QuarkArchException('QuarkServer: Transport is null');
+		throw new QuarkArchException('QuarkServer: Transport is not an IQuarkTransportProviderServer');
 	}
 }
 
@@ -6536,14 +6516,14 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
 	private $_certificate;
 
 	/**
-	 * @var IQuarkTransportProtocol
+	 * @var IQuarkTransportProvider
 	 */
 	private $_protocol;
 
 	/**
-	 * @param IQuarkTransportProtocol $protocol
+	 * @param IQuarkTransportProvider $protocol
 	 */
-	public function __construct (IQuarkTransportProtocol $protocol = null) {
+	public function __construct (IQuarkTransportProvider $protocol = null) {
 		$this->_protocol = $protocol;
 	}
 
@@ -6603,11 +6583,11 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
 	}
 
 	/**
-	 * @param IQuarkTransportProtocol $protocol
+	 * @param IQuarkTransportProvider $protocol
 	 *
-	 * @return IQuarkTransportProtocol
+	 * @return IQuarkTransportProvider
 	 */
-	public function Protocol (IQuarkTransportProtocol $protocol = null) {
+	public function Protocol (IQuarkTransportProvider $protocol = null) {
 		if (func_num_args() != 0)
 			$this->_protocol = $protocol;
 
