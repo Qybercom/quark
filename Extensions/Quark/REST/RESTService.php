@@ -168,12 +168,16 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
+	 * @param array $criteria
+	 * @param array $options
 	 *
 	 * @return array
 	 */
-	public function Find (IQuarkModel $model, $criteria) {
+	public function Find (IQuarkModel $model, $criteria, $options = []) {
 		try {
+			if (isset($options['page']))
+				$this->_uri->query .= '&page=' . $options['page'];
+
 			$api = $this->_api('Get', '/' . self::_class($model) . '/list', $criteria);
 
 			return isset($api->list) ? $api->list : array();

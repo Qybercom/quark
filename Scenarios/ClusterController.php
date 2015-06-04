@@ -95,7 +95,6 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function OnData (QuarkClient $client, $clients, $data) {
-		echo $data;
 		$json = json_decode($data);
 
 		if (!$json || !isset($json->cmd)) return true;
@@ -147,11 +146,13 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 
 		$clients = $this->_cluster->Clients();
 
-		foreach ($clients as $client)
+		foreach ($clients as $client) {
 			$client->Send(json_encode(array(
 				'event' => $name,
 				'data' => $data
 			)));
+			usleep(10000);
+		}
 	}
 
 	/**
