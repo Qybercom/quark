@@ -181,9 +181,11 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
  * @package Quark\Scenarios
  */
 class ClusterNode {
-	public $address = '';
 	public $clients = 0;
-	public $frontend = array();
+
+	public $address = '';
+	public $internal = '';
+	public $external = '';
 
 	/**
 	 * @param QuarkClient $socket
@@ -197,8 +199,9 @@ class ClusterNode {
 	 */
 	public function State ($state) {
 		$this->clients = isset($state->clients) ? $state->clients : $this->clients;
-		$this->address = isset($state->address) ? $state->address : $this->address;
-		$this->frontend = isset($state->frontend) ? $state->frontend : $this->frontend;
+
+		$this->internal = isset($state->internal) ? $state->internal : $this->internal;
+		$this->external = isset($state->external) ? $state->external : $this->external;
 	}
 }
 
