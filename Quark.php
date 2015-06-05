@@ -1032,29 +1032,25 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	 * @throws QuarkArchException
 	 */
 	public function ControllerData (QuarkClient $controller, $data) {
-		echo '[d]', sizeof(explode("\0", $data)),"\r\n";
-		$json = json_decode($data);
+		$cli = QuarkJSONIOProcessor::PackageStack($data);
 
-		if (!$json)
-			throw new QuarkArchException('Malformed controller command ' . $data);
+		foreach ($cli as $cmd) {
+			$json = json_decode($cmd);
 
-		if (isset($json->event) && $json->event == 'nodes') {
-			if (isset($json->data) && is_array($json->data)) {
-				$uri = $this->_cluster->Network()->Server()->ConnectionURI();
-				$uri->host = QuarkServer::ExternalIPOf($uri->host);
+			if (!$json) throw new QuarkArchException('Malformed controller command ' . $cmd);
 
-				foreach ($json->data as $node) {
-					if ($uri == $node->internal) continue;
-					echo '[i] ', $node->internal, "\r\n";
-					if ($this->_cluster->Network()->Has($node->internal)) continue;
+			if (isset($json->event) && $json->event == 'nodes') {
+				if (isset($json->data) && is_array($json->data)) {
+					$nodes = array();
 
-					$this->_cluster->Node(QuarkURI::FromURI($node->internal));
+					foreach ($json->data as $node)
+						$nodes[] = $node->internal;
+
+					$this->_cluster->Network()->Peers($nodes);
 				}
 			}
-		}
 
-		if (isset($json->cmd))
-			switch ($json->cmd) {
+			if (isset($json->cmd)) switch ($json->cmd) {
 				case 'broadcast':
 					print_r($json->service);
 					break;
@@ -1066,6 +1062,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 					var_dump($data);
 					break;
 			}
+		}
 	}
 
 	/**
@@ -1112,6 +1109,22 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 		if ($this->_out($service, $out, $client)) return true;
 
 		throw new QuarkArchException('Class ' . get_class($service) . '  is not a stream');
+	}
+
+	/**
+	 * @param QuarkClient $node
+	 * @param QuarkClient[] $nodes
+	 *
+	 * @return mixed
+	 */
+	public function NodeConnect (QuarkClient $node, $nodes) {
+		$peers = array();
+		$p2 = $this->_cluster->Network()->Peers();
+
+		foreach ($p2 as $peer)
+			$peers[] = $peer->ConnectionURI(true)->URI();
+
+		$this->_cmd('state', array('peers' => $peers));
 	}
 
 	/**
@@ -5584,6 +5597,35 @@ class QuarkPeer {
 	}
 
 	/**
+	 * @param QuarkURI[]|string[] $peers
+	 * @param bool $unique
+	 * @param bool $loopBack
+	 *
+	 * @return QuarkClient[]|bool
+	 */
+	public function Peers ($peers = [], $unique = true, $loopBack = false) {
+		if (func_num_args() == 0) return $this->_peers;
+		if (!is_array($peers)) return false;
+
+		$uri = $this->_server->ConnectionURI();
+		$uri->host = QuarkServer::ExternalIPOf($uri->host);
+
+		$ok = true;
+
+		foreach ($peers as $peer) {
+			if ($peer instanceof QuarkURI)
+				$peer = $peer->URI();
+
+			if (!$loopBack && $uri == $peer) continue;
+			if ($unique && $this->Has($peer)) continue;
+
+			$ok = $this->Peer($peer);
+		}
+
+		return $ok;
+	}
+
+	/**
 	 * @param string $data
 	 *
 	 * @return bool
@@ -5628,8 +5670,16 @@ class QuarkPeer {
 		if ($peer instanceof QuarkURI)
 			$peer = $peer->URI();
 
-		foreach ($this->_peers as $item)
-			if ($item->ConnectionURI() != null && $item->ConnectionURI()->URI() == $peer) return true;
+		$all = $this->_server->URI()->host == QuarkServer::ALL_INTERFACES;
+		$external = QuarkServer::ExternalIPOf($this->_server->ConnectionURI()->host);
+
+		foreach ($this->_peers as $item) {
+			$uri = $item->ConnectionURI(true);
+
+			if ($uri == null) continue;
+			if ($all) $uri->host = $external;
+			if ($uri->URI() == $peer) return true;
+		}
 
 		return false;
 	}
@@ -5806,12 +5856,19 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	public function OnConnect (QuarkClient $client, $clients) {
 		$connection = $client->ConnectionURI();
 		$server = $this->_server->ConnectionURI();
+		$network = $this->_network->Server()->ConnectionURI();
 
 		if ($server->host == QuarkServer::ALL_INTERFACES)
 			$server->host = $connection->host;
 
+		if ($network->host == QuarkServer::ALL_INTERFACES)
+			$network->host = $connection->host;
+
 		if ($connection->URI() == $server->URI())
 			$this->_node->ClientConnect($client, $clients);
+
+		if ($connection->URI() == $network->URI())
+			$this->_node->NodeConnect($client, $this->_network->Peers());
 	}
 
 	/**
@@ -5917,6 +5974,14 @@ interface IQuarkClusterNode {
 	 * @return mixed
 	 */
 	public function OnData(QuarkClusterNode $cluster, $clients, QuarkClient $client, $data, $local);
+
+	/**
+	 * @param QuarkClient $node
+	 * @param QuarkClient[] $nodes
+	 *
+	 * @return mixed
+	 */
+	public function NodeConnect(QuarkClient $node, $nodes);
 
 	/**
 	 * @param QuarkClient $client
@@ -7771,6 +7836,15 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) { return \json_decode($raw); }
+
+	/**
+	 * @param string $json
+	 *
+	 * @return array
+	 */
+	public static function PackageStack ($json) {
+		return explode('}-{', str_replace('}{', '}}-{{', $json));
+	}
 }
 
 /**

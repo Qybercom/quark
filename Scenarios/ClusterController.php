@@ -151,7 +151,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 				'event' => $name,
 				'data' => $data
 			)));
-			usleep(10000);
+			//usleep(10000);
 		}
 	}
 
@@ -183,6 +183,7 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
  */
 class ClusterNode {
 	public $clients = 0;
+	public $peers = 0;
 
 	public $address = '';
 	public $internal = '';
@@ -200,6 +201,7 @@ class ClusterNode {
 	 */
 	public function State ($state) {
 		$this->clients = isset($state->clients) ? $state->clients : $this->clients;
+		$this->peers = isset($state->peers) ? $state->peers : $this->peers;
 
 		$this->internal = isset($state->internal) ? $state->internal : $this->internal;
 		$this->external = isset($state->external) ? $state->external : $this->external;
