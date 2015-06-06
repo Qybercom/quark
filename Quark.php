@@ -933,9 +933,9 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 
 		$this->_cluster = new QuarkClusterNode($this, $external, $transport);
 
-		$this->_connect = Quark::SelectService($connect);
-		$this->_close = Quark::SelectService($close);
-		$this->_unknown = Quark::SelectService($unknown);
+		$this->StreamConnect($connect);
+		$this->StreamClose($close);
+		$this->StreamUnknown($unknown);
 	}
 
 	/**
@@ -945,7 +945,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	 */
 	public function StreamConnect ($uri = '') {
 		if (func_num_args() != 0)
-			$this->_connect = $uri;
+			$this->_connect = Quark::SelectService($uri);
 
 		return $this->_connect;
 	}
@@ -957,7 +957,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	 */
 	public function StreamClose ($uri = '') {
 		if (func_num_args() != 0)
-			$this->_close = $uri;
+			$this->_close = Quark::SelectService($uri);
 
 		return $this->_close;
 	}
@@ -969,7 +969,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	 */
 	public function StreamUnknown ($uri = '') {
 		if (func_num_args() != 0)
-			$this->_unknown = $uri;
+			$this->_unknown = Quark::SelectService($uri);
 
 		return $this->_unknown;
 	}
