@@ -640,29 +640,24 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		if ($service instanceof IQuarkAuthorizableService || $service instanceof IQuarkAuthorizableLiteService) {
 			$session = QuarkSession::Get($service->AuthorizationProvider($request));
+			$session->Initialize($request);
+			$response->AttachData($session->Trail($response));
 
-			$s = $session->Initialize($request);
+			if ($service instanceof IQuarkAuthorizableService) {
+				$criteria = $service->AuthorizationCriteria($request, $session);
 
-			if ($s !== null) $response->AttachData($s);
-			else {
-				$response->AttachData($session->Trail($response));
+				if ($criteria !== true) {
+					$ok = false;
+					$output = $service->AuthorizationFailed($request, $criteria);
+				}
+				else {
+					if (QuarkObject::is($service, 'Quark\IQuarkSigned' . $method . 'Service')) {
+						$sign = $session->Signature();
 
-				if ($service instanceof IQuarkAuthorizableService) {
-					$criteria = $service->AuthorizationCriteria($request, $session);
-
-					if ($criteria !== true) {
-						$ok = false;
-						$output = $service->AuthorizationFailed($request, $criteria);
-					}
-					else {
-						if (QuarkObject::is($service, 'Quark\IQuarkSigned' . $method . 'Service')) {
-							$sign = $session->Signature();
-
-							if ($sign == '' || $request->Signature() != $sign) {
-								$action = 'SignatureCheckFailedOn' . $method;
-								$ok = false;
-								$output = $service->$action($request);
-							}
+						if ($sign == '' || $request->Signature() != $sign) {
+							$action = 'SignatureCheckFailedOn' . $method;
+							$ok = false;
+							$output = $service->$action($request);
 						}
 					}
 				}
@@ -705,10 +700,10 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	 */
 	public function ExceptionHandler (\Exception $exception) {
 		if ($exception instanceof QuarkArchException)
-			return Quark::Log($exception->message, $exception->lvl, Quark::LOG_FATAL);
+			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkConnectionException)
-			return Quark::Log($exception->message, $exception->lvl, Quark::LOG_WARN);
+			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkHTTPException) {
 			ob_start();
@@ -3480,13 +3475,14 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param bool $check = true
 	 *
-	 * @return bool
+	 * @return bool|array
 	 */
-	private static function _validate (IQuarkModel $model) {
+	private static function _validate (IQuarkModel $model, $check = true) {
 		if ($model instanceof IQuarkModelWithBeforeValidate && $model->BeforeValidate() === false) return false;
 
-		return QuarkField::Rules($model->Rules());
+		return $check ? QuarkField::Rules($model->Rules()) : $model->Rules();
 	}
 
 	/**
@@ -3570,6 +3566,13 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public function Validate () {
 		return self::_validate($this->_model);
+	}
+
+	/**
+	 * @return array|bool
+	 */
+	public function ValidationRules () {
+		return self::_validate($this->_model, false);
 	}
 
 	/**

@@ -25,18 +25,20 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 
 	/**
 	 * @param string $config
-	 * @param string $token
+	 * @param string $token = ''
+	 * @param string $id = ''
 	 */
-	public function __construct ($config, $token = '') {
+	public function __construct ($config, $token = '', $id = '') {
 		$this->_config = Quark::Config()->Extension($config);
 		$this->accessToken = (string)$token;
+		$this->id = (string)$id;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->accessToken;
+		return $this->id;
 	}
 
 	/**
@@ -44,6 +46,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Fields () {
 		return array(
+			'id' => '',
 			'accessToken' => '',
 		);
 	}
@@ -52,9 +55,11 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Rules () {
+		$this->id = (string)$this->id;
 		$this->accessToken = (string)$this->accessToken;
 
 		return array(
+			QuarkField::Type($this->id, QuarkField::TYPE_STRING),
 			QuarkField::Type($this->accessToken, QuarkField::TYPE_STRING)
 		);
 	}
@@ -67,16 +72,14 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	public function Link ($raw) {
 		if ($this->SessionFromToken($raw) == null) return null;
 
-		return new QuarkModel($this, array(
-			'accessToken' => $raw
-		));
+		return new QuarkModel($this, json_decode($raw));
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->accessToken;
+		return json_encode($this);
 	}
 
 	/**
