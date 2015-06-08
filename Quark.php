@@ -3458,8 +3458,6 @@ class QuarkModel implements IQuarkContainer {
 			else $output->$key = self::_unlink($value);
 		}
 
-		Quark::Log(print_r($output, true));
-
 		return $output;
 	}
 
@@ -4649,6 +4647,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return mixed
 	 */
 	public function Unlink () {
+		clearstatcache();
 		return $this->DateTime();
 	}
 
