@@ -90,6 +90,12 @@ textarea.quark-input {
     width: 150px;
 }
 
+.quark-link {
+    color: rgba(0,0,0,0);
+    text-decoration: none;
+    cursor: pointer;
+}
+
 
 /**
  * .quark-message represent short notifications from system

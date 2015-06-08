@@ -89,6 +89,11 @@ body {
     text-align: center;
 }
 
+.quark-presence-column.quark-presence-stand .exhibit {
+    display: block;
+    text-align: center;
+}
+
 .quark-presence-column.quark-presence-stand p {
     font-size: 16px;
     font-family: FontAwesome, 'Open Sans', sans-serif;
@@ -109,6 +114,10 @@ body {
 .quark-presence-column.right {
     text-align: right;
     float: right;
+}
+
+.quark-presence-column.center {
+    text-align: center;
 }
 
 .quark-presence-column.left-inverse {
