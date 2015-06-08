@@ -133,7 +133,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function API () {
-		return call_user_func_array(array($this->_config->SocialNetwork()), func_get_args());
+		return call_user_func_array(array($this->_config->SocialNetwork(), 'API'), func_get_args());
 	}
 
 	/**
@@ -141,7 +141,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	 *
 	 * @return mixed
 	 */
-	public function Profile ($user) {
-		return $this->PopulateWith($this->_config->SocialNetwork()->Profile($user));
+	public function Profile ($user = '') {
+		return $this->PopulateWith($this->_config->SocialNetwork()->Profile(func_num_args() != 0 ? $user : $this->id));
 	}
 }
