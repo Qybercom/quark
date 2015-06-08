@@ -4647,7 +4647,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->DateTime();
+		$out = $this->DateTime();
+		Quark::Log(print_r($out, true));
+		return $out;
 	}
 
 	/**
