@@ -148,6 +148,8 @@ class MongoDB implements IQuarkDataProvider {
 	private function _data (IQuarkModel $model, $_id = true) {
 		$out = json_decode(json_encode($model));
 
+		Quark::Log(print_r($out, true));
+
 		if ($_id) $out->_id = new \MongoId(self::_id($model));
 		else unset($out->_id);
 
