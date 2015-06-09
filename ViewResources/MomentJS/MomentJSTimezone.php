@@ -1,9 +1,9 @@
 <?php
 namespace Quark\ViewResources\MomentJS;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\IQuarkViewResourceType;
 
@@ -19,9 +19,9 @@ class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource,
 	private $_version = '';
 
 	/**
-	 * @param string $version = '0.3.1'
+	 * @param string $version = '0.4.0'
 	 */
-	public function __construct ($version = '0.3.1') {
+	public function __construct ($version = '0.4.0') {
 		$this->_version = $version;
 	}
 
@@ -36,7 +36,7 @@ class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/' . $this->_version . '/moment-timezone.min.js';
+		return 'https://cdn.rawgit.com/moment/moment-timezone/' . $this->_version . '/builds/moment-timezone-with-data.js';
 	}
 
 	/**
@@ -51,7 +51,7 @@ class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource,
 	 */
 	public function Dependencies () {
 		return array(
-			new MomentJSTimezoneData()
+			new MomentJS()
 		);
 	}
 }

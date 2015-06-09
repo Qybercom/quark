@@ -1,12 +1,13 @@
 <?php
 namespace Quark\ViewResources\MomentJS;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
+use Quark\IQuarkForeignViewResource;
+
+use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
-use Quark\IQuarkViewResourceType;
 
 /**
  * Class MomentJS
