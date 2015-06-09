@@ -4427,7 +4427,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	public function __construct (IQuarkCulture $culture = null, $value = self::NOW, $timezone = self::CURRENT) {
 		$this->_culture = $culture ? $culture : Quark::Config()->Culture();
 		$this->Value($value);
-		$this->Timezone($timezone);
+		$this->Timezone($timezone, false);
 	}
 
 	/**
@@ -4455,14 +4455,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return \DateTime
 	 */
 	public function Value ($value = '') {
-		if (func_num_args() != 0 && is_string($value)) {
-			try {
-				$this->_date = new \DateTime($value);
-			}
-			catch (\Exception $e) {
-				$this->_date = new \DateTime($value, new \DateTimeZone('UTC'));
-			}
-		}
+		if (func_num_args() != 0 && is_string($value))
+			$this->_date = new \DateTime($value, new \DateTimeZone('UTC'));
 
 		return $this->_date;
 	}
@@ -4506,7 +4500,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return int
 	 */
 	public function Interval (QuarkDate $with = null) {
-		if ($with == null) return $this;
+		if ($with == null) return 0;
 
 		$start = $this->_date->getTimestamp();
 		$end = $with->Value()->getTimestamp();
