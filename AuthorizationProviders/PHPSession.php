@@ -21,6 +21,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
+		unset($_COOKIE[session_name()]);
+
 		if (session_status() == PHP_SESSION_NONE)
 			session_start();
 
