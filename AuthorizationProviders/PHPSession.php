@@ -31,6 +31,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		 */
 		ini_set('session.gc_maxlifetime', $lifetime);
 		session_set_cookie_params($lifetime);
+		session_regenerate_id(true);
 
 		return $_SESSION[$name]['user'];
 	}
