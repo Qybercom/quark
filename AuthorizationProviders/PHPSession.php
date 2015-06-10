@@ -4,6 +4,7 @@ namespace Quark\AuthorizationProviders;
 use Quark\IQuarkAuthorizationProvider;
 
 use Quark\Quark;
+use Quark\QuarkCookie;
 use Quark\QuarkModel;
 use Quark\QuarkDTO;
 
@@ -26,9 +27,15 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (func_num_args() != 0)
 			$this->_request = $request;
 
+		if ($this->_request == null)
+			$this->_request = new QuarkDTO();
+
 		$session = $this->_request->GetCookieByName(session_name());
 
-		if ($session == null) session_start();
+		if ($session == null) {
+			session_start();
+			$session = new QuarkCookie(session_name(), session_id());
+		}
 
 		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value))
 			unset($_COOKIE[session_name()]);
