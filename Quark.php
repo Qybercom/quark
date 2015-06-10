@@ -544,7 +544,7 @@ class QuarkConfig {
 			}
 		}
 
-		return $this->$direction;
+		return is_string($direction) ? $this->$direction : null;
 	}
 }
 

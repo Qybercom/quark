@@ -40,7 +40,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value))
 			unset($_COOKIE[session_name()]);
 
-		if (session_status() == PHP_SESSION_NONE) session_start();
+		if (session_status() == PHP_SESSION_NONE) @session_start();
 	}
 
 	/**
@@ -82,6 +82,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 */
 	public function Login ($name, QuarkModel $model, $credentials) {
 		$this->_start();
+
+		session_regenerate_id(true);
 
 		$_SESSION[$name]['user'] = $model->Model();
 		$_SESSION[$name]['signature'] = Quark::GuID();
