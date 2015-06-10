@@ -14,6 +14,29 @@ use Quark\QuarkDTO;
  */
 class PHPSession implements IQuarkAuthorizationProvider {
 	/**
+	 * @var QuarkDTO $_request
+	 */
+	private $_request;
+
+	/**
+	 * @param QuarkDTO $request
+	 * http://stackoverflow.com/a/22373561
+	 */
+	public function _start (QuarkDTO $request = null) {
+		if (func_num_args() != 0)
+			$this->_request = $request;
+
+		$session = $this->_request->GetCookieByName(session_name());
+
+		if ($session == null) session_start();
+
+		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value))
+			unset($_COOKIE[session_name()]);
+
+		if (session_status() == PHP_SESSION_NONE) session_start();
+	}
+
+	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request
 	 * @param          $lifetime
@@ -21,10 +44,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Initialize ($name, QuarkDTO $request, $lifetime) {
-		unset($_COOKIE[session_name()]);
-
-		if (session_status() == PHP_SESSION_NONE)
-			session_start();
+		$this->_start($request);
 
 		if (!isset($_SESSION) || !isset($_SESSION[$name]) || !isset($_SESSION[$name]['user'])) return null;
 
@@ -33,7 +53,6 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		 */
 		ini_set('session.gc_maxlifetime', $lifetime);
 		session_set_cookie_params($lifetime);
-		session_regenerate_id(true);
 
 		return $_SESSION[$name]['user'];
 	}
@@ -55,8 +74,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Login ($name, QuarkModel $model, $credentials) {
-		if (session_status() == PHP_SESSION_NONE)
-			session_start();
+		$this->_start();
 
 		$_SESSION[$name]['user'] = $model->Model();
 		$_SESSION[$name]['signature'] = Quark::GuID();
@@ -70,8 +88,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function Logout ($name) {
-		if (session_status() == PHP_SESSION_NONE)
-			session_start();
+		$this->_start();
 
 		if (!isset($_SESSION[$name])) return false;
 
@@ -89,6 +106,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return string
 	 */
 	public function Signature ($name) {
+		$this->_start();
+
 		return isset($_SESSION[$name]['signature']) ? $_SESSION[$name]['signature'] : '';
 	}
 }

@@ -6521,8 +6521,12 @@ class QuarkDTO {
 	 * @return array
 	 */
 	public function Headers ($headers = []) {
-		if (func_num_args() == 1 && is_array($headers))
+		if (func_num_args() == 1 && is_array($headers)) {
 			$this->_headers = $headers;
+
+			if (isset($headers[self::HEADER_COOKIE]))
+				$this->_cookies = QuarkCookie::FromCookie($headers[self::HEADER_COOKIE]);
+		}
 
 		return $this->_headers;
 	}
@@ -6559,6 +6563,18 @@ class QuarkDTO {
 		if ($cookie == null) return;
 
 		$this->_cookies[] = $cookie;
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkCookie|null
+	 */
+	public function GetCookieByName ($name = '') {
+		foreach ($this->_cookies as $cookie)
+			if ($cookie->name == $name) return $cookie;
+
+		return null;
 	}
 
 	/**
@@ -6863,20 +6879,26 @@ class QuarkCookie {
 	}
 
 	/**
-	 * @param $header
+	 * @param string $header
 	 *
-	 * @return QuarkCookie|null
+	 * @return QuarkCookie[]
 	 */
 	public static function FromCookie ($header) {
-		if (preg_match_all('#\;#Uis', $header) != 0) return null;
+		$out = array();
+		$cookies = explode(';', $header);
 
-		$cookie = explode('=', $header);
+		foreach ($cookies as $raw) {
+			$cookie = explode('=', $raw);
 
-		return new QuarkCookie($cookie[0], $cookie[1]);
+			if (sizeof($cookie) == 2)
+				$out[] = new QuarkCookie($cookie[0], $cookie[1]);
+		}
+
+		return $out;
 	}
 
 	/**
-	 * @param $header
+	 * @param string $header
 	 *
 	 * @return QuarkCookie
 	 */
