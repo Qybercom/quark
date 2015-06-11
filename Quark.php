@@ -3437,6 +3437,8 @@ class QuarkModel implements IQuarkContainer {
 			else $model->$key = self::_link($property, $value);
 		}
 
+		unset($key, $value);
+
 		return self::_normalize($model);
 	}
 
@@ -7043,7 +7045,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @param string $location
 	 */
 	public function __construct ($location = '') {
-		if (func_num_args() == 1)
+		if (func_num_args() != 0)
 			$this->Load($location);
 	}
 
@@ -7184,13 +7186,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		try {
-			return new QuarkModel(new QuarkFile($raw));
-		}
-		catch (QuarkArchException $e) {
-			Quark::Log($e->message, $e->lvl);
-			return null;
-		}
+		return new QuarkFile($raw);
 	}
 
 	/**
@@ -7257,9 +7253,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 				}
 			}
 
-			if ($simple) $output[$name] = new QuarkModel(new QuarkFile, $buffer);
+			if ($simple) $output[$name] = new QuarkModel(new QuarkFile(), $buffer);
 			else array_walk_recursive($output, function (&$item) use ($buffer) {
-				$item = new QuarkModel(new QuarkFile, $buffer);
+				$item = new QuarkModel(new QuarkFile(), $buffer);
 			});
 		}
 

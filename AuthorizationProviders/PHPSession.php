@@ -33,7 +33,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		$session = $this->_request->GetCookieByName(session_name());
 
 		if ($session == null) {
-			session_start();
+			@session_start();
 			$session = new QuarkCookie(session_name(), session_id());
 		}
 
