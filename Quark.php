@@ -1851,6 +1851,13 @@ class QuarkObject {
 	}
 
 	/**
+	 * @param $name
+	 */
+	public function __unset ($name) {
+		unset($this->_source->$name);
+	}
+
+	/**
 	 * @param mixed $source
 	 * @param mixed $backbone
 	 * @param callable $iterator
@@ -2198,6 +2205,13 @@ class QuarkView implements IQuarkContainer {
 	 */
 	public function __isset ($key) {
 		return isset($this->_view->$key) || isset($this->_layout->$key);
+	}
+
+	/**
+	 * @param $name
+	 */
+	public function __unset ($name) {
+		unset($this->_view->$name);
 	}
 
 	/**
@@ -3277,6 +3291,13 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public function __isset ($key) {
 		return isset($this->_model->$key);
+	}
+
+	/**
+	 * @param $name
+	 */
+	public function __unset ($name) {
+		unset($this->_model->$name);
 	}
 
 	/**
@@ -6299,6 +6320,13 @@ class QuarkDTO {
 	 */
 	public function __isset ($key) {
 		return isset($this->_data->$key);
+	}
+
+	/**
+	 * @param $name
+	 */
+	public function __unset ($name) {
+		unset($this->_data->$name);
 	}
 
 	/**
