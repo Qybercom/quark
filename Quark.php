@@ -713,7 +713,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
 		}
 
-		if ($exception instanceof QuarkArchException)
+		if ($exception instanceof \Exception)
 			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
 
 		return true;
@@ -3481,6 +3481,8 @@ class QuarkModel implements IQuarkContainer {
 			else $output->$key = self::_unlink($value);
 		}
 
+		unset($key, $value);
+
 		return $output;
 	}
 
@@ -3491,7 +3493,7 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private static function _unlink ($value) {
 		if ($value instanceof QuarkModel)
-			$value = $value->Model();
+			$value = self::_export($value->Model());
 
 		return $value instanceof IQuarkLinkedModel ? $value->Unlink() : $value;
 	}
@@ -3501,6 +3503,8 @@ class QuarkModel implements IQuarkContainer {
 	 * @param bool $check = true
 	 *
 	 * @return bool|array
+	 *
+	 * TODO: validate sub-models
 	 */
 	private static function _validate (IQuarkModel $model, $check = true) {
 		if ($model instanceof IQuarkModelWithBeforeValidate && $model->BeforeValidate() === false) return false;

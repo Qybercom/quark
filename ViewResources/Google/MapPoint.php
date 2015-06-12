@@ -12,19 +12,19 @@ use Quark\IQuarkModelWithBeforeExtract;
  */
 class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeExtract {
 	/**
-	 * @var float|int $lat
+	 * @var float|int $lat = 0.0
 	 */
-	public $lat;
+	public $lat = 0.0;
 
 	/**
-	 * @var float|int $lng
+	 * @var float|int $lng = 0.0
 	 */
-	public $lng;
+	public $lng = 0.0;
 
 	/**
-	 * @var float|int $width
+	 * @var float|int $width = -1
 	 */
-	public $width;
+	public $width = -1;
 
 	/**
 	 * @param float|int $lat = 0.0
