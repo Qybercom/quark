@@ -59,6 +59,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		 * http://stackoverflow.com/a/8311400/2097055
 		 */
 		ini_set('session.gc_maxlifetime', $lifetime);
+		ini_set('session.auto_start', false);
+
 		session_set_cookie_params($lifetime);
 
 		return $_SESSION[$name]['user'];
@@ -71,7 +73,9 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Trail ($name, QuarkDTO $response, QuarkModel $user) { }
+	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
+		session_write_close();
+	}
 
 	/**
 	 * @param string $name

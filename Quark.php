@@ -4027,6 +4027,9 @@ class QuarkField {
 	public static function Valid ($key, $nullable = false) {
 		if ($nullable && $key == null) return true;
 
+		if ($key instanceof IQuarkModel)
+			$key = new QuarkModel($key);
+
 		return $key instanceof QuarkModel ? $key->Validate() : false;
 	}
 
