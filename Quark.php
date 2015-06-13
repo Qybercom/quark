@@ -150,10 +150,12 @@ class Quark {
 	}
 
 	/**
+	 * @param bool $endSlash = true
+	 *
 	 * @return string
 	 */
-	public static function Host () {
-		return self::NormalizePath(getcwd());
+	public static function Host ($endSlash = true) {
+		return self::NormalizePath(getcwd(), $endSlash);
 	}
 
 	/**
@@ -3346,16 +3348,6 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param $value
-	 * @param $backbone
-	 *
-	 * @return QuarkModel|null
-	 */
-	public static function Build ($value, $backbone) {
-		return $value === null && $backbone instanceof IQuarkNullableModel ? null : new QuarkModel($backbone);
-	}
-
-	/**
 	 * @param IQuarkModel $model
 	 *
 	 * @return IQuarkDataProvider
@@ -3375,6 +3367,18 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @param $model
+	 * @param $field
+	 *
+	 * @return QuarkModel|null
+	 */
+	public static function Build ($model, $field) {
+		return $field == null && $model instanceof IQuarkNullableModel
+			? null
+			: new QuarkModel($model, $field);
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 * @param array       $fields
 	 *
@@ -3384,20 +3388,20 @@ class QuarkModel implements IQuarkContainer {
 		if (func_num_args() == 1 || (!is_array($fields) && !is_object($fields)))
 			$fields = $model->Fields();
 
-		$output = $model;
+		$output = clone $model;
 
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
-		foreach ($fields as $key => $value) {
+		foreach ($fields as $key => $field) {
 			if (isset($model->$key)) {
-				if (is_scalar($value) && is_scalar($model->$key))
-					settype($model->$key, gettype($value));
+				if (is_scalar($field) && is_scalar($model->$key))
+					settype($model->$key, gettype($field));
 
 				$output->$key = $model->$key;
 			}
-			else $output->$key = $value instanceof IQuarkModel
-				? QuarkModel::Build(empty($model->$key) ? null : $model->$key, $value)
-				: $value;
+			else $output->$key = $field instanceof IQuarkModel
+				? QuarkModel::Build($field, empty($model->$key) ? null : $model->$key)
+				: $field;
 		}
 
 		return $output;
@@ -6046,13 +6050,15 @@ class QuarkURI {
 
 	/**
 	 * @param string $path
+	 * @param bool $full = true
+	 * @param bool $secure = false
 	 *
 	 * @return string
 	 */
-	public static function Of ($path) {
+	public static function Of ($path, $full = true, $secure = false) {
 		$path = Quark::NormalizePath($path, false);
 
-		return Quark::WebHost() . (strlen($path) != 0 && $path[0] == '/' ? substr($path, 1) : $path);
+		return Quark::WebHost($full, $secure) . (strlen($path) != 0 && $path[0] == '/' ? substr($path, 1) : $path);
 	}
 
 	/**
@@ -7010,6 +7016,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	public $isDir = false;
 
 	private $_content = '';
+	private $_loaded = false;
 
 	/**
 	 * @return string
@@ -7050,7 +7057,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 */
 	public function __construct ($location = '') {
 		if (func_num_args() != 0)
-			$this->Load($location);
+			$this->Location($location);
 	}
 
 	/**
@@ -7078,7 +7085,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return bool
 	 */
 	public function Exists () {
-		return file_exists($this->location);
+		return is_file($this->location);
 	}
 
 	/**
@@ -7093,8 +7100,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
-			$this->_content = file_get_contents($this->location);
+		if (file_exists($this->_location) && memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
+			$this->Content(file_get_contents($this->location));
 
 		return $this;
 	}
@@ -7102,17 +7109,18 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	/**
 	 * @return bool
 	 */
-	public function Save () {
+	public function SaveContent () {
 		return file_put_contents($this->location, $this->_content) != 0;
 	}
 
 	/**
-	 * @param bool $full
+	 * @param bool $full = true
+	 * @param bool $secure = false
 	 *
 	 * @return string
 	 */
-	public function WebLocation ($full = true) {
-		return Quark::WebHost($full) . Quark::SanitizePath(str_replace(Quark::Host(), '', $this->location));
+	public function WebLocation ($full = true, $secure = false) {
+		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false), '', $this->location)), $full, $secure);
 	}
 
 	/**
@@ -7121,8 +7129,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return string
 	 */
 	public function Content ($content = '') {
-		if (func_num_args() == 1)
+		if (func_num_args() == 1) {
 			$this->_content = $content;
+			$this->_loaded = true;
+		}
 
 		return $this->_content;
 	}
@@ -7148,6 +7158,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 
 		$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $this->type);
 		$response->Header(QuarkDTO::HEADER_CONTENT_DISPOSITION, 'attachment; filename="' . $this->name . '"');
+
+		if (!$this->_loaded)
+			$this->Content(file_get_contents($this->location));
 
 		$response->Data($this->_content);
 
@@ -7190,7 +7203,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkFile($raw);
+		return $raw ? new QuarkFile($raw) : null;
 	}
 
 	/**
