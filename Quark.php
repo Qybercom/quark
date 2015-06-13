@@ -638,7 +638,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		if ($service instanceof IQuarkAuthorizableService || $service instanceof IQuarkAuthorizableLiteService) {
+		if ($service instanceof IQuarkAuthorizableLiteService) {
 			$session = QuarkSession::Get($service->AuthorizationProvider($request));
 			$session->Initialize($request);
 			$response->AttachData($session->Trail($response));
@@ -1254,18 +1254,25 @@ interface IQuarkAuthorizationProvider {
 }
 
 /**
- * Interface IQuarkAuthorizableService
+ * Interface IQuarkAuthorizableLiteService
  *
  * @package Quark
  */
-interface IQuarkAuthorizableService {
+interface IQuarkAuthorizableLiteService {
 	/**
 	 * @param QuarkDTO $request
 	 *
 	 * @return string
 	 */
 	public function AuthorizationProvider(QuarkDTO $request);
+}
 
+/**
+ * Interface IQuarkAuthorizableService
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableService extends IQuarkAuthorizableLiteService {
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
@@ -1281,20 +1288,6 @@ interface IQuarkAuthorizableService {
 	 * @return mixed
 	 */
 	public function AuthorizationFailed(QuarkDTO $request, $criteria);
-}
-
-/**
- * Interface IQuarkAuthorizableLiteService
- *
- * @package Quark
- */
-interface IQuarkAuthorizableLiteService {
-	/**
-	 * @param QuarkDTO $request
-	 *
-	 * @return string
-	 */
-	public function AuthorizationProvider(QuarkDTO $request);
 }
 
 /**
@@ -6711,7 +6704,7 @@ class QuarkDTO {
 }
 
 /**
- * Class QuarkHTTPTransport
+ * Class QuarkHTTPTransportClient
  *
  * @package Quark\Extensions\Quark
  */
@@ -6888,6 +6881,10 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
 			$this->_protocol = $protocol;
 
 		return $this->_protocol;
+	}
+
+	public function ServicePipeline (IQuarkService $service) {
+
 	}
 }
 
