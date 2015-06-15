@@ -6922,6 +6922,13 @@ class QuarkCookie {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return $this->value;
+	}
+
+	/**
 	 * @param string $header
 	 *
 	 * @return QuarkCookie[]

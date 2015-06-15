@@ -14,6 +14,8 @@ use Quark\QuarkDTO;
  * @package Quark\AuthorizationProviders
  */
 class PHPSession implements IQuarkAuthorizationProvider {
+	const DEFAULT_NAME = 'PHPSESSID';
+
 	/**
 	 * @var QuarkDTO $_request
 	 */
@@ -41,6 +43,15 @@ class PHPSession implements IQuarkAuthorizationProvider {
 			unset($_COOKIE[session_name()]);
 
 		if (session_status() == PHP_SESSION_NONE) @session_start();
+	}
+
+	public function _init ($name, QuarkDTO $request, $lifetime) {
+		$id = $request->GetCookieByName(session_name());
+
+		if ($id == null) return null;
+
+		session_id($id->value);
+		session_start();
 	}
 
 	/**
