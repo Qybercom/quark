@@ -4494,6 +4494,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return string
 	 */
 	public function Timezone ($timezone = self::CURRENT) {
+		if ($this->_date == null)
+			$this->Value('now');
+
 		if (func_num_args() != 0 && $timezone != self::CURRENT)
 			$this->_date->setTimezone(new \DateTimeZone($timezone));
 
