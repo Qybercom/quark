@@ -258,7 +258,7 @@ class Quark {
 	public static function GuID ($salt = '') {
 		$hash = sha1(rand(1, 1000) . QuarkDate::Now()->DateTime() . rand(1000, 1000000) . $salt);
 
-		if (in_array($hash, self::$_gUID)) return self::GuID($salt);
+		if (in_array($hash, self::$_gUID, true)) return self::GuID($salt);
 
 		self::$_gUID[] = $hash;
 		return $hash;
@@ -4202,7 +4202,7 @@ class QuarkField {
 	public static function Enum ($key, $values = [], $nullable = false) {
 		if ($nullable && $key == null) return true;
 
-		return is_array($values) && in_array($key, $values);
+		return is_array($values) && in_array($key, $values, true);
 	}
 
 	/**
@@ -4293,7 +4293,7 @@ class QuarkField {
 	public static function In ($key, $values, $nullable = false) {
 		if ($nullable && $key == null) return true;
 
-		return in_array($key, $values);
+		return in_array($key, $values, true);
 	}
 
 	/**
@@ -5370,7 +5370,7 @@ class QuarkServer {
 
 		if (stream_select($this->_read, $this->_write, $this->_except, 0) === false) return true;
 
-		if (in_array($this->_socket, $this->_read)) {
+		if (in_array($this->_socket, $this->_read, true)) {
 			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
 			$client = QuarkClient::ForServer($socket, $address, $this->URI()->scheme);
 			$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
@@ -8019,7 +8019,7 @@ class QuarkCertificate {
 		$pem = array();
 
 		foreach ($this as $key => $value)
-			if (in_array($key, self::$_allowed)) $data[$key] = $value;
+			if (in_array($key, self::$_allowed, true)) $data[$key] = $value;
 
 		$key = @openssl_pkey_new();
 		$cert = @openssl_csr_new($data, $key);

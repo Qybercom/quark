@@ -45,13 +45,26 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (session_status() == PHP_SESSION_NONE) @session_start();
 	}
 
-	public function _init ($name, QuarkDTO $request, $lifetime) {
-		$id = $request->GetCookieByName(session_name());
+	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return string|null
+	 *
+	 * http://stackoverflow.com/a/22373561
+	 */
+	private function _init (QuarkDTO $request = null) {
+		if (func_num_args() != 0)
+			$this->_request = $request;
+
+		$id = $this->_request->GetCookieByName(session_name());
 
 		if ($id == null) return null;
+		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $id->value)) return null;
 
 		session_id($id->value);
 		session_start();
+
+		return $id->value;
 	}
 
 	/**

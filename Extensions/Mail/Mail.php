@@ -111,7 +111,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 		if (func_num_args() == 0)
 			return $this->_receivers;
 
-		if (QuarkField::Email($email) && !in_array($email, $this->_receivers))
+		if (QuarkField::Email($email) && !in_array($email, $this->_receivers, true))
 			$this->_receivers[] = $email;
 
 		return $this;

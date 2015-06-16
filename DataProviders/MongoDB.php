@@ -69,7 +69,7 @@ class MongoDB implements IQuarkDataProvider {
 		$ids = array();
 
 		foreach ($source as $id)
-			if (self::IsValidId($id) && !in_array($id, $exclude))
+			if (self::IsValidId($id) && !in_array($id, $exclude, true))
 				$ids[] = new \MongoId($id);
 
 		return $ids;
