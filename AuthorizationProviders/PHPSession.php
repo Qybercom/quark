@@ -20,6 +20,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @var QuarkDTO $_request
 	 */
 	private $_request;
+	private $_id;
 
 	/**
 	 * @param QuarkDTO $request
@@ -62,7 +63,9 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $id->value)) return null;
 
 		session_id($id->value);
-		session_start();
+
+		if (session_status() == PHP_SESSION_NONE)
+			session_start();
 
 		return $id->value;
 	}

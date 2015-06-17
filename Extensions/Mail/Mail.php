@@ -164,7 +164,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 	 */
 	public function Send () {
 		if (sizeof($this->_files) != 0)
-			$this->_dto->AttachData(array('files' => $this->_files));
+			$this->_dto->Merge(array('files' => $this->_files));
 
 		$client = new QuarkClient($this->_config->SMTP(), $this, null, 5);
 		$client->Action();
