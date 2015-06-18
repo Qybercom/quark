@@ -3632,7 +3632,7 @@ class QuarkModel implements IQuarkContainer {
 		if (func_num_args() == 1 || (!is_array($fields) && !is_object($fields)))
 			$fields = $model->Fields();
 
-		$output = $model;
+		$output = clone $model;
 
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
@@ -4915,7 +4915,6 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return mixed
 	 */
 	public function Unlink () {
-		clearstatcache();
 		return $this->DateTime();
 	}
 
