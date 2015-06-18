@@ -559,7 +559,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread () {
+	public function Thread1 () {
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
@@ -639,7 +639,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread1 () {
+	public function Thread () {
 		/**
 		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
 		 */
