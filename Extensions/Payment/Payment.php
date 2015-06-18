@@ -71,7 +71,8 @@ class Payment implements IQuarkExtension {
 	public function Pay ($currency = self::CURRENCY_USD, $amount = 0) {
 		if ($this->_config == null) return false;
 
-		$this->_config->Money($currency, $amount);
+		if (func_num_args() != 0)
+			$this->_config->Money($currency, $amount);
 
 		return $this->_scenario->Pay($this->_config);
 	}

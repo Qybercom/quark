@@ -2,6 +2,12 @@
 namespace Quark\Extensions\Payment\Providers\CloudPayments;
 
 use Quark\IQuarkExtensionConfig;
+
+use Quark\QuarkClient;
+use Quark\QuarkDTO;
+use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkJSONIOProcessor;
+
 use Quark\Extensions\Payment\IQuarkPaymentConfig;
 
 /**
@@ -34,5 +40,31 @@ class CloudPaymentsConfig implements IQuarkExtensionConfig, IQuarkPaymentConfig 
 	public function Money ($currency, $amount) {
 		$this->currency = $currency;
 		$this->amount = $amount;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Authorization () {
+		return 'Basic ' . base64_encode($this->user . ':' . $this->pass);
+	}
+
+	/**
+	 * @param \Quark\Extensions\Payment\IQuarkPaymentScenario $data
+	 * @param string $url
+	 *
+	 * @return QuarkClient
+	 */
+	public function API ($data, $url) {
+		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, $this->Authorization());
+		$request->Data($data);
+
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$http = new QuarkClient($url, new QuarkHTTPTransportClient($request, $response));
+		$http->ip = false;
+
+		return $http;
 	}
 }
