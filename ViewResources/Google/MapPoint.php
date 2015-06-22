@@ -11,6 +11,8 @@ use Quark\IQuarkModelWithBeforeExtract;
  * @package Quark\ViewResources\Google
  */
 class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeExtract {
+	const EARTH_RADIUS = 6372795;
+
 	/**
 	 * @var float|int $lat = 0.0
 	 */
@@ -60,6 +62,37 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	 */
 	public function BeforeExtract () {
 		unset($this->width);
+	}
+
+	/**
+	 * @param MapPoint $with
+	 *
+	 * @link https://www.kobzarev.com/programming/calculation-of-distances-between-cities-on-their-coordinates.html
+	 * @return float metres
+	 */
+	public function Distance (MapPoint $with) {
+		// перевести координаты в радианы
+    	$lat1 = $this->lat * M_PI / 180;
+    	$lat2 = $with->lat * M_PI / 180;
+    	$long1 = $this->lng * M_PI / 180;
+    	$long2 = $with->lng * M_PI / 180;
+
+    	// косинусы и синусы широт и разницы долгот
+    	$cl1 = cos($lat1);
+    	$cl2 = cos($lat2);
+    	$sl1 = sin($lat1);
+    	$sl2 = sin($lat2);
+    	$delta = $long2 - $long1;
+    	$cdelta = cos($delta);
+    	$sdelta = sin($delta);
+
+    	// вычисления длины большого круга
+    	$y = sqrt(pow($cl2 * $sdelta, 2) + pow($cl1 * $sl2 - $sl1 * $cl2 * $cdelta, 2));
+    	$x = $sl1 * $sl2 + $cl1 * $cl2 * $cdelta;
+
+    	$ad = atan2($y, $x);
+
+		return $ad * self::EARTH_RADIUS;
 	}
 
 	/**
@@ -127,5 +160,21 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 				'$gte' => $edge->w
 			)
 		);
+	}
+
+	/**
+	 * @param MapPoint $point
+	 * @param int $width = -1
+	 *
+	 * @return bool
+	 */
+	public function Match (MapPoint $point, $width = -1) {
+		$edge = $this->EdgeDelta((float)$width);
+
+		return
+			$point->lat <= $edge->n &&
+			$point->lat >= $edge->s &&
+			$point->lng <= $edge->e &&
+			$point->lng >= $edge->w;
 	}
 }
