@@ -188,8 +188,9 @@ class Quark {
 	}
 
 	/**
-	 * @param $path
-	 * @param $endSlash
+	 * @param string $path
+	 * @param bool $endSlash = true
+	 *
 	 * @return string
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
@@ -200,11 +201,13 @@ class Quark {
 	}
 
 	/**
-	 * @param $path
+	 * @param string $path
+	 * @param bool $endSlash = false
+	 *
 	 * @return string
 	 */
-	public static function SanitizePath ($path) {
-		return self::NormalizePath(str_replace('./', '/', str_replace('../', '/', $path)), false);
+	public static function SanitizePath ($path, $endSlash = false) {
+		return self::NormalizePath(str_replace('./', '/', str_replace('../', '/', $path)), $endSlash);
 	}
 
 	/**
@@ -7391,7 +7394,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return string
 	 */
 	public function WebLocation ($full = true, $secure = false) {
-		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false), '', $this->location)), $full, $secure);
+		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false) . '/', '', $this->location)), $full, $secure);
 	}
 
 	/**
