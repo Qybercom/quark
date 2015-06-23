@@ -290,7 +290,7 @@ class Quark {
 	}
 
 	/**
-	 * @param $message
+	 * @param string $message
 	 * @param string $lvl
 	 * @param string $domain = 'application'
 	 * @return int|bool
@@ -305,6 +305,16 @@ class Quark {
 			'[' . $lvl . '] ' . QuarkDate::Now() . ' ' . $message . "\r\n",
 			FILE_APPEND | LOCK_EX
 		);
+	}
+
+	/**
+	 * @param mixed $needle
+	 * @param string $domain = 'application'
+	 *
+	 * @return int|bool
+	 */
+	public static function Trace ($needle, $domain = 'application') {
+		return self::Log(' [' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO, $domain);
 	}
 }
 
@@ -7394,7 +7404,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return string
 	 */
 	public function WebLocation ($full = true, $secure = false) {
-		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false) . '/', '', $this->location)), $full, $secure);
+		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false), '', $this->location)), $full, $secure);
 	}
 
 	/**
