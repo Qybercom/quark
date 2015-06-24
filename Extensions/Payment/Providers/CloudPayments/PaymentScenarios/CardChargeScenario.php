@@ -33,10 +33,12 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 	/**
 	 * @param string $name
 	 * @param string $cryptogram
+	 * @param string $ip
 	 */
-	public function __construct ($name, $cryptogram) {
+	public function __construct ($name, $cryptogram, $ip) {
 		$this->Name = $name;
 		$this->CardCryptogramPacket = $cryptogram;
+		$this->IpAddress = $ip;
 	}
 
 	/**

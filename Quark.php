@@ -293,6 +293,7 @@ class Quark {
 	 * @param string $message
 	 * @param string $lvl
 	 * @param string $domain = 'application'
+	 *
 	 * @return int|bool
 	 */
 	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
@@ -572,7 +573,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread1 () {
+	public function Thread () {
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
@@ -652,7 +653,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread () {
+	public function Thread2 () {
 		/**
 		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
 		 */
@@ -3961,7 +3962,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return int
 	 */
 	public static function Count (IQuarkModel $model, $criteria = [], $limit = 0, $skip = 0, $options = []) {
-		return self::_provider($model)->Count($model, $criteria, $limit, $skip, $options);
+		return (int)self::_provider($model)->Count($model, $criteria, $limit, $skip, $options);
 	}
 
 	/**
