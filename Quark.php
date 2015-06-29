@@ -657,6 +657,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
+
+		return true;
 	}
 
 	/**
