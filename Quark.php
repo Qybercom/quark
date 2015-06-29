@@ -645,6 +645,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
 
+		echo 'test1';
 		if ($output instanceof QuarkView) {
 			echo $output->Compile();
 		}
@@ -657,6 +658,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
+
+		echo 'test2';
 
 		return true;
 	}
