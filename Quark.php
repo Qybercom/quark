@@ -661,10 +661,10 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		}
 		Quark::BreakPoint('fpm');
 
-		//$out = ob_get_clean();
+		$out = ob_get_clean();
 		Quark::BreakPoint('fpm');
 		//Quark::Trace($out);
-		//echo $out;
+		echo $out;
 	}
 
 	/**
