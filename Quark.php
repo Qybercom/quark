@@ -656,14 +656,10 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
 
 			foreach ($headers as $header) header($header);
-
-			echo $service->Output()->Processor()->Encode($service->Output()->Data());
+			ob_flush();
+			$out = $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
-		Quark::BreakPoint('fpm');
-
-		$out = ob_get_clean();
-		Quark::BreakPoint('fpm');
-		//Quark::Trace($out);
+		Quark::Trace($out);
 		echo $out;
 	}
 
