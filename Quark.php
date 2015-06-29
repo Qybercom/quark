@@ -640,16 +640,13 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		Quark::BreakPoint('fpm');
 		ob_start();
 
 		$output = $service->Authorize($method);
 
-		Quark::BreakPoint('fpm');
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
 
-		Quark::BreakPoint('fpm');
 		if ($output instanceof QuarkView) {
 			echo $output->Compile();
 		}
@@ -664,8 +661,10 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		}
 		Quark::BreakPoint('fpm');
 
-		echo ob_get_clean();
+		$out = ob_get_clean();
 		Quark::BreakPoint('fpm');
+		Quark::Trace($out);
+		echo $out;
 	}
 
 	/**
