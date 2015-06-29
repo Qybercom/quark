@@ -316,7 +316,7 @@ class Quark {
 	 * @return int|bool
 	 */
 	public static function Trace ($needle, $domain = 'application') {
-		return self::Log(' [' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO, $domain);
+		return self::Log('[' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO, $domain);
 	}
 
 	/**
@@ -328,7 +328,7 @@ class Quark {
 	public static function BreakPoint ($branch = 'main', $domain = 'application') {
 		self::$_breaks[$branch] = isset(self::$_breaks[$branch]) ? ++self::$_breaks[$branch] : 0;
 
-		return self::Log('[TRACE ' . self::$_breaks[$branch] . ']', self::LOG_INFO, $domain);
+		return self::Log('[TRACE ' . $branch . ':' . self::$_breaks[$branch] . ']', self::LOG_INFO, $domain);
 	}
 }
 
@@ -640,7 +640,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		ob_start();
+		//ob_start();
 
 		$output = $service->Authorize($method);
 
@@ -661,10 +661,10 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		}
 		Quark::BreakPoint('fpm');
 
-		$out = ob_get_clean();
+		//$out = ob_get_clean();
 		Quark::BreakPoint('fpm');
-		Quark::Trace($out);
-		echo $out;
+		//Quark::Trace($out);
+		//echo $out;
 	}
 
 	/**
