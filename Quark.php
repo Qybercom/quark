@@ -317,6 +317,16 @@ class Quark {
 	public static function Trace ($needle, $domain = 'application') {
 		return self::Log(' [' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO, $domain);
 	}
+
+	/**
+	 * @param mixed $needle
+	 * @param string $domain = 'application'
+	 *
+	 * @return bool|int
+	 */
+	public static function BreakPoint ($needle = null, $domain = 'application') {
+		return self::Log('[TRACE]' . (func_num_args() != 0 ? ' [' . gettype($needle) . '] ' . print_r($needle, true) : ''), self::LOG_INFO, $domain);
+	}
 }
 
 spl_autoload_extensions('.php');
@@ -573,20 +583,26 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread1 () {
+	public function Thread () {
+		Quark::BreakPoint();
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
 			Quark::Config()->Processor(QuarkConfig::RESPONSE)
 		);
 
+		Quark::BreakPoint();
 		$uri = QuarkURI::FromURI($_SERVER['REQUEST_URI']);
+		Quark::BreakPoint();
 		$service->Input()->URI($uri);
+		Quark::BreakPoint();
 		$service->Output()->URI($uri);
+		Quark::BreakPoint();
 
 		if ($service->Service() instanceof IQuarkServiceWithAccessControl)
 			$service->Output()->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
 
+		Quark::BreakPoint();
 		$headers = array();
 
 		foreach ($_SERVER as $name => $value) {
@@ -595,20 +611,24 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			if (substr($name, 0, 5) == 'HTTP_')
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
 		}
+		Quark::BreakPoint();
 
 		$output = null;
 
 		$type = $service->Input()->Processor()->MimeType();
 		$body = file_get_contents('php://input');
 
+		Quark::BreakPoint();
 		$service->Input()->Method($_SERVER['REQUEST_METHOD']);
 		$service->Input()->Headers($headers);
 		$service->Input()->Merge($service->Input()->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
 		$service->Input()->Merge((object)($_GET + $_POST));
 
+		Quark::BreakPoint();
 		if (isset($_POST[$type]))
 			unset($_POST[$type]);
 
+		Quark::BreakPoint();
 		$files = QuarkFile::FromFiles($_FILES);
 		$post = QuarkObject::Normalize(new \StdClass(), $service->Input()->Data(), function ($item) use ($files) {
 			foreach ($files as $key => $value)
@@ -617,23 +637,29 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return $item;
 		});
 
+		Quark::BreakPoint();
 		$service->Input()->Merge($post);
 		$service->Input()->Merge((object)$files);
 
+		Quark::BreakPoint();
 		if ($service->Service() instanceof IQuarkServiceWithRequestBackbone)
 			$service->Input()->Data(QuarkObject::Normalize($service->Input()->Data(), $service->Service()->RequestBackbone()));
 
+		Quark::BreakPoint();
 		$method = $service instanceof IQuarkAnyService
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
+		Quark::BreakPoint();
 		ob_start();
 
 		$output = $service->Authorize($method);
 
+		Quark::BreakPoint();
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
 
+		Quark::BreakPoint();
 		if ($output instanceof QuarkView) {
 			echo $output->Compile();
 		}
@@ -646,14 +672,16 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
+		Quark::BreakPoint();
 
 		echo ob_get_clean();
+		Quark::BreakPoint();
 	}
 
 	/**
 	 * @return mixed
 	 */
-	public function Thread () {
+	public function Thread1 () {
 		/**
 		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
 		 */
