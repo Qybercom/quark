@@ -587,25 +587,19 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	 * @return mixed
 	 */
 	public function Thread () {
-		Quark::BreakPoint('fpm');
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
 			Quark::Config()->Processor(QuarkConfig::RESPONSE)
 		);
 
-		Quark::BreakPoint('fpm');
 		$uri = QuarkURI::FromURI($_SERVER['REQUEST_URI']);
-		Quark::BreakPoint('fpm');
 		$service->Input()->URI($uri);
-		Quark::BreakPoint('fpm');
 		$service->Output()->URI($uri);
-		Quark::BreakPoint('fpm');
 
 		if ($service->Service() instanceof IQuarkServiceWithAccessControl)
 			$service->Output()->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
 
-		Quark::BreakPoint('fpm');
 		$headers = array();
 
 		foreach ($_SERVER as $name => $value) {
@@ -614,24 +608,20 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			if (substr($name, 0, 5) == 'HTTP_')
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
 		}
-		Quark::BreakPoint('fpm');
 
 		$output = null;
 
 		$type = $service->Input()->Processor()->MimeType();
 		$body = file_get_contents('php://input');
 
-		Quark::BreakPoint('fpm');
 		$service->Input()->Method($_SERVER['REQUEST_METHOD']);
 		$service->Input()->Headers($headers);
 		$service->Input()->Merge($service->Input()->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
 		$service->Input()->Merge((object)($_GET + $_POST));
 
-		Quark::BreakPoint('fpm');
 		if (isset($_POST[$type]))
 			unset($_POST[$type]);
 
-		Quark::BreakPoint('fpm');
 		$files = QuarkFile::FromFiles($_FILES);
 		$post = QuarkObject::Normalize(new \StdClass(), $service->Input()->Data(), function ($item) use ($files) {
 			foreach ($files as $key => $value)
@@ -640,15 +630,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return $item;
 		});
 
-		Quark::BreakPoint('fpm');
 		$service->Input()->Merge($post);
 		$service->Input()->Merge((object)$files);
 
-		Quark::BreakPoint('fpm');
 		if ($service->Service() instanceof IQuarkServiceWithRequestBackbone)
 			$service->Input()->Data(QuarkObject::Normalize($service->Input()->Data(), $service->Service()->RequestBackbone()));
 
-		Quark::BreakPoint('fpm');
 		$method = $service instanceof IQuarkAnyService
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
