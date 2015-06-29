@@ -573,7 +573,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread1 () {
+	public function Thread () {
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
@@ -653,7 +653,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
 	 * @return mixed
 	 */
-	public function Thread () {
+	public function Thread1 () {
 		/**
 		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
 		 */
@@ -3762,6 +3762,7 @@ class QuarkModel implements IQuarkContainer {
 	 * TODO: validate sub-models
 	 */
 	private static function _validate (IQuarkModel $model, $check = true) {
+		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
 		if ($model instanceof IQuarkModelWithBeforeValidate && $model->BeforeValidate() === false) return false;
 
 		return $check ? QuarkField::Rules($model->Rules()) : $model->Rules();
@@ -4587,7 +4588,8 @@ class QuarkField {
 	 * @return bool
 	 */
 	public static function Rules ($rules) {
-		if (!is_array($rules)) return $rules == null ? true : (bool)$rules;
+		if (!is_array($rules))
+			return $rules == null ? true : (bool)$rules;
 
 		$ok = true;
 
