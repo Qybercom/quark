@@ -640,8 +640,6 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		//ob_start();
-
 		$output = $service->Authorize($method);
 
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
@@ -656,11 +654,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
 
 			foreach ($headers as $header) header($header);
-			ob_flush();
-			$out = $service->Output()->Processor()->Encode($service->Output()->Data());
+
+			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
-		Quark::Trace($out);
-		echo $out;
 	}
 
 	/**
