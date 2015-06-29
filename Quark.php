@@ -326,7 +326,7 @@ class Quark {
 	 * @return int|bool
 	 */
 	public static function BreakPoint ($branch = 'main', $domain = 'application') {
-		self::$_breaks[$branch] = isset(self::$_breaks[$branch]) ? self::$_breaks[$branch]++ : 0;
+		self::$_breaks[$branch] = isset(self::$_breaks[$branch]) ? ++self::$_breaks[$branch] : 0;
 
 		return self::Log('[TRACE ' . self::$_breaks[$branch] . ']', self::LOG_INFO, $domain);
 	}
