@@ -655,7 +655,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
 
-			//foreach ($headers as $header) header($header);
+			foreach ($headers as $header) header($header);
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
@@ -6534,7 +6534,7 @@ class QuarkDTO {
 		if ($all) {
 			if ($this->_uri != null) $query .= $head();
 
-			$query .= $this->SerializeHeaders();
+			$query .= $this->SerializeHeaders() . "\r\n";
 		}
 
 		return $this->_raw = $query . $this->_raw;
@@ -6560,17 +6560,13 @@ class QuarkDTO {
 	public function SerializeHeaders () {
 		$query = '';
 
-		Quark::Trace($this->_headers);
-
 		$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType() . '; charset=utf-8';
 		$this->_headers[self::HEADER_CONTENT_LENGTH] = strlen($this->_raw);
-
-		Quark::Trace($this->_headers);
 
 		foreach ($this->_headers as $key => $value)
 			$query .= $key . ': ' . $value . "\r\n";
 
-		return $query . "\r\n";
+		return $query;
 	}
 
 	/**
