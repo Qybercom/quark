@@ -68,7 +68,6 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config) {
-		ob_flush();
 		self::$_config = $config;
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
@@ -88,6 +87,8 @@ class Quark {
 			$threads->Threads($streams);
 			$threads->Pipeline();
 		}
+		
+		ob_flush();
 	}
 
 	/**
