@@ -594,23 +594,23 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	 * @return mixed
 	 */
 	public function Thread () {
+		$this->_trace(1);
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
 			Quark::Config()->Processor(QuarkConfig::RESPONSE)
 		);
-		$this->_trace(1);
+
+		$this->_trace(2);
 		$uri = QuarkURI::FromURI($_SERVER['REQUEST_URI']);
 		$service->Input()->URI($uri);
 		$service->Output()->URI($uri);
 
-		$this->_trace(2);
 		if ($service->Service() instanceof IQuarkServiceWithAccessControl)
 			$service->Output()->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
 
 		$headers = array();
 
-		$this->_trace(3);
 		foreach ($_SERVER as $name => $value) {
 			$name = str_replace('CONTENT_', 'HTTP_CONTENT_', $name);
 
@@ -618,19 +618,16 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
 		}
 
-		$this->_trace(4);
 		$output = null;
 
 		$type = $service->Input()->Processor()->MimeType();
 		$body = file_get_contents('php://input');
 
-		$this->_trace(5);
 		$service->Input()->Method($_SERVER['REQUEST_METHOD']);
 		$service->Input()->Headers($headers);
 		$service->Input()->Merge($service->Input()->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
 		$service->Input()->Merge((object)($_GET + $_POST));
 
-		$this->_trace(6);
 		if (isset($_POST[$type]))
 			unset($_POST[$type]);
 
@@ -642,7 +639,6 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return $item;
 		});
 
-		$this->_trace(7);
 		$service->Input()->Merge($post);
 		$service->Input()->Merge((object)$files);
 
@@ -653,13 +649,11 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		$this->_trace(8);
 		$output = $service->Authorize($method);
 
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
 
-		$this->_trace(9);
 		if ($output instanceof QuarkView) {
 			echo $output->Compile();
 		}
@@ -672,8 +666,6 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
-
-		$this->_trace(10);
 
 		return true;
 	}
