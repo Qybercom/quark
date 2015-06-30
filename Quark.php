@@ -68,6 +68,7 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config) {
+		ob_end_flush();
 		self::$_config = $config;
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
