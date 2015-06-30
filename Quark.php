@@ -654,6 +654,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			$service->Output()->Merge($output);
 
 			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
+			Quark::Trace($headers);
 
 			//foreach ($headers as $header) header($header);
 
