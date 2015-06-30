@@ -640,6 +640,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
+		ob_start();
+
 		$output = $service->Authorize($method);
 
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
@@ -658,6 +660,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
+		ob_end_flush();
+
 		return true;
 	}
 
@@ -674,7 +678,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkHTTPException) {
+			ob_start();
 			header($_SERVER['SERVER_PROTOCOL'] . ' ' . Quark::Config()->DefaultNotFoundStatus());
+			ob_end_flush();
 
 			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
 		}
