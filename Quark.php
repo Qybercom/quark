@@ -332,7 +332,7 @@ class Quark {
 	}
 }
 
-ini_set('output_buffering', 'On');
+ini_set('output_buffering', 'Off');
 
 //ob_implicit_flush(true);
 //ob_end_flush();
