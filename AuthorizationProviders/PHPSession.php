@@ -36,14 +36,14 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		$session = $this->_request->GetCookieByName(session_name());
 
 		if ($session == null) {
-			session_start();
+			@session_start();
 			$session = new QuarkCookie(session_name(), session_id());
 		}
 
 		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value))
 			unset($_COOKIE[session_name()]);
 
-		if (session_status() == PHP_SESSION_NONE) session_start();
+		if (session_status() == PHP_SESSION_NONE) @session_start();
 	}
 
 	/**
@@ -85,10 +85,10 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		/**
 		 * http://stackoverflow.com/a/8311400/2097055
 		 */
-		//ini_set('session.gc_maxlifetime', $lifetime);
-		//ini_set('session.auto_start', false);
+		ini_set('session.gc_maxlifetime', $lifetime);
+		ini_set('session.auto_start', false);
 
-		//session_set_cookie_params($lifetime);
+		session_set_cookie_params($lifetime);
 
 		return $_SESSION[$name]['user'];
 	}
@@ -101,7 +101,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		//session_write_close();
+		session_write_close();
 	}
 
 	/**
