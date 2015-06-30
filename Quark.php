@@ -68,7 +68,7 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config) {
-		ob_end_flush();
+		ob_flush();
 		self::$_config = $config;
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
@@ -648,7 +648,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		//$output = $service->Authorize($method);
+		$output = $service->Authorize($method);
 
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
