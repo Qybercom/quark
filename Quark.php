@@ -2557,9 +2557,9 @@ class QuarkView implements IQuarkContainer {
 		foreach ($this->_vars as $name => $value)
 			$$name = $value;
 
-		//ob_start();
+		ob_start();
 		include $this->_file;
-		return '';//ob_get_clean();
+		return ob_get_clean();
 	}
 
 	/**
