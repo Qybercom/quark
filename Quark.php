@@ -332,7 +332,7 @@ class Quark {
 	}
 }
 
-ini_set('output_buffering', 'On');
+//ini_set('output_buffering', 'On');
 
 spl_autoload_extensions('.php');
 
