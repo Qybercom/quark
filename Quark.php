@@ -642,6 +642,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		$output = $service->Authorize($method);
 
+		var_dump($output);
+
 		if ($output === null && strlen(trim($method)) != 0 && QuarkObject::is($service->Service(), 'Quark\IQuark' . $method . 'Service'))
 			$output = $service->Service()->$method($service->Input(), $service->Session());
 
