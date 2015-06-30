@@ -587,6 +587,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	 * @return mixed
 	 */
 	public function Thread () {
+		ob_start(null, 0, PHP_OUTPUT_HANDLER_STDFLAGS ^ PHP_OUTPUT_HANDLER_REMOVABLE);
+
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
