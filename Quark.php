@@ -334,6 +334,9 @@ class Quark {
 
 //ini_set('output_buffering', 'On');
 
+ob_implicit_flush(true);
+ob_end_flush();
+
 spl_autoload_extensions('.php');
 
 Quark::Import(__DIR__, function ($class) { return substr($class, 6); });
