@@ -653,11 +653,14 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		else {
 			$service->Output()->Merge($output);
 
-			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
+			$response = explode("\r\n\r\n", $service->Output()->SerializeResponse());
+			$headers = explode("\r\n", $response[0]);
 
 			foreach ($headers as $header) header($header);
 
-			echo $service->Output()->Processor()->Encode($service->Output()->Data());
+			if (sizeof($response) > 1)
+				echo $response[1];
+			//echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
 		//ob_end_flush();
