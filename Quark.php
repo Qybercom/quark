@@ -640,7 +640,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		ob_start();
+		//ob_start();
 
 		$output = $service->Authorize($method);
 
@@ -655,12 +655,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			$headers = explode("\r\n", $service->Output()->SerializeHeaders());
 
-			foreach ($headers as $header) header($header);
+			//foreach ($headers as $header) header($header);
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
-		ob_end_flush();
+		//ob_end_flush();
 
 		return true;
 	}
