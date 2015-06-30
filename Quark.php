@@ -640,7 +640,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			? 'Any'
 			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
 
-		//ob_start();
+		ob_start();
 
 		$output = $service->Authorize($method);
 
@@ -660,10 +660,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			if (sizeof($response) > 1)
 				echo $response[1];
-			//echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
-		//ob_end_flush();
+		ob_end_flush();
 
 		return true;
 	}
