@@ -666,7 +666,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		}
 
 		Quark::Trace(ob_get_status(true));
-		echo ob_get_flush();
+		//echo ob_get_flush();
+		//Quark::Trace(ob_get_status(true));
 
 		return true;
 	}
@@ -719,7 +720,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $name))))] = $value;
 		}
 
-		ob_start();
+		//ob_start();
 
 		$ok = true;
 		$output = null;
@@ -807,7 +808,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $response->Processor()->Encode($response->Data());
 		}
 
-		echo ob_get_clean();
+		//echo ob_get_clean();
 	}
 
 	/**
@@ -823,9 +824,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkHTTPException) {
-			ob_start();
+			//ob_start();
 			header($_SERVER['SERVER_PROTOCOL'] . ' ' . Quark::Config()->DefaultNotFoundStatus());
-			echo ob_get_clean();
+			//echo ob_get_clean();
 
 			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
 		}
@@ -2708,9 +2709,9 @@ class QuarkView implements IQuarkContainer {
 		foreach ($this->_vars as $name => $value)
 			$$name = $value;
 
-		ob_start();
+		//ob_start();
 		include $this->_file;
-		return ob_get_clean();
+		return '';//ob_get_clean();
 	}
 
 	/**
