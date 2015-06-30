@@ -660,6 +660,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
+		ob_flush();
+
 		return true;
 	}
 
@@ -676,9 +678,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkHTTPException) {
-			ob_start();
 			header($_SERVER['SERVER_PROTOCOL'] . ' ' . Quark::Config()->DefaultNotFoundStatus());
-			echo ob_get_clean();
 
 			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
 		}
