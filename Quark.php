@@ -87,8 +87,6 @@ class Quark {
 			$threads->Threads($streams);
 			$threads->Pipeline();
 		}
-
-		flush();
 	}
 
 	/**
@@ -586,13 +584,6 @@ class QuarkConfig {
  */
 class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	/**
-	 * @param $point
-	 */
-	private function _trace ($point) {
-		echo 'point: ', $point, "\r\n";
-	}
-
-	/**
 	 * @return mixed
 	 */
 	public function Thread () {
@@ -667,151 +658,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
-		echo 'test';
-		Quark::Trace(ob_get_status(true));
-		//echo ob_get_flush();
-		//Quark::Trace(ob_get_status(true));
-
 		return true;
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function Thread1 () {
-		/**
-		 * @var IQuarkAuthorizableService|IQuarkServiceWithCustomProcessor|IQuarkServiceWithCustomRequestProcessor|IQuarkServiceWithCustomResponseProcessor|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone|IQuarkService $service
-		 */
-		$service = Quark::SelectService($_SERVER['REQUEST_URI']);
-
-		$request = new QuarkDTO();
-		$request->Processor(Quark::Config()->Processor(QuarkConfig::REQUEST));
-		$response = new QuarkDTO();
-		$response->Processor(Quark::Config()->Processor(QuarkConfig::RESPONSE));
-
-		if ($service instanceof IQuarkServiceWithCustomProcessor) {
-			$request->Processor($service->Processor());
-			$response->Processor($service->Processor());
-			$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $response->Processor()->MimeType());
-		}
-
-		if ($service instanceof IQuarkServiceWithCustomRequestProcessor)
-			$response->Processor($service->RequestProcessor());
-
-		if ($service instanceof IQuarkServiceWithCustomResponseProcessor) {
-			$response->Processor($service->ResponseProcessor());
-			$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $response->Processor()->MimeType());
-		}
-
-		if ($service instanceof IQuarkServiceWithAccessControl)
-			$response->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->AllowOrigin());
-
-		$headers = array();
-
-		foreach ($_SERVER as $name => $value) {
-			$add = false;
-
-			if (substr($name, 0, 5) == 'HTTP_') {
-				$name = substr($name, 5);
-				$add = true;
-			}
-
-			if (substr($name, 0, 8) == 'CONTENT_')
-				$add = true;
-
-			if ($add)
-				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $name))))] = $value;
-		}
-
-		//ob_start();
-
-		$ok = true;
-		$output = null;
-
-		$type = $request->Processor()->MimeType();
-		$body = file_get_contents('php://input');
-
-		$request->Method($_SERVER['REQUEST_METHOD']);
-		$request->URI(QuarkURI::FromURI($_SERVER['REQUEST_URI']));
-		$request->Headers($headers);
-		$request->Merge($request->Processor()->Decode(strlen(trim($body)) != 0 ? $body : (isset($_POST[$type]) ? $_POST[$type] : '')));
-		$request->Merge((object)($_GET + $_POST));
-
-		if (isset($_POST[$type]))
-			unset($_POST[$type]);
-
-		$files = QuarkFile::FromFiles($_FILES);
-		$post = QuarkObject::Normalize(new \StdClass(), $request->Data(), function ($item) use ($files) {
-			foreach ($files as $key => $value)
-				if ($key == $item) return $value;
-
-			return $item;
-		});
-
-		$request->Merge($post);
-		$request->Merge((object)$files);
-
-		if ($service instanceof IQuarkServiceWithRequestBackbone)
-			$request->Data(QuarkObject::Normalize($request->Data(), $service->RequestBackbone()));
-
-		$session = new QuarkSession();
-		$method = $service instanceof IQuarkAnyService
-			? 'Any'
-			: ucfirst(strtolower($_SERVER['REQUEST_METHOD']));
-
-		if ($service instanceof IQuarkAuthorizableLiteService) {
-			$session = QuarkSession::Get($service->AuthorizationProvider($request));
-			$session->Initialize($request);
-			$response->Merge($session->Trail($response));
-
-			if ($service instanceof IQuarkAuthorizableService) {
-				$criteria = $service->AuthorizationCriteria($request, $session);
-
-				if ($criteria !== true) {
-					$ok = false;
-					$output = $service->AuthorizationFailed($request, $criteria);
-				}
-				else {
-					if (QuarkObject::is($service, 'Quark\IQuarkSigned' . $method . 'Service')) {
-						$sign = $session->Signature();
-
-						if ($sign == '' || $request->Signature() != $sign) {
-							$action = 'SignatureCheckFailedOn' . $method;
-							$ok = false;
-							$output = $service->$action($request);
-						}
-					}
-				}
-			}
-		}
-
-		if ($ok && strlen(trim($method)) != 0 && QuarkObject::is($service, $a = 'Quark\IQuark' . $method . 'Service'))
-			$output = $service->$method($request, $session);
-
-		if ($output instanceof QuarkView) {
-			echo $output->Compile();
-		}
-		else {
-			if ($output instanceof QuarkDTO) $response = $output;
-			else $response->Merge($output, true);
-
-			if (!headers_sent()) {
-				header($_SERVER['SERVER_PROTOCOL'] . ' ' . $response->Status());
-
-				$headers = $response->Headers();
-				$cookies = $response->Cookies();
-
-				foreach ($headers as $key => $value)
-					header($key . ': ' . $value);
-
-				foreach ($cookies as $cookie)
-					header(QuarkDTO::HEADER_SET_COOKIE . ': ' . $a = $cookie->Serialize(), false);
-			}
-
-			echo $response->Processor()->Encode($response->Data());
-		}
-
-		//echo ob_get_clean();
 	}
 
 	/**
@@ -827,9 +674,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			return Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof QuarkHTTPException) {
-			//ob_start();
+			ob_start();
 			header($_SERVER['SERVER_PROTOCOL'] . ' ' . Quark::Config()->DefaultNotFoundStatus());
-			//echo ob_get_clean();
+			echo ob_get_clean();
 
 			return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
 		}
