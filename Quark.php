@@ -87,8 +87,8 @@ class Quark {
 			$threads->Threads($streams);
 			$threads->Pipeline();
 		}
-		
-		ob_flush();
+
+		flush();
 	}
 
 	/**
@@ -667,6 +667,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
+		echo 'test';
 		Quark::Trace(ob_get_status(true));
 		//echo ob_get_flush();
 		//Quark::Trace(ob_get_status(true));
