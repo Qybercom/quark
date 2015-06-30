@@ -583,6 +583,9 @@ class QuarkConfig {
  * @package Quark
  */
 class QuarkFPMEnvironmentProvider implements IQuarkThread {
+	public function __construct () {
+		$this->_trace(0);
+	}
 	/**
 	 * @param $point
 	 */
