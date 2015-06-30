@@ -101,7 +101,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return mixed
 	 */
 	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
-		session_write_close();
+		//session_write_close();
 	}
 
 	/**
