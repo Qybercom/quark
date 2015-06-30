@@ -665,7 +665,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
 
-		ob_end_flush();
+		Quark::Trace(ob_get_status(true));
+		echo ob_get_flush();
 
 		return true;
 	}
