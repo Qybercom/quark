@@ -68,7 +68,6 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config) {
-		echo 'aaa';
 		self::$_config = $config;
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
@@ -584,9 +583,6 @@ class QuarkConfig {
  * @package Quark
  */
 class QuarkFPMEnvironmentProvider implements IQuarkThread {
-	public function __construct () {
-		$this->_trace(0);
-	}
 	/**
 	 * @param $point
 	 */
@@ -598,14 +594,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 	 * @return mixed
 	 */
 	public function Thread () {
-		$this->_trace(1);
 		$service = new QuarkService(
 			$_SERVER['REQUEST_URI'],
 			Quark::Config()->Processor(QuarkConfig::REQUEST),
 			Quark::Config()->Processor(QuarkConfig::RESPONSE)
 		);
 
-		$this->_trace(2);
 		$uri = QuarkURI::FromURI($_SERVER['REQUEST_URI']);
 		$service->Input()->URI($uri);
 		$service->Output()->URI($uri);
@@ -670,6 +664,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 			echo $service->Output()->Processor()->Encode($service->Output()->Data());
 		}
+
+		ob_end_flush();
 
 		return true;
 	}
