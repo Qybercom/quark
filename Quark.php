@@ -332,6 +332,7 @@ class Quark {
 	}
 }
 
+ini_set('output_buffering', false);
 spl_autoload_extensions('.php');
 
 Quark::Import(__DIR__, function ($class) { return substr($class, 6); });
