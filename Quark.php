@@ -6536,7 +6536,7 @@ class QuarkDTO {
 		if ($all) {
 			if ($this->_uri != null) $query .= $head();
 
-			$query .= $this->SerializeHeaders() . "\r\n";
+			$query .= $this->SerializeHeaders();
 		}
 
 		return $this->_raw = $query . $this->_raw;
@@ -6568,7 +6568,7 @@ class QuarkDTO {
 		foreach ($this->_headers as $key => $value)
 			$query .= $key . ': ' . $value . "\r\n";
 
-		return $query;
+		return $query . "\r\n";
 	}
 
 	/**
