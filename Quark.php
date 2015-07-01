@@ -6752,11 +6752,15 @@ class QuarkDTO {
 
 	/**
 	 * @param QuarkCookie $cookie
+	 *
+	 * @return QuarkDTO
 	 */
 	public function Cookie (QuarkCookie $cookie) {
-		if ($cookie == null) return;
+		if ($cookie == null) return $this;
 
 		$this->_cookies[] = $cookie;
+
+		return $this;
 	}
 
 	/**
@@ -7058,10 +7062,12 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
  * @package Quark
  */
 class QuarkCookie {
+	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s GMT';
+
 	public $name = '';
 	public $value = '';
 	public $expires = '';
-	public $MaxAge = '';
+	public $MaxAge = 0;
 	public $path = '';
 	public $domain = '';
 	public $HttpOnly = '';
@@ -7081,6 +7087,27 @@ class QuarkCookie {
 	 */
 	public function __toString () {
 		return $this->value;
+	}
+
+	/**
+	 * @param int $seconds = 0
+	 *
+	 * @return int
+	 */
+	public function Lifetime ($seconds = 0) {
+		if (func_num_args() != 0) {
+			if ($seconds == 0) {
+				$this->expires = '';
+				return 0;
+			}
+
+			$expires = QuarkDate::GMTNow();
+			$expires->Offset('+' . $seconds . ' seconds');
+
+			$this->expires = $expires->Format(self::EXPIRES_FORMAT);
+		}
+
+		return QuarkDate::GMTNow()->Interval(QuarkDate::GMTOf($this->expires));
 	}
 
 	/**
