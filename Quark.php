@@ -7907,7 +7907,7 @@ class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
 	public function Encode ($data, $text = '') {
 		$files = array();
 
-		$output = is_scalar($data)
+		$output = is_scalar($data) || QuarkObject::isIterative($data)
 			? $data
 			: QuarkObject::Normalize(new \StdClass(), (object)$data, function ($item, &$def) use (&$files) {
 				if (!($def instanceof QuarkFile)) return $def;

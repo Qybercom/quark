@@ -36,7 +36,7 @@ class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdn.rawgit.com/moment/moment-timezone/' . $this->_version . '/builds/moment-timezone-with-data.js';
+		return 'https://cdn.rawgit.com/moment/moment-timezone/' . $this->_version . '/builds/moment-timezone-with-data.min.js';
 	}
 
 	/**

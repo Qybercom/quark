@@ -267,11 +267,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Command (IQuarkModel $model, $command) {
 		try {
-			$api = $this->_api('GET', '/' . self::_class($model) . '/' . $command . '/' . $this->_identify($model));
-
-			return isset($api->status) && $api->status == 200;
+			return $this->_api('GET', '/' . self::_class($model) . '/' . $command . '/' . $this->_identify($model));
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return false;
 		}
 	}
