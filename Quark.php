@@ -1499,6 +1499,13 @@ class QuarkTask {
 
 		return true;
 	}
+
+	public function AsyncLaunch () {
+		if (!($this->_service instanceof IQuarkAsyncTask))
+			throw new QuarkArchException('Trying to async launch service ' . get_class($this->_service) . ' which is not an IQuarkAsyncTask');
+
+		$this->_service->OnLaunch();
+	}
 }
 
 /**
@@ -1521,13 +1528,25 @@ interface IQuarkTask extends IQuarkService {
  *
  * @package Quark
  */
-interface IQuarkScheduledTask {
+interface IQuarkScheduledTask extends IQuarkTask {
 	/**
 	 * @param QuarkDate $previous
 	 *
 	 * @return bool
 	 */
 	public function LaunchCriteria(QuarkDate $previous);
+}
+
+/**
+ * Interface IQuarkAsyncTask
+ *
+ * @package Quark
+ */
+interface IQuarkAsyncTask extends IQuarkScheduledTask {
+	/**
+	 * @return mixed
+	 */
+	public function OnLaunch();
 }
 
 /**

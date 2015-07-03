@@ -86,7 +86,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Initialize2 ($name, QuarkDTO $request, $lifetime) {
+	public function Initialize ($name, QuarkDTO $request, $lifetime) {
 		/**
 		 * http://stackoverflow.com/a/8311400/2097055
 		 */
@@ -105,7 +105,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Initialize ($name, QuarkDTO $request, $lifetime) {
+	public function Initialize1 ($name, QuarkDTO $request, $lifetime) {
 		$this->_start($request);
 
 		if (!isset($_SESSION) || !isset($_SESSION[$name]) || !isset($_SESSION[$name]['user'])) return null;
@@ -128,7 +128,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Trail2 ($name, QuarkDTO $response, QuarkModel $user) {
+	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
 		return $response->Cookie($this->_session);
 	}
 
@@ -139,7 +139,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Trail ($name, QuarkDTO $response, QuarkModel $user) {
+	public function Trail1 ($name, QuarkDTO $response, QuarkModel $user) {
 		session_write_close();
 	}
 
@@ -150,10 +150,14 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return bool
 	 */
-	public function Login2 ($name, QuarkModel $model, $credentials) {
-		if (!$this->_init()) return false;
+	public function Login ($name, QuarkModel $model, $credentials) {
+		if (session_status() == PHP_SESSION_NONE)
+			if (!session_start()) return false;
 
+		$_SESSION[$name]['user'] = $model->Model();
+		$_SESSION[$name]['signature'] = Quark::GuID();
 
+		return true;
 	}
 
 	/**
@@ -163,7 +167,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 *
 	 * @return bool
 	 */
-	public function Login ($name, QuarkModel $model, $credentials) {
+	public function Login1 ($name, QuarkModel $model, $credentials) {
 		$this->_start();
 
 		//session_regenerate_id(true);
