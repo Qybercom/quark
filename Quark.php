@@ -3565,11 +3565,10 @@ class QuarkModel implements IQuarkContainer {
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $source
-	 //* @param             $options
 	 *
 	 * @return IQuarkModel
 	 */
-	private static function _import (IQuarkModel $model, $source/*, $options = []*/) {
+	private static function _import (IQuarkModel $model, $source) {
 		if (!is_array($source) && !is_object($source)) return $model;
 
 		$fields = $model->Fields();
