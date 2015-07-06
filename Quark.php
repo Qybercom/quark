@@ -5032,6 +5032,41 @@ class QuarkSession implements IQuarkLinkedModel {
 	}
 }
 
+interface IQuarkStackable {}
+
+class QuarkSession2 implements IQuarkStackable, IQuarkLinkedModel {
+	/**
+	 * @var IQuarkAuthorizationProvider2 $_session
+	 */
+	private $_session;
+
+	public function __construct (IQuarkAuthorizationProvider2 $provider) {
+
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		//$out = new self();
+		//$out->
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		// TODO: Implement Unlink() method.
+	}
+}
+
+interface IQuarkAuthorizationProvider2 {
+	public function Identifier();
+
+}
+
 /**
  * Trait QuarkNetwork
  *

@@ -261,7 +261,7 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		return self::_record($this->_collection($model, $options)->findOne($criteria, self::_fields($options), (array)$options));
+		return self::_record($this->_collection($model, $options)->findOne($criteria, self::_fields($options), sizeof($options) != 0 ? $options : null));
 	}
 
 	/**
@@ -276,7 +276,7 @@ class MongoDB implements IQuarkDataProvider {
 
 		return self::_record($this->_collection($model, $options)->findOne(array(
 			'_id' => $id instanceof \MongoId ? $id : new \MongoId($id)
-		), self::_fields($options), (array)$options));
+		), self::_fields($options), sizeof($options) != 0 ? $options : null));
 	}
 
 	/**
@@ -311,6 +311,6 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
-		return $this->_collection($model, $options)->count($criteria, (array)$options);
+		return $this->_collection($model, $options)->count($criteria, sizeof($options) != 0 ? $options : null);
 	}
 }
