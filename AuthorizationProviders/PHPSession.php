@@ -3,6 +3,7 @@ namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\IQuarkAuthorizationProvider2;
 use Quark\Quark;
 use Quark\QuarkCookie;
 use Quark\QuarkModel;
@@ -206,4 +207,8 @@ class PHPSession implements IQuarkAuthorizationProvider {
 
 		return isset($_SESSION[$name]['signature']) ? $_SESSION[$name]['signature'] : '';
 	}
+}
+
+class PHPSession2 implements IQuarkAuthorizationProvider2 {
+
 }

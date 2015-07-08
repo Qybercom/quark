@@ -2140,6 +2140,15 @@ class QuarkObject {
 	}
 
 	/**
+	 * @param string $class
+	 *
+	 * @return object
+	 */
+	public static function Of ($class) {
+		return new $class;
+	}
+
+	/**
 	 * @param $source
 	 *
 	 * @return array
@@ -5034,37 +5043,162 @@ class QuarkSession implements IQuarkLinkedModel {
 
 interface IQuarkStackable {}
 
-class QuarkSession2 implements IQuarkStackable, IQuarkLinkedModel {
+/**
+ * Class QuarkSession2
+ *
+ * @package Quark
+ */
+class QuarkSession2 implements IQuarkStackable {
 	/**
-	 * @var IQuarkAuthorizationProvider2 $_session
+	 * @var IQuarkAuthorizationProvider2 $_provider
 	 */
-	private $_session;
+	private $_provider;
 
-	public function __construct (IQuarkAuthorizationProvider2 $provider) {
+	/**
+	 * @var IQuarkAuthorizableModel2 $_user
+	 */
+	private $_user;
 
+	/**
+	 * @var string $_name
+	 */
+	private $_name = '';
+
+	/**
+	 * @var QuarkDTO $_input
+	 */
+	private $_input;
+
+	/**
+	 * @var QuarkDTO $_output
+	 */
+	private $_output;
+
+	/**
+	 * @param IQuarkAuthorizationProvider2 $provider
+	 * @param IQuarkAuthorizableModel2 $user
+	 * @param string $name
+	 */
+	public function __construct (IQuarkAuthorizationProvider2 $provider, IQuarkAuthorizableModel2 $user, $name = '') {
+		$this->_provider = $provider;
+		$this->_user = new QuarkModel($user);
+		$this->_name = $name;
 	}
 
 	/**
-	 * @param $raw
+	 * @param QuarkDTO $output
 	 *
-	 * @return mixed
+	 * @return bool
 	 */
-	public function Link ($raw) {
-		//$out = new self();
-		//$out->
+	private function _out ($output) {
+		$this->_output = $output ? $output : $this->_output;
+		return (bool)$output;
 	}
 
 	/**
-	 * @return mixed
+	 * @param QuarkDTO $input
+	 *
+	 * @return QuarkSession2
 	 */
-	public function Unlink () {
-		// TODO: Implement Unlink() method.
+	public function Input (QuarkDTO $input) {
+		$this->_input = $input;
+		$this->_provider->Input($this->_input);
+		$this->_user->Session($this->_provider, $this->_input);
+
+		return $this;
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Output () {
+		$this->_out($this->_provider->Output($this->_output));
+
+		return $this->_output;
+	}
+
+	/**
+	 * @return QuarkModel
+	 */
+	public function &User () {
+		return $this->_user;
+	}
+
+	/**
+	 * @param $criteria
+	 * @param int $lifetime
+	 *
+	 * @return bool
+	 */
+	public function Login ($criteria, $lifetime = 0) {
+		return $this->_user->Authorize($this->_provider, $criteria, $lifetime)
+			? $this->_out($this->_provider->Login($this->_user, $lifetime))
+			: false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Logout () {
+		return $this->_out($this->_provider->Logout());
 	}
 }
 
+/**
+ * Interface IQuarkAuthorizationProvider2
+ *
+ * @package Quark
+ */
 interface IQuarkAuthorizationProvider2 {
-	public function Identifier();
+	/**
+	 * @param QuarkModel $user
+	 * @param int $lifetime
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Login(QuarkModel $user, $lifetime);
 
+	/**
+	 * @return QuarkDTO|bool
+	 */
+	public function Logout();
+
+	/**
+	 * @param QuarkDTO $input
+	 *
+	 * @return mixed
+	 */
+	public function Input(QuarkDTO $input);
+
+	/**
+	 * @param QuarkDTO $output
+	 *
+	 * @return mixed
+	 */
+	public function Output(QuarkDTO $output);
+}
+
+/**
+ * Interface IQuarkAuthorizableModel2
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableModel2 extends IQuarkModel {
+	/**
+	 * @param IQuarkAuthorizationProvider2 $provider
+	 * @param $criteria
+	 *
+	 * @return bool
+	 */
+	public function Authorize(IQuarkAuthorizationProvider2 $provider, $criteria);
+
+	/**
+	 * @param IQuarkAuthorizationProvider2 $provider
+	 * @param string $id
+	 *
+	 * @return mixed
+	 */
+	public function Session(IQuarkAuthorizationProvider2 $provider, $id);
 }
 
 /**
