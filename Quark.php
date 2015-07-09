@@ -2514,6 +2514,8 @@ class QuarkView implements IQuarkContainer {
 		$provider = QuarkSession::Get($this->_view->AuthProvider());
 
 		$sign = $provider->Signature();
+		// TODO: replace with
+		// $sign = $provider->Output()->Signature();
 
 		if (!is_string($sign))
 			throw new QuarkArchException('AuthProvider ' . get_class($provider) . ' specified non-string Signature');
@@ -5065,11 +5067,6 @@ class QuarkSession2 implements IQuarkStackable {
 	private $_name = '';
 
 	/**
-	 * @var QuarkDTO $_input
-	 */
-	private $_input;
-
-	/**
 	 * @var QuarkDTO $_output
 	 */
 	private $_output;
@@ -5101,26 +5098,47 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return QuarkSession2
 	 */
 	public function Input (QuarkDTO $input) {
-		$this->_input = $input;
-		$this->_provider->Input($this->_input);
-		$this->_user->Session($this->_provider, $this->_input);
+		$id = $this->_provider->Session($this->_name, $input);
+
+		if ($id)
+			$this->_user->Session($this->_name, $id);
 
 		return $this;
 	}
 
 	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function Name ($name = '') {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+
+		return $name;
+	}
+
+	/**
+	 * @param QuarkDTO $output
+	 *
 	 * @return QuarkDTO
 	 */
-	public function Output () {
-		$this->_out($this->_provider->Output($this->_output));
+	public function &Output (QuarkDTO $output = null) {
+		if (func_num_args() != 0)
+			$this->_output = $output;
 
 		return $this->_output;
 	}
 
 	/**
+	 * @param QuarkModel $user
+	 *
 	 * @return QuarkModel
 	 */
-	public function &User () {
+	public function &User (QuarkModel $user = null) {
+		if (func_num_args() != 0)
+			$this->_user = $user;
+
 		return $this->_user;
 	}
 
@@ -5131,8 +5149,8 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return bool
 	 */
 	public function Login ($criteria, $lifetime = 0) {
-		return $this->_user->Authorize($this->_provider, $criteria, $lifetime)
-			? $this->_out($this->_provider->Login($this->_user, $lifetime))
+		return $this->_user->Login($this->_name, $criteria, $lifetime)
+			? $this->_out($this->_provider->Login($this->_name, $this->_user, $lifetime))
 			: false;
 	}
 
@@ -5140,7 +5158,9 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return bool
 	 */
 	public function Logout () {
-		return $this->_out($this->_provider->Logout());
+		return $this->_user->Logout($this->_name)
+			? $this->_out($this->_provider->Logout($this->_name))
+			: false;
 	}
 }
 
@@ -5151,31 +5171,28 @@ class QuarkSession2 implements IQuarkStackable {
  */
 interface IQuarkAuthorizationProvider2 {
 	/**
-	 * @param QuarkModel $user
-	 * @param int $lifetime
-	 *
-	 * @return QuarkDTO|bool
-	 */
-	public function Login(QuarkModel $user, $lifetime);
-
-	/**
-	 * @return QuarkDTO|bool
-	 */
-	public function Logout();
-
-	/**
+	 * @param string $name
 	 * @param QuarkDTO $input
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function Input(QuarkDTO $input);
+	public function Session($name, QuarkDTO $input);
 
 	/**
-	 * @param QuarkDTO $output
+	 * @param string $name
+	 * @param QuarkModel $user
+	 * @param int $lifetime (seconds)
 	 *
-	 * @return mixed
+	 * @return QuarkDTO|bool
 	 */
-	public function Output(QuarkDTO $output);
+	public function Login($name, QuarkModel $user, $lifetime);
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Logout($name);
 }
 
 /**
@@ -5185,20 +5202,29 @@ interface IQuarkAuthorizationProvider2 {
  */
 interface IQuarkAuthorizableModel2 extends IQuarkModel {
 	/**
-	 * @param IQuarkAuthorizationProvider2 $provider
-	 * @param $criteria
-	 *
-	 * @return bool
-	 */
-	public function Authorize(IQuarkAuthorizationProvider2 $provider, $criteria);
-
-	/**
-	 * @param IQuarkAuthorizationProvider2 $provider
+	 * @param string $name
 	 * @param string $id
 	 *
 	 * @return mixed
 	 */
-	public function Session(IQuarkAuthorizationProvider2 $provider, $id);
+	public function Session($name, $id);
+
+	/**
+	 * @param string $name
+	 * @param $criteria
+	 * @param int $lifetime (seconds)
+	 *
+	 * @return bool
+	 */
+	public function Login($name, $criteria, $lifetime);
+
+	/**
+	 * @param string $name
+	 *
+	 * @return bool
+	 */
+	public function Logout($name);
+
 }
 
 /**
@@ -7250,6 +7276,7 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
  */
 class QuarkCookie {
 	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s GMT';
+	const EXPIRES_SESSION = 0;
 
 	public $name = '';
 	public $value = '';
@@ -7263,10 +7290,13 @@ class QuarkCookie {
 	/**
 	 * @param string $name
 	 * @param string $value
+	 * @param int $lifetime = self::EXPIRES_SESSION
 	 */
-	public function __construct ($name = '', $value = '') {
+	public function __construct ($name = '', $value = '', $lifetime = self::EXPIRES_SESSION) {
 		$this->name = $name;
 		$this->value = $value;
+
+		$this->Lifetime($lifetime);
 	}
 
 	/**

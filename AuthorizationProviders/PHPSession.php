@@ -209,6 +209,88 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	}
 }
 
+/**
+ * Class PHPSession2
+ *
+ * @package Quark\AuthorizationProviders
+ */
 class PHPSession2 implements IQuarkAuthorizationProvider2 {
+	/**
+	 * @return bool
+	 */
+	private function _start () {
+		$start = true;
 
+		if (session_status() == PHP_SESSION_NONE)
+			$start = session_start();
+
+		return $start;
+	}
+
+	/**
+	 * @param string $id
+	 * @param int $lifetime (seconds)
+	 *
+	 * @return QuarkDTO
+	 */
+	private function _end ($id, $lifetime) {
+		$output = new QuarkDTO();
+		$output->Cookie(new QuarkCookie(session_name(), $id, $lifetime));
+		return $output;
+	}
+
+	/**
+	 * @param string $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Session ($name, QuarkDTO $input) {
+		$session = $input->GetCookieByName(session_name());
+
+		if ($session == null) return false;
+		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
+
+		session_id($session->value);
+
+		return $this->_start();
+	}
+
+	/**
+	 * @param string $name
+	 * @param QuarkModel $user
+	 * @param int $lifetime (seconds)
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Login ($name, QuarkModel $user, $lifetime) {
+		/**
+		 * http://stackoverflow.com/a/8311400/2097055
+		 */
+		ini_set('session.gc_maxlifetime', $lifetime);
+		ini_set('session.auto_start', false);
+
+		if (!$this->_start()) return false;
+
+		$_SESSION[$name]['user'] = $user->Model();
+		$_SESSION[$name]['signature'] = Quark::GuID();
+
+		return $this->_end(session_id(), $lifetime);
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Logout ($name) {
+		if (!$this->_start() || !isset($_SESSION[$name])) return false;
+
+		unset($_SESSION[$name]);
+
+		if (sizeof($_SESSION) == 0)
+			session_destroy();
+
+		return $this->_end('', -3600);
+	}
 }
