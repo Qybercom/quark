@@ -5098,10 +5098,16 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return QuarkSession2
 	 */
 	public function Input (QuarkDTO $input) {
-		$id = $this->_provider->Session($this->_name, $input);
+		$id = $input->Session()
+			? $input->Session()
+			: $this->_provider->SessionId($this->_name, $input);
 
-		if ($id)
+		if ($id) {
+			if (!$this->_provider->Session($this->_name, $id))
+				Quark::Log('Cannot start session ' . get_class($this->_provider) . ' by id: ' . $id);
+
 			$this->_user->Session($this->_name, $id);
+		}
 
 		return $this;
 	}
@@ -5176,7 +5182,15 @@ interface IQuarkAuthorizationProvider2 {
 	 *
 	 * @return string
 	 */
-	public function Session($name, QuarkDTO $input);
+	public function SessionId($name, QuarkDTO $input);
+
+	/**
+	 * @param string $name
+	 * @param string $id
+	 *
+	 * @return mixed
+	 */
+	public function Session($name, $id);
 
 	/**
 	 * @param string $name
@@ -6653,6 +6667,11 @@ class QuarkDTO {
 	private $_textData = '';
 
 	/**
+	 * @var string $_session
+	 */
+	private $_session = '';
+
+	/**
 	 * @var string $_signature
 	 */
 	private $_signature = '';
@@ -7077,9 +7096,26 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param string $session
+	 *
 	 * @return string
 	 */
-	public function Signature () {
+	public function Session ($session = '') {
+		if (func_num_args() != 0)
+			$this->_session = $session;
+
+		return $this->_session;
+	}
+
+	/**
+	 * @param string $signature
+	 *
+	 * @return string
+	 */
+	public function Signature ($signature = '') {
+		if (func_num_args() != 0)
+			$this->_signature = $signature;
+
 		return $this->_signature;
 	}
 }

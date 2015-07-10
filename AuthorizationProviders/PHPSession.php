@@ -245,13 +245,22 @@ class PHPSession2 implements IQuarkAuthorizationProvider2 {
 	 *
 	 * @return string
 	 */
-	public function Session ($name, QuarkDTO $input) {
+	public function SessionId ($name, QuarkDTO $input) {
 		$session = $input->GetCookieByName(session_name());
 
-		if ($session == null) return false;
-		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
+		return $session ? $session->value : false;
+	}
 
-		session_id($session->value);
+	/**
+	 * @param string $name
+	 * @param string $id
+	 *
+	 * @return mixed
+	 */
+	public function Session ($name, $id) {
+		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $id)) return false;
+
+		session_id($id);
 
 		return $this->_start();
 	}
