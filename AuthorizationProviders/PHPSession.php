@@ -248,7 +248,7 @@ class PHPSession2 implements IQuarkAuthorizationProvider2 {
 	public function SessionId ($name, QuarkDTO $input) {
 		$session = $input->GetCookieByName(session_name());
 
-		return $session ? $session->value : false;
+		return $session ? $session->value : false; 
 	}
 
 	/**

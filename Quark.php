@@ -604,6 +604,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		foreach ($_SERVER as $name => $value) {
 			$name = str_replace('CONTENT_', 'HTTP_CONTENT_', $name);
+			$name = str_replace('PHP_AUTH_', 'HTTP_AUTH_', $name);
 
 			if (substr($name, 0, 5) == 'HTTP_')
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
@@ -5098,8 +5099,8 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return QuarkSession2
 	 */
 	public function Input (QuarkDTO $input) {
-		$id = $input->Session()
-			? $input->Session()
+		$id = $input->Session($this->_name)
+			? $input->Session($this->_name)
 			: $this->_provider->SessionId($this->_name, $input);
 
 		if ($id) {
@@ -6667,9 +6668,9 @@ class QuarkDTO {
 	private $_textData = '';
 
 	/**
-	 * @var string $_session
+	 * @var array $_session
 	 */
-	private $_session = '';
+	private $_session = array();
 
 	/**
 	 * @var string $_signature
@@ -7096,15 +7097,18 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param string $name
 	 * @param string $session
 	 *
 	 * @return string
 	 */
-	public function Session ($session = '') {
-		if (func_num_args() != 0)
-			$this->_session = $session;
+	public function Session ($name = '', $session = '') {
+		if (func_num_args() == 2)
+			$this->_session[$name] = $session;
 
-		return $this->_session;
+		return isset($this->_session[$name])
+			? $this->_session[$name]
+			: '';
 	}
 
 	/**
