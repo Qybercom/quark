@@ -252,6 +252,15 @@ class PHPSession2 implements IQuarkAuthorizationProvider2 {
 	}
 
 	/**
+	 * @param QuarkDTO $input
+	 *
+	 * @return bool
+	 */
+	public function Recognize (QuarkDTO $input) {
+		return $input->GetCookieByName(session_name()) != null;
+	}
+
+	/**
 	 * @param string $name
 	 * @param string $id
 	 *

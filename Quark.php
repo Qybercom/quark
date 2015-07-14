@@ -34,6 +34,7 @@ class Quark {
 	private static $_gUID = array();
 	private static $_hID = '';
 	private static $_breaks = array();
+	private static $_stack = array();
 
 	/**
 	 * @return bool
@@ -266,6 +267,36 @@ class Quark {
 
 		self::$_gUID[] = $hash;
 		return $hash;
+	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkStackable $object
+	 *
+	 * @return IQuarkStackable
+	 */
+	public static function Stack ($name, IQuarkStackable $object = null) {
+		if (func_num_args() == 2) {
+			$object->Name($name);
+			self::$_stack[] = $object;
+		}
+
+		return self::$_stack[$name];
+	}
+
+	/**
+	 * @param IQuarkStackable $type
+	 *
+	 * @return IQuarkStackable[]
+	 */
+	public static function StackOf (IQuarkStackable $type) {
+		$out = array();
+
+		foreach (self::$_stack as $object)
+			if ($object instanceof $type)
+				$out[] = $object;
+
+		return $out;
 	}
 
 	/**
@@ -578,6 +609,24 @@ class QuarkConfig {
 }
 
 /**
+ * Interface IQuarkStackable
+ *
+ * @package Quark
+ */
+interface IQuarkStackable {
+	/**
+	 * @param string $name
+	 *
+	 * @return mixed
+	 */
+	public function Name($name);
+}
+
+interface IQuarkEnvironmentProvider {
+
+}
+
+/**
  * Class QuarkFPMEnvironmentProvider
  *
  * @package Quark
@@ -602,12 +651,27 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		$headers = array();
 
+		if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW']))
+			$_SERVER['PHP_AUTH_BASIC'] = QuarkDTO::HTTPBasicAuthorization($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
+
 		foreach ($_SERVER as $name => $value) {
+			$authType = '';
+			$authBasic = 0;
+			$authDigest = 0;
+
 			$name = str_replace('CONTENT_', 'HTTP_CONTENT_', $name);
-			$name = str_replace('PHP_AUTH_', 'HTTP_AUTH_', $name);
+
+			$name = str_replace('PHP_AUTH_BASIC', 'HTTP_AUTHORIZATION', $name, $authBasic);
+			$name = str_replace('PHP_AUTH_DIGEST', 'HTTP_AUTHORIZATION', $name, $authDigest);
+
+			if ($authBasic != 0)
+				$authType = 'Basic ';
+
+			if ($authDigest != 0)
+				$authType = 'Digest ';
 
 			if (substr($name, 0, 5) == 'HTTP_')
-				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = ($name == 'HTTP_AUTHORIZATION' ? $authType : '') . $value;
 		}
 
 		$output = null;
@@ -1875,6 +1939,20 @@ class QuarkService {
 	 */
 	public function Authorize ($method = '') {
 		if (!($this->_service instanceof IQuarkAuthorizableLiteService)) return null;
+
+		// TODO:
+		// * search for auth provider recognition and set first recognized to QuarkDTO->AssumedSession()
+		// * auth algorithm with new session
+		/**
+		 * @var QuarkSession2[] $providers
+		 */
+		$providers = Quark::StackOf(new QuarkSession2());
+
+		foreach ($providers as $provider)
+			if ($provider->Recognize($this->_input)) {
+				$this->_input->Session($provider->Name());
+				break;
+			}
 
 		$this->_session = QuarkSession::Get($this->_service->AuthorizationProvider($this->_input));
 		$this->_session->Initialize($this->_input);
@@ -5044,8 +5122,6 @@ class QuarkSession implements IQuarkLinkedModel {
 	}
 }
 
-interface IQuarkStackable {}
-
 /**
  * Class QuarkSession2
  *
@@ -5077,7 +5153,9 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @param IQuarkAuthorizableModel2 $user
 	 * @param string $name
 	 */
-	public function __construct (IQuarkAuthorizationProvider2 $provider, IQuarkAuthorizableModel2 $user, $name = '') {
+	public function __construct (IQuarkAuthorizationProvider2 $provider = null, IQuarkAuthorizableModel2 $user = null, $name = '') {
+		if (func_num_args() == 0) return;
+
 		$this->_provider = $provider;
 		$this->_user = new QuarkModel($user);
 		$this->_name = $name;
@@ -5099,7 +5177,7 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return QuarkSession2
 	 */
 	public function Input (QuarkDTO $input) {
-		$id = $input->Session($this->_name)
+		/*$id = $input->Session($this->_name)
 			? $input->Session($this->_name)
 			: $this->_provider->SessionId($this->_name, $input);
 
@@ -5108,9 +5186,18 @@ class QuarkSession2 implements IQuarkStackable {
 				Quark::Log('Cannot start session ' . get_class($this->_provider) . ' by id: ' . $id);
 
 			$this->_user->Session($this->_name, $id);
-		}
+		}*/
 
 		return $this;
+	}
+
+	/**
+	 * @param QuarkDTO $input
+	 *
+	 * @return bool
+	 */
+	public function Recognize (QuarkDTO $input) {
+		return $this->_provider->Recognize($input);
 	}
 
 	/**
@@ -5184,6 +5271,13 @@ interface IQuarkAuthorizationProvider2 {
 	 * @return string
 	 */
 	public function SessionId($name, QuarkDTO $input);
+
+	/**
+	 * @param QuarkDTO $input
+	 *
+	 * @return bool
+	 */
+	public function Recognize(QuarkDTO $input);
 
 	/**
 	 * @param string $name
@@ -6668,14 +6762,19 @@ class QuarkDTO {
 	private $_textData = '';
 
 	/**
-	 * @var array $_session
+	 * @var string $_session
 	 */
-	private $_session = array();
+	private $_session = '';
 
 	/**
 	 * @var string $_signature
 	 */
 	private $_signature = '';
+
+	/**
+	 * @var IQuarkEnvironmentProvider $_environment
+	 */
+	private $_environment;
 
 	/**
 	 * @param $key
@@ -7098,17 +7197,14 @@ class QuarkDTO {
 
 	/**
 	 * @param string $name
-	 * @param string $session
 	 *
 	 * @return string
 	 */
-	public function Session ($name = '', $session = '') {
+	public function Session ($name = '') {
 		if (func_num_args() == 2)
-			$this->_session[$name] = $session;
+			$this->_session = $name;
 
-		return isset($this->_session[$name])
-			? $this->_session[$name]
-			: '';
+		return $this->_session;
 	}
 
 	/**
@@ -7121,6 +7217,28 @@ class QuarkDTO {
 			$this->_signature = $signature;
 
 		return $this->_signature;
+	}
+
+	/**
+	 * @param IQuarkEnvironmentProvider $provider
+	 *
+	 * @return IQuarkEnvironmentProvider
+	 */
+	public function Environment (IQuarkEnvironmentProvider &$provider = null) {
+		if (func_num_args() != 0)
+			$this->_environment = $provider;
+
+		return $this->_environment;
+	}
+
+	/**
+	 * @param string $username
+	 * @param string $password
+	 *
+	 * @return string
+	 */
+	public static function HTTPBasicAuthorization ($username = '', $password = '') {
+		return base64_encode($username . ':' . $password);
 	}
 }
 
