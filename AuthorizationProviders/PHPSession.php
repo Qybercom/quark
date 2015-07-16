@@ -2,8 +2,8 @@
 namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizationProvider;
-
 use Quark\IQuarkAuthorizationProvider2;
+
 use Quark\Quark;
 use Quark\QuarkCookie;
 use Quark\QuarkModel;
@@ -240,18 +240,6 @@ class PHPSession2 implements IQuarkAuthorizationProvider2 {
 	}
 
 	/**
-	 * @param string $name
-	 * @param QuarkDTO $input
-	 *
-	 * @return string
-	 */
-	public function SessionId ($name, QuarkDTO $input) {
-		$session = $input->GetCookieByName(session_name());
-
-		return $session ? $session->value : false; 
-	}
-
-	/**
 	 * @param QuarkDTO $input
 	 *
 	 * @return bool
@@ -262,16 +250,23 @@ class PHPSession2 implements IQuarkAuthorizationProvider2 {
 
 	/**
 	 * @param string $name
-	 * @param string $id
+	 * @param QuarkDTO $input
+	 * @param bool $stream
 	 *
-	 * @return mixed
+	 * @return bool|mixed
 	 */
-	public function Session ($name, $id) {
-		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $id)) return false;
+	public function Session ($name, QuarkDTO $input, $stream) {
+		$session = $stream
+			? $input->AuthorizationProvider()->ToCookie()
+			: $input->GetCookieByName(session_name());
 
-		session_id($id);
+		if (!$session || !preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
 
-		return $this->_start();
+		session_id($session->value);
+
+		if (!$this->_start()) return false;
+
+		return $_SESSION[$name]['user'];
 	}
 
 	/**
