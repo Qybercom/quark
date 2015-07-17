@@ -1828,6 +1828,7 @@ class QuarkService {
 	 * @param string $uri
 	 * @param IQuarkIOProcessor $input
 	 * @param IQuarkIOProcessor $output
+	 * @param bool $http = true
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
@@ -1961,7 +1962,11 @@ class QuarkService {
 
 		//$this->_session = QuarkSession::Get($this->_service->AuthorizationProvider($this->_input));
 		//$this->_session->Initialize($this->_input);
-		$this->_session = Quark::Stack($this->_service->AuthorizationProvider($this->_input));
+		/**
+		 * @var QuarkSession|QuarkSession2 $session
+		 */
+		$session = Quark::Stack($this->_service->AuthorizationProvider($this->_input));
+		$this->_session = $session;
 		$this->_session->Input($this->_input);
 
 		$this->_output->Merge($this->_session->Trail($this->_output));
@@ -5223,6 +5228,7 @@ class QuarkSession2 implements IQuarkStackable {
 	 * @return QuarkSession2
 	 */
 	public function Input (QuarkDTO $input) {
+		Quark::Trace($input);
 		/*$id = $input->Session($this->_name)
 			? $input->Session($this->_name)
 			: $this->_provider->SessionId($this->_name, $input);
@@ -7799,7 +7805,7 @@ class QuarkLanguage {
 		return $this->_name == $language
 		|| $strict
 			? false
-			: ($this->_group == strtoupper($language));
+			: ($this->_location == strtoupper($language));
 	}
 
 	/**
