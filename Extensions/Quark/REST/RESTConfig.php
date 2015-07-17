@@ -4,6 +4,7 @@ namespace Quark\Extensions\Quark\REST;
 use Quark\IQuarkExtensionConfig;
 
 use Quark\Quark;
+use Quark\QuarkObject;
 
 /**
  * Class RESTConfig
@@ -36,7 +37,7 @@ class RESTConfig implements IQuarkExtensionConfig {
 			$endpoint = Quark::WebHost();
 
 		if (strlen(trim($source)) == 0)
-			$source = Quark::ClassOf($descriptor);
+			$source = QuarkObject::ClassOf($descriptor);
 
 		$this->_descriptor = $descriptor;
 		$this->_endpoint = $endpoint;
