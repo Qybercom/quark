@@ -884,7 +884,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	/**
 	 * @param string $uri
 	 *
-	 * @return IQuarkService|IQuarkStreamConnect
+	 * @return QuarkService|IQuarkStreamConnect
 	 */
 	public function StreamConnect ($uri = '') {
 		if (func_num_args() != 0) {
@@ -898,7 +898,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	/**
 	 * @param string $uri
 	 *
-	 * @return IQuarkService|IQuarkStreamClose
+	 * @return QuarkService|IQuarkStreamClose
 	 */
 	public function StreamClose ($uri = '') {
 		if (func_num_args() != 0) {
@@ -912,7 +912,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	/**
 	 * @param string $uri
 	 *
-	 * @return IQuarkService|IQuarkStreamUnknown
+	 * @return QuarkService|IQuarkStreamUnknown
 	 */
 	public function StreamUnknown ($uri = '') {
 		if (func_num_args() != 0) {
@@ -1706,11 +1706,11 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param QuarkObject|object|array $data
-	 * @param callable(QuarkClient $client) $filter
+	 * @param callable(QuarkClient $client) $sender
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($data, callable $filter = null) {
+	public function BroadcastLocal ($data, callable $sender = null) {
 		return $this->_call('BroadcastLocal', func_get_args());
 	}
 }
@@ -1974,7 +1974,8 @@ class QuarkService implements IQuarkContainer {
 		 */
 		$session = Quark::Stack($this->_service->AuthorizationProvider($this->_input));
 
-		if (!$session) throw new QuarkArchException('Authorization provider specified by ' . get_class($this->_service) . ' does not recognized');
+		if (!$session)
+			throw new QuarkArchException('Authorization provider specified by ' . get_class($this->_service) . ' does not recognized');
 
 		$this->_session = $session;
 		$this->_session->Input($this->_input);
