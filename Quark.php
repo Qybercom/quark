@@ -631,7 +631,8 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		$response = explode("\r\n\r\n", $service->Output()->SerializeResponse());
 		$headers = explode("\r\n", $response[0]);
 
-		foreach ($headers as $header) header($header);
+		foreach ($headers as $header)
+			header($header, false);
 
 		if (sizeof($response) > 1)
 			echo $response[1];
@@ -2037,7 +2038,7 @@ class QuarkService implements IQuarkContainer {
 		if ($output === null)
 			$output = $this->Call($method, $this->_http);
 
-		if ($output instanceof QuarkDTO)
+		if ($this->_session->Output() instanceof QuarkDTO && $this->_output instanceof QuarkDTO)
 			$this->_session->Output()->Processor($this->_output->Processor());
 
 		$this->_output->Merge($this->_session->Output());
@@ -6901,11 +6902,13 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function SerializeResponse ($all = true) {
-		if (sizeof($this->_cookies) != 0)
-			$this->_headers[self::HEADER_SET_COOKIE] = QuarkCookie::SerializeCookies($this->_cookies);
-
 		return $this->_serialize($all, function () {
-			return 'HTTP/1.0 ' . $this->_status . "\r\n";
+			$cookies = '';
+
+			foreach ($this->_cookies as $cookie)
+				$cookies .= self::HEADER_SET_COOKIE . ': ' . $cookie->Serialize() . "\r\n";
+
+			return 'HTTP/1.0 ' . $this->_status . "\r\n" . $cookies;
 		});
 	}
 
@@ -7192,9 +7195,9 @@ class QuarkDTO {
 			$this->_status = $data->Status();
 			$this->_method = $data->Method();
 			$this->_data = $data->Data();
-			$this->_headers = $data->Headers();
+			$this->_headers += $data->Headers();
 			$this->_boundary = $data->Boundary();
-			$this->_cookies = $data->Cookies();
+			$this->_cookies += $data->Cookies();
 			$this->_processor = $data->Processor();
 			$this->_raw = $data->Raw();
 			$this->_textData = $data->TextData();
