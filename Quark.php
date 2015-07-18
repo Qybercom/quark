@@ -1990,7 +1990,7 @@ class QuarkService implements IQuarkContainer {
 
 		if (!QuarkObject::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) return null;
 
-		$sign = $this->_session->Signature();
+		$sign = $this->_session->Signature($this->_input);
 
 		if ($sign != '' && $this->_input->Signature() == $sign) return null;
 
@@ -2016,12 +2016,6 @@ class QuarkService implements IQuarkContainer {
 	 * @param string $method
 	 */
 	public function Pipeline ($method = '') {
-		// TODO: service pipeline
-		// * auth.in
-		// * auth check
-		// * service
-		// * auth.out
-		// * response
 		$method = func_num_args() != 0
 			? $method
 			: ($this->_service instanceof IQuarkAnyService
@@ -5156,6 +5150,15 @@ class QuarkSession implements IQuarkStackable {
 			? $this->_out($this->_provider->Logout($this->_name))
 			: false;
 	}
+
+	/**
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Signature (QuarkDTO $input) {
+		return $this->_provider->Signature($this->_name, $input);
+	}
 }
 
 /**
@@ -5195,6 +5198,14 @@ interface IQuarkAuthorizationProvider {
 	 * @return QuarkDTO|bool
 	 */
 	public function Logout($name);
+
+	/**
+	 * @param string $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Signature($name, QuarkDTO $input);
 }
 
 /**
@@ -6632,7 +6643,8 @@ class QuarkURI {
  * @package Quark\Extensions\Quark
  */
 class QuarkDTO {
-	const HTTP_PROTOCOL_RESPONSE = '#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis';
+	const HTTP_PROTOCOL_VERSION = 'HTTP/1.0';
+	const HTTP_PROTOCOL_DELIMITER = '\n\s\n';
 
 	const METHOD_GET = 'GET';
 	const METHOD_POST = 'POST';
@@ -6672,6 +6684,20 @@ class QuarkDTO {
 
 	const UPGRADE_WEBSOCKET = 'websocket';
 
+	const DISPOSITION_INLINE = 'inline';
+	const DISPOSITION_FORM_DATA = 'form-data';
+	const DISPOSITION_ATTACHMENT = 'attachment';
+
+	const MULTIPART_FORM_DATA = 'multipart/form-data';
+	const MULTIPART_MIXED = 'multipart/mixed';
+	const MULTIPART_ALTERNATIVE = 'multipart/alternative';
+	const MULTIPART_RELATED = 'multipart/related';
+
+	const TRANSFER_ENCODING_BINARY = 'binary';
+	const TRANSFER_ENCODING_BASE64 = 'base64';
+
+	const CHARSET_UTF8= 'utf-8';
+
 	/**
 	 * @var string $_raw
 	 */
@@ -6681,6 +6707,11 @@ class QuarkDTO {
 	 * @var IQuarkIOProcessor $_processor
 	 */
 	private $_processor = null;
+
+	/**
+	 * @var string $_protocol
+	 */
+	private $_protocol = self::HTTP_PROTOCOL_VERSION;
 
 	/**
 	 * @var QuarkURI $_uri
@@ -6718,19 +6749,39 @@ class QuarkDTO {
 	private $_languages = array();
 
 	/**
+	 * @var string $_agent
+	 */
+	private $_agent = '';
+
+	/**
 	 * @var string $_boundary
 	 */
 	private $_boundary = '';
 
 	/**
+	 * @var string $_encoding
+	 */
+	private $_encoding = self::TRANSFER_ENCODING_BINARY;
+
+	/**
+	 * @var bool $_multipart
+	 */
+	private $_multipart = false;
+
+	/**
+	 * @var int $_length
+	 */
+	private $_length = 0;
+
+	/**
+	 * @var string $_charset
+	 */
+	private $_charset = self:: CHARSET_UTF8;
+
+	/**
 	 * @var mixed $_data
 	 */
 	private $_data = '';
-
-	/**
-	 * @var mixed $_textData
-	 */
-	private $_textData = '';
 
 	/**
 	 * @var QuarkKeyValuePair $_session
@@ -6825,153 +6876,54 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param bool $all
-	 * @param callable $head
+	 * @param string $username
+	 * @param string $password
 	 *
 	 * @return string
 	 */
-	private function _serialize ($all = true, callable $head) {
-		$query = '';
-
-		$this->_processor = new QuarkMultipartIOProcessor($this->_processor, $this->_boundary);
-		$this->_raw = $this->_data instanceof QuarkView
-			? $this->_data->Compile()
-			: $this->_processor->Encode($this->_data, $this->_textData);
-
-		if ($all) {
-			if ($this->_uri != null) $query .= $head();
-
-			$query .= $this->SerializeHeaders();
-		}
-
-		return $this->_raw = $query . $this->_raw;
+	public static function HTTPBasicAuthorization ($username = '', $password = '') {
+		return base64_encode($username . ':' . $password);
 	}
 
 	/**
-	 * @param bool $all
-	 *
-	 * @return string
-	 */
-	public function Serialize ($all = true) {
-		$this->_headers[self::HEADER_HOST] = $this->_uri->host;
-		$this->_headers[self::HEADER_COOKIE] = QuarkCookie::SerializeCookies($this->_cookies);
-
-		return $this->_serialize($all, function () {
-			return $this->_method . ' ' . $this->_uri->Query() . ' HTTP/1.0' . "\r\n";
-		});
-	}
-
-	/**
-	 * @return string
-	 */
-	public function SerializeHeaders () {
-		$query = '';
-
-		$this->_headers[self::HEADER_CONTENT_TYPE] = $this->_processor->MimeType() . '; charset=utf-8';
-		$this->_headers[self::HEADER_CONTENT_LENGTH] = strlen($this->_raw);
-
-		foreach ($this->_headers as $key => $value)
-			$query .= $key . ': ' . $value . "\r\n";
-
-		return $query . "\r\n";
-	}
-
-	/**
-	 * @param string $raw
+	 * @param mixed $data
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Unserialize ($raw = '') {
+	public function Merge ($data = []) {
+		if ($data instanceof QuarkView) $this->_data = $data;
+		elseif ($data instanceof QuarkDTO) {
+			$this->_status = $data->Status();
+			$this->_method = $data->Method();
+			$this->_data = $data->Data();
+			$this->_boundary = $data->Boundary();
+			$this->_headers += $data->Headers();
+			$this->_cookies += $data->Cookies();
+			$this->_languages += $data->Languages();
+			$this->_processor = $data->Processor();
+			$this->_raw = $data->Raw();
+			$this->_uri = $data->URI() == null ? $this->_uri : $data->URI();
+			$this->_remote = $data->Remote() == null ? $this->_remote : $data->Remote();
+			$this->_charset = $data->Charset();
+		}
+		else {
+			if (is_string($data)) $this->_data .= $data;
+			else $this->_data = QuarkObject::Normalize($this->_data, $data);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param string $protocol
+	 *
+	 * @return string
+	 */
+	public function Protocol ($protocol = '') {
 		if (func_num_args() != 0)
-			$this->_raw = $raw;
+			$this->_protocol = $protocol;
 
-		if (preg_match_all(self::HTTP_PROTOCOL_RESPONSE, $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
-
-		$http = $found[0];
-
-		$status = explode(' ', $http[1]);
-
-		if (sizeof($status) > 1)
-			$this->_status = $status[1];
-
-		$this->ParseHeaders($http[2]);
-		$this->Merge($this->_processor->Decode($http[3]));
-
-		return $this;
-	}
-
-	/**
-	 * @param bool $all
-	 *
-	 * @return string
-	 */
-	public function SerializeResponse1 ($all = true) {
-		return $this->_serialize($all, function () {
-			$cookies = '';
-
-			foreach ($this->_cookies as $cookie)
-				$cookies .= self::HEADER_SET_COOKIE . ': ' . $cookie->Serialize() . "\r\n";
-
-			return 'HTTP/1.0 ' . $this->_status . "\r\n" . $cookies;
-		});
-	}
-
-	/**
-	 * @return array
-	 */
-	public function SerializeResponseSplit () {
-		$this->SerializeResponse1();
-
-		if (preg_match_all(self::HTTP_PROTOCOL_RESPONSE, $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
-
-		$http = $found[0];
-
-		return $http;
-	}
-
-	/**
-	 * @param string $raw
-	 * @param bool   $secure
-	 *
-	 * @return QuarkDTO
-	 */
-	public function UnserializeRequest1 ($raw = '', $secure = false) {
-		$this->_raw = $raw;
-
-		if (preg_match_all('#^(.*) (.*) HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw . "\r\n", $found, PREG_SET_ORDER) == 0) return null;
-
-		$http = $found[0];
-
-		$this->Method($http[1]);
-		$this->ParseHeaders($http[4]);
-		$this->URI(QuarkURI::FromURI('http' . ($secure ? 's' : '') . '://' . $this->Header(QuarkDTO::HEADER_HOST) . $http[2]));
-		$this->Data($http[5]);
-
-		return $this;
-	}
-
-	/**
-	 * @param string $source
-	 */
-	public function ParseHeaders ($source = '') {
-		if (preg_match_all('#(.*)\: (.*)\n#Uis', $source . "\r\n", $headers, PREG_SET_ORDER) == 0) return;
-
-		$cookies = array();
-
-		foreach ($headers as $header) {
-			$key = trim($header[1]);
-			$value = trim($header[2]);
-
-			// TODO: language
-			if ($key == self::HEADER_ACCEPT_LANGUAGE)
-				$this->_languages = QuarkLanguage::CollectionFromAcceptLanguage($value);
-
-			if ($key == self::HEADER_SET_COOKIE) $cookies[] = $value;
-			else $this->_headers[$key] = $value;
-		}
-
-		foreach ($cookies as $cookie)
-			$this->_cookies[] = QuarkCookie::FromSetCookie($cookie);
+		return $this->_protocol;
 	}
 
 	/**
@@ -6980,10 +6932,8 @@ class QuarkDTO {
 	 * @return IQuarkIOProcessor
 	 */
 	public function Processor (IQuarkIOProcessor $processor = null) {
-		if (func_num_args() == 1 && $processor != null) {
+		if (func_num_args() == 1 && $processor != null)
 			$this->_processor = $processor;
-			$this->_headers[self::HEADER_CONTENT_TYPE] = $processor->MimeType();
-		}
 
 		return $this->_processor;
 	}
@@ -7044,17 +6994,17 @@ class QuarkDTO {
 	 */
 	public function Headers ($headers = []) {
 		if (func_num_args() == 1 && is_array($headers)) {
-			$this->_headers = $headers;
+			$assoc = QuarkObject::isAssociative($headers);
 
-			if (isset($headers[self::HEADER_COOKIE]))
-				$this->_cookies = QuarkCookie::FromCookie($headers[self::HEADER_COOKIE]);
+			foreach ($headers as $key => $value) {
+				if (!$assoc) {
+					$header = explode(': ', $value);
+					$key = $header[0];
+					$value = isset($header[1]) ? $header[1] : '';
+				}
 
-			if (isset($headers[self::HEADER_SET_COOKIE]))
-				$this->_cookies = QuarkCookie::FromSetCookie($headers[self::HEADER_SET_COOKIE]);
-
-			if (isset($headers[self::HEADER_ACCEPT_LANGUAGE]))
-				$this->_languages = QuarkLanguage::CollectionFromAcceptLanguage($headers[self::HEADER_ACCEPT_LANGUAGE]);
-
+				$this->Header($key, $value);
+			}
 		}
 
 		return $this->_headers;
@@ -7070,11 +7020,25 @@ class QuarkDTO {
 		if (func_num_args() == 2)
 			$this->_headers[$key] = $value;
 
-		if ($key == self::HEADER_COOKIE)
-			$this->_cookies = QuarkCookie::FromCookie($value);
+		switch ($key) {
+			case self::HEADER_COOKIE:
+				$this->_cookies = QuarkCookie::FromCookie($value);
+				break;
 
-		if ($key == self::HEADER_SET_COOKIE)
-			$this->_cookies[] = QuarkCookie::FromSetCookie($value);
+			case self::HEADER_SET_COOKIE:
+				$this->_cookies[] = QuarkCookie::FromSetCookie($value);
+				break;
+
+			case self::HEADER_ACCEPT_LANGUAGE:
+				$this->_languages = QuarkLanguage::FromAcceptLanguage($value);
+				break;
+
+			case self::HEADER_CONTENT_LANGUAGE:
+				$this->_languages = QuarkLanguage::FromContentLanguage($value);
+				break;
+
+			default: break;
+		}
 
 		return isset($this->_headers[$key]) ? $this->_headers[$key] : null;
 	}
@@ -7154,6 +7118,18 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param string $agent
+	 *
+	 * @return string
+	 */
+	public function UserAgent ($agent = '') {
+		if (func_num_args() != 0)
+			$this->_agent = $agent;
+
+		return $this->_agent;
+	}
+
+	/**
 	 * @param string $boundary
 	 *
 	 * @return string
@@ -7178,18 +7154,6 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param mixed $textData
-	 *
-	 * @return mixed
-	 */
-	public function TextData ($textData = []) {
-		if (func_num_args() == 1)
-			$this->_textData = $textData;
-
-		return $this->_textData;
-	}
-
-	/**
 	 * @param mixed $raw
 	 *
 	 * @return mixed
@@ -7199,44 +7163,6 @@ class QuarkDTO {
 			$this->_raw = $raw;
 
 		return $this->_raw;
-	}
-
-	/**
-	 * @param mixed $data
-	 *
-	 * @return QuarkDTO
-	 */
-	public function Merge ($data = []) {
-		if ($data instanceof QuarkView) $this->_data = $data;
-		elseif ($data instanceof QuarkDTO) {
-			$this->_status = $data->Status();
-			$this->_method = $data->Method();
-			$this->_data = $data->Data();
-			$this->_headers += $data->Headers();
-			$this->_boundary = $data->Boundary();
-			$this->_cookies += $data->Cookies();
-			$this->_processor = $data->Processor();
-			$this->_raw = $data->Raw();
-			$this->_textData = $data->TextData();
-			$this->_uri = $data->URI() == null ? $this->_uri : $data->URI();
-		}
-		else {
-			if (is_string($this->_data)) {
-				if (is_string($data)) $this->_data .= $data;
-				else {
-					$this->_textData = $this->_data;
-					$this->_data = QuarkObject::Normalize($this->_data, $data);
-				}
-			}
-			else {
-				if (is_string($data)) $this->_textData .= $data;
-				else {
-					$this->_data = QuarkObject::Normalize($this->_data, $data);
-				}
-			}
-		}
-
-		return $this;
 	}
 
 	/**
@@ -7276,34 +7202,217 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param string $username
-	 * @param string $password
+	 * @param string $encoding = self::TRANSFER_ENCODING_BINARY
 	 *
 	 * @return string
 	 */
-	public static function HTTPBasicAuthorization ($username = '', $password = '') {
-		return base64_encode($username . ':' . $password);
+	public function Encoding ($encoding = self::TRANSFER_ENCODING_BINARY) {
+		if (func_num_args() != 0)
+			$this->_encoding = $encoding;
+
+		return $this->_encoding;
 	}
 
-	public function SerializeRequest () {}
-	public function SerializeRequestBody () {}
-	public function SerializeRequestHeaders () {}
-	public function SerializeRequestHeadersToArray () {}
+	/**
+	 * @param string $charset = self::CHARSET_UTF8
+	 *
+	 * @return string
+	 */
+	public function Charset ($charset = self::CHARSET_UTF8) {
+		if (func_num_args() != 0)
+			$this->_charset = $charset;
 
-	public function SerializeResponse () {}
-	public function SerializeResponseBody () {}
-	public function SerializeResponseHeaders () {}
-	public function SerializeResponseHeadersToArray () {}
+		return $this->_charset;
+	}
 
-	public function UnserializeRequest () {}
+	/**
+	 * @return string
+	 */
+	public function SerializeRequest () {
+		$body = $this->_serializeBody(true);
+
+		return $this->_serializeHeaders(true, true) . "\r\n\r\n" . $body;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SerializeRequestBody () {
+		return $this->_serializeBody(true);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SerializeRequestHeaders () {
+		return $this->_serializeHeaders(true, true);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function SerializeRequestHeadersToArray () {
+		return $this->_serializeHeaders(true, false);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SerializeResponse () {
+		$body = $this->_serializeBody(false);
+
+		return $this->_serializeHeaders(false, true) . "\r\n\r\n" . $body;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SerializeResponseBody () {
+		return $this->_serializeBody(false);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SerializeResponseHeaders () {
+		return $this->_serializeHeaders(false, true);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function SerializeResponseHeadersToArray () {
+		return $this->_serializeHeaders(false, false);
+	}
+
+	public function UnserializeRequest ($raw = '') {}
 	public function UnserializeRequestBody () {}
-	public function UnserializeRequestHeaders () {}
-	public function UnserializeRequestHeadersToArray () {}
+	public function UnserializeRequestHeaders ($raw = '') {
 
-	public function UnserializeResponse () {}
+	}
+
+	public function UnserializeResponse ($raw = '') {}
 	public function UnserializeResponseBody () {}
-	public function UnserializeResponseHeaders () {}
-	public function UnserializeResponseHeadersToArray () {}
+	public function UnserializeResponseHeaders ($raw = '') {
+		return $this->Headers(explode(self::HTTP_PROTOCOL_DELIMITER, $raw));
+	}
+
+	/**
+	 * @param bool $client
+	 * @param bool $str
+	 *
+	 * @return string|array
+	 */
+	private function _serializeHeaders ($client, $str) {
+		$headers = array($client
+			? $this->_method . ' ' . $this->_uri->Query() . ' ' . $this->_protocol
+			: $this->_protocol . ' ' . $this->_status
+		);
+
+		$typeSet = isset($this->_headers[self::HEADER_CONTENT_TYPE]);
+		$typeValue = $typeSet ? $this->_headers[self::HEADER_CONTENT_TYPE] : '';
+
+		$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
+		$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
+			? $typeValue
+			: ($this->_multipart
+				? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
+				: $this->_processor->MimeType() . '; charset=' . $this->_charset
+			);
+
+		if ($client) {
+			$this->_headers[self::HEADER_HOST] = $this->_uri->host;
+			$this->_headers[self::HEADER_COOKIE] = QuarkCookie::SerializeCookies($this->_cookies);
+
+			if (sizeof($this->_languages) != 0)
+				$this->_headers[self::HEADER_ACCEPT_LANGUAGE] = QuarkLanguage::SerializeAcceptLanguage($this->_languages);
+		}
+		else {
+			foreach ($this->_cookies as $cookie)
+				$headers[] = self::HEADER_SET_COOKIE . ': ' . $cookie->Serialize();
+
+			if (sizeof($this->_languages) != 0)
+				$this->_headers[self::HEADER_CONTENT_LANGUAGE] = QuarkLanguage::SerializeContentLanguage($this->_languages);
+		}
+
+		foreach ($this->_headers as $key => $value)
+			$headers[] = $key . ': ' . $value;
+
+		return $str ? implode("\r\n", $headers) : $headers;
+	}
+
+	/**
+	 * @param bool $client
+	 *
+	 * @return string
+	 */
+	private function _serializeBody ($client) {
+		/**
+		 * @var QuarkKeyValuePair[] $files
+		 */
+		$files = array();
+
+		if ($this->_data instanceof QuarkView) {
+			$this->_processor = new QuarkHTMLIOProcessor();
+			$out = $this->_data->Compile();
+		}
+		else {
+			$output = is_scalar($this->_data) || QuarkObject::isIterative($this->_data)
+				? $this->_data
+				: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def) use (&$files) {
+					if ($def instanceof QuarkFile) {
+						$def = Quark::GuID();
+						$files[] = new QuarkKeyValuePair($def, $item);
+					}
+
+					return $def;
+				});
+
+			$out = $this->_processor->Encode($output);
+
+			if (sizeof($files) != 0) {
+				$this->_multipart = true;
+				$output = $this->_part($this->_processor->MimeType(), $out, $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_INLINE);
+
+				foreach ($files as $file)
+					$output .= $this->_part($file->Key(), $file->Value(), $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_ATTACHMENT);
+
+				$out = $output . '--' . $this->_boundary . '--';
+			}
+		}
+
+		if (sizeof($files) == 0 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
+			$out = base64_encode($out);
+
+		$this->_length = strlen($out);
+
+		return $out;
+	}
+
+	/**
+	 * @param $key
+	 * @param mixed $value
+	 * @param string $disposition
+	 *
+	 * @return string
+	 */
+	private function _part ($key, $value, $disposition) {
+		$file = $value instanceof QuarkFile;
+		$contents = $file ? $value->Load()->Content() : $value;
+
+		return
+			'--' . $this->_boundary . "\r\n"
+			. self::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
+			. (self::HEADER_CONTENT_DISPOSITION . ': ' . $disposition
+				. ($disposition == self::DISPOSITION_FORM_DATA ? '; name="' . $key . '"' : '')
+				. ($file ? '; filename="' . $value->name . '"' : '')
+				. "\r\n"
+			)
+			. ($file ? self::HEADER_CONTENT_TRANSFER_ENCODING . ': ' . $this->_encoding . "\r\n" : '')
+			. "\r\n"
+			. ($file && $this->_encoding == self::TRANSFER_ENCODING_BASE64 ? base64_encode($contents) : $contents)
+			. "\r\n";
+	}
 }
 
 /**
@@ -7352,8 +7461,8 @@ class QuarkHTTPTransportClient implements IQuarkTransportProviderClient {
 		$this->_response->URI($this->_request->URI());
 		$this->_response->Method($this->_request->Method());
 
-		$client->Send($request = $this->_request->Serialize());
-		$this->_response->Unserialize($response = $client->Receive());
+		$client->Send($request = $this->_request->SerializeRequest());
+		$this->_response->UnserializeResponse($response = $client->Receive());
 		$client->Close();
 
 		return $this->_response;
@@ -7554,7 +7663,7 @@ class QuarkCookie {
 	 *
 	 * @return QuarkCookie[]
 	 */
-	public static function FromCookie ($header) {
+	public static function FromCookie ($header = '') {
 		$out = array();
 		$cookies = explode(';', $header);
 
@@ -7573,7 +7682,7 @@ class QuarkCookie {
 	 *
 	 * @return QuarkCookie
 	 */
-	public static function FromSetCookie ($header) {
+	public static function FromSetCookie ($header = '') {
 		$cookie = explode(';', $header);
 
 		$instance = new QuarkCookie();
@@ -7713,19 +7822,72 @@ class QuarkLanguage {
 	 *
 	 * @return QuarkLanguage[]
 	 */
-	public static function CollectionFromAcceptLanguage ($header = '') {
+	public static function FromAcceptLanguage ($header = '') {
 		$out = array();
 		$languages = explode(',', $header);
 
-		foreach ($languages as $language) {
-			$lang = explode(';', $language);
-			$loc = explode('-', $lang[0]);
-			$q = explode('=', sizeof($lang) == 1 ? 'q=1' : $lang[1]);
+		foreach ($languages as $raw) {
+			$language = explode(';', $raw);
+			$loc = explode('-', $language[0]);
+			$q = explode('=', sizeof($language) == 1 ? 'q=1' : $language[1]);
 
-			$out[] = new self($lang[0], array_reverse($q)[0], array_reverse($loc)[0]);
+			$out[] = new QuarkLanguage($language[0], array_reverse($q)[0], array_reverse($loc)[0]);
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param string $header
+	 *
+	 * @return QuarkLanguage[]
+	 */
+	public static function FromContentLanguage ($header = '') {
+		$out = array();
+		$languages = explode(',', $header);
+
+		foreach ($languages as $raw)
+			$out[] = new QuarkLanguage(trim($raw));
+
+		return $out;
+	}
+
+	/**
+	 * @param QuarkLanguage[] $languages
+	 *
+	 * @return string
+	 */
+	public static function SerializeAcceptLanguage ($languages = []) {
+		if (!is_array($languages)) return '';
+
+		$out = array();
+
+		/**
+		 * @var QuarkLanguage[] $languages
+		 */
+		foreach ($languages as $language)
+			$out[] = $language->Name() . ';q=' . $language->Quantity();
+
+		return implode(';', $out);
+	}
+
+	/**
+	 * @param QuarkLanguage[] $languages
+	 *
+	 * @return string
+	 */
+	public static function SerializeContentLanguage ($languages = []) {
+		if (!is_array($languages)) return '';
+
+		$out = array();
+
+		/**
+		 * @var QuarkLanguage[] $languages
+		 */
+		foreach ($languages as $language)
+			$out[] = $language->Name();
+
+		return implode(',', $out);
 	}
 }
 
@@ -7737,7 +7899,6 @@ class QuarkLanguage {
 class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQuarkModelWithDataProvider {
 	const LOCAL_FS = 'LocalFS';
 
-	public $_location = '';
 	public $location = '';
 	public $name = '';
 	public $type = '';
@@ -7820,18 +7981,19 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	}
 
 	/**
-	 * @param $location
+	 * @param string $location
 	 *
 	 * @return QuarkFile
 	 * @throws QuarkArchException
 	 */
-	public function Load ($location) {
-		$this->Location($location);
+	public function Load ($location = '') {
+		if (func_num_args() != 0)
+			$this->Location($location);
 
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (file_exists($this->_location) && memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
+		if (file_exists($this->location) && memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
 			$this->Content(file_get_contents($this->location));
 
 		return $this;
@@ -7855,13 +8017,17 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	}
 
 	/**
-	 * @param string $content
+	 * @param string|true $content
 	 *
 	 * @return string
 	 */
 	public function Content ($content = '') {
 		if (func_num_args() == 1) {
 			$this->_content = $content;
+
+			if ($content === true)
+				$this->Load($this->location);
+
 			$this->_loaded = true;
 		}
 
@@ -8339,189 +8505,6 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 		parse_str($raw, $data);
 
 		return $data;
-	}
-}
-
-/**
- * Class QuarkMultipartProcessor
- *
- * @package Quark
- */
-class QuarkMultipartIOProcessor implements IQuarkIOProcessor {
-	const DISPOSITION_FORM_DATA = 'form-data';
-	const DISPOSITION_ATTACHMENT = 'attachment';
-
-	const MIME_FORM_DATA = 'form-data';
-	const MIME_MIXED = 'mixed';
-
-	const TRANSFER_ENCODING_BINARY = 'binary';
-	const TRANSFER_ENCODING_BASE64 = 'base64';
-
-	/**
-	 * @var IQuarkIOProcessor $_processor
-	 */
-	private $_processor;
-
-	/**
-	 * @var string $_boundary
-	 */
-	private $_boundary = '';
-
-	/**
-	 * @var string $_mime
-	 */
-	private $_mime = '';
-
-	/**
-	 * @var string $_encoding
-	 */
-	private $_encoding = '';
-
-	/**
-	 * @var string $_disposition
-	 */
-	private $_disposition = '';
-
-	/**
-	 * @var bool $_original
-	 */
-	private $_original = true;
-
-	/**
-	 * @param IQuarkIOProcessor $processor
-	 * @param string            $boundary
-	 *
-	 * @return QuarkMultipartIOProcessor
-	 */
-	public static function ForFormData (IQuarkIOProcessor $processor, $boundary = '') {
-		$processor = new self($processor, $boundary);
-		$processor->_mime = self::MIME_FORM_DATA;
-		$processor->_encoding = self::TRANSFER_ENCODING_BINARY;
-		$processor->_disposition = self::DISPOSITION_FORM_DATA;
-
-		return $processor;
-	}
-
-	/**
-	 * @param IQuarkIOProcessor $processor
-	 * @param string            $boundary
-	 *
-	 * @return QuarkMultipartIOProcessor
-	 */
-	public static function ForAttachment (IQuarkIOProcessor $processor, $boundary = '') {
-		$processor = new self($processor, $boundary);
-		$processor->_mime = self::MIME_MIXED;
-		$processor->_encoding = self::TRANSFER_ENCODING_BASE64;
-		$processor->_disposition = self::DISPOSITION_ATTACHMENT;
-
-		return $processor;
-	}
-
-	/**
-	 * @param IQuarkIOProcessor $processor
-	 * @param string $boundary
-	 */
-	public function __construct (IQuarkIOProcessor $processor, $boundary = '') {
-		$this->_processor = $processor;
-		$this->_boundary = func_num_args() == 2 ? $boundary : 'QuarkBoundary' . Quark::GuID();
-
-		$this->_mime = $processor instanceof self ? $processor->_mime :  self::MIME_FORM_DATA;
-		$this->_encoding = $processor instanceof self ? $processor->_encoding :  self::TRANSFER_ENCODING_BINARY;
-		$this->_disposition = $processor instanceof self ? $processor->_disposition :  self::DISPOSITION_FORM_DATA;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function MimeType () {
-		return $this->_original ? $this->_processor->MimeType() : 'multipart/' . $this->_mime . '; boundary=' . $this->_boundary;
-	}
-
-	/**
-	 * @param $data
-	 * @param string $text
-	 *
-	 * @return mixed
-	 */
-	public function Encode ($data, $text = '') {
-		$files = array();
-
-		$output = is_scalar($data) || QuarkObject::isIterative($data)
-			? $data
-			: QuarkObject::Normalize(new \StdClass(), (object)$data, function ($item, &$def) use (&$files) {
-				if (!($def instanceof QuarkFile)) return $def;
-
-				$def = Quark::GuID();
-
-				$files[] = array(
-					'file' => $item,
-					'depth' => $def
-				);
-
-				return $def;
-			});
-
-		$out = $this->_processor->Encode($output);
-
-		if (sizeof($files) != 0) {
-			$this->_original = false;
-			$output = $this->_part(
-				$this->_processor->MimeType(),
-				func_num_args() == 2 ? $text : $out,
-				$this->_disposition == self::DISPOSITION_ATTACHMENT
-			);
-
-			foreach ($files as $file)
-				$output .= $this->_part($file['depth'], $file['file']);
-
-			$out = $output . '--' . $this->_boundary . '--';
-		}
-		else {
-			if (func_num_args() == 1 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
-				$out = base64_encode($out);
-		}
-
-		return $out;
-	}
-
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	public function Decode ($raw) {
-		// TODO: Implement Decode() method.
-	}
-
-	/**
-	 * @param $key
-	 * @param mixed $value
-	 * @param bool $main
-	 *
-	 * @return string
-	 */
-	private function _part ($key, $value, $main = false) {
-		$file = $value instanceof QuarkFile;
-		$contents = $file ? $value->Content() : $value;
-
-		/**
-		 * Attention!
-		 * Here is solution for support custom boundary by Quark: if You does not specify filename to you attachment,
-		 * then PHP parser cannot parse your files
-		 */
-
-		return
-			'--' . $this->_boundary . "\r\n"
-			. ($main ? '' : QuarkDTO::HEADER_CONTENT_DISPOSITION . ': ' . $this->_disposition
-				. ($this->_disposition == self::DISPOSITION_FORM_DATA ? '; name="' . $key . '"' : '')
-				. ($file ? '; filename="' . $value->name . '"' : '')
-				. "\r\n"
-			)
-			. QuarkDTO::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
-			. QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING . ': ' . $this->_encoding . "\r\n"
-			. "\r\n"
-			. ($this->_encoding == self::TRANSFER_ENCODING_BASE64 ? base64_encode($contents) : $contents)
-			. "\r\n";
 	}
 }
 

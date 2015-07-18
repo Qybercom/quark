@@ -107,4 +107,14 @@ class PHPSession implements IQuarkAuthorizationProvider {
 
 		return $this->_end('', -3600);
 	}
+
+	/**
+	 * @param string $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Signature ($name, QuarkDTO $input) {
+		return $this->_start() && isset($_SESSION[$name]['signature']) ? $_SESSION[$name]['signature'] : '';
+	}
 }
