@@ -633,9 +633,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		foreach ($headers as $header)
 			header($header);
 
-		echo $service->Output()->SerializeResponseBody();
-
 		ob_end_flush();
+
+		echo $ok = $service->Output()->SerializeResponseBody();
 
 		return true;
 	}
@@ -6643,14 +6643,19 @@ class QuarkURI {
  * @package Quark\Extensions\Quark
  */
 class QuarkDTO {
-	const HTTP_PROTOCOL_VERSION = 'HTTP/1.0';
-	const HTTP_PROTOCOL_DELIMITER = '\n\s\n';
+	const HTTP_VERSION_1_0 = 'HTTP/1.0';
+	const HTTP_VERSION_1_1 = 'HTTP/1.1';
+	const HTTP_VERSION_2_0 = 'HTTP/2.0';
+	CONST HTTP_PROTOCOL_REQUEST = '#^(.*) (.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
+	const HTTP_PROTOCOL_RESPONSE = '#^(.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
 
 	const METHOD_GET = 'GET';
 	const METHOD_POST = 'POST';
 
 	const HEADER_HOST = 'Host';
+	const HEADER_ACCEPT = 'Accept';
 	const HEADER_ACCEPT_LANGUAGE = 'Accept-Language';
+	const HEADER_ACCEPT_ENCODING = 'Accept-Encoding';
 	const HEADER_CACHE_CONTROL = 'Cache-Control';
 	const HEADER_CONTENT_LENGTH = 'Content-Length';
 	const HEADER_CONTENT_TYPE = 'Content-Type';
@@ -6671,6 +6676,7 @@ class QuarkDTO {
 	const HEADER_SEC_WEBSOCKET_ACCEPT = 'Sec-WebSocket-Accept';
 	const HEADER_SEC_WEBSOCKET_PROTOCOL = 'Sec-WebSocket-Protocol';
 	const HEADER_LOCATION = 'Location';
+	const HEADER_USER_AGENT = 'User-Agent';
 	const HEADER_WWW_AUTHENTICATE = 'WWW-Authenticate';
 
 	const STATUS_200_OK = '200 OK';
@@ -6711,7 +6717,7 @@ class QuarkDTO {
 	/**
 	 * @var string $_protocol
 	 */
-	private $_protocol = self::HTTP_PROTOCOL_VERSION;
+	private $_protocol = self::HTTP_VERSION_1_0;
 
 	/**
 	 * @var QuarkURI $_uri
@@ -7061,9 +7067,8 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	public function Cookie (QuarkCookie $cookie) {
-		if ($cookie == null) return $this;
-
-		$this->_cookies[] = $cookie;
+		if ($cookie != null)
+			$this->_cookies[] = $cookie;
 
 		return $this;
 	}
@@ -7098,9 +7103,8 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	public function Language (QuarkLanguage $language) {
-		if ($language == null) return $this;
-
-		$this->_languages[] = $language;
+		if ($language != null)
+			$this->_languages[] = $language;
 
 		return $this;
 	}
@@ -7229,9 +7233,7 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function SerializeRequest () {
-		$body = $this->_serializeBody(true);
-
-		return $this->_serializeHeaders(true, true) . "\r\n\r\n" . $body;
+		return $this->_serializeHeaders(true, true) . "\r\n\r\n" . $this->_serializeBody(true);
 	}
 
 	/**
@@ -7259,9 +7261,7 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function SerializeResponse () {
-		$body = $this->_serializeBody(false);
-
-		return $this->_serializeHeaders(false, true) . "\r\n\r\n" . $body;
+		return $this->_serializeHeaders(false, true) . "\r\n\r\n" . $this->_serializeBody(false);
 	}
 
 	/**
@@ -7285,16 +7285,79 @@ class QuarkDTO {
 		return $this->_serializeHeaders(false, false);
 	}
 
-	public function UnserializeRequest ($raw = '') {}
-	public function UnserializeRequestBody () {}
-	public function UnserializeRequestHeaders ($raw = '') {
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeRequest ($raw = '') {
+		$this->_raw = $raw;
 
+		if (preg_match(self::HTTP_PROTOCOL_REQUEST, $raw, $found)) {
+			$this->Method($found[1]);
+			$this->URI(QuarkURI::FromURI($found[2]));
+			$this->Protocol($found[3]);
+
+			$this->_unserializeHeaders($found[4], true);
+			$this->_unserializeBody($found[5], true);
+		}
+
+		return $this;
 	}
 
-	public function UnserializeResponse ($raw = '') {}
-	public function UnserializeResponseBody () {}
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeRequestBody ($raw = '') {
+		return $this->_unserializeBody($raw);
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeRequestHeaders ($raw = '') {
+		return $this->_unserializeHeaders($raw);
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeResponse ($raw = '') {
+		$this->_raw = $raw;
+
+		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, $raw, $found)) {
+			$this->Protocol($found[1]);
+			$this->Status($found[2]);
+
+			$this->_unserializeHeaders($found[3], true);
+			$this->_unserializeBody($found[4], true);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	public function UnserializeResponseBody ($raw = '') {
+		return $this->_unserializeBody($raw);
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return string
+	 */
 	public function UnserializeResponseHeaders ($raw = '') {
-		return $this->Headers(explode(self::HTTP_PROTOCOL_DELIMITER, $raw));
+		return $this->_unserializeHeaders($raw);
 	}
 
 	/**
@@ -7304,6 +7367,8 @@ class QuarkDTO {
 	 * @return string|array
 	 */
 	private function _serializeHeaders ($client, $str) {
+		$body = $this->_serializeBody($client);
+
 		$headers = array($client
 			? $this->_method . ' ' . $this->_uri->Query() . ' ' . $this->_protocol
 			: $this->_protocol . ' ' . $this->_status
@@ -7338,7 +7403,12 @@ class QuarkDTO {
 		foreach ($this->_headers as $key => $value)
 			$headers[] = $key . ': ' . $value;
 
-		return $str ? implode("\r\n", $headers) : $headers;
+		$out = implode("\r\n", $headers);
+
+		if ($this->_raw == '')
+			$this->_raw = $out . "\r\n\r\n" . $body;
+
+		return $str ? $out : $headers;
 	}
 
 	/**
@@ -7347,46 +7417,49 @@ class QuarkDTO {
 	 * @return string
 	 */
 	private function _serializeBody ($client) {
-		/**
-		 * @var QuarkKeyValuePair[] $files
-		 */
-		$files = array();
+		if ($this->_raw == '') {
+			/**
+			 * @var QuarkKeyValuePair[] $files
+			 */
+			$files = array();
 
-		if ($this->_data instanceof QuarkView) {
-			$this->_processor = new QuarkHTMLIOProcessor();
-			$out = $this->_data->Compile();
-		}
-		else {
-			$output = is_scalar($this->_data) || QuarkObject::isIterative($this->_data)
-				? $this->_data
-				: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def) use (&$files) {
-					if ($def instanceof QuarkFile) {
-						$def = Quark::GuID();
-						$files[] = new QuarkKeyValuePair($def, $item);
-					}
-
-					return $def;
-				});
-
-			$out = $this->_processor->Encode($output);
-
-			if (sizeof($files) != 0) {
-				$this->_multipart = true;
-				$output = $this->_part($this->_processor->MimeType(), $out, $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_INLINE);
-
-				foreach ($files as $file)
-					$output .= $this->_part($file->Key(), $file->Value(), $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_ATTACHMENT);
-
-				$out = $output . '--' . $this->_boundary . '--';
+			if ($this->_data instanceof QuarkView) {
+				$this->_processor = new QuarkHTMLIOProcessor();
+				$out = $this->_data->Compile();
 			}
+			else {
+				$output = is_scalar($this->_data) || QuarkObject::isIterative($this->_data)
+					? $this->_data
+					: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def) use (&$files) {
+						if ($def instanceof QuarkFile) {
+							$def = Quark::GuID();
+							$files[] = new QuarkKeyValuePair($def, $item);
+						}
+
+						return $def;
+					});
+
+				$out = $this->_processor->Encode($output);
+
+				if (sizeof($files) != 0) {
+					$this->_multipart = true;
+					$output = $this->_part($this->_processor->MimeType(), $out, $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_INLINE);
+
+					foreach ($files as $file)
+						$output .= $this->_part($file->Key(), $file->Value(), $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_ATTACHMENT);
+
+					$out = $output . '--' . $this->_boundary . '--';
+				}
+			}
+
+			if (sizeof($files) == 0 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
+				$out = base64_encode($out);
+
+			$this->_length = strlen($out);
+			$this->_raw = $out;
 		}
 
-		if (sizeof($files) == 0 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
-			$out = base64_encode($out);
-
-		$this->_length = strlen($out);
-
-		return $out;
+		return $this->_raw;
 	}
 
 	/**
@@ -7412,6 +7485,28 @@ class QuarkDTO {
 			. "\r\n"
 			. ($file && $this->_encoding == self::TRANSFER_ENCODING_BASE64 ? base64_encode($contents) : $contents)
 			. "\r\n";
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	private function _unserializeHeaders ($raw) {
+		if (preg_match_all('#(.*)\: (.*)\n#Uis', $raw . "\r\n", $headers, PREG_SET_ORDER))
+			foreach ($headers as $header)
+				$this->Header($header[1], $header[2]);
+
+		return $this;
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	private function _unserializeBody ($raw) {
+		return $this;
 	}
 }
 
@@ -7868,7 +7963,7 @@ class QuarkLanguage {
 		foreach ($languages as $language)
 			$out[] = $language->Name() . ';q=' . $language->Quantity();
 
-		return implode(';', $out);
+		return implode(',', $out);
 	}
 
 	/**
