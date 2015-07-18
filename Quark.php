@@ -628,14 +628,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		$service->Pipeline();
 
-		$response = explode("\r\n\r\n", $service->Output()->SerializeResponse());
-		$headers = explode("\r\n", $response[0]);
+		$headers = $service->Output()->SerializeResponseHeadersToArray();
 
 		foreach ($headers as $header)
-			header($header, false);
+			header($header);
 
-		if (sizeof($response) > 1)
-			echo $response[1];
+		echo $service->Output()->SerializeResponseBody();
 
 		ob_end_flush();
 
@@ -2659,11 +2657,11 @@ class QuarkView implements IQuarkContainer {
 	public function Signature ($field = true) {
 		if (!($this->_view instanceof IQuarkAuthorizableViewModel)) return '';
 
-		$provider = QuarkSession::Get($this->_view->AuthProvider());
-
-		$sign = $provider->Signature();
-		// TODO: replace with
-		// $sign = $provider->Output()->Signature();
+		/**
+		 * @var QuarkSession $provider
+		 */
+		$provider = Quark::Stack($this->_view->AuthProvider());
+		$sign = $provider->Output()->Signature();
 
 		if (!is_string($sign))
 			throw new QuarkArchException('AuthProvider ' . get_class($provider) . ' specified non-string Signature');
@@ -2679,7 +2677,11 @@ class QuarkView implements IQuarkContainer {
 		if (!($this->_view instanceof IQuarkAuthorizableViewModel))
 			throw new QuarkArchException('ViewModel ' . get_class($this->_view) . ' need to be IQuarkAuthorizableViewModel');
 
-		return QuarkSession::Get($this->_view->AuthProvider())->User();
+		/**
+		 * @var QuarkSession $provider
+		 */
+		$provider = Quark::Stack($this->_view->AuthProvider());
+		return $provider->User();
 	}
 
 	/**
@@ -6630,6 +6632,8 @@ class QuarkURI {
  * @package Quark\Extensions\Quark
  */
 class QuarkDTO {
+	const HTTP_PROTOCOL_RESPONSE = '#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis';
+
 	const METHOD_GET = 'GET';
 	const METHOD_POST = 'POST';
 
@@ -6881,7 +6885,7 @@ class QuarkDTO {
 		if (func_num_args() != 0)
 			$this->_raw = $raw;
 
-		if (preg_match_all('#^HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
+		if (preg_match_all(self::HTTP_PROTOCOL_RESPONSE, $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
 
 		$http = $found[0];
 
@@ -6901,7 +6905,7 @@ class QuarkDTO {
 	 *
 	 * @return string
 	 */
-	public function SerializeResponse ($all = true) {
+	public function SerializeResponse1 ($all = true) {
 		return $this->_serialize($all, function () {
 			$cookies = '';
 
@@ -6913,12 +6917,25 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @return array
+	 */
+	public function SerializeResponseSplit () {
+		$this->SerializeResponse1();
+
+		if (preg_match_all(self::HTTP_PROTOCOL_RESPONSE, $this->_raw, $found, PREG_SET_ORDER) == 0) return null;
+
+		$http = $found[0];
+
+		return $http;
+	}
+
+	/**
 	 * @param string $raw
 	 * @param bool   $secure
 	 *
 	 * @return QuarkDTO
 	 */
-	public function UnserializeRequest ($raw = '', $secure = false) {
+	public function UnserializeRequest1 ($raw = '', $secure = false) {
 		$this->_raw = $raw;
 
 		if (preg_match_all('#^(.*) (.*) HTTP\/(.*)\n(.*)\n\s\n(.*)$#Uis', $raw . "\r\n", $found, PREG_SET_ORDER) == 0) return null;
@@ -7267,6 +7284,26 @@ class QuarkDTO {
 	public static function HTTPBasicAuthorization ($username = '', $password = '') {
 		return base64_encode($username . ':' . $password);
 	}
+
+	public function SerializeRequest () {}
+	public function SerializeRequestBody () {}
+	public function SerializeRequestHeaders () {}
+	public function SerializeRequestHeadersToArray () {}
+
+	public function SerializeResponse () {}
+	public function SerializeResponseBody () {}
+	public function SerializeResponseHeaders () {}
+	public function SerializeResponseHeadersToArray () {}
+
+	public function UnserializeRequest () {}
+	public function UnserializeRequestBody () {}
+	public function UnserializeRequestHeaders () {}
+	public function UnserializeRequestHeadersToArray () {}
+
+	public function UnserializeResponse () {}
+	public function UnserializeResponseBody () {}
+	public function UnserializeResponseHeaders () {}
+	public function UnserializeResponseHeadersToArray () {}
 }
 
 /**
