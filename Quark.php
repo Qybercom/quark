@@ -629,14 +629,15 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		$service->Pipeline();
 
+		$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, ob_get_length());Quark::Trace(ob_get_length());
 		$headers = $service->Output()->SerializeResponseHeadersToArray();
 
 		foreach ($headers as $header)
 			header($header);
 
-		ob_end_flush();
-
 		echo $ok = $service->Output()->SerializeResponseBody();
+
+		ob_end_flush();
 
 		return true;
 	}
@@ -7412,7 +7413,7 @@ class QuarkDTO {
 		$typeSet = isset($this->_headers[self::HEADER_CONTENT_TYPE]);
 		$typeValue = $typeSet ? $this->_headers[self::HEADER_CONTENT_TYPE] : '';
 
-		if ($this->_length != 0)
+		if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
 			$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
 
 		$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
@@ -7442,8 +7443,6 @@ class QuarkDTO {
 		foreach ($this->_headers as $key => $value)
 			$headers[] = $key . ': ' . $value;
 
-		Quark::Trace($headers);
-
 		return $str ? implode("\r\n", $headers) : $headers;
 	}
 
@@ -7466,11 +7465,11 @@ class QuarkDTO {
 			else {
 				$output = is_scalar($this->_data) || QuarkObject::isIterative($this->_data)
 					? $this->_data
-					: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def) use (&$files) {
+					: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def, $key) use (&$files) {
 						$buffer = $def instanceof QuarkModel ? $def->Model() : $def;
 
 						if ($buffer instanceof QuarkFile) {
-							$def = Quark::GuID();
+							$def = $this->_processor instanceof QuarkFormIOProcessor ? $key : Quark::GuID();
 							$files[] = new QuarkKeyValuePair($def, $item);
 						}
 
@@ -8117,7 +8116,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return bool
 	 */
 	public function Exists () {
-		return is_file($this->location) || is_file($this->tmp_name);
+		return is_file($this->location);
 	}
 
 	/**
@@ -8537,32 +8536,6 @@ interface IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode($raw);
-}
-
-/**
- * Interface IQuarkIOProcessorWithCustomHeaders
- *
- * @package Quark
- */
-interface IQuarkIOProcessorWithCustomHeaders {
-	/**
-	 * @param array $headers
-	 *
-	 * @return array
-	 */
-	public function Headers($headers);
-}
-
-/**
- * Interface IQuarkIOProcessorWithMultipartControl
- *
- * @package Quark
- */
-interface IQuarkIOProcessorWithMultipartControl {
-	/**
-	 * @return bool
-	 */
-	public function MultipartControl();
 }
 
 /**
