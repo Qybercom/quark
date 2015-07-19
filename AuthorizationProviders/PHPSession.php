@@ -39,11 +39,12 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	}
 
 	/**
+	 * @param string $name
 	 * @param QuarkDTO $input
 	 *
 	 * @return bool
 	 */
-	public function Recognize (QuarkDTO $input) {
+	public function Recognize ($name, QuarkDTO $input) {
 		return $input->GetCookieByName(session_name()) != null;
 	}
 

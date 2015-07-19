@@ -8,11 +8,69 @@ use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
- * Class PHPDigestAuth
+ * Class DigestAuth
  *
  * @package Quark\AuthorizationProviders
  */
-class PHPDigestAuth implements IQuarkAuthorizationProvider {
+class DigestAuth implements IQuarkAuthorizationProvider {
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return bool
+	 */
+	public function Recognize ($name, QuarkDTO $input) {
+		// TODO: Implement Recognize() method.
+	}
+
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 * @param bool     $stream
+	 *
+	 * @return bool|mixed
+	 */
+	public function Session ($name, QuarkDTO $input, $stream) {
+		// TODO: Implement Session() method.
+	}
+
+	/**
+	 * @param string     $name
+	 * @param QuarkModel $user
+	 * @param int        $lifetime (seconds)
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Login ($name, QuarkModel $user, $lifetime) {
+		// TODO: Implement Login() method.
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Logout ($name) {
+		// TODO: Implement Logout() method.
+	}
+
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Signature ($name, QuarkDTO $input) {
+		// TODO: Implement Signature() method.
+	}
+}
+
+/**
+ * Class PHPDigestAuth1
+ *
+ * @package Quark\AuthorizationProviders
+ */
+class PHPDigestAuth1 {
 	/**
 	 * @var array $_criteria
 	 */

@@ -8,11 +8,71 @@ use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 /**
+ * Class BasicAuth
+ *
+ * @package Quark\AuthorizationProviders
+ */
+class BasicAuth implements IQuarkAuthorizationProvider {
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return bool
+	 */
+	public function Recognize ($name, QuarkDTO $input) {
+		// TODO: Implement Recognize() method.
+	}
+
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 * @param bool     $stream
+	 *
+	 * @return bool|mixed
+	 */
+	public function Session ($name, QuarkDTO $input, $stream) {
+		$user = $input->Header(QuarkDTO::HEADER_AUTHORIZATION);
+	}
+
+	/**
+	 * @param string     $name
+	 * @param QuarkModel $user
+	 * @param int        $lifetime (seconds)
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Login ($name, QuarkModel $user, $lifetime) {
+		// TODO: Implement Login() method.
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkDTO|bool
+	 */
+	public function Logout ($name) {
+		$response = new QuarkDTO();
+		$response->Status(QuarkDTO::STATUS_401_UNAUTHORIZED);
+		return $response;
+	}
+
+	/**
+	 * @param string   $name
+	 * @param QuarkDTO $input
+	 *
+	 * @return string
+	 */
+	public function Signature ($name, QuarkDTO $input) {
+		// TODO: Implement Signature() method.
+	}
+}
+
+/**
  * Class PHPBasicAuth
  *
  * @package Quark\AuthorizationProviders
  */
-class PHPBasicAuth implements IQuarkAuthorizationProvider {
+class PHPBasicAuth {
 	/**
 	 * @param string   $name
 	 * @param QuarkDTO $request
