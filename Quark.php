@@ -8116,7 +8116,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return bool
 	 */
 	public function Exists () {
-		return is_file($this->location);
+		return file_exists($this->location);
 	}
 
 	/**
@@ -8135,7 +8135,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (file_exists($this->location) && memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
+		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
 			$this->Content(file_get_contents($this->location));
 
 		return $this;
