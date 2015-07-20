@@ -189,11 +189,12 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return IQuarkModel|null
 	 */
-	public function FindOne (IQuarkModel $model, $criteria) {
+	public function FindOne (IQuarkModel $model, $criteria, $options) {
 		$class = self::_class($model);
 
 		try {
@@ -207,11 +208,12 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $id
+	 * @param $options
 	 *
 	 * @return null
 	 * @throws QuarkArchException
 	 */
-	public function FindOneById (IQuarkModel $model, $id) {
+	public function FindOneById (IQuarkModel $model, $id, $options) {
 		if (!is_scalar($id))
 			throw new QuarkArchException('Parameter $id must have scalar value, Given: ' . print_r($id, true));
 
@@ -252,10 +254,11 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param             $criteria
 	 * @param             $limit
 	 * @param             $skip
+	 * @param             $options
 	 *
 	 * @return int
 	 */
-	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
+	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.
 	}
 

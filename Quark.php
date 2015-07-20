@@ -629,13 +629,13 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 
 		$service->Pipeline();
 
-		$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, ob_get_length());Quark::Trace(ob_get_length());
+		echo $ok = $service->Output()->SerializeResponseBody();
+
+		$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, ob_get_length());
 		$headers = $service->Output()->SerializeResponseHeadersToArray();
 
 		foreach ($headers as $header)
 			header($header);
-
-		echo $ok = $service->Output()->SerializeResponseBody();
 
 		ob_end_flush();
 
@@ -1990,7 +1990,7 @@ class QuarkService implements IQuarkContainer {
 
 		if (!QuarkObject::is($this->_service, 'Quark\IQuarkSigned' . $method . 'Service')) return null;
 
-		$sign = $this->_session->Signature($this->_input);
+		$sign = $this->_session->Signature();
 
 		if ($sign != '' && $this->_input->Signature() == $sign) return null;
 
@@ -2196,6 +2196,37 @@ class QuarkObject {
 		}
 
 		return $output;
+	}
+
+	/**
+	 * @param $source
+	 * @param callable $iterator
+	 * @param string $key
+	 */
+	public static function Walk ($source, callable $iterator, $key = '') {
+		if (self::isIterative($source)) {
+			$i = 0;
+			$size = sizeof($source);
+
+			while ($i < $size) {
+				self::Walk($source[$i], $iterator, $key . ($key == '' ? $i : '[' . $i . ']'));
+
+				$i++;
+			}
+
+			unset($i, $size);
+		}
+		else {
+			if (is_scalar($source)) $iterator($key, $source);
+			elseif ($source instanceof QuarkModel) $iterator($key, $source->Model());
+			else {
+				foreach ($source as $k => $v) {
+					self::Walk($v, $iterator, $key . ($key == '' ? $k : '[' . $k . ']'));
+				}
+			}
+
+			unset($k, $v);
+		}
 	}
 
 	/**
@@ -2655,7 +2686,7 @@ class QuarkView implements IQuarkContainer {
 		 * @var QuarkSession $provider
 		 */
 		$provider = Quark::Stack($this->_view->AuthProvider());
-		$sign = $provider->Output()->Signature();
+		$sign = $provider->Signature();
 
 		if (!is_string($sign))
 			throw new QuarkArchException('AuthProvider ' . get_class($provider) . ' specified non-string Signature');
@@ -5040,6 +5071,11 @@ class QuarkSession implements IQuarkStackable {
 	private $_null = null;
 
 	/**
+	 * @var QuarkDTO $_input
+	 */
+	private $_input;
+
+	/**
 	 * @var QuarkDTO $_output
 	 */
 	private $_output;
@@ -5078,6 +5114,8 @@ class QuarkSession implements IQuarkStackable {
 
 		if ($session)
 			$this->_authorized = (bool)($this->_user = $this->_user->Session($this->_name, $session));
+
+		$this->_input = $input;
 
 		return $this;
 	}
@@ -5152,18 +5190,18 @@ class QuarkSession implements IQuarkStackable {
 	 * @return bool
 	 */
 	public function Logout () {
-		return $this->_user->Logout($this->_name)
+		$user = $this->_user->Logout($this->_name);
+
+		return $user || $user === null
 			? $this->_out($this->_provider->Logout($this->_name))
 			: false;
 	}
 
 	/**
-	 * @param QuarkDTO $input
-	 *
 	 * @return string
 	 */
-	public function Signature (QuarkDTO $input) {
-		return $this->_provider->Signature($this->_name, $input);
+	public function Signature () {
+		return $this->_provider->Signature($this->_name, $this->_input);
 	}
 }
 
@@ -6799,9 +6837,19 @@ class QuarkDTO {
 	private $_data = '';
 
 	/**
+	 * @var QuarkFile[] $_files
+	 */
+	private $_files = array();
+
+	/**
+	 * @var QuarkKeyValuePair $_authorization
+	 */
+	private $_authorization = null;
+
+	/**
 	 * @var QuarkKeyValuePair $_session
 	 */
-	private $_session;
+	private $_session = null;
 
 	/**
 	 * @var string $_signature
@@ -7040,11 +7088,18 @@ class QuarkDTO {
 	 *
 	 * @return mixed
 	 */
-	public function Header ($key, $value = null) {
+	public function Header ($key, $value = '') {
+		$value = trim($value);
+
 		if (func_num_args() == 2)
 			$this->_headers[$key] = $value;
 
 		switch ($key) {
+			case self::HEADER_AUTHORIZATION:
+				if (preg_match('#^(.*) (.*)$#Uis', $value, $auth))
+					$this->_authorization = new QuarkKeyValuePair($auth[1], $auth[2]);
+				break;
+
 			case self::HEADER_COOKIE:
 				$this->_cookies = QuarkCookie::FromCookie($value);
 				break;
@@ -7055,6 +7110,10 @@ class QuarkDTO {
 
 			case self::HEADER_ACCEPT_LANGUAGE:
 				$this->_languages = QuarkLanguage::FromAcceptLanguage($value);
+				break;
+
+			case self::HEADER_CONTENT_LENGTH:
+				$this->_length = $value;
 				break;
 
 			case self::HEADER_CONTENT_LANGUAGE:
@@ -7189,6 +7248,13 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @return QuarkFile[]
+	 */
+	public function Files () {
+		return $this->_files;
+	}
+
+	/**
 	 * @param mixed $raw
 	 *
 	 * @return mixed
@@ -7198,6 +7264,18 @@ class QuarkDTO {
 			$this->_raw = $raw;
 
 		return $this->_raw;
+	}
+
+	/**
+	 * @param QuarkKeyValuePair $auth
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function Authorization (QuarkKeyValuePair $auth = null) {
+		if (func_num_args() != 0)
+			$this->_authorization = $auth;
+
+		return $this->_authorization;
 	}
 
 	/**
@@ -7334,6 +7412,9 @@ class QuarkDTO {
 			$sign = self::SIGNATURE;
 			$this->Signature(isset($this->_data->$sign) ? $this->_data->$sign : '');
 
+			if ($this->_processor == null)
+				$this->_processor = new QuarkFormIOProcessor();
+
 			$this->_unserializeHeaders($found[4]);
 			$this->_unserializeBody($found[5]);
 		}
@@ -7370,6 +7451,9 @@ class QuarkDTO {
 		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, $raw, $found)) {
 			$this->Protocol($found[1]);
 			$this->Status($found[2]);
+
+			if ($this->_processor == null)
+				$this->_processor = new QuarkHTMLIOProcessor();
 
 			$this->_unserializeHeaders($found[3]);
 			$this->_unserializeBody($found[4]);
@@ -7413,6 +7497,9 @@ class QuarkDTO {
 		$typeSet = isset($this->_headers[self::HEADER_CONTENT_TYPE]);
 		$typeValue = $typeSet ? $this->_headers[self::HEADER_CONTENT_TYPE] : '';
 
+		if (!isset($this->_headers[self::HEADER_AUTHORIZATION]) && $this->_authorization != null)
+			$this->_headers[self::HEADER_AUTHORIZATION] = $this->_authorization->Key() . ' ' . $this->_authorization->Value();
+
 		if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
 			$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
 
@@ -7434,7 +7521,7 @@ class QuarkDTO {
 		}
 		else {
 			foreach ($this->_cookies as $cookie)
-				$headers[] = self::HEADER_SET_COOKIE . ': ' . $cookie->Serialize();
+				$headers[] = self::HEADER_SET_COOKIE . ': ' . $cookie->Serialize(true);
 
 			if (sizeof($this->_languages) != 0)
 				$this->_headers[self::HEADER_CONTENT_LANGUAGE] = QuarkLanguage::SerializeContentLanguage($this->_languages);
@@ -7453,43 +7540,40 @@ class QuarkDTO {
 	 */
 	private function _serializeBody ($client) {
 		if ($this->_raw == '') {
-			/**
-			 * @var QuarkKeyValuePair[] $files
-			 */
-			$files = array();
-
 			if ($this->_data instanceof QuarkView) {
 				$this->_processor = new QuarkHTMLIOProcessor();
 				$out = $this->_data->Compile();
 			}
 			else {
-				$output = is_scalar($this->_data) || QuarkObject::isIterative($this->_data)
-					? $this->_data
-					: QuarkObject::Normalize(new \StdClass(), (object)$this->_data, function ($item, &$def, $key) use (&$files) {
-						$buffer = $def instanceof QuarkModel ? $def->Model() : $def;
+				$out = '';
 
-						if ($buffer instanceof QuarkFile) {
-							$def = $this->_processor instanceof QuarkFormIOProcessor ? $key : Quark::GuID();
-							$files[] = new QuarkKeyValuePair($def, $item);
-						}
+				QuarkObject::Walk($this->_data, function ($key, $value) use (&$out, $client) {
+					$this->_multipart |= $value instanceof QuarkFile;
 
-						return $def;
-					});
+					if ($this->_processor instanceof QuarkFormIOProcessor || ($value instanceof QuarkFile))
+						$out .= $this->_serializePart($key, $value, $client
+							? self::DISPOSITION_FORM_DATA
+							: ($this->_multipart
+								? self::DISPOSITION_ATTACHMENT
+								: self::DISPOSITION_INLINE
+							)
+						);
+				});
 
-				$out = $this->_processor->Encode($output);
+				if (!$this->_multipart) $out = $this->_processor->Encode($this->_data);
+				else {
+					if (!($this->_processor instanceof QuarkFormIOProcessor))
+						$out = $this->_serializePart(
+								$this->_processor->MimeType(),
+								$this->_processor->Encode($this->_data),
+								$client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_INLINE
+							) . $out;
 
-				if (sizeof($files) != 0) {
-					$this->_multipart = true;
-					$output = $this->_part($this->_processor->MimeType(), $out, $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_INLINE);
-
-					foreach ($files as $file)
-						$output .= $this->_part($file->Key(), $file->Value(), $client ? self::DISPOSITION_FORM_DATA : self::DISPOSITION_ATTACHMENT);
-
-					$out = $output . '--' . $this->_boundary . '--';
+					$out = $out . '--' . $this->_boundary . '--';
 				}
 			}
 
-			if (sizeof($files) == 0 && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
+			if (!$this->_multipart && $this->_encoding == self::TRANSFER_ENCODING_BASE64)
 				$out = base64_encode($out);
 
 			$this->_length = strlen($out);
@@ -7506,13 +7590,16 @@ class QuarkDTO {
 	 *
 	 * @return string
 	 */
-	private function _part ($key, $value, $disposition) {
-		$file = ($value instanceof QuarkModel ? $value->Model() instanceof QuarkFile : false) || $value instanceof QuarkFile;
+	private function _serializePart ($key, $value, $disposition) {
+		$file = $value instanceof QuarkFile;
 		$contents = $file ? $value->Load()->Content() : $value;
+
+		if ($file)
+			$this->_files[] = new QuarkModel($value);
 
 		return
 			'--' . $this->_boundary . "\r\n"
-			. self::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"
+			. (!$file && $this->_processor instanceof QuarkFormIOProcessor ? '' : (self::HEADER_CONTENT_TYPE . ': ' . ($file ? $value->type : $this->_processor->MimeType()) . "\r\n"))
 			. (self::HEADER_CONTENT_DISPOSITION . ': ' . $disposition
 				. ($disposition == self::DISPOSITION_FORM_DATA ? '; name="' . $key . '"' : '')
 				. ($file ? '; filename="' . $value->name . '"' : '')
@@ -7534,8 +7621,6 @@ class QuarkDTO {
 			foreach ($headers as $header)
 				$this->Header($header[1], $header[2]);
 
-
-
 		return $this;
 	}
 
@@ -7545,10 +7630,69 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	private function _unserializeBody ($raw) {
-		$post = array();
-		parse_str($raw, $post);
+		if (!$this->_multipart) $this->_data = $this->_processor->Decode($raw);
+		else {
+			$parts = explode('--' . $this->_boundary, $raw);
 
-		$this->MergeData($post);
+			foreach ($parts as $part)
+				$this->_unserializePart($part);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return QuarkDTO
+	 */
+	private function _unserializePart ($raw) {
+		if (preg_match('#^(.*)\n\s\n(.*)$#Uis', $raw, $found)) {
+			$head = array();
+
+			if (preg_match_all('#(.*)\: (.*)\n#Uis', trim($raw) . "\r\n", $headers, PREG_SET_ORDER))
+				foreach ($headers as $header)
+					$head[$header[1]] = trim($header[2]);
+
+			if (isset($head[self::HEADER_CONTENT_DISPOSITION])) {
+				$value = $head[self::HEADER_CONTENT_DISPOSITION];
+				$position = explode(';', $value)[0];
+
+				preg_match('#name\=(.*)\;#Uis', $value . ';', $name);
+				preg_match('#filename\=(.*)\;#Uis', $value . ';', $file);
+
+				$name = isset($name[1]) ? $name[1] : '';
+				$file = isset($file[1]) ? $file[1] : '';
+
+				if ($name == $this->_processor->MimeType())
+					$this->MergeData($this->_processor->Decode($found[2]));
+
+				$fs = null;
+
+				if ($file != '') {
+					if (isset($head[self::HEADER_CONTENT_TRANSFER_ENCODING]) && $head[self::HEADER_CONTENT_TRANSFER_ENCODING] == self::TRANSFER_ENCODING_BASE64)
+						$found[2] = base64_decode($found[2]);
+
+					/**
+					 * @var QuarkFile $fs
+					 */
+					$fs = new QuarkModel(new QuarkFile());
+					$fs->Content($found[2]);
+
+					$this->_files[] = $fs;
+				}
+
+				if ($position == 'form-data') {
+					parse_str($name, $storage);
+
+					array_walk_recursive($storage, function (&$item) use ($found, $fs) {
+						$item = $fs ? $fs : $found[2];
+					});
+
+					$this->MergeData($storage);
+				}
+			}
+		}
 
 		return $this;
 	}
@@ -7745,14 +7889,14 @@ class QuarkHTTPTransportServer implements IQuarkTransportProviderServer {
  * @package Quark
  */
 class QuarkCookie {
-	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s GMT';
+	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s';
 	const EXPIRES_SESSION = 0;
 
 	public $name = '';
 	public $value = '';
 	public $expires = '';
 	public $MaxAge = 0;
-	public $path = '';
+	public $path = '/';
 	public $domain = '';
 	public $HttpOnly = '';
 	public $secure = '';
@@ -7783,6 +7927,8 @@ class QuarkCookie {
 	 */
 	public function Lifetime ($seconds = 0) {
 		if (func_num_args() != 0) {
+			$this->MaxAge = $seconds;
+
 			if ($seconds == 0) {
 				$this->expires = '';
 				return 0;
@@ -7862,14 +8008,12 @@ class QuarkCookie {
 	 * @return string
 	 */
 	public function Serialize ($full = false) {
-		$main = $this->name . '=' . $this->value;
+		$out = $this->name . '=' . $this->value;
 
-		if (!$full) return $main;
+		if (!$full) return $out;
 		else {
-			$out = $main;
-
 			foreach ($this as $field => $value)
-				if (strlen(trim($value)) != 0)
+				if (strlen(trim($value)) != 0 && $field != 'name' && $field != 'value')
 					$out .= '; ' . $field . '=' . $value;
 
 			return $out;
@@ -8135,8 +8279,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024)
+		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024) {
 			$this->Content(file_get_contents($this->location));
+			$this->_loaded = true;
+		}
 
 		return $this;
 	}
@@ -8164,14 +8310,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 	 * @return string
 	 */
 	public function Content ($content = '') {
-		if (func_num_args() == 1) {
+		if (func_num_args() == 1)
 			$this->_content = $content;
-
-			if ($content === true)
-				$this->Load($this->location);
-
-			$this->_loaded = true;
-		}
 
 		return $this->_content;
 	}
