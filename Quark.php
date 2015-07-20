@@ -1049,16 +1049,18 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 		}
 
 		$out = false;
-		$data = new QuarkObject(isset($json->data) ? $json->data : null);
+		$service->Input()->MergeData(isset($json->data) ? $json->data : null);
 
 		// TODO: service auth
-		if ($local == true && $service instanceof IQuarkStream)
-			$out = $service->Stream($cluster, $data, $clients, $client);
+		// TODO: NORMALIZE STREAM API TO (QuarkDTO $request, QuarkSession $session, QuarkClusterNode $cluster)
 
-		if ($local == false && $service instanceof IQuarkStreamNetwork)
-			$out = $service->StreamNetwork($cluster, $data, $clients);
+		if ($local == true && $service->Service() instanceof IQuarkStream)
+			$service->Pipeline('Stream', $cluster, $clients, $client);
 
-		if ($this->_out($service, $out, $client)) return true;
+		if ($local == false && $service->Service() instanceof IQuarkStreamNetwork)
+			$service->Pipeline('StreamNetwork', $cluster, $clients);
+
+		if ($this->_out($service->Service(), $service->Output()->Data(), $client)) return true;
 
 		throw new QuarkArchException('Class ' . get_class($service) . '  is not a stream');
 	}
@@ -1578,14 +1580,13 @@ interface IQuarkThread {
  */
 interface IQuarkStream extends IQuarkService {
 	/**
+	 * @param QuarkDTO $request
+	 * @param QuarkSession $session,
 	 * @param QuarkClusterNode $cluster
-	 * @param QuarkObject $data
-	 * @param QuarkClient[] $clients
-	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
-	public function Stream(QuarkClusterNode $cluster, QuarkObject $data, $clients, $client);
+	public function Stream(QuarkDTO $request, QuarkSession $session, QuarkClusterNode $cluster);
 }
 
 /**
@@ -1980,6 +1981,11 @@ class QuarkService implements IQuarkContainer {
 		$this->_session->Input($this->_input);
 	}
 
+	/**
+	 * @param string $method
+	 *
+	 * @return mixed|null
+	 */
 	public function AuthorizationCheck ($method = '') {
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return null;
 
@@ -2001,21 +2007,24 @@ class QuarkService implements IQuarkContainer {
 	/**
 	 * @param string $method
 	 * @param bool $http
+	 * @param array $args
 	 *
 	 * @return null
 	 */
-	public function Call ($method, $http = true) {
+	public function Call ($method, $http = true, $args = []) {
 		$method = ucfirst(strtolower($method));
 
 		return strlen(trim($method)) != 0 && QuarkObject::is($this->_service, 'Quark\IQuark' . $method . ($http ? 'Service' : ''))
-			? $this->_service->$method($this->_input, $this->_session)
+			? call_user_func_array(array($this->_service, $method), array($this->_input, $this->_session) + $args)
 			: null;
 	}
 
 	/**
+	 * @param array $args
+	 *
 	 * @param string $method
 	 */
-	public function Pipeline ($method = '') {
+	public function Pipeline ($method = '', $args = []) {
 		$method = func_num_args() != 0
 			? $method
 			: ($this->_service instanceof IQuarkAnyService
@@ -2028,7 +2037,7 @@ class QuarkService implements IQuarkContainer {
 		$output = $this->AuthorizationCheck($method);
 
 		if ($output === null)
-			$output = $this->Call($method, $this->_http);
+			$output = $this->Call($method, $this->_http, $args);
 
 		if ($this->_session->Output() instanceof QuarkDTO && $this->_output instanceof QuarkDTO)
 			$this->_session->Output()->Processor($this->_output->Processor());
