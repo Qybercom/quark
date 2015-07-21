@@ -1750,6 +1750,16 @@ trait QuarkStreamBehavior {
 	public function BroadcastLocal ($data, callable $sender = null) {
 		return $this->_call('BroadcastLocal', func_get_args());
 	}
+
+	/**
+	 * @param QuarkObject|object|array $data
+	 * @param callable(QuarkClient $client) $sender
+	 *
+	 * @return bool
+	 */
+	public function Event ($data, callable $sender = null) {
+		return $this->_call('Event', func_get_args());
+	}
 }
 
 /**
@@ -1807,7 +1817,7 @@ class QuarkService implements IQuarkContainer {
 	 * @throws QuarkHTTPException
 	 */
 	public function __construct ($uri, IQuarkIOProcessor $input = null, IQuarkIOProcessor $output = null, $http = true) {
-		$route = $uri = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
+		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
 		$path = QuarkURI::ParseRoute($route->path);
 
 		$buffer = array();
@@ -1854,7 +1864,7 @@ class QuarkService implements IQuarkContainer {
 		$this->_output = new QuarkDTO();
 		$this->_output->Processor($output);
 
-		$this->_input->URI($uri);
+		$this->_input->URI(QuarkURI::FromURI(Quark::NormalizePath($uri, false), false));
 
 		if ($this->_service instanceof IQuarkServiceWithCustomProcessor) {
 			$this->_input->Processor($this->_service->Processor());
@@ -1926,10 +1936,24 @@ class QuarkService implements IQuarkContainer {
 			$buffer = $sender($client, $data);
 
 			if ($buffer !== false)
-				$client->Send(json_encode($buffer instanceof QuarkDTO ? $buffer->Data() : $buffer));
+				$client->Send($this->_input->Processor()->Encode($buffer instanceof QuarkDTO ? $buffer->Data() : $buffer));
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param QuarkDTO|object|array $data
+	 * @param callable(QuarkClient $client) $sender
+	 *
+	 * @return bool
+	 */
+	public function Event ($data, callable $sender = null) {
+		return $this->BroadcastLocal(array(
+			'event' => $this->URL(),
+			'data' => $data instanceof QuarkDTO ? $data->Data() : $data,
+			//'session' => ''
+		), $sender);
 	}
 
 	/**

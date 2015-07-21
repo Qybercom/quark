@@ -33,8 +33,15 @@ Quark.Network.Client = function (host, port, on) {
             if (input.response != undefined)
                 response(input.response, input.data, input.session);
 
-            if (input.event != undefined && events[input.event] != undefined)
-                events[input.event](input.event, input.data, input.session);
+            if (input.event != undefined && events[input.event] instanceof Array) {
+                var i = 0;
+
+                while (i < events[input.event].length) {
+                    events[input.event][i](input.event, input.data, input.session);
+
+                    i++;
+                }
+            }
         }
         catch (e) {
             on.error(e);
