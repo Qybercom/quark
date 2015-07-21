@@ -151,7 +151,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 			}
 
 			$request = new QuarkDTO();
-			$request->UnserializeRequest1($this->_buffer. "\r\n");
+			$request->UnserializeRequest($this->_buffer. "\r\n");
 
 			$this->_buffer = '';
 
@@ -166,7 +166,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 			if (strlen($this->_subprotocol) != 0)
 				$response->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_PROTOCOL, $this->_subprotocol);
 
-			$client->Send($response->SerializeResponse1());
+			$client->Send($response->SerializeResponse());
 
 			$client->Connected(true);
 			$client->BeforeSend(function ($data) {

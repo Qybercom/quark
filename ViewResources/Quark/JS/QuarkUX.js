@@ -136,3 +136,27 @@ Quark.UX = function (selector) {
 		});
 	}
 };
+
+/**
+ * @param selector
+ * @param submit
+ * @param type
+ */
+Quark.UX.Command = function (selector, submit, type) {
+    $(document).on('keydown', selector, function (e) {
+        var text = $(this).val();
+
+        if (e.keyCode != 13) {
+            if (type instanceof Function) type(text);
+
+            return;
+        }
+
+        if (submit instanceof Function)
+            submit(text);
+
+        $(this).val('');
+
+        return false;
+    });
+};

@@ -27,14 +27,16 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	}
 
 	/**
+	 * @param string $name
 	 * @param string $id
 	 * @param int $lifetime (seconds)
 	 *
 	 * @return QuarkDTO
 	 */
-	private function _end ($id, $lifetime) {
+	private function _end ($name, $id, $lifetime) {
 		$output = new QuarkDTO();
 		$output->Cookie(new QuarkCookie(session_name(), $id, $lifetime));
+		$output->AuthorizationProvider($name, $id);
 
 		return $output;
 	}
@@ -91,7 +93,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		$_SESSION[$name]['user'] = $user->Model();
 		$_SESSION[$name]['signature'] = Quark::GuID();
 
-		return $this->_end(session_id(), $lifetime);
+		return $this->_end($name, session_id(), $lifetime);
 	}
 
 	/**
@@ -107,7 +109,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (sizeof($_SESSION) == 0)
 			session_destroy();
 
-		return $this->_end(session_id(), -3600);
+		return $this->_end($name, session_id(), -3600);
 	}
 
 	/**

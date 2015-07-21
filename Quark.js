@@ -77,3 +77,64 @@ Quark.Event = function (events) {
 		}
 	};
 };
+
+/**
+ * @url http://javascript.ru/unsorted/top-10-functions
+ */
+Quark.Cookie = {};
+
+/**
+ * @param name
+ * @return {string}
+ */
+Quark.Cookie.Get = function (name) {
+    var found = document.cookie.match(new RegExp(
+        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+    ));
+
+    return found ? decodeURIComponent(found[1]) : undefined;
+};
+
+/**
+ * @param name
+ * @param value
+ * @param opt
+ */
+Quark.Cookie.Set = function (name, value, opt) {
+    opt = opt || {};
+
+    var expires = opt.expires;
+
+    if (typeof expires == 'number' && expires) {
+        var d = new Date();
+        d.setTime(d.getTime() + expires * 1000);
+        expires = opt.expires = d;
+    }
+
+    if(expires && expires.toUTCString)
+        opt.expires = expires.toUTCString();
+
+    value = encodeURIComponent(value);
+
+    var cookie = name + '=' + value;
+
+    for (var property in opt) {
+        cookie += '; ' + property;
+
+        var val = opt[property];
+
+        if (val !== true)
+            cookie += '=' + val;
+    }
+
+    document.cookie = cookie;
+};
+
+/**
+ * @param name
+ */
+Quark.Cookie.Remove = function (name) {
+    Quark.Cookie.Set(name, null, {
+        expires: -1
+    });
+};
