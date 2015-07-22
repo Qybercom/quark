@@ -924,10 +924,12 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 	 * @return QuarkURI
 	 */
 	public function ClusterController ($uri = '') {
-		if ($this->_cluster == null) return new QuarkURI();
+		$cluster = QuarkURI::FromURI($uri);
+
+		if ($this->_cluster == null) return $cluster;
 
 		if (func_num_args() != 0)
-			$this->_cluster->Controller(QuarkURI::FromURI($uri));
+			$this->_cluster->Controller($cluster);
 
 		return $this->_cluster->Controller();
 	}
@@ -6310,10 +6312,11 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 
 		if (!$this->_controller->Connected()) {
 			$run &= $this->_controller->Connect();
-			echo ' - controller: ', $this->_controller->ConnectionURI(),"\r\n\r\n";
 
-			if ($run)
+			if ($run) {
+				echo ' - controller: ', $this->_controller->ConnectionURI(),"\r\n\r\n";
 				$this->_node->ControllerConnect($this->_controller, $this->_server, $this->_network);
+			}
 		}
 
 		return $run;
