@@ -547,16 +547,19 @@ interface IQuarkStackable {
 	public function Name($name);
 }
 
-interface IQuarkEnvironmentProvider {
-
-}
+/**
+ * Interface IQuarkEnvironmentProvider
+ *
+ * @package Quark
+ */
+interface IQuarkEnvironmentProvider { }
 
 /**
  * Class QuarkFPMEnvironmentProvider
  *
  * @package Quark
  */
-class QuarkFPMEnvironmentProvider implements IQuarkThread {
+class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkThread {
 	/**
 	 * @return mixed
 	 */
@@ -574,6 +577,9 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
 		$remote = QuarkURI::FromEndpoint($_SERVER['REMOTE_ADDR'], $_SERVER['REMOTE_PORT']);
 		$service->Input()->Remote($remote);
 		$service->Output()->Remote($remote);
+
+		$service->Input()->Environment($this);
+		$service->Output()->Environment($this);
 
 		if ($service->Service() instanceof IQuarkServiceWithAccessControl)
 			$service->Output()->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
@@ -674,7 +680,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkThread {
  *
  * @package Quark
  */
-class QuarkCLIEnvironmentProvider implements IQuarkThread {
+class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkThread {
 	/**
 	 * @var QuarkTask[] $_tasks
 	 */
@@ -844,7 +850,7 @@ interface IQuarkTransportProviderServer extends IQuarkTransportProvider {
  *
  * @package Quark
  */
-class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode {
+class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkThread, IQuarkClusterNode {
 	/**
 	 * @var QuarkService $_connect
 	 */
@@ -1034,7 +1040,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 		try {
 			$service = $this->_service($json->url, $client);
 
-			if (isset($json->session)) {
+			if (isset($json->session) && QuarkObject::isAssociative($json->session)) {
 				$session = (object)each($json->session);
 				$service->Input()->AuthorizationProvider(new QuarkKeyValuePair($session->key, $session->value));
 			}
@@ -1136,6 +1142,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkThread, IQuarkClusterNode 
 
 		$stream->Session()->Client($client);
 		$stream->Input()->Remote($client->URI());
+		$stream->Input()->Environment($this);
 
 		return $stream;
 	}
@@ -2027,12 +2034,13 @@ class QuarkService implements IQuarkContainer {
 		$providers = Quark::StackOf(new QuarkSession());
 		$target = $this->_input->AuthorizationProvider();
 
-		foreach ($providers as $provider) if (($target != null && $target->Key() == $provider->Name()) || $provider->Recognize($this->_input)) {
-			if ($target == null)
-				$this->_input->AuthorizationProvider(new QuarkKeyValuePair($provider->Name()));
+		foreach ($providers as $provider)
+			if (($target != null && $target->Key() == $provider->Name()) || $provider->Recognize($this->_input)) {
+				if ($target == null)
+					$this->_input->AuthorizationProvider(new QuarkKeyValuePair($provider->Name()));
 
-			break;
-		}
+				break;
+			}
 
 		/**
 		 * @var QuarkSession $session
@@ -2322,7 +2330,7 @@ class QuarkObject {
 	 * @return bool
 	 */
 	public static function isAssociative ($source) {
-		return is_array($source) && sizeof(array_filter(array_keys($source), 'is_string')) != 0;
+		return is_object($source) || is_array($source) && sizeof(array_filter(array_keys($source), 'is_string')) != 0;
 	}
 
 	/**
@@ -5326,11 +5334,11 @@ interface IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
 	 * @param QuarkDTO $input
-	 * @param bool $stream
+	 * @param bool $fpm
 	 *
 	 * @return bool|mixed
 	 */
-	public function Session($name, QuarkDTO $input, $stream);
+	public function Session($name, QuarkDTO $input, $fpm);
 
 	/**
 	 * @param string $name
@@ -6963,7 +6971,7 @@ class QuarkDTO {
 	/**
 	 * @var IQuarkEnvironmentProvider $_environment
 	 */
-	private $_environment;
+	private $_environment = null;
 
 	/**
 	 * @param $key

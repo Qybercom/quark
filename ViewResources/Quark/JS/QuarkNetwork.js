@@ -131,7 +131,7 @@ Quark.Network.Client = function (host, port, on) {
             };
 
             if (session != undefined && that.session[session] != undefined)
-                out.session = that.session[session];
+                out.session = {session: that.session[session]};
 
             that.Send(JSON.stringify(out));
         }

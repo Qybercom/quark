@@ -21,7 +21,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		$start = true;
 
 		if (session_status() == PHP_SESSION_NONE)
-			$start = session_start();
+			$start = @session_start();
 
 		return $start;
 	}
@@ -54,14 +54,14 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
 	 * @param QuarkDTO $input
-	 * @param bool $stream
+	 * @param bool $fpm
 	 *
 	 * @return bool|mixed
 	 */
-	public function Session ($name, QuarkDTO $input, $stream) {
-		$session = $stream
-			? $input->AuthorizationProvider()->ToCookie()
-			: $input->GetCookieByName(session_name());
+	public function Session ($name, QuarkDTO $input, $fpm) {
+		$session = $fpm
+			? $input->GetCookieByName(session_name())
+			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null);
 
 		if (!$session || !preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
 
