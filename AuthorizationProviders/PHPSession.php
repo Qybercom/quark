@@ -5,6 +5,7 @@ use Quark\IQuarkAuthorizationProvider;
 
 use Quark\Quark;
 use Quark\QuarkCookie;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkDTO;
 
@@ -36,7 +37,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	private function _end ($name, $id, $lifetime) {
 		$output = new QuarkDTO();
 		$output->Cookie(new QuarkCookie(session_name(), $id, $lifetime));
-		$output->AuthorizationProvider($name, $id);
+		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $id));
 
 		return $output;
 	}
