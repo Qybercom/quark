@@ -5300,7 +5300,8 @@ class QuarkSession implements IQuarkStackable {
 			$this->_authorized = (bool)($this->_user = $this->_user->Session($this->_name, $session));
 
 		$this->_input = $input;
-		$this->_output = $input;
+		$this->_output = new QuarkDTO();
+		$this->_output->AuthorizationProvider($input->AuthorizationProvider());
 
 		return $this;
 	}
