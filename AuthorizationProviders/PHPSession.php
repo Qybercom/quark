@@ -60,6 +60,9 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return bool|mixed
 	 */
 	public function Session ($name, QuarkDTO $input, $fpm) {
+		if (isset($_COOKIE[session_name()]))
+			unset($_COOKIE[session_name()]);
+
 		$session = $fpm
 			? $input->GetCookieByName(session_name())
 			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null);
