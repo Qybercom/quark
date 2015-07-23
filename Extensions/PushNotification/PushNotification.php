@@ -55,7 +55,7 @@ class PushNotification implements IQuarkExtension {
 	/**
 	 * @param Device $device
 	 */
-	public function Device (Device $device) {
+	public function Device (Device $device = null) {
 		$this->_devices[] = $device;
 	}
 
@@ -71,12 +71,17 @@ class PushNotification implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
+		if (!$this->_config) {
+			Quark::Log('PushNotification does not have a valid config', Quark::LOG_WARN);
+			return false;
+		}
+
 		$ok = true;
 		$providers = $this->_config->Providers();
 
 		foreach ($providers as $provider) {
 			foreach ($this->_devices as $device)
-				if ($device->type == $provider->Type())
+				if ($device && $device->type == $provider->Type())
 					$provider->Device($device);
 
 			$ok &= $provider->Send($this->_payload, isset($this->_options[$provider->Type()])

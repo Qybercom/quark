@@ -3934,7 +3934,7 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private static function _link ($property, $value) {
 		return $property instanceof IQuarkLinkedModel
-			? $property->Link(QuarkObject::isAssociative($value) ? (object)$value : $value)
+			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : $value))
 			: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
 	}
 
