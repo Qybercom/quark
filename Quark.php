@@ -1054,7 +1054,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function ControllerClose (QuarkClient $controller, QuarkServer $server, QuarkPeer $network) {
-		echo '[cluster.controller] closed ', $controller->ConnectionURI(),"\r\n\r\n";
+		echo '[cluster.controller] closed ', $controller->ConnectionURI(),"\r\n";
 	}
 
 	/**
@@ -5927,10 +5927,9 @@ class QuarkClient {
 	 * @return mixed
 	 */
 	public function Receive ($mode = self::MODE_STREAM, $max = -1, $offset = -1) {
-		// TODO: handle closing state
-		return $this->_receive($this->_socket, $mode == self::MODE_STREAM, $max, $offset);
+		$rcv = $this->_receive($this->_socket, $mode == self::MODE_STREAM, $max, $offset);
 
-		if ($rcv === false && $this->_connected)
+		if ($this->Closed())
 			$this->Close();
 
 		return $rcv;
@@ -6001,6 +6000,13 @@ class QuarkClient {
 			$this->_connected = $connected;
 
 		return $this->_connected;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Closed () {
+		return feof($this->_socket) === true && $this->_connected;
 	}
 
 	/**
