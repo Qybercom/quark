@@ -1628,12 +1628,12 @@ class QuarkThreadSet {
 	 */
 	public static function Queue (callable $pipe, $sleep = 1) {
 		$run = true;
-
+		clearstatcache();
 		while ($run) {
 			$result = $pipe();
 
 			$run = $result !== false;
-			usleep($sleep);
+			time_nanosleep(0, 10000000);//$sleep);
 		}
 	}
 }
