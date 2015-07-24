@@ -5898,7 +5898,8 @@ class QuarkClient {
 			return self::_err($this->_errorString, $this->_errorNumber);
 
 		stream_set_timeout($this->_socket, 0);//$this->_timeout);
-		stream_set_blocking($this->_socket, 0);//$this->_blocking);
+
+		$this->Blocking($this->_blocking);
 
 		if ($this->ConnectionURI() == $this->ConnectionURI(true)) return $this->Close();
 
@@ -6014,8 +6015,12 @@ class QuarkClient {
 	 * @return bool
 	 */
 	public function Blocking ($block = true) {
-		if (func_num_args() != 0)
+		if (func_num_args() != 0) {
 			$this->_blocking = $block;
+
+			if ($this->_socket)
+				stream_set_blocking($this->_socket, $block);
+		}
 
 		return $this->_blocking;
 	}
@@ -6149,6 +6154,7 @@ class QuarkServer {
 			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
 			$client = QuarkClient::ForServer($socket, $address, $this->URI()->scheme);
 			$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
+			$client->Blocking(false);
 
 			$accept = $this->_transport->OnConnect($client, $this->_clients);
 
