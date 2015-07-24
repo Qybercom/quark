@@ -975,7 +975,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 				break;
 
 			case QuarkClusterNode::EVENT_CONTROLLER:
-				echo ' - controller: ', $cluster->Controller()->ConnectionURI(),"\r\n";
+				echo ' - controller: ', $cluster->Controller()->ConnectionURI(), ' ', $cluster->Controller()->ConnectionURI(true), "\r\n";
 				break;
 
 			case QuarkClusterNode::EVENT_NODE:
@@ -2037,6 +2037,7 @@ class QuarkService implements IQuarkContainer {
 	public function Event ($data, callable $sender = null, $pack = true) {
 		return $this->_broadcast(function (QuarkClient $client) use ($data, $sender, $pack) {
 			if (!$sender && !$pack) return $data;
+			if (!$client->Session()) return null;
 
 			$session = QuarkSession::Restore($client->Session());
 			$out = $sender($session, $data);
@@ -5633,7 +5634,7 @@ trait QuarkNetwork {
 	/**
 	 * @var int $_timeout
 	 */
-	private $_timeout = 30;
+	private $_timeout = 0;
 
 	/**
 	 * @var resource $_socket
@@ -5716,11 +5717,11 @@ trait QuarkNetwork {
 	}
 
 	/**
-	 * @param int $timeout = 30
+	 * @param int $timeout = 0
 	 *
 	 * @return int
 	 */
-	public function Timeout ($timeout = 30) {
+	public function Timeout ($timeout = 0) {
 		if (func_num_args() == 1 && is_int($timeout))
 			$this->_timeout = $timeout;
 
@@ -5786,7 +5787,7 @@ trait QuarkNetwork {
 	 */
 	private function _close ($socket) {
 		try {
-			return stream_socket_shutdown($socket, STREAM_SHUT_RDWR);
+			return $socket ? stream_socket_shutdown($socket, STREAM_SHUT_RDWR) : false;
 		}
 		catch (\Exception $e) {
 			return self::_err($e->getMessage(), $e->getCode());
@@ -5855,10 +5856,10 @@ class QuarkClient {
 	 * @param string $uri
 	 * @param IQuarkTransportProvider $transport
 	 * @param QuarkCertificate $certificate
-	 * @param int $timeout = 30
+	 * @param int $timeout = 0
 	 * @param bool $block = true
 	 */
-	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 30, $block = true) {
+	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 0, $block = true) {
 		$this->URI(QuarkURI::FromURI($uri));
 		$this->Transport($transport);
 		$this->Certificate($certificate);
@@ -5870,6 +5871,9 @@ class QuarkClient {
 	 * @return bool
 	 */
 	public function Connect () {
+		if ($this->_uri->IsNull())
+			return self::_err('QuarkClient URI is null', 125000);
+
 		$stream = stream_context_create();
 
 		if ($this->_certificate == null) {
@@ -5881,29 +5885,26 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		if ($this->_uri->IsNull())
-			return self::_err('Unknown uri', 1);
-
-		$this->_socket = stream_socket_client(
+		$this->_socket = @stream_socket_client(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
-			$this->_timeout,
-			STREAM_CLIENT_ASYNC_CONNECT,
+			0,
+			STREAM_CLIENT_CONNECT,
 			$stream
 		);
 
-		if (!$this->_socket)
+		if (!$this->_socket || $this->_errorNumber != 0)
 			return self::_err($this->_errorString, $this->_errorNumber);
 
-		stream_set_blocking($this->_socket, (int)$this->_blocking);
+		stream_set_timeout($this->_socket, $this->_timeout);
+		stream_set_blocking($this->_socket, $this->_blocking);
 
+		if ($this->ConnectionURI() == $this->ConnectionURI(true)) return $this->Close();
+
+		$this->_connected = true;
 		$this->_remote = QuarkURI::FromURI($this->ConnectionURI(true));
-
-		if ($this->ConnectionURI(false)->host != QuarkServer::ALL_INTERFACES) {
-			$this->_connected = true;
-			$this->_transport->OnConnect($this, array());
-		}
+		$this->_transport->OnConnect($this, array());
 
 		return true;
 	}
@@ -5930,12 +5931,7 @@ class QuarkClient {
 	 * @return mixed
 	 */
 	public function Receive ($mode = self::MODE_STREAM, $max = -1, $offset = -1) {
-		$rcv = $this->_receive($this->_socket, $mode == self::MODE_STREAM, $max, $offset);
-
-		if ($this->Closed())
-			$this->Close();
-
-		return $rcv;
+		return $this->Closed() ? $this->Close() : $this->_receive($this->_socket, $mode == self::MODE_STREAM, $max, $offset);
 	}
 
 	/**
@@ -6009,7 +6005,7 @@ class QuarkClient {
 	 * @return bool
 	 */
 	public function Closed () {
-		return feof($this->_socket) === true && $this->_connected;
+		return $this->_socket && (feof($this->_socket) === true && $this->_connected);
 	}
 
 	/**
@@ -6097,6 +6093,9 @@ class QuarkServer {
 	 * @return bool
 	 */
 	public function Bind () {
+		if ($this->_uri->IsNull())
+			return self::_err('QuarkServer URI is null', 125000);
+
 		$stream = stream_context_create();
 
 		if ($this->_certificate == null) {
@@ -6108,7 +6107,7 @@ class QuarkServer {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_server(
+		$this->_socket = stream_socket_server(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -6144,7 +6143,7 @@ class QuarkServer {
 		if (sizeof($this->_read) == 0)
 			$this->_read = array($this->_socket);
 
-		if (stream_select($this->_read, $this->_write, $this->_except, 0) === false) return true;
+		if (stream_select($this->_read, $this->_write, $this->_except, 0, 0) === false) return true;
 
 		if (in_array($this->_socket, $this->_read, true)) {
 			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
@@ -6467,7 +6466,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 
 		$this->_server = new QuarkServer($external, $transport);
 		$this->_network = new QuarkPeer($this, $internal);
-		$this->_controller = new QuarkClient($controller, $this, null, 5, false);
+		$this->_controller = new QuarkClient($controller, $this, null, 0, false);
 	}
 
 	/**
@@ -6524,7 +6523,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 		}
 
 		if (!$this->_controller->Connected()) {
-			$run &= $this->_controller->Connect();
+			$this->_controller->Connect();
 
 			if ($this->_controller->Connected())
 				$this->_node->NetworkEvent(self::EVENT_CONTROLLER, $this);
@@ -6596,17 +6595,18 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 */
 	public function OnConnect (QuarkClient $client, $clients) {
 		$connection = $client->ConnectionURI();
+
 		$server = $this->_server->ConnectionURI(false, $connection->host);
 		$network = $this->_network->Server()->ConnectionURI(false, true);
 		$controller = $this->_controller->ConnectionURI(false);
 
-		if ($connection->URI() == $server->URI())
+		if ($server && $connection->URI() == $server->URI())
 			$this->_node->ClientConnect($client, $clients);
 
-		if ($connection->URI() == $network->URI())
+		if ($network && $connection->URI() == $network->URI())
 			$this->_node->NodeConnect($client, $this->_network->Peers());
 
-		if ($connection->URI() == $controller->URI())
+		if ($controller && $connection->URI() == $controller->URI())
 			$this->_node->ControllerConnect($this->_controller, $this->_server, $this->_network);
 	}
 
@@ -6619,28 +6619,23 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 */
 	public function OnData (QuarkClient $client, $clients, $data) {
 		$remote = $client->Remote();
+
+		if (!$remote) return;
+
 		$remote->host = QuarkServer::ExternalIPOf($remote->host);
 
-		$controller = $this->_controller->ConnectionURI(true);
 		$server = $this->_server->ConnectionURI(false, true);
 		$network = $this->_network->Server()->ConnectionURI(false, true);
+		$controller = $this->_controller->ConnectionURI(true);
 
-		switch ($remote->URI()) {
-			case $controller->URI():
-				$this->_node->ControllerData($this->_controller, $data);
-				break;
+		if ($server && $remote->URI() == $server->URI())
+			$this->_node->OnData($this, $client, $data, true);
 
-			case $server->URI():
-				$this->_node->OnData($this, $client, $data, true);
-				break;
+		if ($network && $remote->URI() == $network->URI())
+			$this->_node->OnData($this,  $client, $data, false);
 
-			case $network->URI():
-				$this->_node->OnData($this,  $client, $data, false);
-				break;
-
-			default:
-				break;
-		}
+		if ($controller && $remote->URI() == $controller->URI())
+			$this->_node->ControllerData($this->_controller, $data);
 	}
 
 	/**
@@ -6660,8 +6655,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 * @return bool
 	 */
 	public function Pipe () {
-		return
-			$this->Bind() &&
+		return $this->Bind() &&
 			$this->_server->Pipe() &&
 			$this->_controller->Pipe() &&
 			$this->_network->Pipe();
