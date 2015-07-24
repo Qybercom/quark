@@ -86,7 +86,7 @@ class Quark {
 			$streams[] = new QuarkCLIEnvironmentProvider($argc, $argv);
 
 			$threads->Threads($streams);
-			$threads->Pipeline(100);
+			$threads->Pipeline(self::$_config->Tick());
 		}
 	}
 
@@ -332,6 +332,11 @@ class QuarkConfig {
 	private $_alloc = 5;
 
 	/**
+	 * @var int $_tick = 1 000 000 (nanoseconds) (1 millisecond)
+	 */
+	private $_tick = 1000000;
+
+	/**
 	 * @var string
 	 */
 	private $_mode = Quark::MODE_DEV;
@@ -402,6 +407,18 @@ class QuarkConfig {
 			$this->_alloc = $mb;
 
 		return $this->_alloc;
+	}
+
+	/**
+	 * @param int $ns = 1 000 000 (nanoseconds) (1 millisecond)
+	 *
+	 * @return int
+	 */
+	public function Tick ($ns = 1000000) {
+		if (func_num_args() != 0)
+			$this->_tick = $ns;
+
+		return $this->_tick;
 	}
 
 	/**
@@ -1614,9 +1631,9 @@ class QuarkThreadSet {
 	}
 
 	/**
-	 * @param int $sleep = 1 (microseconds)
+	 * @param int $sleep = 1 000 000 (nanoseconds) (1 millisecond)
 	 */
-	public function Pipeline ($sleep = 1) {
+	public function Pipeline ($sleep = 10000000) {
 		self::Queue(function () {
 			return $this->Invoke();
 		}, $sleep);
@@ -1624,16 +1641,16 @@ class QuarkThreadSet {
 
 	/**
 	 * @param callable $pipe
-	 * @param int $sleep = 1 (microseconds)
+	 * @param int $sleep = 1 000 000 (nanoseconds) (1 millisecond)
 	 */
-	public static function Queue (callable $pipe, $sleep = 1) {
+	public static function Queue (callable $pipe, $sleep = 10000000) {
 		$run = true;
-		clearstatcache();
+
 		while ($run) {
 			$result = $pipe();
 
 			$run = $result !== false;
-			time_nanosleep(0, 10000000);//$sleep);
+			time_nanosleep(0, $sleep);
 		}
 	}
 }
