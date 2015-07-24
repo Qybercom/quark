@@ -410,11 +410,11 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param int $ns = 1 000 000 (nanoseconds) (1 millisecond)
+	 * @param int $ns = 10 000 000 (nanoseconds) (10 milliseconds)
 	 *
 	 * @return int
 	 */
-	public function Tick ($ns = 1000000) {
+	public function Tick ($ns = 10000000) {
 		if (func_num_args() != 0)
 			$this->_tick = $ns;
 
@@ -1631,7 +1631,7 @@ class QuarkThreadSet {
 	}
 
 	/**
-	 * @param int $sleep = 1 000 000 (nanoseconds) (1 millisecond)
+	 * @param int $sleep = 10 000 000 (nanoseconds) (10 milliseconds)
 	 */
 	public function Pipeline ($sleep = 10000000) {
 		self::Queue(function () {
@@ -1641,7 +1641,7 @@ class QuarkThreadSet {
 
 	/**
 	 * @param callable $pipe
-	 * @param int $sleep = 1 000 000 (nanoseconds) (1 millisecond)
+	 * @param int $sleep = 10 000 000 (nanoseconds) (10 milliseconds)
 	 */
 	public static function Queue (callable $pipe, $sleep = 10000000) {
 		$run = true;
