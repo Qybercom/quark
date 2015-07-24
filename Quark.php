@@ -332,9 +332,9 @@ class QuarkConfig {
 	private $_alloc = 5;
 
 	/**
-	 * @var int $_tick = 1 000 000 (nanoseconds) (1 millisecond)
+	 * @var int $_tick = 10 000 000 (nanoseconds) (10 milliseconds)
 	 */
-	private $_tick = 1000000;
+	private $_tick = 10000000;
 
 	/**
 	 * @var string
