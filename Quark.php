@@ -5881,12 +5881,15 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
+		if ($this->_uri->IsNull())
+			return self::_err('Unknown uri', 1);
+
 		$this->_socket = stream_socket_client(
 			$this->_uri->Socket($this->ip),
 			$this->_errorNumber,
 			$this->_errorString,
 			$this->_timeout,
-			STREAM_CLIENT_CONNECT|STREAM_CLIENT_ASYNC_CONNECT,
+			STREAM_CLIENT_ASYNC_CONNECT,
 			$stream
 		);
 
@@ -6927,7 +6930,7 @@ class QuarkURI {
 	public static function Of ($path, $full = true, $secure = false) {
 		$path = Quark::NormalizePath($path, false);
 
-		// TODO: abstract ::WebHost fir non-FPM environment (use global default source fir example)
+		// TODO: abstract ::WebHost for non-FPM environment (use global default source for example)
 		return Quark::WebHost($full, $secure) . (strlen($path) != 0 && $path[0] == '/' ? substr($path, 1) : $path);
 	}
 
@@ -7074,6 +7077,13 @@ class QuarkURI {
 			if ($uri->$key != $value) return false;
 
 		return true;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsNull () {
+		return !$this->host && $this->port === null;
 	}
 }
 
