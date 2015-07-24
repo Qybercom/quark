@@ -86,7 +86,7 @@ class Quark {
 			$streams[] = new QuarkCLIEnvironmentProvider($argc, $argv);
 
 			$threads->Threads($streams);
-			$threads->Pipeline();
+			$threads->Pipeline(100);
 		}
 	}
 
