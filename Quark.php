@@ -5897,8 +5897,8 @@ class QuarkClient {
 		if (!$this->_socket || $this->_errorNumber != 0)
 			return self::_err($this->_errorString, $this->_errorNumber);
 
-		stream_set_timeout($this->_socket, $this->_timeout);
-		stream_set_blocking($this->_socket, $this->_blocking);
+		stream_set_timeout($this->_socket, 0);//$this->_timeout);
+		stream_set_blocking($this->_socket, 0);//$this->_blocking);
 
 		if ($this->ConnectionURI() == $this->ConnectionURI(true)) return $this->Close();
 
