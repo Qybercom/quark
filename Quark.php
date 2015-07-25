@@ -6547,12 +6547,12 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 			$this->_node->NetworkEvent(self::EVENT_NETWORK, $this);
 		}
 
-		if (!$this->_controller->Connected()) {
+		/*if (!$this->_controller->Connected()) {
 			$this->_controller->Connect();
 
 			if ($this->_controller->Connected())
 				$this->_node->NetworkEvent(self::EVENT_CONTROLLER, $this);
-		}
+		}*/
 
 		return $run;
 	}
@@ -6682,7 +6682,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	public function Pipe () {
 		return $this->Bind() &&
 			$this->_server->Pipe() &&
-			$this->_controller->Pipe() &&
+			//$this->_controller->Pipe() &&
 			$this->_network->Pipe();
 	}
 }
