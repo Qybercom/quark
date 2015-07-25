@@ -238,8 +238,6 @@ class MongoDB implements IQuarkDataProvider {
 		$buffer = array();
 		$item = null;
 
-		Quark::Trace($criteria);
-
 		foreach ($raw as $document) {
 			/**
 			 * @var \StdClass $document->_id
