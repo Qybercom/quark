@@ -310,6 +310,7 @@ Quark::Import(Quark::Host());
 
 /**
  * Class QuarkConfig
+ *
  * @package Quark
  */
 class QuarkConfig {
@@ -837,7 +838,7 @@ interface IQuarkIntermediateTransportProvider {
 /**
  * Interface IQuarkTransportProviderClient
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
 interface IQuarkTransportProviderClient extends IQuarkTransportProvider {
 	/**
@@ -4373,6 +4374,7 @@ interface IQuarkModelWithCustomPrimaryKey {
 
 /**
  * Interface IQuarkModelWithAfterFind
+ *
  * @package Quark
  */
 interface IQuarkModelWithAfterFind {
@@ -4466,6 +4468,7 @@ interface IQuarkModelWithBeforeExtract {
 
 /**
  * Interface IQuarkDataProvider
+ *
  * @package Quark
  */
 interface IQuarkDataProvider {
@@ -4556,6 +4559,7 @@ interface IQuarkDataProvider {
 
 /**
  * Class QuarkField
+ *
  * @package Quark
  */
 class QuarkField {
@@ -5848,7 +5852,7 @@ trait QuarkNetwork {
 /**
  * Class QuarkClient
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
 class QuarkClient {
 	const MODE_STREAM = 'stream';
@@ -6839,7 +6843,7 @@ interface IQuarkClusterController {
 /**
  * Class QuarkURI
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
 class QuarkURI {
 	const SCHEME_HTTP = 'http';
@@ -7111,7 +7115,7 @@ class QuarkURI {
 /**
  * Class QuarkDTO
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
 class QuarkDTO {
 	const HTTP_VERSION_1_0 = 'HTTP/1.0';
@@ -8127,7 +8131,7 @@ class QuarkDTO {
 /**
  * Class QuarkHTTPTransportClient
  *
- * @package Quark\Extensions\Quark
+ * @package Quark
  */
 class QuarkHTTPTransportClient implements IQuarkTransportProviderClient {
 	/**
@@ -8887,6 +8891,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQ
 
 /**
  * Interface IQuarkCulture
+ *
  * @package Quark
  */
 interface IQuarkCulture {
@@ -8908,6 +8913,7 @@ interface IQuarkCulture {
 
 /**
  * Class QuarkCultureISO
+ *
  * @package Quark
  */
 class QuarkCultureISO implements IQuarkCulture {
@@ -8929,6 +8935,7 @@ class QuarkCultureISO implements IQuarkCulture {
 
 /**
  * Class QuarkCultureRU
+ *
  * @package Quark
  */
 class QuarkCultureRU implements IQuarkCulture {
@@ -9007,6 +9014,7 @@ class QuarkCultureCustom implements IQuarkCulture {
 
 /**
  * Class QuarkException
+ *
  * @package Quark
  */
 abstract class QuarkException extends \Exception {
@@ -9023,6 +9031,7 @@ abstract class QuarkException extends \Exception {
 
 /**
  * Class QuarkArchException
+ *
  * @package Quark
  */
 class QuarkArchException extends QuarkException {
@@ -9037,6 +9046,7 @@ class QuarkArchException extends QuarkException {
 
 /**
  * Class QuarkHTTPException
+ *
  * @package Quark
  */
 class QuarkHTTPException extends QuarkException {
@@ -9106,6 +9116,7 @@ interface IQuarkIOProcessor {
 
 /**
  * Class QuarkPlainIOProcessor
+ *
  * @package Quark
  */
 class QuarkPlainIOProcessor implements IQuarkIOProcessor {
@@ -9129,6 +9140,7 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
 
 /**
  * Class QuarkHTMLIOProcessor
+ *
  * @package Quark
  */
 class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
@@ -9192,6 +9204,7 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 
 /**
  * Class QuarkJSONIOProcessor
+ *
  * @package Quark
  */
 class QuarkJSONIOProcessor implements IQuarkIOProcessor {
@@ -9224,6 +9237,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 
 /**
  * Class QuarkXMLIOProcessor
+ *
  * @package Quark
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
@@ -9734,7 +9748,7 @@ interface IQuarkSQLDataProvider {
 /**
  * Class QuarkSource
  *
- * @package Quark\Tools
+ * @package Quark
  */
 class QuarkSource {
 	private $_location = '';
