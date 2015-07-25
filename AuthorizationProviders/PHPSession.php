@@ -67,7 +67,11 @@ class PHPSession implements IQuarkAuthorizationProvider {
 			? $input->GetCookieByName(session_name())
 			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null);
 
-		if (!$session || !$session->value || !preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
+		if (!$session || !$session->value || !is_string($session->value)) return false;
+
+		$session->value = trim($session->value);
+
+		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
 
 		session_id($session->value);
 

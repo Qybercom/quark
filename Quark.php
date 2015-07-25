@@ -1206,7 +1206,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		$stream->Session()->Client($client);
 		$stream->Input()->Remote($client->URI());
-		$stream->Input()->Environment($this);
 
 		return $stream;
 	}
@@ -1614,7 +1613,10 @@ class QuarkThreadSet {
 	 * @return bool|mixed
 	 */
 	public function Invoke () {
-		clearstatcache();
+		// WARNING!
+		// These options seriously affect Quark performance and system integration.
+		//clearstatcache();
+		//gc_collect_cycles();
 
 		$run = true;
 
@@ -6547,12 +6549,12 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 			$this->_node->NetworkEvent(self::EVENT_NETWORK, $this);
 		}
 
-		/*if (!$this->_controller->Connected()) {
+		if (!$this->_controller->Connected()) {
 			$this->_controller->Connect();
 
 			if ($this->_controller->Connected())
 				$this->_node->NetworkEvent(self::EVENT_CONTROLLER, $this);
-		}*/
+		}
 
 		return $run;
 	}
@@ -8374,10 +8376,10 @@ class QuarkCookie {
 	 */
 	public static function FromCookie ($header = '') {
 		$out = array();
-		$cookies = explode(';', $header);
+		$cookies = explode(',', $header);
 
 		foreach ($cookies as $raw) {
-			$cookie = explode('=', $raw);
+			$cookie = explode('=', trim($raw));
 
 			if (sizeof($cookie) == 2)
 				$out[] = new QuarkCookie($cookie[0], $cookie[1]);
