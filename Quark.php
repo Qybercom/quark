@@ -1615,7 +1615,7 @@ class QuarkThreadSet {
 	 */
 	public function Invoke () {
 		clearstatcache();
-		
+
 		$run = true;
 
 		foreach ($this->_threads as $thread) {
