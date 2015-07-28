@@ -84,11 +84,7 @@ class SMS implements IQuarkExtension {
 	 * @throws QuarkArchException
 	 */
 	public function Send () {
-		$out = $this->_main();
-
-		var_dump($out);
-
-		return !isset($out->error);
+		return !isset($this->_main()->error);
 	}
 
 	/**
