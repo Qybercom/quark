@@ -3,26 +3,22 @@ namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
-use Quark\IQuarkTransportProviderClient;
+use Quark\IQuarkTransportProvider;
 
 use Quark\Quark;
-use Quark\QuarkArchException;
-use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkField;
 use Quark\QuarkFile;
 use Quark\QuarkHTMLIOProcessor;
-use Quark\QuarkMultipartIOProcessor;
-use Quark\QuarkServer;
-use Quark\QuarkURI;
+use Quark\QuarkArchException;
 
 /**
  * Class Mail
  *
  * @package Quark\Extensions\Mail
  */
-class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
+class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	const HEADER_SUBJECT = 'Subject';
 	const HEADER_TO = 'To';
 	const HEADER_FROM = 'From';
@@ -31,11 +27,6 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 	 * @var IQuarkExtensionConfig|IQuarkMailProvider $_config
 	 */
 	private $_config;
-
-	/**
-	 * @var QuarkURI $_uri
-	 */
-	private $_uri;
 
 	/**
 	 * @var QuarkDTO $_dto
@@ -81,7 +72,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 	public function __construct ($config, $subject, $text, $to = '') {
 		$this->_config = Quark::Config()->Extension($config);
 
-		$this->_dto = new QuarkDTO(QuarkMultipartIOProcessor::ForAttachment(new QuarkHTMLIOProcessor()));
+		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());
 
 		$this->Subject($subject);
@@ -167,9 +158,8 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 			$this->_dto->Merge(array('files' => $this->_files));
 
 		$client = new QuarkClient($this->_config->SMTP(), $this, null, 5);
-		$client->Action();
 
-		return true;
+		return $client->Connect();
 	}
 
 	/**
@@ -177,16 +167,6 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 	 */
 	public function Log () {
 		return $this->_log;
-	}
-
-	/**
-	 * @param QuarkURI         $uri
-	 * @param QuarkCertificate $certificate
-	 *
-	 * @return mixed
-	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		$this->_uri = $uri;
 	}
 
 	/**
@@ -223,7 +203,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 		}
 
 		$smtp = $this->_config->SMTP();
-		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkMultipartIOProcessor::TRANSFER_ENCODING_BASE64);
+		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
 
 		try {
 			$this->_cmd($client, 220);
@@ -237,7 +217,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 				$this->_cmd($client, 250, 'RCPT TO: <' . $receiver . '>');
 
 			$this->_cmd($client, 354, 'DATA');
-			$this->_cmd($client, 250, $this->_dto->Serialize() . "\r\n.");
+			$this->_cmd($client, 250, $this->_dto->SerializeResponseBody() . "\r\n.");
 			$this->_cmd($client, 221, 'QUIT');
 		}
 		catch (QuarkArchException $e) {
@@ -245,5 +225,33 @@ class Mail implements IQuarkExtension, IQuarkTransportProviderClient {
 		}
 
 		return $client->Close();
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return bool
+	 */
+	public function OnConnect (QuarkClient $client) {
+		// TODO: Implement OnConnect() method.
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function OnData (QuarkClient $client, $data) {
+		// TODO: Implement OnData() method.
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return mixed
+	 */
+	public function OnClose (QuarkClient $client) {
+		// TODO: Implement OnClose() method.
 	}
 }

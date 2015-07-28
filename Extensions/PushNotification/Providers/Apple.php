@@ -1,13 +1,11 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
-use Quark\IQuarkTransportProviderClient;
+use Quark\IQuarkTransportProvider;
 
-use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkURI;
 
 use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
@@ -17,7 +15,7 @@ use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProviderClient {
+class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProvider {
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';
@@ -26,11 +24,6 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	const OPTION_ALERT = 'alert';
 	const OPTION_BADGE = 'badge';
 	const OPTION_SOUND = 'sound';
-
-	/**
-	 * @var QuarkURI $_uri
-	 */
-	private $_uri;
 
 	/**
 	 * @var QuarkCertificate $_certificate
@@ -104,7 +97,7 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 		);
 
 		$client = new QuarkClient($this->_host, $this, $this->_certificate);
-		$client->Action();
+		$client->Connect();
 
 		return true;
 	}
@@ -114,16 +107,6 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	 */
 	public function Reset () {
 		$this->_devices = array();
-	}
-
-	/**
-	 * @param QuarkURI         $uri
-	 * @param QuarkCertificate $certificate
-	 *
-	 * @return mixed
-	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		$this->_uri = $uri;
 	}
 
 	/**
@@ -140,52 +123,31 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	/**
 	 * @param QuarkClient $client
 	 *
-	 * @return mixed
+	 * @return bool
 	 */
-	public function Client (QuarkClient $client) {
-		$conn = $client->Connect();
-
-		if (!$conn) {
-			Quark::Log('PushNotification.Apple. Unable to connect to push server. Error: ' . $client->Error(true));
-			return false;
-		}
-
+	public function OnConnect (QuarkClient $client) {
 		foreach ($this->_devices as $device)
 			$client->Send($this->_msg($device));
 
 		$client->Close();
-
-		return true;
 	}
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
-	 *
-	 * @return bool
-	 */
-	public function OnConnect (QuarkClient $client, $clients) {
-		// TODO: Implement OnConnect() method.
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData (QuarkClient $client, $clients, $data) {
+	public function OnData (QuarkClient $client, $data) {
 		// TODO: Implement OnData() method.
 	}
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 *
 	 * @return mixed
 	 */
-	public function OnClose (QuarkClient $client, $clients) {
+	public function OnClose (QuarkClient $client) {
 		// TODO: Implement OnClose() method.
 	}
 }

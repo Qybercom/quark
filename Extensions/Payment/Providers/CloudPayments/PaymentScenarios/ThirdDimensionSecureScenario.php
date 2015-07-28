@@ -37,7 +37,7 @@ class ThirdDimensionSecureScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Pay (IQuarkPaymentConfig $config) {
-		$this->_response = $config->API($this, 'https://api.cloudpayments.ru/payments/cards/post3ds')->Action();
+		$this->_response = $config->API($this, 'https://api.cloudpayments.ru/payments/cards/post3ds');
 
 		return isset($this->_response->Success) && $this->_response->Success;
 	}

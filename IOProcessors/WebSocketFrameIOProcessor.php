@@ -211,4 +211,11 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	private static function _lengthBin ($source, $format) {
 		return str_split(sprintf($format, $source), 8);
 	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Batch ($raw) { return $raw; }
 }

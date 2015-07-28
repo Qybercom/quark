@@ -1,12 +1,14 @@
 <?php
 namespace Quark\Extensions\Payment;
 
+use Quark\IQuarkExtensionConfig;
+
 /**
  * Interface IQuarkPaymentConfig
  *
  * @package Quark\Extensions\Payment
  */
-interface IQuarkPaymentConfig {
+interface IQuarkPaymentConfig extends IQuarkExtensionConfig {
 	/**
 	 * @param string $currency
 	 * @param float $amount

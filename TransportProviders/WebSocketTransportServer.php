@@ -1,31 +1,27 @@
 <?php
 namespace Quark\TransportProviders;
 
-use Quark\IOProcessors\WebSocketFrameIOProcessor;
 use Quark\IQuarkIOProcessor;
 use Quark\IQuarkTransportProvider;
-use Quark\IQuarkTransportProviderServer;
 use Quark\IQuarkIntermediateTransportProvider;
 
-use Quark\QuarkCertificate;
 use Quark\QuarkClient;
-use Quark\QuarkServer;
-use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkHTMLIOProcessor;
+
+use Quark\IOProcessors\WebSocketFrameIOProcessor;
 
 /**
  * Class WebSocketTransportServer
  *
  * @package Quark\TransportProviders
  */
-class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkIntermediateTransportProvider {
+class WebSocketTransportServer implements IQuarkTransportProvider, IQuarkIntermediateTransportProvider {
 	const GuID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 	/**
-	 * @var QuarkURI $_uri
+	 * @var string $_buffer
 	 */
-	private $_uri;
 	private $_buffer = '';
 
 	/**
@@ -93,46 +89,21 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 	}
 
 	/**
-	 * @param QuarkURI         $uri
-	 * @param QuarkCertificate $certificate
-	 *
-	 * @return mixed
-	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		$this->_uri = $uri;
-	}
-
-	/**
-	 * @param QuarkServer $server
-	 *
-	 * @return mixed
-	 */
-	public function Server (QuarkServer $server) {
-		if (!$server->Bind()) return false;
-
-		$server->Listen();
-
-		return true;
-	}
-
-	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 *
 	 * @return bool
 	 */
-	public function OnConnect (QuarkClient $client, $clients) {
+	public function OnConnect (QuarkClient $client) {
 		// TODO: Implement OnConnect() method.
 	}
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData (QuarkClient $client, $clients, $data) {
+	public function OnData (QuarkClient $client, $data) {
 		if ($client->Connected()) {
 			$out = $this->_processor->Decode(strlen($this->_buffer) == 0 ? $data : $this->_buffer . $data);
 
@@ -140,7 +111,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 				$this->_buffer .= $data;
 			}
 			else {
-				$this->_protocol->OnData($client, $clients, $out);
+				$this->_protocol->OnData($client, $out);
 				$this->_buffer = '';
 			}
 		}
@@ -155,7 +126,7 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 
 			$this->_buffer = '';
 
-			$response = new QuarkDTO(new QuarkHTMLIOProcessor(), $this->_uri);
+			$response = new QuarkDTO(new QuarkHTMLIOProcessor());
 			$response->Status(101, 'Switching Protocols');
 			$response->Headers(array(
 				QuarkDTO::HEADER_CONNECTION => QuarkDTO::CONNECTION_UPGRADE,
@@ -173,17 +144,16 @@ class WebSocketTransportServer implements IQuarkTransportProviderServer, IQuarkI
 				return $this->_processor->Encode($data);
 			});
 
-			$this->_protocol->OnConnect($client, $clients);
+			$this->_protocol->OnConnect($client);
 		}
 	}
 
 	/**
-	 * @param QuarkClient   $client
-	 * @param QuarkClient[] $clients
+	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
-	public function OnClose (QuarkClient $client, $clients) {
-		$this->_protocol->OnClose($client, $clients);
+	public function OnClose (QuarkClient $client) {
+		$this->_protocol->OnClose($client);
 	}
 }

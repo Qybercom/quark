@@ -17,6 +17,11 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	public $appSecret;
 
 	/**
+	 * @var string $_name
+	 */
+	private $_name = '';
+
+	/**
 	 * @param IQuarkSocialNetworkProvider $social
 	 * @param string $id
 	 * @param string $secret
@@ -44,5 +49,17 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	 */
 	public function SocialNetwork () {
 		return $this->social;
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function Name ($name = '') {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+
+		return $this->_name;
 	}
 }

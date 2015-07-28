@@ -51,7 +51,7 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 		$this->Amount = $config->amount;
 		$this->AccountId = $config->user;
 
-		$this->_response = $config->API($this, 'https://api.cloudpayments.ru/payments/cards/charge')->Action();
+		$this->_response = $config->API($this, 'https://api.cloudpayments.ru/payments/cards/charge');
 
 		return isset($this->_response->Success) && $this->_response->Success;
 	}

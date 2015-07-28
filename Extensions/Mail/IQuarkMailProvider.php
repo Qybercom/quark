@@ -1,6 +1,8 @@
 <?php
 namespace Quark\Extensions\Mail;
 
+use Quark\IQuarkExtensionConfig;
+
 use Quark\QuarkURI;
 
 /**
@@ -8,7 +10,7 @@ use Quark\QuarkURI;
  *
  * @package Quark\Extensions\Mail
  */
-interface IQuarkMailProvider {
+interface IQuarkMailProvider extends IQuarkExtensionConfig {
 	/**
 	 * @return QuarkURI
 	 */

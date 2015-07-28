@@ -1,11 +1,9 @@
 <?php
 namespace Quark\Extensions\Mail\Providers;
 
-use Quark\IQuarkExtensionConfig;
-use Quark\Extensions\Mail\IQuarkMailProvider;
-
 use Quark\QuarkURI;
 
+use Quark\Extensions\Mail\IQuarkMailProvider;
 use Quark\Extensions\Mail\Mail;
 
 /**
@@ -13,10 +11,15 @@ use Quark\Extensions\Mail\Mail;
  *
  * @package Quark\Extensions\Mail\Providers
  */
-class Yandex implements IQuarkMailProvider, IQuarkExtensionConfig {
+class Yandex implements IQuarkMailProvider {
 	private $_username;
 	private $_password;
-	private $_name;
+	private $_fullname;
+
+	/**
+	 * @var string $_name
+	 */
+	private $_name = '';
 
 	/**
 	 * @param string $username
@@ -26,7 +29,7 @@ class Yandex implements IQuarkMailProvider, IQuarkExtensionConfig {
 	public function __construct ($username, $password, $name = '') {
 		$this->_username = $username;
 		$this->_password = $password;
-		$this->_name = $name;
+		$this->_fullname = $name;
 	}
 
 	/**
@@ -40,6 +43,18 @@ class Yandex implements IQuarkMailProvider, IQuarkExtensionConfig {
 	 * @return string
 	 */
 	public function From () {
-		return Mail::Sender($this->_name, $this->_username);
+		return Mail::Sender($this->_fullname, $this->_username);
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function Name ($name = '') {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+
+		return $this->_name;
 	}
 }

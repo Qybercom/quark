@@ -8,7 +8,6 @@ use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
-use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkObject;
@@ -52,10 +51,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 		$this->_uri->path = $action;
 
-		$client = new QuarkClient($this->_uri->URI(true));
-		$client->Transport(new QuarkHTTPTransportClient($request, $response));
-
-		$data = $client->Action()->Data();
+		$data = QuarkHTTPTransportClient::To($this->_uri->URI(true), $request, $response);
 
 		if ($data == null || !isset($data->status) || $data->status != 200)
 			throw new QuarkArchException('QuarkRest API is not reachable. Response: ' . print_r($data, true));

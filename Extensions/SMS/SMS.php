@@ -4,7 +4,6 @@ namespace Quark\Extensions\SMS;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
-use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkArchException;
@@ -24,11 +23,6 @@ class SMS implements IQuarkExtension {
 
 	private $_message = '';
 	private $_phones = array();
-
-	/**
-	 * @var QuarkDTO $_response
-	 */
-	private $_response = null;
 
 	/**
 	 * @param string $config
@@ -112,14 +106,14 @@ class SMS implements IQuarkExtension {
 	/**
 	 * @param string $append
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkDTO!bool
 	 * @throws QuarkArchException
 	 */
 	private function _main ($append = '') {
 		if (strlen($this->_message) == 0)
 			throw new QuarkArchException('SMS: message length should be greater than 0');
 
-		$client = new QuarkClient(
+		return QuarkHTTPTransportClient::To(
 			'http://smsc.ru/sys/send.php'
 			. '?login='. $this->_config->username
 			. '&psw=' . $this->_config->password
@@ -129,21 +123,8 @@ class SMS implements IQuarkExtension {
 			. '&charset=utf-8'
 			. ($this->_config->sender != '' ? '&sender=' . $this->_config->sender : '')
 			. $append,
-			new QuarkHTTPTransportClient(
-				QuarkDTO::ForGET(new QuarkPlainIOProcessor()),
-				new QuarkDTO(new QuarkJSONIOProcessor())
-			)
+			QuarkDTO::ForGET(new QuarkPlainIOProcessor()),
+			new QuarkDTO(new QuarkJSONIOProcessor())
 		);
-
-		$this->_response = $client->Action();
-
-		return $this->_response;
-	}
-
-	/**
-	 * @return QuarkDTO
-	 */
-	public function Response () {
-		return $this->_response;
 	}
 }

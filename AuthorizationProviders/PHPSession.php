@@ -16,15 +16,18 @@ use Quark\QuarkDTO;
  */
 class PHPSession implements IQuarkAuthorizationProvider {
 	/**
-	 * @return bool
+	 * @var QuarkDTO $_output
+	 */
+	private $_output;
+
+	/**
+	 * start session
 	 */
 	private function _start () {
-		$start = true;
-
 		if (session_status() == PHP_SESSION_NONE)
-			$start = @session_start();
+			@session_start();
 
-		return $start;
+		session_write_close();
 	}
 
 	/**
@@ -32,14 +35,16 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @param string $id
 	 * @param int $lifetime (seconds)
 	 *
-	 * @return QuarkDTO
+	 * @return bool
 	 */
 	private function _end ($name, $id, $lifetime) {
-		$output = new QuarkDTO();
-		$output->Cookie(new QuarkCookie(session_name(), $id, $lifetime));
-		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $id));
+		$this->_output = new QuarkDTO();
+		$this->_output->Cookie(new QuarkCookie(session_name(), $id, $lifetime));
+		$this->_output->AuthorizationProvider(new QuarkKeyValuePair($name, $id));
 
-		return $output;
+		session_write_close();
+
+		return true;
 	}
 
 	/**
@@ -55,15 +60,15 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
 	 * @param QuarkDTO $input
-	 * @param bool $fpm
+	 * @param bool $http
 	 *
 	 * @return bool|mixed
 	 */
-	public function Session ($name, QuarkDTO $input, $fpm) {
+	public function Input ($name, QuarkDTO $input, $http) {
 		if (isset($_COOKIE[session_name()]))
 			unset($_COOKIE[session_name()]);
 
-		$session = $fpm
+		$session = $http
 			? $input->GetCookieByName(session_name())
 			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null);
 
@@ -74,10 +79,14 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		if (!preg_match('/^[a-zA-Z0-9,\-]{22,40}$/', $session->value)) return false;
 
 		session_id($session->value);
+		$this->_start();
 
-		if (!$this->_start()) return false;
+		if (!isset($_SESSION[$name]['user'])) return false;
 
-		return isset($_SESSION[$name]['user']) ? $_SESSION[$name]['user'] : false;
+		$this->_output = new QuarkDTO();
+		$this->_output->AuthorizationProvider(new QuarkKeyValuePair($name, $session->value));
+
+		return $_SESSION[$name]['user'];
 	}
 
 	/**
@@ -85,7 +94,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @param QuarkModel $user
 	 * @param int $lifetime (seconds)
 	 *
-	 * @return QuarkDTO|bool
+	 * @return bool
 	 */
 	public function Login ($name, QuarkModel $user, $lifetime) {
 		/**
@@ -95,8 +104,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 		ini_set('session.auto_start', false);
 
 		session_regenerate_id();
-
-		if (!$this->_start()) return false;
+		$this->_start();
 
 		$_SESSION[$name]['user'] = $user->Model();
 		$_SESSION[$name]['signature'] = Quark::GuID();
@@ -107,10 +115,12 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
 	 *
-	 * @return QuarkDTO|bool
+	 * @return bool
 	 */
 	public function Logout ($name) {
-		if (!$this->_start() || !isset($_SESSION[$name])) return false;
+		$this->_start();
+
+		if (!isset($_SESSION[$name])) return false;
 
 		unset($_SESSION[$name]);
 
@@ -122,11 +132,19 @@ class PHPSession implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
-	 * @param QuarkDTO $input
 	 *
 	 * @return string
 	 */
-	public function Signature ($name, QuarkDTO $input) {
+	public function Signature ($name) {
 		return $this->_start() && isset($_SESSION[$name]['signature']) ? $_SESSION[$name]['signature'] : '';
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkDTO
+	 */
+	public function Output ($name) {
+		return $this->_output;
 	}
 }

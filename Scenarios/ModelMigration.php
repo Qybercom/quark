@@ -3,7 +3,6 @@ namespace Quark\Scenarios;
 
 use Quark\IQuarkTask;
 
-use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 
@@ -21,9 +20,7 @@ class ModelMigration implements IQuarkTask {
 		var_dump(isset($_SERVER['SERVER_ADDR']));
 		echo gethostbyname(gethostname());
 
-		$client = new QuarkClient('http://canihazip.com/', new QuarkHTTPTransportClient(new QuarkDTO(), new QuarkDTO()));
-
-		var_dump($client->Action());
+		var_dump(QuarkHTTPTransportClient::To('http://canihazip.com/', new QuarkDTO()));
 	}
 
 	/**

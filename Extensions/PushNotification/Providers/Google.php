@@ -58,11 +58,7 @@ class Google implements IQuarkPushNotificationProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$client = new QuarkClient('https://android.googleapis.com/gcm/send', new QuarkHTTPTransportClient($request, $response));
-
-		$client->Action();
-
-		return true;
+		return QuarkHTTPTransportClient::To('https://android.googleapis.com/gcm/send', $request, $response);
 	}
 
 	/**
