@@ -112,7 +112,7 @@ class Quark {
 	 * @return string
 	 */
 	public static function IP ($host) {
-		return gethostbyname(gethostbyaddr($host));
+		return gethostbyname($host . '.');
 	}
 
 	/**
@@ -5881,11 +5881,11 @@ class QuarkClient {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_client(
+		$this->_socket = stream_socket_client(
 			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
-			0,
+			$this->_timeout,
 			STREAM_CLIENT_CONNECT,
 			$stream
 		);
@@ -7162,11 +7162,19 @@ class QuarkDTO {
 	private $_environment = null;
 
 	/**
+	 * @var null $_null
+	 */
+	private $_null = null;
+
+	/**
 	 * @param $key
 	 *
 	 * @return mixed
 	 */
 	public function &__get ($key) {
+		if (is_scalar($this->_data))
+			return $this->_null;
+
 		return $this->_data->$key;
 	}
 
@@ -8029,7 +8037,7 @@ class QuarkHTTPTransportClient implements IQuarkTransportProvider {
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
 	 */
-	public function __construct (QuarkDTO $request, QuarkDTO $response) {
+	public function __construct (QuarkDTO $request, QuarkDTO $response = null) {
 		$this->_request = $request;
 		$this->_response = $response;
 	}
@@ -8104,11 +8112,11 @@ class QuarkHTTPTransportClient implements IQuarkTransportProvider {
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
 	 * @param QuarkCertificate $certificate
-	 * @param int $timeout = 0
+	 * @param int $timeout = 10
 	 *
 	 * @return QuarkDTO|bool
 	 */
-	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 0) {
+	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
 		$client = new QuarkClient($uri, new QuarkHTTPTransportClient($request, $response), $certificate, $timeout);
 
 		if (!$client->Connect()) return false;
