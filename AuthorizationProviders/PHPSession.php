@@ -26,8 +26,6 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	private function _start () {
 		if (session_status() == PHP_SESSION_NONE)
 			@session_start();
-
-		session_write_close();
 	}
 
 	/**
@@ -145,6 +143,7 @@ class PHPSession implements IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function Output ($name) {
+		session_write_close();
 		return $this->_output;
 	}
 }
