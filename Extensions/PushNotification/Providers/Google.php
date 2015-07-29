@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
-use Quark\QuarkClient;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
@@ -50,7 +49,7 @@ class Google implements IQuarkPushNotificationProvider {
 	 */
 	public function Send($payload, $options = []) {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-		$request->Header('Authorization', 'key=' . $this->_key);
+		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
 		$request->Data(array(
 			'registration_ids' => $this->_devices,
 			'data' => $payload,
