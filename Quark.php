@@ -4077,12 +4077,13 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param mixed       $data
-	 * @param array       $options
+	 * @param mixed $data
+	 * @param array $options
+	 * @param callable $after = null
 	 *
 	 * @return QuarkModel|\StdClass
 	 */
-	private static function _record (IQuarkModel $model, $data, $options = []) {
+	private static function _record (IQuarkModel $model, $data, $options = [], callable $after = null) {
 		if ($data == null) return null;
 
 		$output = new QuarkModel($model, $data);
@@ -4091,6 +4092,13 @@ class QuarkModel implements IQuarkContainer {
 
 		if ($model instanceof IQuarkModelWithAfterFind)
 			$model->AfterFind($data);
+
+		if ($after) {
+			$buffer = $after($output);
+
+			if ($buffer === false) return null;
+			if ($buffer !== null) $output = $buffer;
+		}
 
 		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
 			$output = $options[self::OPTION_EXTRACT] === true
@@ -4222,7 +4230,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
-	 * @param callable $after = null
+	 * @param callable(QuarkModel) $after = null
 	 *
 	 * @return QuarkCollection
 	 */
@@ -4231,18 +4239,8 @@ class QuarkModel implements IQuarkContainer {
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
 		if ($raw != null)
-			foreach ($raw as $item) {
-				$record = self::_record($model, $item, $options);
-
-				if ($after) {
-					$buffer = $after($record);
-
-					if ($buffer === false) continue;
-					if ($buffer !== null) $record = $buffer;
-				}
-
-				$records[] = $record;
-			}
+			foreach ($raw as $item)
+				$records[] = self::_record($model, $item, $options, $after);
 
 		return isset($options[self::OPTION_EXTRACT])
 			? $records
@@ -4253,22 +4251,24 @@ class QuarkModel implements IQuarkContainer {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
+	 * @param callable(QuarkModel) $after = null
 	 *
 	 * @return QuarkModel|null
 	 */
-	public static function FindOne (IQuarkModel $model, $criteria = [], $options = []) {
-		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options);
+	public static function FindOne (IQuarkModel $model, $criteria = [], $options = [], callable $after = null) {
+		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options, $after);
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param $id
 	 * @param $options
+	 * @param callable(QuarkModel) $after = null
 	 *
 	 * @return QuarkModel|null
 	 */
-	public static function FindOneById (IQuarkModel $model, $id, $options = []) {
-		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options);
+	public static function FindOneById (IQuarkModel $model, $id, $options = [], callable $after= null) {
+		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options, $after);
 	}
 
 	/**
