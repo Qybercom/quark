@@ -84,9 +84,10 @@ class PushNotification implements IQuarkExtension {
 				if ($device && $device->type == $provider->Type())
 					$provider->Device($device);
 
-			$ok &= $provider->Send($this->_payload, isset($this->_options[$provider->Type()])
+			$ok &= (bool)$provider->Send($this->_payload, isset($this->_options[$provider->Type()])
 				? $this->_options[$provider->Type()]
 				: array());
+
 			$provider->Reset();
 		}
 

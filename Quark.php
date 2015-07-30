@@ -2778,12 +2778,12 @@ class QuarkView implements IQuarkContainer {
 			if ($resource instanceof IQuarkForeignViewResource) { }
 
 			if ($resource instanceof IQuarkLocalViewResource) {
-				$res = QuarkSource::FromFile($location);
+				$res = new QuarkSource($location);
 
 				if ($obfuscate && $resource->CacheControl())
 					$res->Obfuscate();
 
-				$content = $res->Source();
+				$content = $res->Content();
 
 				$location = '';
 			}
@@ -8510,8 +8510,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public $extension = '';
 	public $isDir = false;
 
-	private $_content = '';
-	private $_loaded = false;
+	protected $_content = '';
+	protected $_loaded = false;
 
 	/**
 	 * @return string
@@ -8723,31 +8723,6 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Unlink () {
 		return $this->location;
-	}
-
-	/**
-	 * @param array $files
-	 *
-	 * @return array
-	 */
-	public static function CollectionFrom ($files = []) {
-		if (!is_array($files)) return array();
-
-		$output = array();
-
-		foreach ($files as $file)
-			$output[] = self::From($file);
-
-		return $output;
-	}
-
-	/**
-	 * @param $file
-	 *
-	 * @return QuarkFile
-	 */
-	public static function From ($file) {
-		return (new QuarkModel(new QuarkFile(), $file))->Model();
 	}
 
 	/**
@@ -9687,14 +9662,8 @@ interface IQuarkSQLDataProvider {
  * Class QuarkSource
  *
  * @package Quark
- *
- * TODO: reuse QuarkFile
  */
-class QuarkSource {
-	private $_location = '';
-	private $_type = '';
-	private $_source = '';
-	private $_size = 0;
+class QuarkSource extends QuarkFile {
 	private $_trim = array();
 
 	/**
@@ -9710,121 +9679,22 @@ class QuarkSource {
 	);
 
 	/**
-	 * @param string $source
-	 * @param array $trim
-	 */
-	public function __construct ($source = '', $trim = array()) {
-		$this->Load($source);
-		$this->_trim = func_num_args() == 2 ? $trim : self::$__trim;
-	}
-
-	/**
-	 * @param $file
+	 * @param string[] $trim
 	 *
-	 * @return QuarkSource
-	 * @throws QuarkArchException
+	 * @return string[]
 	 */
-	public static function FromFile ($file) {
-		$source = new self();
+	public function Trim ($trim = []) {
+		if (func_num_args() != 0)
+			$this->_trim = $trim;
 
-		if (!$source->Load($file))
-			throw new QuarkArchException('There is no source file at ' . (string)$file);
-
-		return $source;
-	}
-
-	/**
-	 * @param string $file
-	 * @return string
-	 */
-	public static function FileExtension ($file) {
-		return array_reverse(explode('.', $file))[0];
-	}
-
-	/**
-	 * @param $source
-	 *
-	 * @return bool
-	 */
-	public function Load ($source) {
-		if (!is_file($source)) return false;
-
-		$this->_location = $source;
-		$this->_type = self::FileExtension($source);
-		$this->_source = file_get_contents($source);
-		$this->_size();
-
-		return true;
-	}
-
-	/**
-	 * @param $destination
-	 *
-	 * @return bool
-	 */
-	public function Save ($destination) {
-		if (!is_file($destination)) return false;
-
-		file_put_contents($destination, $this->_source);
-		return true;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		return $this->_location;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Type () {
-		return $this->_type;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Source () {
-		return $this->_source;
-	}
-
-	/**
-	 * @return float|int
-	 */
-	public function Size () {
-		return $this->_size;
-	}
-
-	/**
-	 * @param string $dim = 'k'
-	 * @param int    $precision = 3
-	 */
-	private function _size ($dim = 'k', $precision = 3) {
-		$size = strlen($this->_source);
-
-		switch ($dim) {
-			default: break;
-			case 'b': break;
-			case 'k': $size = $size / 1024; break;
-			case 'm': $size = $size / 1024 / 1024; break;
-			case 'g': $size = $size / 1024 / 1024 / 1024; break;
-			case 't': $size = $size / 1024 / 1024 / 1024 / 1024; break;
-		}
-
-		if ($dim != 'b')
-			$size = round($size, $precision);
-
-		$this->_size = $size;
+		return $this->_trim;
 	}
 
 	/**
 	 * @return QuarkSource
 	 */
 	public function Obfuscate () {
-		$this->_source = self::ObfuscateString($this->_source, $this->_trim);
-		$this->_size();
+		$this->_content = self::ObfuscateString($this->_content, $this->_trim);
 
 		return $this;
 	}
