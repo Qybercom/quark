@@ -4222,16 +4222,27 @@ class QuarkModel implements IQuarkContainer {
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
+	 * @param callable $after = null
 	 *
 	 * @return QuarkCollection
 	 */
-	public static function Find (IQuarkModel $model, $criteria = [], $options = []) {
+	public static function Find (IQuarkModel $model, $criteria = [], $options = [], callable $after = null) {
 		$records = array();
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
 		if ($raw != null)
-			foreach ($raw as $item)
-				$records[] = self::_record($model, $item, $options);
+			foreach ($raw as $item) {
+				$record = self::_record($model, $item, $options);
+
+				if ($after) {
+					$buffer = $after($record);
+
+					if ($buffer === false) continue;
+					if ($buffer !== null) $record = $buffer;
+				}
+
+				$records[] = $record;
+			}
 
 		return isset($options[self::OPTION_EXTRACT])
 			? $records
