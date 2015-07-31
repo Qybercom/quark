@@ -1942,11 +1942,11 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param QuarkDTO|object|array $data
-	 * @param IQuarkStream $service
+	 * @param IQuarkStreamNetwork $service
 	 *
 	 * @return bool
 	 */
-	public function Broadcast ($data, IQuarkStream $service = null) {
+	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
 		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $data, $this->URL($service));
 	}
 
