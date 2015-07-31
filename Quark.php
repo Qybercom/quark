@@ -905,8 +905,7 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return mixed
 	 */
 	public function ExceptionHandler (\Exception $exception) {
-		if ($exception instanceof QuarkException)
-			Quark::Log($exception->message, $exception->lvl);
+		return QuarkException::ExceptionHandler($exception);
 	}
 }
 
@@ -1110,8 +1109,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function ExceptionHandler (\Exception $exception) {
-		if ($exception instanceof QuarkException)
-			Quark::Log($exception->message, $exception->lvl);
+		return QuarkException::ExceptionHandler($exception);
 	}
 
 	/**
@@ -2778,7 +2776,7 @@ class QuarkView implements IQuarkContainer {
 			if ($resource instanceof IQuarkForeignViewResource) { }
 
 			if ($resource instanceof IQuarkLocalViewResource) {
-				$res = new QuarkSource($location);
+				$res = new QuarkSource($location, true);
 
 				if ($obfuscate && $resource->CacheControl())
 					$res->Obfuscate();
@@ -8560,10 +8558,14 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 	/**
 	 * @param string $location
+	 * @param bool $load = false
 	 */
-	public function __construct ($location = '') {
+	public function __construct ($location = '', $load = false) {
 		if (func_num_args() != 0)
 			$this->Location($location);
+
+		if ($load)
+			$this->Load();
 	}
 
 	/**
@@ -8909,6 +8911,21 @@ abstract class QuarkException extends \Exception {
 	 * @var string
 	 */
 	public $message = 'QuarkException';
+
+	/**
+	 * @param \Exception $exception
+	 *
+	 * @return bool|int
+	 */
+	public static function ExceptionHandler (\Exception $exception) {
+		if ($exception instanceof QuarkException)
+			return Quark::Log($exception->message, $exception->lvl);
+
+		if ($exception instanceof \Exception)
+			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
+
+		return true;
+	}
 }
 
 /**
