@@ -886,7 +886,7 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 
 				$service = new $class();
 			}
-			else $service = new QuarkService('/' . $argv[1]);
+			else $service = (new QuarkService('/' . $argv[1]))->Service();
 
 			if (!($service instanceof IQuarkTask))
 				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
@@ -1043,7 +1043,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return bool
 	 */
 	public function UsageCriteria () {
-		return Quark::CLI();
+		return Quark::CLI() && $_SERVER['argc'] == 1;
 	}
 
 	/**
@@ -1618,10 +1618,10 @@ class QuarkTask implements IQuarkTransportProvider {
 	 * @param IQuarkService $service
 	 */
 	public function __construct (IQuarkService $service = null) {
-		$this->_client = func_num_args() == 0;
+		$this->_client = func_num_args() != 0;
 		$this->_io = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		if ($this->_client) return;
+		if (!$this->_client) return;
 
 		$this->_service = $service;
 		$this->_launched = QuarkDate::Now();
@@ -1655,11 +1655,14 @@ class QuarkTask implements IQuarkTransportProvider {
 		if (!($this->_service instanceof IQuarkAsyncTask))
 			throw new QuarkArchException('Trying to async launch service ' . get_class($this->_service) . ' which is not an IQuarkAsyncTask');
 
-		$out = $this->_service->OnLaunch();
+		$out = $this->_service->OnLaunch(sizeof($args), $args);
+		$this->_io->Data($args);
 
-		$client = new QuarkClient($queue, $protocol ? $protocol : $this, null, 0, false);
+		$client = new QuarkClient($queue, ($protocol ? $protocol : $this), null, 30);
 
 		if (!$client->Connect()) return false;
+
+		return $out;
 	}
 
 	/**
@@ -1687,9 +1690,14 @@ class QuarkTask implements IQuarkTransportProvider {
 	 * @return bool
 	 */
 	public function OnConnect (QuarkClient $client) {
-		if (!$this->_client) return;
+		if (!$this->_client) return true;
 
-		$client->Send();
+		$this->_io->Data(array(
+			'task' => get_class($this->_service),
+			'args' => $this->_io->Data()
+		));
+
+		return $client->Send($this->_io->SerializeRequestBody()) && $client->Close();
 	}
 
 	/**
@@ -1699,8 +1707,15 @@ class QuarkTask implements IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function OnData (QuarkClient $client, $data) {
-		$this->_io->BatchUnserialize($data, function () {
-			
+		$this->_io->BatchUnserialize($data, function ($json) {
+			if (!isset($json->task) || !isset($json->args)) return;
+
+			$args = (array)$json->args;
+			$class = $json->task;
+			$task = new $class();
+
+			if ($task instanceof IQuarkAsyncTask)
+				$task->Task(sizeof($args), $args);
 		});
 	}
 
@@ -1709,9 +1724,7 @@ class QuarkTask implements IQuarkTransportProvider {
 	 *
 	 * @return mixed
 	 */
-	public function OnClose (QuarkClient $client) {
-		// TODO: Implement OnClose() method.
-	}
+	public function OnClose (QuarkClient $client) { }
 }
 
 /**
@@ -1748,11 +1761,14 @@ interface IQuarkScheduledTask extends IQuarkTask {
  *
  * @package Quark
  */
-interface IQuarkAsyncTask extends IQuarkScheduledTask {
+interface IQuarkAsyncTask extends IQuarkTask {
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
 	 * @return mixed
 	 */
-	public function OnLaunch();
+	public function OnLaunch($argc, $argv);
 }
 
 /**
@@ -6241,6 +6257,9 @@ class QuarkServer {
 		foreach ($this->_clients as $key => &$client) {
 			$data = $client->Receive(QuarkClient::MODE_BUCKET);
 
+			if ($data !== false)
+				$this->_transport->OnData($client, $data);
+
 			if (feof($client->Socket())) {
 				unset($this->_clients[$key]);
 
@@ -6249,9 +6268,6 @@ class QuarkServer {
 
 				continue;
 			}
-
-			if ($data !== false)
-				$this->_transport->OnData($client, $data);
 
 			$this->_read[] = $client->Socket();
 		}
@@ -7612,7 +7628,7 @@ class QuarkDTO {
 	 * @return mixed
 	 */
 	public function Data ($data = []) {
-		if (func_num_args() == 1)
+		if (func_num_args() != 0)
 			$this->_data = $data;
 
 		return $this->_data;
@@ -7631,7 +7647,7 @@ class QuarkDTO {
 	 * @return mixed
 	 */
 	public function Raw ($raw = []) {
-		if (func_num_args() == 1)
+		if (func_num_args() != 0)
 			$this->_raw = $raw;
 
 		return $this->_raw;

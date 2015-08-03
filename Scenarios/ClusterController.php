@@ -77,24 +77,22 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 	}
 
 	/**
-	 * @param QuarkClient   $client
-	 * @param QuarkClient[] $clients
+	 * @param QuarkClient $client
 	 *
 	 * @return bool
 	 */
-	public function OnConnect (QuarkClient $client, $clients) {
+	public function OnConnect (QuarkClient $client) {
 		$client->node = new ClusterNode($client);
 		$this->_event('nodes', $this->Nodes());
 	}
 
 	/**
-	 * @param QuarkClient   $client
-	 * @param QuarkClient[] $clients
-	 * @param string        $data
+	 * @param QuarkClient $client
+	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData (QuarkClient $client, $clients, $data) {
+	public function OnData (QuarkClient $client, $data) {
 		$json = json_decode($data);
 
 		if (!$json || !isset($json->cmd)) return true;
@@ -127,12 +125,11 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 	}
 
 	/**
-	 * @param QuarkClient   $client
-	 * @param QuarkClient[] $clients
+	 * @param QuarkClient $client
 	 *
 	 * @return mixed
 	 */
-	public function OnClose (QuarkClient $client, $clients) {
+	public function OnClose (QuarkClient $client) {
 		$this->_event('nodes', $this->Nodes());
 	}
 
@@ -238,22 +235,20 @@ class ClusterMonitor implements IQuarkTransportProvider {
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 *
 	 * @return bool
 	 */
-	public function OnConnect (QuarkClient $client, $clients) {
+	public function OnConnect (QuarkClient $client) {
 		$this->Event('nodes', $this->_cluster->Nodes());
 	}
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 * @param string $data
 	 *
 	 * @return mixed
 	 */
-	public function OnData (QuarkClient $client, $clients, $data) {
+	public function OnData (QuarkClient $client, $data) {
 		$json = json_decode($data);
 
 		if (!$json || !isset($json->cmd)) return true;
@@ -278,11 +273,10 @@ class ClusterMonitor implements IQuarkTransportProvider {
 
 	/**
 	 * @param QuarkClient $client
-	 * @param QuarkClient[] $clients
 	 *
 	 * @return mixed
 	 */
-	public function OnClose (QuarkClient $client, $clients) {
+	public function OnClose (QuarkClient $client) {
 		// TODO: Implement OnClose() method.
 	}
 
