@@ -462,7 +462,7 @@ class QuarkConfig {
 	/**
 	 * @var int $_tick = 10000 (microseconds)
 	 */
-	private $_tick = 10000;
+	private $_tick = QuarkThreadSet::TICK;
 
 	/**
 	 * @var string
@@ -516,7 +516,7 @@ class QuarkConfig {
 	 *
 	 * @return int
 	 */
-	public function Tick ($ms = 10000) {
+	public function Tick ($ms = QuarkThreadSet::TICK) {
 		if (func_num_args() != 0)
 			$this->_tick = $ms;
 
@@ -1590,8 +1590,9 @@ interface IQuarkSignedPostService {
  *
  * @package Quark
  */
-class QuarkTask {
+class QuarkTask implements IQuarkTransportProvider {
 	const PREDEFINED = '--quark';
+	const QUEUE = 'tcp://127.0.0.1:25500';
 
 	/**
 	 * @var IQuarkService|IQuarkTask|IQuarkScheduledTask $_service
@@ -1604,9 +1605,24 @@ class QuarkTask {
 	private $_launched = '';
 
 	/**
+	 * @var bool $_client = true
+	 */
+	private $_client = true;
+
+	/**
+	 * @var QuarkDTO $_io
+	 */
+	private $_io;
+
+	/**
 	 * @param IQuarkService $service
 	 */
-	public function __construct (IQuarkService $service) {
+	public function __construct (IQuarkService $service = null) {
+		$this->_client = func_num_args() == 0;
+		$this->_io = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		if ($this->_client) return;
+
 		$this->_service = $service;
 		$this->_launched = QuarkDate::Now();
 	}
@@ -1626,11 +1642,75 @@ class QuarkTask {
 		return true;
 	}
 
-	public function AsyncLaunch () {
+	/**
+	 * @param array $args
+	 * @param string $queue
+	 * @param IQuarkTransportProvider $protocol
+	 *
+	 * @return mixed
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function AsyncLaunch ($args = [], $queue = self::QUEUE, IQuarkTransportProvider $protocol = null) {
 		if (!($this->_service instanceof IQuarkAsyncTask))
 			throw new QuarkArchException('Trying to async launch service ' . get_class($this->_service) . ' which is not an IQuarkAsyncTask');
 
-		$this->_service->OnLaunch();
+		$out = $this->_service->OnLaunch();
+
+		$client = new QuarkClient($queue, $protocol ? $protocol : $this, null, 0, false);
+
+		if (!$client->Connect()) return false;
+	}
+
+	/**
+	 * @param QuarkURI|string $listen
+	 * @param IQuarkTransportProvider $protocol
+	 * @param int $tick = 10000 (microseconds)
+	 *
+	 * @return bool
+	 */
+	public static function AsyncQueue ($listen = self::QUEUE, IQuarkTransportProvider $protocol = null, $tick = QuarkThreadSet::TICK) {
+		$server = new QuarkServer($listen, $protocol ? $protocol : new QuarkTask());
+
+		if (!$server->Bind()) return false;
+
+		QuarkThreadSet::Queue(function () use ($server) {
+			return $server->Pipe();
+		}, $tick);
+
+		return true;
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return bool
+	 */
+	public function OnConnect (QuarkClient $client) {
+		if (!$this->_client) return;
+
+		$client->Send();
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function OnData (QuarkClient $client, $data) {
+		$this->_io->BatchUnserialize($data, function () {
+			
+		});
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return mixed
+	 */
+	public function OnClose (QuarkClient $client) {
+		// TODO: Implement OnClose() method.
 	}
 }
 
@@ -1681,6 +1761,8 @@ interface IQuarkAsyncTask extends IQuarkScheduledTask {
  * @package Quark
  */
 class QuarkThreadSet {
+	const TICK = 10000;
+
 	/**
 	 * @var IQuarkThread[] $_threads
 	 */
@@ -1745,7 +1827,7 @@ class QuarkThreadSet {
 	/**
 	 * @param int $sleep = 10000 (microseconds)
 	 */
-	public function Pipeline ($sleep = 10000) {
+	public function Pipeline ($sleep = self::TICK) {
 		self::Queue(function () {
 			return $this->Invoke();
 		}, $sleep);
@@ -1755,7 +1837,7 @@ class QuarkThreadSet {
 	 * @param callable $pipe
 	 * @param int $sleep = 10000 (microseconds)
 	 */
-	public static function Queue (callable $pipe, $sleep = 10000) {
+	public static function Queue (callable $pipe, $sleep = self::TICK) {
 		$run = true;
 
 		while ($run) {
@@ -3228,16 +3310,12 @@ trait QuarkInlineViewResource {
 	/**
 	 * @return string
 	 */
-	public function Location () {
-		// TODO: Implement Location() method.
-	}
+	public function Location () { }
 
 	/**
 	 * @return string
 	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
+	public function Type () { }
 
 	/**
 	 * @return bool
@@ -6087,9 +6165,9 @@ class QuarkServer {
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkTransportProvider $transport
 	 * @param QuarkCertificate $certificate
-	 * @param int $timeout = 30
+	 * @param int $timeout = 0
 	 */
-	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 30) {
+	public function __construct ($uri = '', IQuarkTransportProvider $transport = null, QuarkCertificate $certificate = null, $timeout = 0) {
 		$this->URI(QuarkURI::FromURI($uri));
 		$this->Transport($transport);
 		$this->Certificate($certificate);
@@ -6666,16 +6744,6 @@ class QuarkClusterController implements IQuarkTransportProvider {
 	public function __construct (IQuarkClusterController $controller, $external, $internal) {
 		$this->_network = new QuarkServer($internal, $this);
 		$this->_monitor = new QuarkServer();
-	}
-
-	/**
-	 * @param QuarkURI $uri
-	 * @param QuarkCertificate $certificate
-	 *
-	 * @return mixed
-	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		// TODO: Implement Setup() method.
 	}
 
 	/**
