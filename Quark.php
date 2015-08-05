@@ -1010,7 +1010,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->StreamUnknown($unknown);
 
 		Quark::On(self::EVENT_BROADCAST, function ($data, $url) {
-			$this->_cluster->Broadcast(json_encode(array(
+			$this->_cluster->Broadcast($this->_pack(array(
 				'url' => $url,
 				'data' => $data instanceof QuarkDTO ? $data->Data() : $data
 			)));
@@ -1033,7 +1033,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 				if ($session->Authorized())
 					$out['session'] = $session->ID()->Extract();
 
-				$client->Send(json_encode($out));
+				$client->Send($this->_pack($out));
+				$session->Output();
 			}
 
 			unset($out, $session, $client, $clients);
