@@ -8,6 +8,7 @@ use Quark\QuarkArchException;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkServer;
+use Quark\QuarkStreamEnvironmentProvider;
 use Quark\QuarkThreadSet;
 use Quark\QuarkURI;
 
@@ -33,13 +34,24 @@ class ClusterController implements IQuarkTask, IQuarkTransportProvider {
 	private $_control;
 
 	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
+	 * @return mixed
+	 */
+	public function Task ($argc, $argv) {
+		$streams = new QuarkStreamEnvironmentProvider();
+		$streams->StartClusterController(new WebSocketTransportServer());
+	}
+
+	/**
 	 * @param int   $argc
 	 * @param array $argv
 	 *
 	 * @return mixed
 	 * @throws QuarkArchException
 	 */
-	public function Task ($argc, $argv) {
+	public function Task1 ($argc, $argv) {
 		$cluster = isset($argv[3]) && (int)$argv[3] != 0 ? (int)$argv[3] : false;
 		$control = isset($argv[4]) && (int)$argv[4] != 0 ? (int)$argv[4] : false;
 

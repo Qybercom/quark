@@ -957,7 +957,7 @@ interface IQuarkIntermediateTransportProvider {
  *
  * @package Quark
  */
-class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkClusterNode {
+class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuarkClusterNode, IQuarkClusterController {
 	const EVENT_BROADCAST = 'event.broadcast';
 	const EVENT_EVENT = 'event.event';
 
@@ -982,6 +982,11 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_cluster;
 
 	/**
+	 * @var QuarkClusterController $_controller
+	 */
+	private $_controller;
+
+	/**
 	 * @var QuarkDTO $_dto
 	 */
 	private $_dto;
@@ -993,10 +998,11 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @param string $close = ''
 	 * @param string $unknown = ''
 	 */
-	public function __construct ($external, IQuarkTransportProvider $transport, $connect = '', $close = '', $unknown = '') {
-		if (!Quark::CLI() || $_SERVER['argc'] > 1) return;
-
+	public function __construct ($external = '', IQuarkTransportProvider $transport = null, $connect = '', $close = '', $unknown = '') {
 		$this->_dto = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		if (func_num_args() == 0 || !Quark::CLI() || $_SERVER['argc'] > 1) return;
+
 		$this->_cluster = new QuarkClusterNode($this, $transport, $external);
 
 		$this->StreamConnect($connect);
@@ -1118,13 +1124,17 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function ControllerConnect (QuarkClient $controller) {
-		echo '[cluster.controller.connect] ', $controller->ConnectionURI(), ' ', $controller->ConnectionURI(true), "\r\n";
+		echo '[cluster.node.controller.connect] ', $controller->ConnectionURI(), ' ', $controller->ConnectionURI(true), "\r\n";
 
-		$internal = $this->_cluster->Network()->Server()->ConnectionURI(false, true);
+		$internal = $this->_cluster->Network()->Server()->ConnectionURI();
+		$internal->host = Quark::IP(null);
+
+		$external = $this->_cluster->Server()->URI();
+		$external->host = Quark::IP(null);
 
 		$this->_cmd('state', array(
 			'internal' => $internal->URI(),
-			'external' => $this->_cluster->Server()->URI()->URI()
+			'external' => $external->URI()
 		));
 	}
 
@@ -1139,8 +1149,11 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->_dto->BatchUnserialize($data, function ($json) use ($controller) {
 			if (isset($json->event) && $json->event == 'nodes') {
 				if (isset($json->data) && is_array($json->data)) {
-					foreach ($json->data as $node)
-						$this->_cluster->Node(QuarkURI::FromURI($node->internal));
+					foreach ($json->data as $node) {
+						if (!isset($node->internal)) continue;
+
+						$this->_cluster->Node($node->internal);
+					}
 				}
 			}
 
@@ -1154,7 +1167,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function ControllerClose (QuarkClient $controller) {
-		echo '[cluster.controller.close] ', $controller->ConnectionURI(),"\r\n";
+		echo '[cluster.node.controller.close] ', $controller->ConnectionURI(),"\r\n";
 	}
 
 	/**
@@ -1163,7 +1176,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function NodeConnect (QuarkClient $node) {
-		echo '[cluster.node.connect] ', $this->_cluster->Network()->Server()->ConnectionURI(), ' ', "\r\n";
+		echo '[cluster.node.node.connect] ', $this->_cluster->Network()->Server()->ConnectionURI(), ' ', "\r\n";
 
 		$peers = array();
 		$network = $this->_cluster->Nodes();
@@ -1216,7 +1229,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function NodeClose (QuarkClient $node) {
-		echo "[cluster.node.close]\r\n";
+		echo "[cluster.node.node.close]\r\n";
 	}
 
 	/**
@@ -1226,7 +1239,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @throws QuarkArchException
 	 */
 	public function ClientConnect (QuarkClient $client) {
-		echo '[cluster.client.connect] ', $client->ConnectionURI(true), "\r\n";
+		echo '[cluster.node.client.connect] ', $client->ConnectionURI(true), "\r\n";
 
 		$this->_cmd('state', array(
 			'clients' => sizeof($this->_cluster->Server()->Clients())
@@ -1274,7 +1287,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @throws QuarkArchException
 	 */
 	public function ClientClose (QuarkClient $client) {
-		echo "[cluster.client.close]\r\n";
+		echo "[cluster.node.client.close]\r\n";
 
 		$this->_cmd('state', array(
 			'clients' => sizeof($this->_cluster->Server()->Clients())
@@ -1354,10 +1367,168 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @param array $data
 	 */
 	private function _cmd ($name = '', $data = []) {
-		$this->_cluster->Control(json_encode(array(
+		$this->_cluster->Control($this->_pack(array(
 			'cmd' => $name,
-			'state' => $data
+			'data' => $data
 		)));
+	}
+
+	/**
+	 * @param IQuarkTransportProvider $terminal
+	 *
+	 * @return bool
+	 */
+	public function StartClusterController (IQuarkTransportProvider $terminal) {
+		$this->_controller = new QuarkClusterController($this, $terminal, 'ws://0.0.0.0:25900', 'tcp://0.0.0.0:25800');
+
+		if (!$this->_controller->Bind()) return false;
+
+		QuarkThreadSet::Queue(function () {
+			$this->_controller->Pipe();
+		});
+
+		return true;
+	}
+
+	/**
+	 * @param QuarkClient $node
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientConnect (QuarkClient $node) {
+		echo '[cluster.controller.node.connect] ' . $node->ConnectionURI(),"\r\n";
+		/**
+		 * @var \StdClass $node
+		 */
+		$node->state = new \StdClass();
+	}
+
+	/**
+	 * @param QuarkClient $node
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientData (QuarkClient $node, $data) {
+		$this->_dto->BatchUnserialize($data, function ($json) use ($node) {
+			/**
+			 * @var \StdClass $node
+			 */
+			if (isset($json->cmd) && $json->cmd == 'state') {
+				if (isset($json->data->internal))
+					$node->state->internal = (string)$json->data->internal;
+
+				if (isset($json->data->external))
+					$node->state->external = (string)$json->data->external;
+
+				if (isset($json->data->clients))
+					$node->state->clients = (int)$json->data->clients;
+
+				if (isset($json->data->peers))
+					$node->state->peers = (array)$json->data->peers;
+
+				$this->_event('nodes', $this->_nodes());
+				$this->_infrastructure();
+			}
+		});
+	}
+
+	/**
+	 * @param QuarkClient $node
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientClose (QuarkClient $node) {
+		echo '[cluster.controller.node.close] ' . $node->ConnectionURI(),"\r\n";
+		$this->_infrastructure();
+	}
+
+	/**
+	 * @param QuarkClient $terminal
+	 *
+	 * @return mixed
+	 */
+	public function TerminalConnect (QuarkClient $terminal) {
+		echo '[cluster.controller.terminal.connect] ' . $terminal->ConnectionURI(),"\r\n";
+
+		$this->_infrastructure();
+	}
+
+	/**
+	 * @param QuarkClient $terminal
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function TerminalData (QuarkClient $terminal, $data) {
+		// TODO: Implement TerminalData() method.
+	}
+
+	/**
+	 * @param QuarkClient $terminal
+	 *
+	 * @return mixed
+	 */
+	public function TerminalClose (QuarkClient $terminal) {
+		echo '[cluster.controller.terminal.close] ' . $terminal->ConnectionURI(),"\r\n";
+	}
+
+	/**
+	 * @param array $data
+	 *
+	 * @return string
+	 */
+	private function _pack ($data = []) {
+		$this->_dto->Raw('');
+		$this->_dto->Data($data);
+
+		return $this->_dto->SerializeResponseBody();
+	}
+
+	/**
+	 * @param $name
+	 * @param array $data
+	 *
+	 * @return bool
+	 */
+	private function _event ($name, $data = []) {
+		return $this->_controller->Broadcast($this->_pack(array(
+			'event' => $name,
+			'data' => $data
+		)));
+	}
+
+	/**
+	 * @return array
+	 */
+	private function _nodes () {
+		$nodes = $this->_controller->Network()->Clients();
+		$out = array();
+
+		foreach ($nodes as $node) {
+			/**
+			 * @var \StdClass $node
+			 */
+			$out[] = $node->state;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function _infrastructure () {
+		$terminals = $this->_controller->Terminal()->Clients();
+		$out = true;
+
+		foreach ($terminals as $terminal)
+			$out &= $terminal->Send($this->_pack(array(
+				'event' => 'nodes',
+				'data' => $this->_nodes()
+			)));
+
+		return $out;
 	}
 }
 
@@ -1652,10 +1823,13 @@ class QuarkTask implements IQuarkTransportProvider {
 	 * @throws QuarkArchException
 	 */
 	public function AsyncLaunch ($args = [], $queue = self::QUEUE, IQuarkTransportProvider $protocol = null) {
-		if (!($this->_service instanceof IQuarkAsyncTask))
-			throw new QuarkArchException('Trying to async launch service ' . get_class($this->_service) . ' which is not an IQuarkAsyncTask');
+		if (!($this->_service instanceof IQuarkTask))
+			throw new QuarkArchException('Trying to async launch service ' . ($this->_service ? get_class($this->_service) : 'null') . ' which is not an IQuarkTask');
 
-		$out = $this->_service->OnLaunch(sizeof($args), $args);
+		$out = $this->_service instanceof IQuarkAsyncTask
+			? $this->_service->OnLaunch(sizeof($args), $args)
+			: null;
+
 		$this->_io->Data($args);
 
 		$client = new QuarkClient($queue, ($protocol ? $protocol : $this), null, 30);
@@ -1714,7 +1888,7 @@ class QuarkTask implements IQuarkTransportProvider {
 			$class = $json->task;
 			$task = new $class();
 
-			if ($task instanceof IQuarkAsyncTask)
+			if ($task instanceof IQuarkTask)
 				$task->Task(sizeof($args), $args);
 		});
 	}
@@ -6344,6 +6518,8 @@ class QuarkPeer {
 	public function __construct (IQuarkTransportProvider $transport = null, $bind = '', $connect = []) {
 		$this->_transport = $transport;
 		$this->_server = new QuarkServer($bind, $this->_transport);
+
+		$this->Peers($connect);
 	}
 
 	/**
@@ -6366,6 +6542,29 @@ class QuarkPeer {
 	}
 
 	/**
+	 * @param QuarkClient|QuarkURI|string $peer
+	 *
+	 * @return bool
+	 */
+	public function Has ($peer) {
+		if ($peer instanceof QuarkClient && $peer->ConnectionURI() != null)
+			$peer = $peer->ConnectionURI()->URI();
+
+		$peer = QuarkURI::FromURI($peer);
+
+		if (!$peer) return false;
+
+		foreach ($this->_peers as $item) {
+			$uri = $item->ConnectionURI(true, $peer->host);
+
+			if ($uri == null) continue;
+			if ($uri->URI() == $peer) return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param bool $unique = true
 	 * @param bool $loopBack = false
@@ -6373,15 +6572,14 @@ class QuarkPeer {
 	 * @return bool
 	 */
 	public function Peer ($uri = null, $unique = true, $loopBack = false) {
+		$uri = QuarkURI::FromURI($uri);
+
 		if (!$uri) return false;
 
-		$server = $this->_server->ConnectionURI(false, true);
-
-		if ($uri instanceof QuarkURI)
-			$uri = $uri->URI();
+		$server = $this->_server->ConnectionURI(false, $uri->host)->URI();
+		$uri = $uri->URI();
 
 		if ($uri == ':///') return false;
-
 		if (!$loopBack && $uri == $server) return false;
 		if ($unique && $this->Has($uri)) return false;
 
@@ -6443,32 +6641,6 @@ class QuarkPeer {
 	 */
 	public function Running () {
 		return $this->_server->Running();
-	}
-
-	/**
-	 * @param QuarkClient|QuarkURI|string $peer
-	 *
-	 * @return bool
-	 */
-	public function Has ($peer) {
-		if ($peer instanceof QuarkClient && $peer->ConnectionURI() != null)
-			$peer = $peer->ConnectionURI()->URI();
-
-		if ($peer instanceof QuarkURI)
-			$peer = $peer->URI();
-
-		$all = $this->_server->URI()->host == QuarkServer::ALL_INTERFACES;
-		$external = $this->_server->ConnectionURI(false, true)->host;
-
-		foreach ($this->_peers as $item) {
-			$uri = $item->ConnectionURI(true);
-
-			if ($uri == null) continue;
-			if ($all) $uri->host = $external;
-			if ($uri->URI() == $peer) return true;
-		}
-
-		return false;
 	}
 
 	/**
@@ -6580,7 +6752,7 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	}
 
 	/**
-	 * @param QuarkDTO|object|array $data
+	 * @param string $data
 	 *
 	 * @return bool
 	 */
@@ -6590,18 +6762,18 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	}
 
 	/**
-	 * @param QuarkURI $node
+	 * @param QuarkURI|string $node
 	 * @param bool $unique = true
 	 * @param bool $loopBack = false
 	 *
 	 * @return bool
 	 */
-	public function Node (QuarkURI $node, $unique = true, $loopBack = false) {
+	public function Node ($node, $unique = true, $loopBack = false) {
 		return $this->_network->Peer($node, $unique, $loopBack);
 	}
 
 	/**
-	 * @param QuarkURI[] $nodes
+	 * @param QuarkURI[]|string[] $nodes
 	 * @param bool $unique = true
 	 * @param bool $loopBack = false
 	 *
@@ -6615,23 +6787,27 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 * @param $event
 	 * @param QuarkClient $client
 	 * @param array $data
+	 *
+	 * @return mixed
 	 */
 	private function _switch ($event, QuarkClient $client, $data = []) {
 		$args = array_slice(func_get_args(), 1);
 		$connection = $client->ConnectionURI();
 
 		$server = $this->_server->ConnectionURI(false, $connection->host);
-		$network = $this->_network->Server()->ConnectionURI(false, true);
+		$network = $this->_network->Server()->ConnectionURI(false, $connection->host);
 		$controller = $this->_controller->ConnectionURI(false);
 
 		if ($server && $connection->URI() == $server->URI())
-			call_user_func_array(array($this->_node, 'Client' . $event), $args);
+			return call_user_func_array(array($this->_node, 'Client' . $event), $args);
 
 		if ($network && $connection->URI() == $network->URI())
-			call_user_func_array(array($this->_node, 'Node' . $event), $args);
+			return call_user_func_array(array($this->_node, 'Node' . $event), $args);
 
 		if ($controller && $connection->URI() == $controller->URI())
-			call_user_func_array(array($this->_node, 'Controller' . $event), $args);
+			return call_user_func_array(array($this->_node, 'Controller' . $event), $args);
+
+		return null;
 	}
 
 	/**
@@ -6743,23 +6919,107 @@ interface IQuarkClusterNode {
  */
 class QuarkClusterController implements IQuarkTransportProvider {
 	/**
+	 * @var IQuarkClusterController $_controller
+	 */
+	private $_controller;
+
+	/**
 	 * @var QuarkServer $_network
 	 */
 	private $_network;
 
 	/**
-	 * @var QuarkServer $_monitor
+	 * @var QuarkServer $_terminal
 	 */
-	private $_monitor;
+	private $_terminal;
 
 	/**
 	 * @param IQuarkClusterController $controller
+	 * @param IQuarkTransportProvider|IQuarkIntermediateTransportProvider $terminal
 	 * @param QuarkURI|string $external
 	 * @param QuarkURI|string $internal
 	 */
-	public function __construct (IQuarkClusterController $controller, $external, $internal) {
+	public function __construct (IQuarkClusterController $controller, IQuarkTransportProvider $terminal, $external, $internal) {
+		$this->_controller = $controller;
+
+		if ($terminal instanceof IQuarkIntermediateTransportProvider)
+			$terminal->Protocol($this);
+
 		$this->_network = new QuarkServer($internal, $this);
-		$this->_monitor = new QuarkServer();
+		$this->_terminal = new QuarkServer($external, $terminal);
+	}
+
+	/**
+	 * @return QuarkServer
+	 */
+	public function &Network () {
+		return $this->_network;
+	}
+
+	/**
+	 * @return QuarkServer
+	 */
+	public function &Terminal () {
+		return $this->_terminal;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Pipe () {
+		return $this->Bind() &&
+		$this->_network->Pipe() &&
+		$this->_terminal->Pipe();
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Bind () {
+		$run = true;
+
+		if (!$this->_network->Running())
+			$this->_network->Bind();
+
+		if (!$this->_terminal->Running())
+			$this->_terminal->Bind();
+
+		return $run;
+	}
+
+	/**
+	 * @param string $data
+	 *
+	 * @return bool
+	 */
+	public function Broadcast ($data) {
+		$nodes = $this->_network->Clients();
+
+		foreach ($nodes as $node)
+			$node->Send($data);
+	}
+
+	/**
+	 * @param $event
+	 * @param QuarkClient $client
+	 * @param array $data
+	 *
+	 * @return mixed
+	 */
+	private function _switch ($event, QuarkClient $client, $data = []) {
+		$args = array_slice(func_get_args(), 1);
+		$connection = $client->ConnectionURI();
+
+		$network = $this->_network->ConnectionURI(false, $connection->host);
+		$terminal = $this->_terminal->ConnectionURI(false, $connection->host);
+
+		if ($network && $connection->URI() == $network->URI())
+			return call_user_func_array(array($this->_controller, 'NodeClient' . $event), $args);
+
+		if ($terminal && $connection->URI() == $terminal->URI())
+			return call_user_func_array(array($this->_controller, 'Terminal' . $event), $args);
+
+		return null;
 	}
 
 	/**
@@ -6768,7 +7028,7 @@ class QuarkClusterController implements IQuarkTransportProvider {
 	 * @return bool
 	 */
 	public function OnConnect (QuarkClient $client) {
-		// TODO: Implement OnConnect() method.
+		$this->_switch('Connect', $client);
 	}
 
 	/**
@@ -6778,7 +7038,7 @@ class QuarkClusterController implements IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function OnData (QuarkClient $client, $data) {
-		// TODO: Implement OnData() method.
+		$this->_switch('Data', $client, $data);
 	}
 
 	/**
@@ -6787,12 +7047,59 @@ class QuarkClusterController implements IQuarkTransportProvider {
 	 * @return mixed
 	 */
 	public function OnClose (QuarkClient $client) {
-		// TODO: Implement OnClose() method.
+		$this->_switch('Close', $client);
 	}
 }
 
+/**
+ * Interface IQuarkClusterController
+ *
+ * @package Quark
+ */
 interface IQuarkClusterController {
+	/**
+	 * @param QuarkClient $node
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientConnect(QuarkClient $node);
 
+	/**
+	 * @param QuarkClient $node
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientData(QuarkClient $node, $data);
+
+	/**
+	 * @param QuarkClient $node
+	 *
+	 * @return mixed
+	 */
+	public function NodeClientClose(QuarkClient $node);
+
+	/**
+	 * @param QuarkClient $terminal
+	 *
+	 * @return mixed
+	 */
+	public function TerminalConnect(QuarkClient $terminal);
+
+	/**
+	 * @param QuarkClient $terminal
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function TerminalData(QuarkClient $terminal, $data);
+
+	/**
+	 * @param QuarkClient $terminal
+	 *
+	 * @return mixed
+	 */
+	public function TerminalClose(QuarkClient $terminal);
 }
 
 /**
@@ -6828,6 +7135,8 @@ class QuarkURI {
 		'scp' => 'ssl',
 		'http' => 'tcp',
 		'https' => 'ssl',
+		'ws' => 'tcp',
+		'wss' => 'ssl',
 	);
 
 	private static $_ports = array(
