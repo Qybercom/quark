@@ -2515,7 +2515,11 @@ trait QuarkContainerBehavior {
 		/**
 		 * @var IQuarkPrimitive $this
 		 */
-		return call_user_func_array(array(Quark::ContainerOf($this), $method), $args);
+		$container = Quark::ContainerOf($this);
+
+		return method_exists($container, $method)
+			? call_user_func_array(array($container, $method), $args)
+			: null;
 	}
 
 	/**
@@ -3956,7 +3960,9 @@ class QuarkModelSource implements IQuarkStackable {
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		return call_user_func_array(array($this->_provider, $method), $args);
+		return method_exists($this->_provider, $method)
+			? call_user_func_array(array($this->_provider, $method), $args)
+			: null;
 	}
 
 	/**
