@@ -368,7 +368,7 @@ class Quark {
 	 * @return int|bool
 	 */
 	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
-		$logs = self::NormalizePath(self::Host() . '/' . self::Config()->Location(QuarkConfig::LOGS) . '/');
+		$logs = self::NormalizePath(self::Host() . '/' . self::Config()->Location(QuarkConfig::RUNTIME) . '/');
 
 		if (!is_dir($logs)) mkdir($logs);
 
@@ -447,7 +447,7 @@ Quark::Import(Quark::Host());
 class QuarkConfig {
 	const SERVICES = 'services';
 	const VIEWS = 'views';
-	const LOGS = 'logs';
+	const RUNTIME = 'runtime';
 
 	/**
 	 * @var IQuarkCulture
@@ -475,7 +475,7 @@ class QuarkConfig {
 	private $_location = array(
 		self::SERVICES => 'Services',
 		self::VIEWS => 'Views',
-		self::LOGS => 'logs',
+		self::RUNTIME => 'runtime',
 	);
 
 	/**
@@ -483,11 +483,7 @@ class QuarkConfig {
 	 */
 	public function __construct ($mode = Quark::MODE_DEV) {
 		$this->_mode = $mode;
-
 		$this->_culture = new QuarkCultureISO();
-
-		$this->_processorRequest = new QuarkFormIOProcessor();
-		$this->_processorResponse = new QuarkHTMLIOProcessor();
 	}
 
 	/**
@@ -2318,9 +2314,9 @@ class QuarkService implements IQuarkContainer {
 		$this->_service = $bundle;
 
 		$this->_input = new QuarkDTO();
-		$this->_input->Processor($input);
+		$this->_input->Processor($input ? $input : new QuarkFormIOProcessor());
 		$this->_output = new QuarkDTO();
-		$this->_output->Processor($output);
+		$this->_output->Processor($output ? $output : new QuarkHTMLIOProcessor());
 
 		$this->_input->URI(QuarkURI::FromURI(Quark::NormalizePath($uri, false), false));
 
@@ -4373,7 +4369,7 @@ class QuarkModel implements IQuarkContainer {
 			if ($buffer !== null) $output = $buffer;
 		}
 
-		if (isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
+		if (is_array($options) && isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
 			$output = $options[self::OPTION_EXTRACT] === true
 				? $output->Extract()
 				: $output->Extract($options[self::OPTION_EXTRACT]);
@@ -4497,6 +4493,19 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public function Remove ($options = []) {
 		return $this->_op('Remove', $options);
+	}
+
+	/**
+	 * @return mixed
+	 * @throws QuarkArchException
+	 */
+	public function PrimaryKey () {
+		$pk = self::_provider($this->_model)->PrimaryKey();
+
+		if ($this->_model instanceof IQuarkModelWithCustomPrimaryKey)
+			$pk = $this->_model->PrimaryKey();
+
+		return $this->$pk;
 	}
 
 	/**
@@ -4797,6 +4806,11 @@ interface IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Remove(IQuarkModel $model);
+
+	/**
+	 * @return string
+	 */
+	public function PrimaryKey();
 
 	/**
 	 * @param IQuarkModel $model
@@ -5703,7 +5717,11 @@ class QuarkSession implements IQuarkStackable {
 	 * @return bool
 	 */
 	public function Logout () {
-		return $this->_user && !($this->_authorized = !$this->_user->Logout($this->_name));
+		$logout = $this->_user->Logout($this->_name);
+
+		if ($logout === null) $logout = true;
+
+		return $this->_user && !($this->_authorized = !($logout && $this->_provider->Logout($this->_name)));
 	}
 
 	/**
@@ -5776,11 +5794,11 @@ interface IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
 	 * @param QuarkDTO $input
-	 * @param bool $fpm
+	 * @param bool $http
 	 *
 	 * @return bool|mixed
 	 */
-	public function Input($name, QuarkDTO $input, $fpm);
+	public function Input($name, QuarkDTO $input, $http);
 
 	/**
 	 * @param string $name
@@ -7213,6 +7231,17 @@ class QuarkURI {
 	public static function FromEndpoint ($host, $port = null) {
 		$uri = new self();
 		$uri->Endpoint($host, $port);
+		return $uri;
+	}
+
+	/**
+	 * @param string $location
+	 *
+	 * @return QuarkURI
+	 */
+	public static function FromFile ($location = '') {
+		$uri = new self();
+		$uri->path = Quark::NormalizePath($location);
 		return $uri;
 	}
 
@@ -8918,6 +8947,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public $size = 0;
 	public $extension = '';
 	public $isDir = false;
+	public $parent = '';
 
 	protected $_content = '';
 	protected $_loaded = false;
@@ -8979,6 +9009,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 			$this->location = Quark::NormalizePath($real ? $real : $location, false);
 			$this->name = array_reverse(explode('/', $this->location))[0];
+			$this->parent = str_replace($this->name, '', $this->location);
 
 			if ($this->Exists()) {
 				$this->type = self::Mime($this->location);

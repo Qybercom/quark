@@ -93,6 +93,13 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function PrimaryKey () {
+		return 'id';
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 * @param             $criteria
 	 * @param array       $options

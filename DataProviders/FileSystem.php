@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkFile;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
@@ -46,7 +47,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
-		$this->_root = Quark::NormalizePath(Quark::SanitizePath(str_replace(self::PROTOCOL, '', preg_replace('#\/([a-zA-Z])\:#Uis', '$1:', $uri->URI()))));
+		$this->_root = Quark::NormalizePath($uri->path);
 	}
 
 	/**
@@ -81,6 +82,13 @@ class FileSystem implements IQuarkDataProvider {
 		$location = QuarkObject::Property($model, self::LOCATION);
 
 		return is_file($location) ? unlink($location) : false;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function PrimaryKey () {
+		return self::LOCATION;
 	}
 
 	/**
@@ -255,10 +263,11 @@ class FileSystem implements IQuarkDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $criteria
+	 * @param             $options
 	 *
 	 * @return IQuarkModel
 	 */
-	public function FindOne (IQuarkModel $model, $criteria) {
+	public function FindOne (IQuarkModel $model, $criteria, $options) {
 		$buffer = self::_find($criteria);
 
 		return sizeof($buffer) == 0 ? null : $buffer[0];
@@ -267,15 +276,13 @@ class FileSystem implements IQuarkDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $id
+	 * @param             $options
 	 *
 	 * @return IQuarkModel
 	 */
-	public function FindOneById (IQuarkModel $model, $id) {
-		$buffer = self::_find(array(
-			self::LOCATION => $id
-		));
-
-		return sizeof($buffer) == 0 ? null : $buffer[0];
+	public function FindOneById (IQuarkModel $model, $id, $options) {
+		$file = new QuarkFile($id);
+		return self::_file($file->location, $file->name, $file->extension, $file->isDir);
 	}
 
 	/**
@@ -305,10 +312,11 @@ class FileSystem implements IQuarkDataProvider {
 	 * @param             $criteria
 	 * @param             $limit
 	 * @param             $skip
+	 * @param             $options
 	 *
 	 * @return int
 	 */
-	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
+	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		return sizeof(self::_find($criteria));
 	}
 }

@@ -214,6 +214,13 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function PrimaryKey () {
+		return '_id';
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
