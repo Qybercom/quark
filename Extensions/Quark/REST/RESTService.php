@@ -49,6 +49,9 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
+		if (!$this->_uri)
+			throw new QuarkArchException('QuarkRest API is not reachable. URI is not provided');
+
 		$this->_uri->path = $action;
 
 		$data = QuarkHTTPTransportClient::To($this->_uri->URI(true), $request, $response);
@@ -160,6 +163,15 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		catch (QuarkArchException $e) {
 			return false;
 		}
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return string
+	 */
+	public function PrimaryKey (IQuarkModel $model) {
+		return $this->_pk($model);
 	}
 
 	/**

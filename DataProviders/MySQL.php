@@ -105,9 +105,11 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	}
 
 	/**
+	 * @param IQuarkModel $model
+	 *
 	 * @return string
 	 */
-	public function PrimaryKey () {
+	public function PrimaryKey (IQuarkModel $model) {
 		return 'id';
 	}
 

@@ -85,9 +85,11 @@ class FileSystem implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @param IQuarkModel $model
+	 *
 	 * @return string
 	 */
-	public function PrimaryKey () {
+	public function PrimaryKey (IQuarkModel $model) {
 		return self::LOCATION;
 	}
 

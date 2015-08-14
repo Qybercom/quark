@@ -124,22 +124,24 @@ class Session implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
+	 * @param QuarkModel $user
 	 * @param QuarkDTO $input
 	 *
 	 * @return bool
 	 */
-	public function Recognize ($name, QuarkDTO $input) {
+	public function Recognize ($name, QuarkModel $user, QuarkDTO $input) {
 		return $input->GetCookieByName($this->_cookie) != null;
 	}
 
 	/**
 	 * @param string $name
+	 * @param QuarkModel $user
 	 * @param QuarkDTO $input
 	 * @param bool $http
 	 *
 	 * @return bool|mixed
 	 */
-	public function Input ($name, QuarkDTO $input, $http) {
+	public function Input ($name, QuarkModel $user, QuarkDTO $input, $http) {
 		$session = $this->_session($name, $http
 			? $input->GetCookieByName($this->_cookie)
 			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null));
@@ -154,10 +156,11 @@ class Session implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
+	 * @param QuarkModel $user
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Output ($name) {
+	public function Output ($name, QuarkModel $user) {
 		return $this->_output;
 	}
 
@@ -173,7 +176,7 @@ class Session implements IQuarkAuthorizationProvider {
 		$storage = self::_storage($name, $this->_sid);
 
 		$this->_sid = Quark::GuID();
-		$this->_user = (string)$user->PrimaryKey();
+		$this->_user = $user->Export();
 		$this->_signature = Quark::GuID();
 		$this->_ttl = $lifetime;
 
@@ -197,10 +200,11 @@ class Session implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
+	 * @param QuarkModel $user
 	 *
 	 * @return bool
 	 */
-	public function Logout ($name) {
+	public function Logout ($name, QuarkModel $user) {
 		$storage = self::_storage($name, $this->_sid);
 
 		return ($this->_sid ? unlink($storage->Location()) : true)
@@ -209,10 +213,11 @@ class Session implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
+	 * @param QuarkModel $user
 	 *
 	 * @return string
 	 */
-	public function Signature ($name) {
+	public function Signature ($name, QuarkModel $user) {
 		return $this->_signature;
 	}
 }
