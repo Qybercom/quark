@@ -45,7 +45,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	private function _api ($method, $action, $data = []) {
 		$request = new QuarkDTO(new QuarkJSONIOProcessor());
 		$request->Method($method);
-		$request->Data($data);
+		$request->Merge($data);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
@@ -129,6 +129,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return true;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return false;
 		}
 	}
@@ -145,6 +146,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return isset($api->status) && $api->status == 200;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message . print_r($model, true), $e->lvl);
 			return false;
 		}
 	}
@@ -161,6 +163,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return isset($api->status) && $api->status == 200;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return false;
 		}
 	}
@@ -209,6 +212,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return $this->_api('Get', '/' . $class, $criteria)->$class;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return null;
 		}
 	}
@@ -273,12 +277,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	/**
 	 * @param IQuarkModel $model
 	 * @param string $command
+	 * @param QuarkDTO|object|array $data
 	 *
 	 * @return bool
 	 */
-	public function Command (IQuarkModel $model, $command) {
+	public function Command (IQuarkModel $model, $command, $data = []) {
 		try {
-			return $this->_api('GET', '/' . self::_class($model) . '/' . $command . '/' . $this->_identify($model));
+			return $this->_api('GET', '/' . self::_class($model) . '/' . $command . '/' . $this->_identify($model), $data);
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);

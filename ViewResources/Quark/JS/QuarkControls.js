@@ -130,7 +130,7 @@ Quark.Controls.File = function (selector, opt) {
 Quark.Controls.File._send = function (e) {
 	Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(e.data, {
 		data: {
-			_signature: $(this).attr('quark-signature')
+			_s: $(this).attr('quark-signature')
 		}
 	}));
 };
@@ -158,8 +158,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
 			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
 				Quark.Controls._toForm(opt.data) +
-				'<input type="text" name="' + name + (opt.multiple ? '[]' : '') + '" value="file_' + name + '" />' +
-				'<input type="file" name="file_' + name + (opt.multiple ? '[]' : '') + '" />' +
+				'<input type="file" name="' + name + (opt.multiple ? '[]' : '') + '" />' +
 			'</form>'
 		);
 
