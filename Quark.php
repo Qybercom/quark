@@ -9424,8 +9424,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			QuarkField::Type($this->type, QuarkField::TYPE_STRING),
 			QuarkField::Type($this->size, QuarkField::TYPE_INT),
 			QuarkField::Type($this->tmp_name, QuarkField::TYPE_STRING),
-			QuarkField::MinLength($this->name, 1),
-			QuarkField::MinLength($this->tmp_name, 2)
+			QuarkField::MinLength($this->name, 1)
 		);
 	}
 
