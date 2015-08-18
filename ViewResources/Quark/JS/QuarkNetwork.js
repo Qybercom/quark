@@ -33,13 +33,17 @@ Quark.Network.Client = function (host, port, on) {
             if (input.response != undefined)
                 response(input.response, input.data, input.session);
 
-            if (input.event != undefined && events[input.event] instanceof Array) {
-                var i = 0;
+            if (input.event != undefined) {
+                input.event = input.event.toLowerCase();
 
-                while (i < events[input.event].length) {
-                    events[input.event][i](input.event, input.data, input.session);
+                if (events[input.event] instanceof Array) {
+                    var i = 0;
 
-                    i++;
+                    while (i < events[input.event].length) {
+                        events[input.event][i](input.event, input.data, input.session);
+
+                        i++;
+                    }
                 }
             }
         }
@@ -97,6 +101,8 @@ Quark.Network.Client = function (host, port, on) {
      */
     that.Event = function (url, listener) {
         if (!(listener instanceof Function)) return false;
+
+        url = url.toLowerCase();
 
         if (events[url] == undefined)
             events[url] = [];

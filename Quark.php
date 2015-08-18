@@ -1061,55 +1061,47 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	public function __construct (IQuarkTransportProvider $transport = null, $external = self::URI_NODE_EXTERNAL, $internal = self::URI_NODE_INTERNAL, $connect = '', $close = '', $unknown = '') {
 		$this->_dto = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$broadcast = function ($data, $url) {
-			echo '[cluster.service.broadcast] ' . $url, "\r\n";
-
-			self::ControllerCommand('broadcast', array(
+		Quark::On(self::EVENT_BROADCAST, function ($http, $data, $url) {
+			$payload = array(
 				'url' => $url,
-				'data' => $data
-			));
-		};
+				'data' => $data instanceof QuarkDTO ? $data->Data() : $data
+			);
 
-		if (func_num_args() != 0 && Quark::CLI() && $_SERVER['argc'] <= 1) {
-			$this->_cluster = new QuarkClusterNode($this, $transport, $external, $internal);
+			if ($http) self::ControllerCommand('broadcast', $payload);
+			else $this->_cluster->Broadcast($this->_pack($payload));
+		}, true);
 
-			$this->StreamConnect($connect);
-			$this->StreamClose($close);
-			$this->StreamUnknown($unknown);
+		if (func_num_args() == 0 || !Quark::CLI() || $_SERVER['argc'] > 1) return;
 
-			$broadcast = function ($data, $url) {
-				$this->_cluster->Broadcast($this->_pack(array(
-					'url' => $url,
-					'data' => $data instanceof QuarkDTO ? $data->Data() : $data
-				)));
-			};
+		$this->_cluster = new QuarkClusterNode($this, $transport, $external, $internal);
 
-			Quark::On(self::EVENT_EVENT, function ($sender, $url) {
-				$clients = $this->_cluster->Server()->Clients();
+		$this->StreamConnect($connect);
+		$this->StreamClose($close);
+		$this->StreamUnknown($unknown);
 
-				foreach ($clients as $client) {
-					$session = QuarkSession::Restore($client->Session());
-					$out = $sender($session);
+		Quark::On(self::EVENT_EVENT, function ($sender, $url) {
+			$clients = $this->_cluster->Server()->Clients();
 
-					if (!$out) continue;
+			foreach ($clients as $client) {
+				$session = QuarkSession::Restore($client->Session());
+				$out = $sender($session);
 
-					$out = array(
-						'event' => $url,
-						'data' => $out instanceof QuarkDTO ? $out->Data() : $out
-					);
+				if (!$out) continue;
 
-					if ($session->Authorized())
-						$out['session'] = $session->ID()->Extract();
+				$out = array(
+					'event' => $url,
+					'data' => $out instanceof QuarkDTO ? $out->Data() : $out
+				);
 
-					$client->Send($this->_pack($out));
-					$session->Output();
-				}
+				if ($session->Authorized())
+					$out['session'] = $session->ID()->Extract();
 
-				unset($out, $session, $client, $clients);
-			});
-		}
+				$client->Send($this->_pack($out));
+				$session->Output();
+			}
 
-		Quark::On(self::EVENT_BROADCAST, $broadcast, true);
+			unset($out, $session, $client, $clients);
+		});
 	}
 
 	/**
@@ -1164,6 +1156,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function Thread () {
+		if (!$this->_cluster) return true;
+
 		if (!$this->_cluster->Controller()->Connected())
 			$this->_cluster->Controller()->URI(QuarkURI::FromURI(Quark::Config()->ClusterController()));
 
@@ -1274,10 +1268,10 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$endpoint = $node->URI()->URI();
 
 		if (!$json)
-			throw new QuarkArchException('Node ' . $endpoint . ' sent invalid json: ' . $json);
+			throw new QuarkArchException('Node ' . $endpoint . ' sent invalid json: ' . $data . '. ' . json_last_error_msg(), Quark::LOG_WARN);
 
 		if (!isset($json->url))
-			throw new QuarkArchException('Client ' . $endpoint . ' sent unknown url');
+			throw new QuarkArchException('Node ' . $endpoint . ' sent unknown url', Quark::LOG_WARN);
 
 		try {
 			$this->_pipe(null, $json, 'StreamNetwork', function (QuarkService $service) {
@@ -1332,14 +1326,16 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @throws QuarkHTTPException
 	 */
 	public function ClientData (QuarkClient $client, $data) {
+		if (strlen($data) == 0) return;
+
 		$json = json_decode($data);
 		$endpoint = $client->URI()->URI();
 
 		if (!$json)
-			throw new QuarkArchException('Client ' . $endpoint . ' sent invalid json: ' . $json);
+			throw new QuarkArchException('Client ' . $endpoint . ' sent invalid json: ' . $data . '. ' . json_last_error_msg(), Quark::LOG_WARN);
 
 		if (!isset($json->url))
-			throw new QuarkArchException('Client ' . $endpoint . ' sent unknown url');
+			throw new QuarkArchException('Client ' . $endpoint . ' sent unknown url', Quark::LOG_WARN);
 
 		try {
 			$this->_pipe($client, $json);
@@ -1534,7 +1530,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return mixed
 	 */
 	public function NodeClientClose (QuarkClient $node) {
-		echo '[cluster.controller.node.close] ' . $node->ConnectionURI(),"\r\n";
+		echo '[cluster.controller.node.close] ' . $node->ConnectionURI(true),"\r\n";
 		$this->_infrastructure();
 	}
 
@@ -2104,13 +2100,13 @@ class QuarkThreadSet {
 
 			try {
 				$run_tmp = call_user_func_array(array($thread, 'Thread'), $this->_args);
+				$run_tmp = $run_tmp === null || $run_tmp;
 			}
 			catch (\Exception $e) {
-				$thread->ExceptionHandler($e);
-				$run_tmp = false;
+				$run_tmp = $thread->ExceptionHandler($e);
 			}
 
-			$run &= $run_tmp === null || $run_tmp;
+			$run &= $run_tmp;
 		}
 
 		unset($thread);
@@ -2324,7 +2320,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $data, $this->URL($service));
+		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $this->Input()->AuthorizationProvider() && $this->Input()->AuthorizationProvider()->Value() === false, $data, $this->URL($service));
 	}
 
 	/**
@@ -9641,7 +9637,7 @@ abstract class QuarkException extends \Exception {
 	 */
 	public static function ExceptionHandler (\Exception $exception) {
 		if ($exception instanceof QuarkException)
-			return Quark::Log($exception->message, $exception->lvl);
+			return $exception->lvl != Quark::LOG_FATAL && Quark::Log($exception->message, $exception->lvl);
 
 		if ($exception instanceof \Exception)
 			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
@@ -9658,9 +9654,10 @@ abstract class QuarkException extends \Exception {
 class QuarkArchException extends QuarkException {
 	/**
 	 * @param string $message
+	 * @param string $lvl = Quark::LOG_FATAL
 	 */
-	public function __construct ($message) {
-		$this->lvl = Quark::LOG_FATAL;
+	public function __construct ($message, $lvl = Quark::LOG_FATAL) {
+		$this->lvl = $lvl;
 		$this->message = $message;
 	}
 }

@@ -102,16 +102,20 @@ class WebSocketTransportServer implements IQuarkTransportProvider, IQuarkInterme
 	 * @param string $data
 	 *
 	 * @return mixed
+	 * @throws \Exception
 	 */
 	public function OnData (QuarkClient $client, $data) {
 		if ($client->Connected()) {
-			$out = $this->_processor->Decode(strlen($this->_buffer) == 0 ? $data : $this->_buffer . $data);
-
-			if ($out === false) {
+			try {
 				$this->_buffer .= $data;
+				$out = $this->_processor->Decode($this->_buffer);
+
+				if ($out !== false) {
+					$this->_buffer = '';
+					$this->_protocol->OnData($client, $out);
+				}
 			}
-			else {
-				$this->_protocol->OnData($client, $out);
+			catch (\Exception $e) {
 				$this->_buffer = '';
 			}
 		}
