@@ -1411,8 +1411,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		$session = $service->Session()->ID();
 
-		if ($client instanceof QuarkClient && $service->Session()->Authorized())
-			$client->Session($session);
+		//if ($client instanceof QuarkClient && $service->Session()->Authorized())
+			//$client->Session($session);
 
 		if ($out) {
 			$output = array(
