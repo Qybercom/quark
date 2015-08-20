@@ -1085,8 +1085,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
 
-				print_r($client->Session());
-
 				$out = $sender($session);
 
 				if (!$out) continue;
@@ -8999,7 +8997,7 @@ class QuarkCookie {
 	 */
 	public static function FromCookie ($header = '') {
 		$out = array();
-		$cookies = explode(',', $header);
+		$cookies = array_merge(explode(',', $header), explode(';', $header));
 
 		foreach ($cookies as $raw) {
 			$cookie = explode('=', trim($raw));
