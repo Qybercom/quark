@@ -1084,6 +1084,9 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
+
+				print_r($client->Session());
+
 				$out = $sender($session);
 
 				if (!$out) continue;
@@ -1398,8 +1401,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			$method,
 			$auth,
 			function (QuarkService $service) use ($client, $args) {
-				//if ($client instanceof QuarkClient)
-					//$client->Session($service->Session()->ID());
+				if ($client instanceof QuarkClient)
+					$client->Session($service->Session()->ID());
 
 				return $args ? $args($service) : $service->Arguments(array($this->_cluster));
 			})
@@ -1408,7 +1411,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		$session = $service->Session()->ID();
 
-		if ($service->Session()->Authorized())
+		if ($client instanceof QuarkClient && $service->Session()->Authorized())
 			$client->Session($session);
 
 		if ($out) {
