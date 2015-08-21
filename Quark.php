@@ -1106,7 +1106,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->StreamClose($close);
 		$this->StreamUnknown($unknown);
 
-		Quark::On(self::EVENT_EVENT, function ($call, $sender, $url) {
+		Quark::On(self::EVENT_EVENT, function ($sender, $url) {
 			$clients = $this->_cluster->Server()->Clients();
 
 			foreach ($clients as $client) {
@@ -1415,7 +1415,10 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			$service->Input()->Data($json->data);
 
 		if (isset($json->session) && QuarkObject::isAssociative($json->session)) {
+			Quark::Trace($json);
+
 			$session = (object)each($json->session);
+			Quark::Trace($session);
 			$provider = new QuarkKeyValuePair($session->key, $session->value);
 
 			$service->Input()->AuthorizationProvider($provider);
@@ -2359,7 +2362,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Event (callable $sender = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_EVENT, Quark::TuID(), $sender, $this->URL());
+		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_EVENT, $sender, $this->URL());
 	}
 }
 
