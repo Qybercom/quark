@@ -1073,11 +1073,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_dto;
 
 	/**
-	 * @var string $___call
-	 */
-	private $___call;
-
-	/**
 	 * @param IQuarkTransportProvider $transport
 	 * @param QuarkURI|string $external = self::URI_NODE_EXTERNAL
 	 * @param QuarkURI|string $internal = self::URI_NODE_INTERNAL
