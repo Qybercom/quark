@@ -121,10 +121,6 @@ class Session implements IQuarkAuthorizationProvider {
 			? $input->GetCookieByName($this->_cookie)
 			: ($input->AuthorizationProvider() != null ? $input->AuthorizationProvider()->ToCookie() : null);
 
-		Quark::Trace($http);
-		Quark::Trace($input);
-		Quark::Trace($session);
-
 		if (!$session) return false;
 		$session->value = trim($session->value);
 		if (!$session->value) return false;
