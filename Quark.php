@@ -9376,7 +9376,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function SaveContent () {
-		return file_put_contents($this->location, $this->_content) != 0;
+		return file_put_contents($this->location, $this->_content, LOCK_EX) !== false;
 	}
 
 	/**
