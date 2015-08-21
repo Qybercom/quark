@@ -115,9 +115,6 @@ class Quark {
 
 		$after = function () {
 			self::ContainerFree();
-			self::$_tUID = self::GuID();
-
-			gc_collect_cycles();
 		};
 
 		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke($after);
