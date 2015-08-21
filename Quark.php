@@ -46,6 +46,11 @@ class Quark {
 	private static $_gUID = array();
 
 	/**
+	 * @var string[] $_tUID
+	 */
+	private static $_tUID = array();
+
+	/**
 	 * @var string[] $_breaks
 	 */
 	private static $_breaks = array();
@@ -94,6 +99,7 @@ class Quark {
 	 */
 	public static function Run (QuarkConfig $config) {
 		self::$_config = $config;
+		self::$_tUID = self::GuID();
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
 		$argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
@@ -107,8 +113,15 @@ class Quark {
 
 		$threads->Threads(self::$_environment);
 
-		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke();
-		else $threads->Pipeline(self::$_config->Tick());
+		$after = function () {
+			self::ContainerFree();
+			self::$_tUID = self::GuID();
+
+			gc_collect_cycles();
+		};
+
+		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke($after);
+		else $threads->Pipeline(self::$_config->Tick(), $after);
 	}
 
 	/**
@@ -216,6 +229,8 @@ class Quark {
 	}
 
 	/**
+	 * Global unique ID
+	 *
 	 * @param string $salt
 	 *
 	 * @return string
@@ -227,6 +242,13 @@ class Quark {
 
 		self::$_gUID[] = $hash;
 		return $hash;
+	}
+
+	/**
+	 * Tick ID
+	 */
+	public static function TuID () {
+		return self::$_tUID;
 	}
 
 	/**
@@ -1051,6 +1073,11 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private $_dto;
 
 	/**
+	 * @var string $___call
+	 */
+	private $___call;
+
+	/**
 	 * @param IQuarkTransportProvider $transport
 	 * @param QuarkURI|string $external = self::URI_NODE_EXTERNAL
 	 * @param QuarkURI|string $internal = self::URI_NODE_INTERNAL
@@ -1079,7 +1106,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->StreamClose($close);
 		$this->StreamUnknown($unknown);
 
-		Quark::On(self::EVENT_EVENT, function ($sender, $url) {
+		Quark::On(self::EVENT_EVENT, function ($call, $sender, $url) {
 			$clients = $this->_cluster->Server()->Clients();
 
 			foreach ($clients as $client) {
@@ -2091,9 +2118,11 @@ class QuarkThreadSet {
 	}
 
 	/**
+	 * @param callable $after
+	 *
 	 * @return bool|mixed
 	 */
-	public function Invoke () {
+	public function Invoke (callable $after = null) {
 		$run = true;
 
 		foreach ($this->_threads as $thread) {
@@ -2112,18 +2141,18 @@ class QuarkThreadSet {
 
 		unset($thread);
 
-		Quark::ContainerFree();
-		gc_collect_cycles();
+		if ($after) $after();
 
 		return (bool)$run;
 	}
 
 	/**
 	 * @param int $sleep = 10000 (microseconds)
+	 * @param callable $after
 	 */
-	public function Pipeline ($sleep = self::TICK) {
-		self::Queue(function () {
-			return $this->Invoke();
+	public function Pipeline ($sleep = self::TICK, callable $after = null) {
+		self::Queue(function () use ($after) {
+			return $this->Invoke($after);
 		}, $sleep);
 	}
 
@@ -2330,7 +2359,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Event (callable $sender = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_EVENT, $sender, $this->URL());
+		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_EVENT, Quark::TuID(), $sender, $this->URL());
 	}
 }
 
