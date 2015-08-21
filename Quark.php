@@ -1415,10 +1415,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			$service->Input()->Data($json->data);
 
 		if (isset($json->session) && QuarkObject::isAssociative($json->session)) {
-			Quark::Trace($json);
-
 			$session = (object)each($json->session);
-			Quark::Trace($session);
 			$provider = new QuarkKeyValuePair($session->key, $session->value);
 
 			$service->Input()->AuthorizationProvider($provider);
