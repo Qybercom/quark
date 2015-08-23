@@ -9244,7 +9244,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->WebLocation(false);
+		return $this->WebLocation();
 	}
 
 	/**
