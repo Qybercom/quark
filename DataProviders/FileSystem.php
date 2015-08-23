@@ -25,6 +25,7 @@ class FileSystem implements IQuarkDataProvider {
 	const EXTENSION = 'extension';
 	const IS_DIR = 'isDir';
 	const SIZE = 'size';
+	const PARENT = 'parent';
 
 	const OPTIONS_RECURSIVE = 'opt.recursive';
 	const OPTIONS_JUMP = 'opt.jump';
@@ -172,7 +173,8 @@ class FileSystem implements IQuarkDataProvider {
 			self::NAME => $name,
 			self::EXTENSION => $extension,
 			self::IS_DIR => $isDir,
-			self::SIZE => $isDir ? '' : filesize($location)
+			self::SIZE => $isDir ? '' : filesize($location),
+			self::PARENT => str_replace($name, '', $location)
 		);
 	}
 
@@ -209,7 +211,7 @@ class FileSystem implements IQuarkDataProvider {
 
 			if ($options[self::OPTIONS_JUMP] == false && ($name == '.' || $name == '..')) continue;
 
-			$buffer = self::_file($file->getPathname(), $name, $file->getExtension(), $file->isDir());
+			$buffer = self::_file($file->getRealPath(), $name, $file->getExtension(), $file->isDir());
 
 			if (self::_condition($buffer, $criteria))
 				$output[] = $buffer;
@@ -226,7 +228,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
-		$buffer = self::_find($criteria);
+		$buffer = self::_find($criteria, $options);
 
 		if (isset($options[QuarkModel::OPTION_SORT]) && QuarkObject::isAssociative($options[QuarkModel::OPTION_SORT])) {
 			$sort = $options[QuarkModel::OPTION_SORT];

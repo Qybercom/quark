@@ -46,6 +46,11 @@ class Quark {
 	private static $_gUID = array();
 
 	/**
+	 * @var string[] $_tUID
+	 */
+	private static $_tUID = array();
+
+	/**
 	 * @var string[] $_breaks
 	 */
 	private static $_breaks = array();
@@ -94,6 +99,7 @@ class Quark {
 	 */
 	public static function Run (QuarkConfig $config) {
 		self::$_config = $config;
+		self::$_tUID = self::GuID();
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
 		$argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
@@ -107,8 +113,12 @@ class Quark {
 
 		$threads->Threads(self::$_environment);
 
-		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke();
-		else $threads->Pipeline(self::$_config->Tick());
+		$after = function () {
+			self::ContainerFree();
+		};
+
+		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke($after);
+		else $threads->Pipeline(self::$_config->Tick(), $after);
 	}
 
 	/**
@@ -216,6 +226,8 @@ class Quark {
 	}
 
 	/**
+	 * Global unique ID
+	 *
 	 * @param string $salt
 	 *
 	 * @return string
@@ -227,6 +239,13 @@ class Quark {
 
 		self::$_gUID[] = $hash;
 		return $hash;
+	}
+
+	/**
+	 * Tick ID
+	 */
+	public static function TuID () {
+		return self::$_tUID;
 	}
 
 	/**
@@ -1084,6 +1103,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
+
 				$out = $sender($session);
 
 				if (!$out) continue;
@@ -1408,8 +1428,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 		$session = $service->Session()->ID();
 
-		if ($service->Session()->Authorized())
-			$client->Session($session);
+		//if ($client instanceof QuarkClient && $service->Session()->Authorized())
+			//$client->Session($session);
 
 		if ($out) {
 			$output = array(
@@ -2090,9 +2110,11 @@ class QuarkThreadSet {
 	}
 
 	/**
+	 * @param callable $after
+	 *
 	 * @return bool|mixed
 	 */
-	public function Invoke () {
+	public function Invoke (callable $after = null) {
 		$run = true;
 
 		foreach ($this->_threads as $thread) {
@@ -2111,18 +2133,18 @@ class QuarkThreadSet {
 
 		unset($thread);
 
-		Quark::ContainerFree();
-		gc_collect_cycles();
+		if ($after) $after();
 
 		return (bool)$run;
 	}
 
 	/**
 	 * @param int $sleep = 10000 (microseconds)
+	 * @param callable $after
 	 */
-	public function Pipeline ($sleep = self::TICK) {
-		self::Queue(function () {
-			return $this->Invoke();
+	public function Pipeline ($sleep = self::TICK, callable $after = null) {
+		self::Queue(function () use ($after) {
+			return $this->Invoke($after);
 		}, $sleep);
 	}
 
@@ -8996,7 +9018,7 @@ class QuarkCookie {
 	 */
 	public static function FromCookie ($header = '') {
 		$out = array();
-		$cookies = explode(',', $header);
+		$cookies = array_merge(explode(',', $header), explode(';', $header));
 
 		foreach ($cookies as $raw) {
 			$cookie = explode('=', trim($raw));
@@ -9346,7 +9368,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function SaveContent () {
-		return file_put_contents($this->location, $this->_content) != 0;
+		return file_put_contents($this->location, $this->_content, LOCK_EX) !== false;
 	}
 
 	/**
