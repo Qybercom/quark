@@ -7730,6 +7730,7 @@ class QuarkDTO {
 	const HEADER_ACCEPT = 'Accept';
 	const HEADER_ACCEPT_LANGUAGE = 'Accept-Language';
 	const HEADER_ACCEPT_ENCODING = 'Accept-Encoding';
+	const HEADER_ACCEPT_RANGES = 'Accept-Ranges';
 	const HEADER_CACHE_CONTROL = 'Cache-Control';
 	const HEADER_CONTENT_LENGTH = 'Content-Length';
 	const HEADER_CONTENT_TYPE = 'Content-Type';
@@ -7739,6 +7740,7 @@ class QuarkDTO {
 	const HEADER_CONTENT_LANGUAGE = 'Content-Language';
 	const HEADER_COOKIE = 'Cookie';
 	const HEADER_CONNECTION = 'Connection';
+	const HEADER_ETAG = 'ETag';
 	const HEADER_SET_COOKIE = 'Set-Cookie';
 	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
 	const HEADER_AUTHORIZATION = 'Authorization';
@@ -7751,6 +7753,10 @@ class QuarkDTO {
 	const HEADER_SEC_WEBSOCKET_PROTOCOL = 'Sec-WebSocket-Protocol';
 	const HEADER_LOCATION = 'Location';
 	const HEADER_USER_AGENT = 'User-Agent';
+	const HEADER_KEEP_ALIVE = 'Keep-Alive';
+	const HEADER_LAST_MODIFIED = 'Last-Modified';
+	const HEADER_SERVER = 'Server';
+	const HEADER_DATE = 'Date';
 	const HEADER_WWW_AUTHENTICATE = 'WWW-Authenticate';
 
 	const STATUS_200_OK = '200 OK';
@@ -7777,6 +7783,8 @@ class QuarkDTO {
 	const TRANSFER_ENCODING_BASE64 = 'base64';
 
 	const CHARSET_UTF8 = 'utf-8';
+
+	const RANGES_BYTES = 'bytes';
 
 	const SIGNATURE = '_s';
 
@@ -8025,7 +8033,7 @@ class QuarkDTO {
 	 * @return mixed
 	 */
 	public function MergeData ($data) {
-		if ($this->_data instanceof QuarkView) return $this->_data;
+		if ($this->_data instanceof QuarkView || $data === null) return $this->_data;
 
 		if (is_string($data) && is_string($this->_data)) $this->_data .= $data;
 		else $this->_data = QuarkObject::Merge($this->_data, $data);
@@ -8584,6 +8592,10 @@ class QuarkDTO {
 			if ($this->_data instanceof QuarkView) {
 				$this->_processor = new QuarkHTMLIOProcessor();
 				$out = $this->_data->Compile();
+			}
+			elseif ($this->_data instanceof QuarkFile) {
+				$this->Header(QuarkDTO::HEADER_CONTENT_TYPE, $this->_data->type);
+				$out = $this->_data->Content();
 			}
 			else {
 				$out = '';
