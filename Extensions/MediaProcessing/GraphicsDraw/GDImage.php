@@ -129,6 +129,64 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
+	 * http://php.net/manual/ru/function.imagecolorat.php
+	 * http://php.net/manual/ru/function.imagecolorallocatealpha.php#61081
+	 *
+	 * @param int $x
+	 * @param int $y
+	 *
+	 * @return GDColor
+	 */
+	public function ColorPicker ($x, $y) {
+		$rgb = imagecolorat($this->_image, $x, $y);
+
+		$color = GDColor::FromRGB($rgb);
+		$color->a = $rgb >> 24;
+
+		return $color;
+	}
+
+	/**
+	 * @param int $width
+	 *
+	 * @return int
+	 */
+	public function Width ($width = 0) {
+		if (func_num_args() != 0)
+			$this->_resize(-1, $width);
+
+		return imagesx($this->_image);
+	}
+
+	/**
+	 * @param int $height
+	 *
+	 * @return int
+	 */
+	public function Height ($height = 0) {
+		if (func_num_args() != 0)
+			$this->_resize($height, -1);
+
+		return imagesy($this->_image);
+	}
+
+	/**
+	 * @param int $height
+	 * @param int $width
+	 *
+	 * @return bool
+	 */
+	private function _resize ($height = -1, $width = -1) {
+		$x = imagesy($this->_image);
+		$y = imagesy($this->_image);
+
+		$height = $height > -1 ? $height : $y;
+		$width = $width > -1 ? $width : $x;
+
+		return imagecopyresampled($this->_image, $this->_image, 0, 0, 0, 0, $width, $height, $x, $y);
+	}
+
+	/**
 	 * @return bool
 	 */
 	private function _apply () {
