@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\MediaProcessing\GraphicsDraw\Actions;
 
-use Quark\Quark;
 use Quark\QuarkFile;
 
 use Quark\Extensions\MediaProcessing\GraphicsDraw\GDColor;
