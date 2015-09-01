@@ -133,6 +133,13 @@ class Quark {
 	/**
 	 * @return string
 	 */
+	public static function HostIP () {
+		return self::IP(php_uname('n'));
+	}
+
+	/**
+	 * @return string
+	 */
 	public static function EntryPoint () {
 		return $_SERVER['PHP_SELF'];
 	}
@@ -1202,10 +1209,10 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		echo '[cluster.node.controller.connect] ', $controller->ConnectionURI(), ' ', $controller->ConnectionURI(true), "\r\n";
 
 		$internal = $this->_cluster->Network()->Server()->ConnectionURI();
-		$internal->host = Quark::IP(null);
+		$internal->host = Quark::HostIP();
 
 		$external = $this->_cluster->Server()->URI();
-		$external->host = Quark::IP(null);
+		$external->host = Quark::HostIP();
 
 		$this->_cmd('state', array(
 			'internal' => $internal->URI(),
@@ -7725,7 +7732,7 @@ class QuarkURI {
 	 * @return bool
 	 */
 	public function IsHostLocal () {
-		return $this->host == self::LOCALHOST || $this->host == Quark::IP(null);
+		return $this->host == self::LOCALHOST || $this->host == Quark::HostIP();
 	}
 
 	public function IsHostState ($state = '') {
