@@ -7440,6 +7440,8 @@ class QuarkURI {
 	const SCHEME_HTTP = 'http';
 	const SCHEME_HTTPS = 'https';
 
+	const LOCALHOST = '127.0.0.1';
+
 	public $scheme;
 	public $user;
 	public $pass;
@@ -7708,6 +7710,26 @@ class QuarkURI {
 	 */
 	public function IsNull () {
 		return !$this->host && $this->port === null;
+	}
+
+	/**
+	 * @param string $host
+	 *
+	 * @return bool
+	 */
+	public function IsHost ($host = '') {
+		return $this->host == $host;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsHostLocal () {
+		return $this->host == self::LOCALHOST || $this->host == Quark::IP(null);
+	}
+
+	public function IsHostState ($state = '') {
+		// TODO: GeoIP check
 	}
 }
 
