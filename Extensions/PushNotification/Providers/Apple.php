@@ -19,6 +19,8 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';
+
+	const OPTION_PRODUCTION = 'ssl://gateway.push.apple.com:2195';
 	const OPTION_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
 
 	const OPTION_ALERT = 'alert';
@@ -33,7 +35,7 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	/**
 	 * @var string $_host
 	 */
-	private $_host = 'ssl://gateway.push.apple.com:2195';
+	private $_host = self::OPTION_PRODUCTION;
 
 	/**
 	 * @var Device[] $_devices
@@ -96,10 +98,9 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 			'data' => $data
 		);
 
-		$client = new QuarkClient($this->_host, $this, $this->_certificate);
-		$client->Connect();
+		$client = new QuarkClient($this->_host, $this, $this->_certificate, 1);
 
-		return true;
+		return $client->Connect();
 	}
 
 	/**
