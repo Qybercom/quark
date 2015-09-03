@@ -29,7 +29,7 @@ class GDColor {
 	public $b = 0;
 
 	/**
-	 * @var int $a = 1
+	 * @var float $a = 1.0
 	 */
 	public $a = 1;
 
@@ -42,9 +42,9 @@ class GDColor {
 	 * @param $r
 	 * @param $g
 	 * @param $b
-	 * @param int $a = 1
+	 * @param float $a = 1.0
 	 */
-	public function __construct ($r, $g, $b, $a = 1) {
+	public function __construct ($r, $g, $b, $a = 1.0) {
 		$this->r = (int)$r;
 		$this->g = (int)$g;
 		$this->b = (int)$b;
@@ -53,16 +53,18 @@ class GDColor {
 
 	/**
 	 * @param int $rgb
+	 * @param float $alpha = 1.0
 	 *
 	 * @return GDColor
 	 */
-	public static function FromRGB ($rgb) {
+	public static function FromRGB ($rgb, $alpha = 1.0) {
 		$rgb = (float)$rgb;
 
 		return new GDColor(
 			($rgb >> 16) & 0xFF,
 			($rgb >> 8) & 0xFF,
-			$rgb & 0xFF
+			$rgb & 0xFF,
+			$alpha
 		);
 	}
 
@@ -70,10 +72,11 @@ class GDColor {
 	 * http://php.net/manual/ru/function.hexdec.php#99478
 	 *
 	 * @param string $hex
+	 * @param float $alpha = 1.0
 	 *
 	 * @return GDColor
 	 */
-	public static function FromHEX ($hex = '') {
+	public static function FromHEX ($hex = '', $alpha = 1.0) {
 		$hex = preg_replace('/[^0-9A-Fa-f]/', '', $hex);
 
 		if (strlen($hex) == 3)
@@ -81,7 +84,7 @@ class GDColor {
 
 		if (strlen($hex) != 6) return null;
 
-		return self::FromRGB(hexdec($hex));
+		return self::FromRGB(hexdec($hex), $alpha);
 	}
 
 	/**

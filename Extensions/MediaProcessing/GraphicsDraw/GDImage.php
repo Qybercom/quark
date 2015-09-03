@@ -90,6 +90,13 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
+	 * @return resource
+	 */
+	public function Image () {
+		return $this->_image;
+	}
+
+	/**
 	 * @param IQuarkGDImageFilter $filter
 	 *
 	 * @return GDImage
@@ -171,19 +178,73 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
+	 * @param int $factor = 1
+	 *
+	 * @return bool
+	 */
+	public function Resize ($factor = 1) {
+		return $this->_resize($this->Height() * $factor, $this->Width() * $factor);
+	}
+
+	/**
+	 * http://stackoverflow.com/a/18110532
+	 *
 	 * @param int $height
 	 * @param int $width
 	 *
 	 * @return bool
 	 */
 	private function _resize ($height = -1, $width = -1) {
-		$x = imagesy($this->_image);
+		$x = imagesx($this->_image);
 		$y = imagesy($this->_image);
 
 		$height = $height > -1 ? $height : $y;
 		$width = $width > -1 ? $width : $x;
 
-		return imagecopyresampled($this->_image, $this->_image, 0, 0, 0, 0, $width, $height, $x, $y);
+		$tmp = self::Canvas($width, $height);
+
+		$ok = imagecopyresized($tmp, $this->_image, 0, 0, 0, 0, $width, $height, $x, $y);
+
+		$this->_image = $tmp;
+
+		return $ok && $this->_apply();
+	}
+
+	/**
+	 * @param $width
+	 * @param $height
+	 * @param int $x = 0
+	 * @param int $y = 0
+	 *
+	 * @return bool
+	 */
+	public function Crop ($width, $height, $x = 0, $y = 0) {
+		$dst = imagecreatetruecolor($width, $height);
+		$ok = imagecopy($dst, $this->_image, 0, 0, $x, $y, $width, $height);
+
+		$this->_image = $dst;
+
+		return $ok && $this->_apply();
+	}
+
+	/**
+	 * http://php.net/manual/ru/function.imagecopymerge.php#92787
+	 *
+	 * @param GDImage $image
+	 * @param int $x = 0
+	 * @param int $y = 0
+	 * @param float $alpha = 1.0
+	 *
+	 * @return bool
+	 */
+	public function Merge (GDImage $image, $x = 0, $y = 0, $alpha = 1.0) {
+		$canvas = imagecreatetruecolor($this->Width(), $this->Height());
+
+		imagecopy($canvas, $this->_image, 0, 0, 0, 0, $this->Width(), $this->Height());
+		imagecopy($canvas, $image->Image(), $x, $y, 0, 0, $image->Width(), $image->Height());
+		imagecopymerge($this->_image, $canvas, 0, 0, 0, 0, $this->Width(), $this->Height(), $alpha * 100);
+
+		return $this->_apply();
 	}
 
 	/**
@@ -199,5 +260,27 @@ class GDImage implements IQuarkExtension {
 		$this->_file->Content(ob_get_clean());
 
 		return true;
+	}
+
+	/**
+	 * @param int $width = 0
+	 * @param int $height = 0
+	 * @param GDColor $bg = new GDColor(255,255,255,0)
+	 *
+	 * @return resource
+	 */
+	public static function Canvas ($width = 0, $height = 0, GDColor $bg = null) {
+		if (!$bg)
+			$bg = new GDColor(255,255,255,0);
+
+		$canvas = imagecreatetruecolor((int)$width, (int)$height);
+		imagealphablending($canvas, false);
+		imagesavealpha($canvas, true);
+
+		$bg->Allocate($canvas);
+
+		imagefill($canvas, 0, 0, $bg->Resource());
+
+		return $canvas;
 	}
 }
