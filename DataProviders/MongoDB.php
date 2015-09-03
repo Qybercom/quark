@@ -42,21 +42,36 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return string
 	 */
 	public static function _id ($source) {
-		if (self::IsValidId($source)) return $source;
+		if (self::IsValidId($source)) return (string)$source;
 
 		if (is_array($source))
 			$source = (object)$source;
 
 		if (isset($source->_id) && self::IsValidId($source->_id))
-			return $source->_id;
+			return (string)$source->_id;
 
 		if (isset($source->{'$id'}) && self::IsValidId($source->{'$id'}))
-			return $source->{'$id'};
+			return (string)$source->{'$id'};
 
 		if (isset($source->_id->{'$id'}) && self::IsValidId($source->_id->{'$id'}))
-			return $source->_id->{'$id'};
+			return (string)$source->_id->{'$id'};
 
 		return '';
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param bool $_id
+	 *
+	 * @return mixed
+	 */
+	private function _data (IQuarkModel $model, $_id = true) {
+		$out = json_decode(json_encode($model));
+
+		if ($_id) $out->_id = new \MongoId(self::_id($model));
+		else unset($out->_id);
+
+		return $out;
 	}
 
 	/**
@@ -145,21 +160,6 @@ class MongoDB implements IQuarkDataProvider {
 			throw new QuarkArchException('MongoDB connection not pooled');
 
 		return $this->_connection->$collection;
-	}
-
-	/**
-	 * @param IQuarkModel $model
-	 * @param bool $_id
-	 *
-	 * @return mixed
-	 */
-	private function _data (IQuarkModel $model, $_id = true) {
-		$out = json_decode(json_encode($model));
-
-		if ($_id) $out->_id = new \MongoId(self::_id($model));
-		else unset($out->_id);
-
-		return $out;
 	}
 
 	/**
