@@ -43,15 +43,20 @@ class MongoDB implements IQuarkDataProvider {
 	 */
 	public static function _id ($source) {
 		if (self::IsValidId($source)) return $source;
-		if (!is_object($source))
-			return isset($source['_id']) && self::IsValidId($source['_id']) ? $source['_id'] : '';
 
-		if (is_array($source->_id))
-			$source->_id = (object)$source->_id;
+		if (is_array($source))
+			$source = (object)$source;
 
-		return isset($source->_id->{'$id'})
-			? $source->_id->{'$id'}
-			: (isset($source->_id) && self::IsValidId($source->_id) ? $source->_id : '');
+		if (isset($source->_id) && self::IsValidId($source->_id))
+			return $source->_id;
+
+		if (isset($source->{'$id'}) && self::IsValidId($source->{'$id'}))
+			return $source->{'$id'};
+
+		if (isset($source->_id->{'$id'}) && self::IsValidId($source->_id->{'$id'}))
+			return $source->_id->{'$id'};
+
+		return '';
 	}
 
 	/**
@@ -158,7 +163,7 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|\StdClass $model
 	 * @param $options
 	 *
 	 * @return mixed
@@ -284,10 +289,12 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
+		$id = self::_id($id);
+
 		if (!self::IsValidId($id)) return null;
 
 		return self::_record($this->_collection($model, $options)->findOne(array(
-			'_id' => $id instanceof \MongoId ? $id : new \MongoId($id)
+			'_id' => new \MongoId($id)
 		), self::_fields($options)));
 	}
 

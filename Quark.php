@@ -3285,33 +3285,18 @@ class QuarkView implements IQuarkContainer {
 	 * @param bool $field = true
 	 *
 	 * @return string
-	 * @throws QuarkArchException
 	 */
 	public function Signature ($field = true) {
-		if (!($this->_view instanceof IQuarkAuthorizableViewModel)) return '';
-
-		$sign = $this->_session->Signature();
-
-		//if (!is_string($sign))
-			//throw new QuarkArchException('AuthProvider ' . get_class($provider) . ' specified non-string Signature');
+		$sign = $this->_session ? $this->_session->Signature() : '';
 
 		return $field ? '<input type="hidden" name="' . QuarkDTO::SIGNATURE . '" value="' . $sign . '" />' : $sign;
 	}
 
 	/**
 	 * @return QuarkModel
-	 * @throws QuarkArchException
 	 */
 	public function User () {
-		if (!($this->_view instanceof IQuarkAuthorizableViewModel))
-			throw new QuarkArchException('ViewModel ' . get_class($this->_view) . ' need to be IQuarkAuthorizableViewModel');
-
-		/**
-		 * @var QuarkSession $provider
-		 */
-		//$provider = Quark::Stack($this->_view->AuthProvider());
-
-		return $this->_session->User();
+		return $this->_session ? $this->_session->User() : null;
 	}
 
 	/**
@@ -5980,7 +5965,7 @@ class QuarkSession implements IQuarkTickable {
 		 */
 		$source = Quark::Stack($name);
 
-		return new QuarkSession($source);
+		return $source instanceof QuarkSessionSource ? new QuarkSession($source) : null;
 	}
 
 	/**
