@@ -47,8 +47,13 @@ class MongoDB implements IQuarkDataProvider {
 		if (is_array($source))
 			$source = (object)$source;
 
-		if (isset($source->_id) && self::IsValidId($source->_id))
-			return (string)$source->_id;
+		if (isset($source->_id)) {
+			if (is_array($source->_id))
+				$source->_id = (object)$source->_id;
+
+			if (self::IsValidId($source->_id))
+				return (string)$source->_id;
+		}
 
 		if (isset($source->{'$id'}) && self::IsValidId($source->{'$id'}))
 			return (string)$source->{'$id'};
