@@ -4433,7 +4433,10 @@ class QuarkModel implements IQuarkContainer {
 		$output = self::_normalize($model);
 
 		foreach ($model as $key => $value) {
-			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
+			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) {
+				unset($output->$key);
+				continue;
+			}
 
 			if ($value instanceof QuarkCollection) {
 				$output->$key = $value->Collection(function ($item) {
@@ -5445,6 +5448,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
  */
 class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate, IQuarkModelWithBeforeExtract {
 	const NOW = 'now';
+	const NOW_FULL = 'Y-m-d H:i:s.u';
 	const GMT = 'UTC';
 	const CURRENT = '';
 
@@ -5474,6 +5478,13 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 */
 	public function __toString () {
 		return $this->DateTime();
+	}
+
+	/**
+	 * cloning behavior
+	 */
+	public function __clone () {
+		$this->_date = clone $this->_date;
 	}
 
 	/**
@@ -5552,13 +5563,15 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 
 	/**
 	 * @param string $offset
+	 * @param bool $copy = false
 	 *
 	 * @return QuarkDate
 	 */
-	public function Offset ($offset) {
-		$this->_date->modify($offset);
+	public function Offset ($offset, $copy = false) {
+		$out = $copy ? clone $this : $this;
+		$out->_date->modify($offset);
 
-		return $this;
+		return $out;
 	}
 
 	/**
@@ -5584,12 +5597,19 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @return string
+	 */
+	public static function NowUSec () {
+		return date('Y-m-d H:i:s') . '.' . str_pad(explode(' ', microtime())[0] * 1000000, 6, '0');
+	}
+
+	/**
 	 * @param string $format
 	 *
 	 * @return QuarkDate
 	 */
 	public static function Now ($format = '') {
-		return self::FromFormat($format);
+		return self::FromFormat($format, self::NowUSec());
 	}
 
 	/**
@@ -5598,7 +5618,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return QuarkDate
 	 */
 	public static function GMTNow ($format = '') {
-		return self::FromFormat($format, self::NOW, self::GMT);
+		return self::FromFormat($format, self::NowUSec(), self::GMT);
 	}
 
 	/**
