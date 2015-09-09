@@ -114,11 +114,16 @@ class Quark {
 		$threads->Threads(self::$_environment);
 
 		$after = function () {
+			$timers = QuarkTimer::Timers();
+
+			foreach ($timers as $timer)
+				if ($timer) $timer->Invoke();
+
 			self::ContainerFree();
 		};
 
-		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke($after);
-		else $threads->Pipeline(self::$_config->Tick(), $after);
+		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke(null, $after);
+		else $threads->Pipeline(self::$_config->Tick(), null, $after);
 	}
 
 	/**
@@ -2119,12 +2124,15 @@ class QuarkThreadSet {
 	}
 
 	/**
+	 * @param callable $before
 	 * @param callable $after
 	 *
 	 * @return bool|mixed
 	 */
-	public function Invoke (callable $after = null) {
+	public function Invoke (callable $before = null, callable $after = null) {
 		$run = true;
+
+		if ($before) $before();
 
 		foreach ($this->_threads as $thread) {
 			if (!($thread instanceof IQuarkThread)) continue;
@@ -2149,11 +2157,12 @@ class QuarkThreadSet {
 
 	/**
 	 * @param int $sleep = 10000 (microseconds)
+	 * @param callable $before
 	 * @param callable $after
 	 */
-	public function Pipeline ($sleep = self::TICK, callable $after = null) {
-		self::Queue(function () use ($after) {
-			return $this->Invoke($after);
+	public function Pipeline ($sleep = self::TICK, callable $before = null, callable $after = null) {
+		self::Queue(function () use ($before, $after) {
+			return $this->Invoke($before, $after);
 		}, $sleep);
 	}
 
@@ -2170,6 +2179,122 @@ class QuarkThreadSet {
 			$run = $result !== false;
 			usleep($sleep);
 		}
+	}
+}
+
+/**
+ * Class QuarkTimer
+ *
+ * @package Quark
+ */
+class QuarkTimer {
+	const ONE_SECOND = 1;
+	const ONE_MINUTE = 60;
+	const ONE_HOUR = 3600;
+
+	/**
+	 * @var QuarkTimer[] $_timers
+	 */
+	private static $_timers = array();
+
+	/**
+	 * @var int $time
+	 */
+	private $_time;
+
+	/**
+	 * @var callable $_callback
+	 */
+	private $_callback;
+
+	/**
+	 * @var QuarkDate $_last
+	 */
+	private $_last;
+
+	/**
+	 * @var string $_id
+	 */
+	private $_id;
+
+	/**
+	 * @param int $time (seconds)
+	 * @param callable $callback
+	 * @param int $offset = 0
+	 */
+	public function __construct ($time, callable $callback, $offset = 0) {
+		$this->_time = $time > $offset ? $time - $offset : $time;
+		$this->_callback = $callback;
+		$this->_last = QuarkDate::GMTNow();
+		$this->_id = Quark::GuID();
+
+		self::$_timers[] = $this;
+	}
+
+	/**
+	 * @param int $time
+	 *
+	 * @return int
+	 */
+	public function Time ($time = 0) {
+		if (func_num_args() != 0)
+			$this->_time = $time;
+
+		return $this->_time;
+	}
+
+	/**
+	 * @param callable $callback
+	 *
+	 * @return callable
+	 */
+	public function Callback (callable $callback = null) {
+		if (func_num_args() != 0)
+			$this->_callback = $callback;
+
+		return $this->_callback;
+	}
+
+	/**
+	 * @return QuarkDate
+	 */
+	public function Last () {
+		return $this->_last;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ID () {
+		return $this->_id;
+	}
+
+	/**
+	 * Invoke timer callback
+	 */
+	public function Invoke () {
+		if (!$this->_last->Expired(null, $this->_time)) return;
+
+		$this->_last = QuarkDate::GMTNow();
+
+		$worker = $this->_callback;
+		$worker($this);
+	}
+
+	/**
+	 * Destroy timer
+	 */
+	public function Destroy () {
+		foreach (self::$_timers as $i => &$timer)
+			if ($timer->_id == $this->_id)
+				unset(self::$_timers[$i]);
+	}
+
+	/**
+	 * @return QuarkTimer[]
+	 */
+	public static function Timers () {
+		return self::$_timers;
 	}
 }
 
@@ -5601,8 +5726,22 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	/**
 	 * @return string
 	 */
+	public static function Microtime () {
+		return str_pad(explode(' ', microtime())[0] * 1000000, 6, '0');
+	}
+
+	/**
+	 * @return string
+	 */
 	public static function NowUSec () {
-		return date('Y-m-d H:i:s') . '.' . str_pad(explode(' ', microtime())[0] * 1000000, 6, '0');
+		return date('Y-m-d H:i:s') . '.' . self::Microtime();
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function NowUSecGMT () {
+		return gmdate('Y-m-d H:i:s') . '.' . self::Microtime();
 	}
 
 	/**
@@ -5620,7 +5759,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 * @return QuarkDate
 	 */
 	public static function GMTNow ($format = '') {
-		return self::FromFormat($format, self::NowUSec(), self::GMT);
+		return self::FromFormat($format, self::NowUSecGMT(), self::GMT);
 	}
 
 	/**
