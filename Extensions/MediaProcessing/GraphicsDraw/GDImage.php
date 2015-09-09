@@ -3,7 +3,6 @@ namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
 
 use Quark\IQuarkExtension;
 
-use Quark\Quark;
 use Quark\QuarkFile;
 
 /**
