@@ -3,6 +3,7 @@ namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
 
 use Quark\IQuarkExtension;
 
+use Quark\Quark;
 use Quark\QuarkFile;
 
 /**
@@ -38,11 +39,10 @@ class GDImage implements IQuarkExtension {
 	 * @param int $width
 	 * @param int $height
 	 */
-	public function __construct ($width = 0, $height = 0) {
+	public function __construct ($width = 1, $height = 1) {
 		$this->_file = new QuarkFile();
-
-		if (func_num_args() != 0)
-			$this->_image = imagecreatetruecolor($width, $height);
+		$this->_file->type = 'image/png';
+		$this->_image = self::Canvas($width, $height);
 	}
 
 	/**
