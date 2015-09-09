@@ -11,8 +11,8 @@ var Quark = Quark || {};
 Quark.Network = {};
 
 /**
- * @param host
- * @param port
+ * @param host = '127.0.0.1'
+ * @param port = 25000
  * @param on
  *
  * @constructor
@@ -52,8 +52,8 @@ Quark.Network.Client = function (host, port, on) {
         }
     };
 
-    that.host = host;
-    that.port = port;
+    that.host = host || '127.0.0.1';
+    that.port = port || 25000;
     that.socket = null;
     that.session = {};
 
@@ -61,7 +61,7 @@ Quark.Network.Client = function (host, port, on) {
      * API methods
      */
     that.Connect = function () {
-        that.socket = new WebSocket('ws://' + host + ':' + port);
+        that.socket = new WebSocket('ws://' + that.host + ':' + that.port);
 
         that.socket.onmessage = message;
 

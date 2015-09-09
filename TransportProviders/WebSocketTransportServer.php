@@ -112,7 +112,9 @@ class WebSocketTransportServer implements IQuarkTransportProvider, IQuarkInterme
 
 				if ($out !== false) {
 					$this->_buffer = '';
-					$this->_protocol->OnData($client, $out);
+
+					if ($this->_protocol)
+						$this->_protocol->OnData($client, $out);
 				}
 			}
 			catch (\Exception $e) {
@@ -148,7 +150,8 @@ class WebSocketTransportServer implements IQuarkTransportProvider, IQuarkInterme
 				return $this->_processor->Encode($data);
 			});
 
-			$this->_protocol->OnConnect($client);
+			if ($this->_protocol)
+				$this->_protocol->OnConnect($client);
 		}
 	}
 
@@ -158,6 +161,7 @@ class WebSocketTransportServer implements IQuarkTransportProvider, IQuarkInterme
 	 * @return mixed
 	 */
 	public function OnClose (QuarkClient $client) {
-		$this->_protocol->OnClose($client);
+		if ($this->_protocol)
+			$this->_protocol->OnClose($client);
 	}
 }

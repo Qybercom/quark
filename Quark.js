@@ -1,11 +1,11 @@
 /**
  * JS part of Quark PHP framework
  */
-var Quark = {
-	EventValidateError: 'quark.validation.error',
-	EventSubmitError: 'quark.submit.error',
-	EventSubmitSuccess: 'quark.submit.success'
-};
+var Quark = Quark || {};
+
+Quark.EventValidateError = 'quark.validation.error';
+Quark.EventSubmitError = 'quark.submit.error';
+Quark.EventSubmitSuccess = 'quark.submit.success';
 
 /**
  * @param target

@@ -1106,6 +1106,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->StreamUnknown($unknown);
 
 		Quark::On(self::EVENT_EVENT, function ($sender, $url) {
+			if (!$sender) return;
+
 			$clients = $this->_cluster->Server()->Clients();
 
 			foreach ($clients as $client) {
@@ -8774,6 +8776,68 @@ class QuarkDTO {
 
 		foreach ($batch as $part)
 			$process($this->_processor->Decode($part));
+	}
+}
+
+/**
+ * Class QuarkTCPTransport
+ *
+ * @package Quark
+ */
+class QuarkTCPTransport implements IQuarkTransportProvider, IQuarkIntermediateTransportProvider {
+	/**
+	 * @var IQuarkTransportProvider $_protocol
+	 */
+	private $_protocol;
+
+	/**
+	 * @param IQuarkTransportProvider $protocol
+	 */
+	public function __construct (IQuarkTransportProvider $protocol = null) {
+		$this->_protocol = $protocol;
+	}
+
+	/**
+	 * @param IQuarkTransportProvider $protocol
+	 *
+	 * @return IQuarkTransportProvider
+	 */
+	public function Protocol (IQuarkTransportProvider $protocol = null) {
+		if (func_num_args() != 0)
+			$this->_protocol = $protocol;
+
+		return $this->_protocol;
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return bool
+	 */
+	public function OnConnect (QuarkClient $client) {
+		if ($this->_protocol)
+			$this->_protocol->OnConnect($client);
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public function OnData (QuarkClient $client, $data) {
+		if ($this->_protocol)
+			$this->_protocol->OnData($client, $data);
+	}
+
+	/**
+	 * @param QuarkClient $client
+	 *
+	 * @return mixed
+	 */
+	public function OnClose (QuarkClient $client) {
+		if ($this->_protocol)
+			$this->_protocol->OnClose($client);
 	}
 }
 
