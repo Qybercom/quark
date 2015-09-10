@@ -907,6 +907,16 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	private $_tasks = array();
 
 	/**
+	 * @var string $_start = ''
+	 */
+	private $_start = '';
+
+	/**
+	 * @var bool $-started = false
+	 */
+	private $_started = false;
+
+	/**
 	 * @param int   $argc = 0
 	 * @param array $argv = []
 	 */
@@ -950,6 +960,18 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	}
 
 	/**
+	 * @param string $uri
+	 *
+	 * @return string
+	 */
+	public function ApplicationStart ($uri = '') {
+		if (func_num_args() != 0)
+			$this->_start = $uri;
+
+		return $this->_start;
+	}
+
+	/**
 	 * @param int $argc
 	 * @param array $argv
 	 *
@@ -979,6 +1001,16 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 			$service->Task($argc, $argv);
 		}
 		else {
+			if (!$this->_started) {
+				$this->_started = true;
+				$service = (new QuarkService('/' . $this->_start))->Service();
+
+				if (!($service instanceof IQuarkApplicationStartTask))
+					throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkApplicationStartTask');
+
+				$service->ApplicationStartTask($argc, $argv);
+			}
+
 			foreach ($this->_tasks as $task)
 				$task->Launch($argc, $argv);
 		}
@@ -1412,7 +1444,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	private function _pipe (QuarkClient $client = null, $json = [], $method = 'Stream', callable $args = null, $auth = true) {
 		$json = (object)$json;
 
-		$service = new QuarkService($json->url, new QuarkJSONIOProcessor(), new QuarkJSONIOProcessor(), false);
+		$service = new QuarkService('/' . $json->url, new QuarkJSONIOProcessor(), new QuarkJSONIOProcessor(), false);
 
 		if ($client)
 			$service->Input()->Remote($client->URI());
@@ -2080,6 +2112,21 @@ interface IQuarkAsyncTask extends IQuarkTask {
 }
 
 /**
+ * Interface IQuarkApplicationStartTask
+ *
+ * @package Quark
+ */
+interface IQuarkApplicationStartTask extends IQuarkService {
+	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
+	 * @return mixed
+	 */
+	public function ApplicationStartTask($argc, $argv);
+}
+
+/**
  * Class QuarkThreadSet
  *
  * @package Quark
@@ -2476,7 +2523,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $this->Input()->AuthorizationProvider() && $this->Input()->AuthorizationProvider()->Value() === false, $data, $this->URL($service));
+		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, !$this->Input() || ($this->Input()->AuthorizationProvider() && $this->Input()->AuthorizationProvider()->Value() === false), $data, $this->URL($service));
 	}
 
 	/**
@@ -9908,7 +9955,7 @@ abstract class QuarkException extends \Exception {
 	 */
 	public static function ExceptionHandler (\Exception $exception) {
 		if ($exception instanceof QuarkException)
-			return $exception->lvl != Quark::LOG_FATAL && Quark::Log($exception->message, $exception->lvl);
+			return Quark::Log($exception->message, $exception->lvl) != Quark::LOG_FATAL && $exception->lvl;
 
 		if ($exception instanceof \Exception)
 			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
