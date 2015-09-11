@@ -1649,8 +1649,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return bool
 	 */
 	private function _event ($name, $data = []) {
-		Quark::Trace($data);
-
 		return $this->_controller->Broadcast($this->_pack(array(
 			'event' => $name,
 			'data' => $data
