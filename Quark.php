@@ -1124,14 +1124,14 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	public function __construct (IQuarkTransportProvider $transport = null, $external = self::URI_NODE_EXTERNAL, $internal = self::URI_NODE_INTERNAL, $connect = '', $close = '', $unknown = '') {
 		$this->_dto = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		Quark::On(self::EVENT_BROADCAST, function ($http, $data, $url) {
+		Quark::On(self::EVENT_BROADCAST, function ($data, $url) {
 			$payload = array(
 				'url' => $url,
 				'data' => $data instanceof QuarkDTO ? $data->Data() : $data
 			);
 
-			if ($http) self::ControllerCommand('broadcast', $payload);
-			else $this->_cluster->Broadcast($this->_pack($payload));
+			if ($this->_cluster) $this->_cluster->Broadcast($this->_pack($payload));
+			else self::ControllerCommand('broadcast', $payload);
 		}, true);
 
 		if (func_num_args() == 0 || !Quark::CLI() || $_SERVER['argc'] > 1) return;
@@ -1649,6 +1649,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	 * @return bool
 	 */
 	private function _event ($name, $data = []) {
+		Quark::Trace($data);
+
 		return $this->_controller->Broadcast($this->_pack(array(
 			'event' => $name,
 			'data' => $data
@@ -2482,6 +2484,13 @@ interface IQuarkControllerStreamClose extends IQuarkService {
 trait QuarkServiceBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return IQuarkContainer
+	 */
+	private function _envelope () {
+		return new QuarkService($this);
+	}
+
 	/**
 	 * @param IQuarkService $service
 	 *
@@ -2523,7 +2532,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, !$this->Input() || ($this->Input()->AuthorizationProvider() && $this->Input()->AuthorizationProvider()->Value() === false), $data, $this->URL($service));
+		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $data, $this->URL($service));
 	}
 
 	/**
@@ -2572,7 +2581,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $uri
+	 * @param IQuarkService|string $uri
 	 * @param IQuarkIOProcessor $input
 	 * @param IQuarkIOProcessor $output
 	 *
@@ -2580,42 +2589,49 @@ class QuarkService implements IQuarkContainer {
 	 * @throws QuarkHTTPException
 	 */
 	public function __construct ($uri, IQuarkIOProcessor $input = null, IQuarkIOProcessor $output = null) {
-		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
-		$path = QuarkURI::ParseRoute($route->path);
+		$bundle = null;
 
-		$buffer = array();
+		if ($uri instanceof IQuarkService) {
+			$bundle = $uri;
+			$class = get_class($bundle);
+			$uri = substr(substr($class, 8), 0, -7);
+		}
+		else {
+			$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
+			$path = QuarkURI::ParseRoute($route->path);
 
-		foreach ($path as $item)
-			if (strlen(trim($item)) != 0) $buffer[] = ucfirst(trim($item));
+			$buffer = array();
 
-		$route = $buffer;
-		unset($buffer);
-		$length = sizeof($route);
-		$service = $length == 0 ? 'Index' : implode('/', $route);
-		$path = self::_bundle($service);
+			foreach ($path as $item) if (strlen(trim($item)) != 0) $buffer[] = ucfirst(trim($item));
 
-		while ($length > 0) {
-			if (is_file($path)) break;
+			$route = $buffer;
+			unset($buffer);
+			$length = sizeof($route);
+			$service = $length == 0 ? 'Index' : implode('/', $route);
+			$path = self::_bundle($service);
 
-			$index = self::_bundle($service . '\\Index');
+			while ($length > 0) {
+				if (is_file($path)) break;
 
-			if (is_file($index)) {
-				$service .= '\\Index';
-				$path = $index;
+				$index = self::_bundle($service . '\\Index');
 
-				break;
+				if (is_file($index)) {
+					$service .= '\\Index';
+					$path = $index;
+
+					break;
+				}
+
+				$length--;
+				$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
+				$path = self::_bundle($service);
 			}
 
-			$length--;
-			$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
-			$path = self::_bundle($service);
+			if (!file_exists($path)) throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
+
+			$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
+			$bundle = new $class();
 		}
-
-		if (!file_exists($path))
-			throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
-
-		$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
-		$bundle = new $class();
 
 		if (!($bundle instanceof IQuarkService))
 			throw new QuarkArchException('Class ' . $class . ' is not an IQuarkService');
@@ -2810,12 +2826,21 @@ class QuarkService implements IQuarkContainer {
  */
 trait QuarkContainerBehavior {
 	/**
+	 * @return IQuarkContainer
+	 */
+	private function _envelope () {
+		return null;
+	}
+
+	/**
 	 * @param $method
 	 * @param $args
 	 *
 	 * @return mixed
 	 */
 	private function _call ($method, $args) {
+		$this->_envelope();
+
 		/**
 		 * @var IQuarkPrimitive $this
 		 */
@@ -3206,6 +3231,13 @@ class QuarkObject {
 trait QuarkViewBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return IQuarkContainer
+	 */
+	private function _envelope () {
+		return new QuarkView($this);
+	}
+
 	/**
 	 * @param IQuarkViewModel $view = null
 	 *
@@ -3267,7 +3299,7 @@ class QuarkView implements IQuarkContainer {
 	private $_null = null;
 
 	/**
-	 * @param IQuarkViewModel $view
+	 * @param IQuarkViewModel|QuarkViewBehavior $view
 	 * @param array|object $vars
 	 * @param array $resources
 	 *
@@ -4178,6 +4210,13 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 trait QuarkModelBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return IQuarkContainer
+	 */
+	private function _envelope () {
+		return new QuarkModel($this);
+	}
+
 	/**
 	 * @param array $options
 	 *
@@ -4354,7 +4393,7 @@ class QuarkModel implements IQuarkContainer {
 	private $_model = null;
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $source
 	 */
 	public function __construct (IQuarkModel $model, $source = null) {
