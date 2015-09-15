@@ -2,11 +2,11 @@
 namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
 
 /**
- * Interface IQuarkGDImageFilter
+ * Interface IQuarkGDFilter
  *
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw
  */
-interface IQuarkGDImageFilter {
+interface IQuarkGDFilter {
 	/**
 	 * @param resource $image
 	 *

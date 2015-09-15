@@ -4,11 +4,11 @@ namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
 use Quark\QuarkFile;
 
 /**
- * Interface IQuarkGDImageAction
+ * Interface IQuarkGDAction
  *
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw
  */
-interface IQuarkGDImageAction {
+interface IQuarkGDAction {
 	/**
 	 * @param resource $image
 	 * @param QuarkFile $file

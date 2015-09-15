@@ -5,17 +5,17 @@ use Quark\QuarkFile;
 
 use Quark\Extensions\MediaProcessing\GraphicsDraw\GDColor;
 use Quark\Extensions\MediaProcessing\GraphicsDraw\GDPosition;
-use Quark\Extensions\MediaProcessing\GraphicsDraw\IQuarkGDImageAction;
+use Quark\Extensions\MediaProcessing\GraphicsDraw\IQuarkGDAction;
 
 /**
- * Class GDImageTextAction
+ * Class GDTextAction
  *
  * @note Function `imagettftext` `y` coordinate depends on the BASELINE.
  * 		 For that case, by default, position's `y` coordinate is set to the given size
  *
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw\Actions
  */
-class GDImageTextAction implements IQuarkGDImageAction {
+class GDTextAction implements IQuarkGDAction {
 	const DEFAULT_FONT = 'Arial';
 	CONST DEFAULT_SIZE = 20;
 

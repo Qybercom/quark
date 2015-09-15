@@ -96,11 +96,11 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
-	 * @param IQuarkGDImageFilter $filter
+	 * @param IQuarkGDFilter $filter
 	 *
 	 * @return GDImage
 	 */
-	public function Filter (IQuarkGDImageFilter $filter) {
+	public function Filter (IQuarkGDFilter $filter) {
 		if ($this->_image) {
 			$this->_image = $filter->GDFilter($this->_image);
 			$this->_apply();
@@ -110,11 +110,11 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
-	 * @param IQuarkGDImageAction $action
+	 * @param IQuarkGDAction $action
 	 *
 	 * @return GDImage
 	 */
-	public function Action (IQuarkGDImageAction $action) {
+	public function Action (IQuarkGDAction $action) {
 		if ($this->_image) {
 			$this->_image = $action->GDAction($this->_image, $this->_file);
 			$this->_apply();

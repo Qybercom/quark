@@ -1,14 +1,14 @@
 <?php
 namespace Quark\Extensions\MediaProcessing\GraphicsDraw\Filters;
 
-use Quark\Extensions\MediaProcessing\GraphicsDraw\IQuarkGDImageFilter;
+use Quark\Extensions\MediaProcessing\GraphicsDraw\IQuarkGDFilter;
 
 /**
- * Class GDImageBlurFilter
+ * Class GDBlurFilter
  *
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw\Filters
  */
-class GDImageBlurFilter implements IQuarkGDImageFilter {
+class GDBlurFilter implements IQuarkGDFilter {
 	/**
 	 * @var int $_cycles = 15
 	 */
