@@ -1971,8 +1971,8 @@ class QuarkTask implements IQuarkTransportProvider {
 	public function Launch ($argc, $argv) {
 		if (!$this->_service->LaunchCriteria($this->_launched)) return true;
 
-		$this->_service->Task($argc, $argv);
 		$this->_launched = QuarkDate::Now();
+		$this->_service->Task($argc, $argv);
 
 		return true;
 	}
@@ -4386,6 +4386,8 @@ class QuarkModel implements IQuarkContainer {
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
 
+	const OPTION_USER_OPTIONS = '___user___';
+
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior|null
 	 */
@@ -4706,7 +4708,7 @@ class QuarkModel implements IQuarkContainer {
 		$model = $output->Model();
 
 		if ($model instanceof IQuarkModelWithAfterFind)
-			$model->AfterFind($data);
+			$model->AfterFind($data, $options);
 
 		if ($after) {
 			$buffer = $after($output);
@@ -4742,7 +4744,7 @@ class QuarkModel implements IQuarkContainer {
 		$model = clone $this->_model;
 
 		if ($model instanceof IQuarkModelWithBeforeExtract) {
-			$out = $model->BeforeExtract();
+			$out = $model->BeforeExtract($fields, $weak);
 
 			if ($out !== null)
 				return $out;
@@ -5040,10 +5042,11 @@ interface IQuarkModelWithCustomPrimaryKey {
 interface IQuarkModelWithAfterFind {
 	/**
 	 * @param $raw
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
-	public function AfterFind($raw);
+	public function AfterFind($raw, $options);
 }
 
 /**
@@ -5121,9 +5124,12 @@ interface IQuarkModelWithBeforeValidate {
  */
 interface IQuarkModelWithBeforeExtract {
 	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
 	 * @return mixed
 	 */
-	public function BeforeExtract();
+	public function BeforeExtract($fields, $weak);
 }
 
 /**
@@ -5942,9 +5948,12 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
 	 * @return mixed
 	 */
-	public function BeforeExtract () {
+	public function BeforeExtract ($fields, $weak) {
 		return $this->DateTime();
 	}
 }
