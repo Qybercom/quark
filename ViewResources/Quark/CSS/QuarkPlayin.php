@@ -37,7 +37,7 @@ class QuarkPlayin implements IQuarkViewResource, IQuarkLocalViewResource, IQuark
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

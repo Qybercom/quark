@@ -39,7 +39,7 @@ class QuarkMVC implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVie
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

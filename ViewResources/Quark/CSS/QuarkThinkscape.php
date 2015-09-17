@@ -39,7 +39,7 @@ class QuarkThinkscape implements IQuarkViewResource, IQuarkLocalViewResource, IQ
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

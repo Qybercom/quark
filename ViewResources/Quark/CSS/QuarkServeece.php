@@ -37,7 +37,7 @@ class QuarkServeece implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

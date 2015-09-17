@@ -3056,6 +3056,26 @@ class QuarkObject {
 	}
 
 	/**
+	 * @param $source
+	 * @param $type
+	 *
+	 * @return bool
+	 */
+	public static function IsArrayOf ($source, $type) {
+		if (!self::isIterative($source)) return false;
+
+		$scalar = is_scalar($type);
+		$typeof = gettype($type);
+
+		foreach ($source as $item) {
+			if ($scalar && gettype($item) != $typeof) return false;
+			if (!$scalar && !($item instanceof $source)) return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * @param $class
 	 * @param string|array $interface
 	 * @param bool $silent
@@ -3276,7 +3296,7 @@ trait QuarkViewBehavior {
  */
 class QuarkView implements IQuarkContainer {
 	/**
-	 * @var IQuarkViewModel|IQuarkViewModelWithResources|IQuarkViewModelWithCachedResources|null
+	 * @var IQuarkViewModel|IQuarkViewModelWithResources
 	 */
 	private $_view = null;
 	private $_child = null;
@@ -3443,10 +3463,15 @@ class QuarkView implements IQuarkContainer {
 	 * @param IQuarkViewResource $resource
 	 *
 	 * @return QuarkView
+	 *
+	 * @throws QuarkArchException
 	 */
 	private function _resource (IQuarkViewResource $resource) {
 		if ($resource instanceof IQuarkViewResourceWithDependencies) {
 			$resources = $resource->Dependencies();
+
+			if (!is_array($resources))
+				throw new QuarkArchException('ViewResource ' . get_class($resource) . ' specified invalid value for `Dependencies`. Expected array of IQuarkViewResource.');
 
 			/**
 			 * @var IQuarkViewResource $dependency
@@ -3622,39 +3647,15 @@ interface IQuarkViewModel extends IQuarkPrimitive {
 }
 
 /**
- * Interface IQuarkAuthorizableViewModel
- *
- * @package Quark
- */
-interface IQuarkAuthorizableViewModel {
-	/**
-	 * @return string
-	 */
-	public function AuthProvider();
-}
-
-/**
  * Interface IQuarkViewModelWithResources
  *
  * @package Quark
  */
 interface IQuarkViewModelWithResources extends IQuarkViewModel {
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Resources();
-}
-
-/**
- * Interface IQuarkViewModelWithCachedResources
- *
- * @package Quark
- */
-interface IQuarkViewModelWithCachedResources extends IQuarkViewModel {
-	/**
-	 * @return array
-	 */
-	public function CachedResources();
 }
 
 /**
@@ -3681,7 +3682,7 @@ interface IQuarkViewResource {
  */
 interface IQuarkViewResourceWithDependencies {
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies();
 }

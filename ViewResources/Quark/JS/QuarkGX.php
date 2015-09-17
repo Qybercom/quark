@@ -38,7 +38,7 @@ class QuarkGX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

@@ -54,7 +54,7 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

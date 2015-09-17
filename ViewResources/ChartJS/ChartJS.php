@@ -3,18 +3,22 @@ namespace Quark\ViewResources\ChartJS;
 
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
+use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
+
 use Quark\QuarkJSViewResourceType;
+
+use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
  * Class ChartJS
  *
  * @package Quark\ViewResources\ChartJS
  */
-class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource {
+class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
 	private $_version = '';
 
 	/**
@@ -43,5 +47,14 @@ class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource {
 	 */
 	public function RequestDTO () {
 		// TODO: Implement RequestDTO() method.
+	}
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function Dependencies () {
+		return array(
+			new jQueryCore()
+		);
 	}
 }

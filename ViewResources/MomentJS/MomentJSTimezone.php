@@ -47,7 +47,7 @@ class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource,
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(

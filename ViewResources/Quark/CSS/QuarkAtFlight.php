@@ -37,7 +37,7 @@ class QuarkAtFlight implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(
