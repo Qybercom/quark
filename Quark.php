@@ -792,8 +792,12 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return mixed
 	 */
 	public function Thread () {
+		$offset = isset($_SERVER['DOCUMENT_ROOT'])
+			? str_replace($_SERVER['DOCUMENT_ROOT'], '', Quark::Host())
+			: '';
+
 		$service = new QuarkService(
-			$_SERVER['REQUEST_URI'],
+			substr($_SERVER['REQUEST_URI'], (int)strpos($_SERVER['REQUEST_URI'], $offset) + strlen($offset)),
 			$this->_processorRequest,
 			$this->_processorResponse
 		);
