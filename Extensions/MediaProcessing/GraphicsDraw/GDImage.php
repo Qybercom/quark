@@ -57,7 +57,7 @@ class GDImage implements IQuarkExtension {
 
 		$img = new GDImage();
 		$img->File($image);
-		$img->Content($image->Content());
+		$img->Content($image->Load()->Content());
 
 		return $img;
 	}

@@ -238,6 +238,14 @@ class Quark {
 	}
 
 	/**
+	 * @return string
+	 */
+	public static function DuID () {
+		$micro = explode(' ', microtime());
+		return date('YmdHis', $micro[1]) . substr($micro[0], strpos($micro[0], '.'));
+	}
+
+	/**
 	 * Global unique ID
 	 *
 	 * @param string $salt
@@ -3453,6 +3461,9 @@ class QuarkView implements IQuarkContainer {
 
 		$resources = $this->_view->Resources();
 
+		if (!is_array($resources))
+			return $this->_resources;
+
 		foreach ($resources as $resource)
 			$this->_resource($resource);
 
@@ -3665,14 +3676,14 @@ interface IQuarkViewModelWithResources extends IQuarkViewModel {
  */
 interface IQuarkViewResource {
 	/**
+	 * @return IQuarkViewResourceType
+	 */
+	public function Type();
+
+	/**
 	 * @return string
 	 */
 	public function Location();
-
-	/**
-	 * @return IQuarkViewResourceType;
-	 */
-	public function Type();
 }
 
 /**
@@ -9593,6 +9604,11 @@ class QuarkLanguage {
 class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	const LOCAL_FS = 'LocalFS';
 
+	const MODE_DEFAULT = null;
+	const MODE_ANYONE = 0777;
+	const MODE_GROUP = 0771;
+	const MODE_USER = 0711;
+
 	public $location = '';
 	public $name = '';
 	public $type = '';
@@ -9708,9 +9724,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param int $mode
+	 * http://php.net/manual/ru/function.mkdir.php#114960
+	 *
 	 * @return bool
 	 */
-	public function SaveContent () {
+	public function SaveContent ($mode = self::MODE_DEFAULT) {
+		if (!is_dir($this->parent) && !is_file($this->parent))
+			mkdir($this->parent, $mode, true);
+
 		return file_put_contents($this->location, $this->_content, LOCK_EX) !== false;
 	}
 
