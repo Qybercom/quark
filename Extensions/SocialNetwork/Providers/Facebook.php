@@ -2,15 +2,13 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
+use Quark\QuarkDTO;
+use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 
-use Facebook\GraphObject;
-use Facebook\GraphUser;
-use Facebook\FacebookSession;
-use Facebook\FacebookRequest;
-use Facebook\FacebookRequestException;
-use Facebook\FacebookRedirectLoginHelper;
+use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
  * Class FacebookSession
@@ -20,55 +18,24 @@ use Facebook\FacebookRedirectLoginHelper;
 class Facebook implements IQuarkSocialNetworkProvider {
 	const CURRENT_USER = '/me';
 
+	const PERMISSION_ID = 'id';
+	const PERMISSION_NAME = 'name';
+	const PERMISSION_PICTURE = 'picture';
+	const PERMISSION_GENDER = 'gender';
+	const PERMISSION_LINK = 'link';
+
+	const PERMISSION_EMAIL = 'email';
+	const PERMISSION_BIRTHDAY = 'birthday';
+	const PERMISSION_LIKES = 'user_likes';
+	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
+
 	private $_appId = '';
 	private $_appSecret = '';
 
 	/**
-	 * @var FacebookSession $_session
+	 * @var string $_session
 	 */
 	private $_session;
-
-	/**
-	 * Facebook constructor
-	 */
-	public function __construct () {
-		Quark::Import(__DIR__ . '/facebook-php-sdk-v4/src/');
-	}
-
-	/**
-	 * @param string $method
-	 * @param string $url
-	 * @param array  $data
-	 * @param string $type = 'Facebook\GraphObject'
-	 *
-	 * @return GraphObject
-	 */
-	public function API ($method = '', $url = '', $data = [], $type = 'Facebook\GraphObject') {
-		try {
-			if ($this->_session == null) return null;
-
-			$request = new FacebookRequest($this->_session, $method, $url, $data);
-
-			return $request->execute()->getGraphObject($type);
-		}
-		catch (FacebookRequestException $e) {
-			Quark::Log('FacebookRequestException: ' . $e->getMessage(), Quark::LOG_WARN);
-			return null;
-		}
-		catch (\Exception $e) {
-			Quark::Log('Facebook.Exception: ' . $e->getMessage(), Quark::LOG_WARN);
-			return null;
-		}
-	}
-
-	/**
-	 * @param string $user
-	 *
-	 * @return GraphObject
-	 */
-	public function Profile ($user) {
-		return $this->API('GET', '/' . $user, array(), GraphUser::className())->asArray();
-	}
 
 	/**
 	 * @param string $appId
@@ -79,22 +46,21 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	public function Init ($appId, $appSecret) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
-
-		if (session_status() == PHP_SESSION_NONE)
-			session_start();
-
-		FacebookSession::setDefaultApplication($appId, $appSecret);
-		$this->_session = FacebookSession::newAppSession($appId, $appSecret);
 	}
 
 	/**
 	 * @param string $to
-	 * @param array  $permissions
+	 * @param string[] $permissions
 	 *
 	 * @return string
 	 */
 	public function LoginURL ($to, $permissions = []) {
-		return (new FacebookRedirectLoginHelper($to))->getLoginUrl($permissions);
+		return 'https://www.facebook.com/v2.3/dialog/oauth?' . http_build_query(array(
+			'client_id' => $this->_appId,
+			'redirect_uri' => $to,
+			'state' => Quark::GuID(),
+			'scope' => implode(',', (array)$permissions)
+		));
 	}
 
 	/**
@@ -103,40 +69,104 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	public function LogoutURL ($to) {
-		return (new FacebookRedirectLoginHelper(''))->getLogoutUrl($this->_session, $to);
-	}
-
-	/**
-	 * @param FacebookSession $session
-	 *
-	 * @return null|string
-	 */
-	private function _session (FacebookSession $session = null) {
-		$this->_session = $session;
-		return $this->_session == null ? null : (string)$this->_session->getAccessToken();
+		return 'https://www.facebook.com/logout.php?' . http_build_query(array(
+			'next' => $to,
+			'access_token' => $this->_session
+		));
 	}
 
 	/**
 	 * @param string $to
+	 * @param string $code
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function SessionFromRedirect ($to) {
-		try {
-			return $this->_session((new FacebookRedirectLoginHelper($to))->getSessionFromRedirect());
-		}
-		catch (\Exception $e) {
-			Quark::Log('SocialNetwork.Facebook exception: ' . $e->getMessage(), Quark::LOG_WARN);
-			return null;
-		}
+	public function SessionFromRedirect ($to, $code) {
+		$response = $this->API('GET', '/oauth/access_token', array(
+			'client_id' => $this->_appId,
+			'client_secret' => $this->_appSecret,
+			'redirect_uri' => $to,
+			'code' => $code
+		));
+
+		return $response == null ? '' : $this->_session = $response->access_token;
 	}
 
 	/**
 	 * @param string $token
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function SessionFromToken ($token) {
-		return $this->_session(new FacebookSession($token));
+		return $this->_session = $token;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function Profile ($user) {
+		$response = $this->API('GET', '/' . $user, array('fields' => implode(',', array(
+			self::PERMISSION_ID,
+			self::PERMISSION_NAME,
+			self::PERMISSION_PICTURE,
+			self::PERMISSION_GENDER,
+			self::PERMISSION_LINK,
+			self::PERMISSION_BIRTHDAY,
+		))));
+
+		if ($response == null) return null;
+
+		$user = new SocialNetworkUser($response->id, $response->name);
+
+		$user->AccessToken($this->_session);
+		$user->Gender($response->gender[0]);
+		$user->PhotoFromLink($response->picture->data->url);
+		$user->Page($response->link);
+		$user->BirthdayByDate('m/d/Y', $response->birthday);
+
+		return $user;
+	}
+
+	/**
+	 * @param string $method
+	 * @param string $url
+	 * @param array  $data
+	 * @param string $base = 'https://graph.facebook.com/'
+	 *
+	 * @return QuarkDTO
+	 */
+	public function API ($method = '', $url = '', $data = [], $base = 'https://graph.facebook.com/') {
+		$request = new QuarkDTO(new QuarkJSONIOProcessor());
+		$request->Method($method);
+		$request->Data($data);
+
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
+			'access_token' => $this->_session
+		)), $request, $response);
+
+		if (!$out->Data()) {
+			$data = array();
+			parse_str($out->RawData(), $data);
+
+			$out->Data((object)$data);
+		}
+
+		if (isset($out->error)) {
+			Quark::Log('Facebook.Exception: ' . $out->error->type . ': ' . $out->error->message . '. Code: ' . $out->error->code, Quark::LOG_WARN);
+			return null;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function CurrentUser () {
+		return '/me';
 	}
 }

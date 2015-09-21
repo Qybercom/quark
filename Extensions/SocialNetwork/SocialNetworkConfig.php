@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
+use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
 /**
@@ -61,5 +62,12 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 			$this->_name = $name;
 
 		return $this->_name;
+	}
+
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance () {
+		return new SocialNetwork($this->_name);
 	}
 }

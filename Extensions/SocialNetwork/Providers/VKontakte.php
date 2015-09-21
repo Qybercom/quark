@@ -3,11 +3,13 @@ namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
-use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkFormIOProcessor;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
+
+use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
  * Class VKontakte
@@ -42,7 +44,15 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	private $_appId = '';
 	private $_appSecret = '';
 
+	/**
+	 * @var string $_session
+	 */
 	private $_session;
+
+	/**
+	 * @var string $_current
+	 */
+	private $_current = '';
 
 	/**
 	 * @param string $appId
@@ -66,8 +76,8 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 			'client_id' => $this->_appId,
 			'redirect_uri' => $to,
 			'state' => Quark::GuID(),
-			'v' => '5.29',
 			'scope' => implode(',', (array)$permissions),
+			'v' => '5.29',
 			'response_type' => 'code'
 		));
 	}
@@ -83,33 +93,29 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $to
+	 * @param string $code
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function SessionFromRedirect ($to) {
-		$response = QuarkHTTPTransportClient::To(
-			'https://oauth.vk.com/access_token?' . http_build_query(array(
-				'client_id' => $this->_appId,
-				'client_secret' => $this->_appSecret,
-				'code' => $_GET['code'],
-				'redirect_uri' => $to,
-			)),
-			QuarkDTO::ForGET(),
-			new QuarkDTO(new QuarkJSONIOProcessor())
-		);
+	public function SessionFromRedirect ($to, $code) {
+		$response = $this->API('GET', '/access_token', array(
+			'client_id' => $this->_appId,
+			'client_secret' => $this->_appSecret,
+			'redirect_uri' => $to,
+			'code' => $code), 'https://oauth.vk.com/');
 
-		if (isset($response->error) || !isset($response->access_token)) {
-			Quark::Log('VKontakte.Exception: ' . $response->error . ': ' . $response->error_description, Quark::LOG_WARN);
-			return null;
-		}
+		if ($response == null) return '';
 
-		return $this->_session = $response->access_token;
+		$this->_session = $response->access_token;
+		$this->_current = $response->user_id;
+
+		return $this->_session;
 	}
 
 	/**
 	 * @param string $token
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function SessionFromToken ($token) {
 		return $this->_session = $token;
@@ -118,31 +124,42 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	/**
 	 * @param $user
 	 *
-	 * @return mixed
+	 * @return SocialNetworkUser
 	 */
 	public function Profile ($user) {
 		$response = $this->API('GET', 'users.get')->response;
+		$response = is_array($response) && sizeof($response) != 0 ? $response[0] : null;
 
-		return is_array($response) && sizeof($response) != 0 ? $response[0] : null;
+		if ($response == null) return null;
+
+		$user = new SocialNetworkUser($response->id, $response->name);
+
+		$user->AccessToken($this->_session);
+		$user->Gender($response->gender[0]);
+		$user->PhotoFromLink($response->picture->data->url);
+		$user->Page($response->link);
+
+		return $user;
 	}
 
 	/**
 	 * @param string $method
 	 * @param string $url
 	 * @param array  $data
+	 * @param string $base = 'https://api.vk.com/method/'
 	 *
-	 * @return mixed
+	 * @return QuarkDTO
 	 */
-	public function API ($method = '', $url = '', $data = []) {
+	public function API ($method = '', $url = '', $data = [], $base = 'https://api.vk.com/method/') {
 		$request = new QuarkDTO(new QuarkFormIOProcessor());
 		$request->Method($method);
 		$request->Data($data);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$out = QuarkHTTPTransportClient::To('https://api.vk.com/method/' . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
-					'access_token' => $this->_session
-				)), $request, $response);
+		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
+			'access_token' => $this->_session
+		)), $request, $response);
 
 		if (isset($out->error)) {
 			Quark::Log('VKontakte.Exception: ' . $out->error->error_code . ': ' . $out->error->error_msg, Quark::LOG_WARN);
@@ -150,5 +167,12 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function CurrentUser () {
+		return $this->_current;
 	}
 }

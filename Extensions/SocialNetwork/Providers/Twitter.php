@@ -22,7 +22,7 @@ class Twitter implements IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $to
-	 * @param array  $permissions
+	 * @param string[] $permissions
 	 *
 	 * @return string
 	 */
@@ -64,5 +64,12 @@ class Twitter implements IQuarkSocialNetworkProvider {
 	 */
 	public function Profile ($user) {
 		// TODO: Implement Profile() method.
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function API () {
+		// TODO: Implement API() method.
 	}
 }

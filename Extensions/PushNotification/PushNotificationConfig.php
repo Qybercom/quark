@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\PushNotification;
 
+use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
 /**
@@ -49,5 +50,12 @@ class PushNotificationConfig implements IQuarkExtensionConfig {
 			$this->_name = $name;
 
 		return $this->_name;
+	}
+
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance () {
+		return new PushNotification($this->_name);
 	}
 }

@@ -17,7 +17,7 @@ interface IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $to
-	 * @param array $permissions
+	 * @param string[] $permissions
 	 *
 	 * @return string
 	 */
@@ -32,27 +32,33 @@ interface IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $to
+	 * @param string $code
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function SessionFromRedirect($to);
+	public function SessionFromRedirect($to, $code);
 
 	/**
 	 * @param string $token
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function SessionFromToken($token);
 
 	/**
 	 * @param $user
 	 *
-	 * @return mixed
+	 * @return SocialNetworkUser
 	 */
 	public function Profile($user);
 
 	/**
-	 * @return mixed
+	 * @return \Quark\QuarkDTO
 	 */
 	public function API();
+
+	/**
+	 * @return string
+	 */
+	public function CurrentUser();
 }
