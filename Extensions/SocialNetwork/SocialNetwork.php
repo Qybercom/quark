@@ -131,12 +131,19 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	private function _session ($method, $token) {
 		if ($token == null) {
-			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config->SocialNetwork()) . ' failed', Quark::LOG_WARN);
+			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config->SocialNetwork()) . ' failed. Invalid token.', Quark::LOG_WARN);
+			return null;
+		}
+
+		$profile = $this->Profile($this->_config->SocialNetwork()->CurrentUser());
+
+		if ($profile == null) {
+			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config->SocialNetwork()) . ' failed. Profile error.', Quark::LOG_WARN);
 			return null;
 		}
 
 		$this->accessToken = $token;
-		$this->id = $this->Profile($this->_config->SocialNetwork()->CurrentUser())->ID();
+		$this->id = $profile->ID();
 
 		return $this;
 	}
