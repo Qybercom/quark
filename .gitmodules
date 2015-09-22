@@ -1,3 +1,0 @@
-[submodule "Extensions/SocialNetwork/Providers/facebook-php-sdk-v4"]
-	path = Extensions/SocialNetwork/Providers/facebook-php-sdk-v4
-	url = https://github.com/facebook/facebook-php-sdk-v4.git

@@ -313,8 +313,10 @@ class Quark {
 	 * @return IQuarkStackable|null
 	 */
 	public static function Stack ($name, IQuarkStackable $object = null) {
-		if (func_num_args() == 2)
+		if (func_num_args() == 2) {
+			$object->Name($name);
 			self::$_stack[$name] = $object;
+		}
 
 		return isset(self::$_stack[$name]) ? self::$_stack[$name] : null;
 	}
@@ -679,9 +681,11 @@ class QuarkConfig {
  */
 interface IQuarkStackable {
 	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public function Name();
+	public function Name($name = '');
 }
 
 /**
@@ -1713,7 +1717,12 @@ interface IQuarkExtension { }
  *
  * @package Quark
  */
-interface IQuarkExtensionConfig extends IQuarkStackable { }
+interface IQuarkExtensionConfig extends IQuarkStackable {
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance();
+}
 
 /**
  * Interface IQuarkAuthorizableLiteService
@@ -3294,6 +3303,15 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $name
+	 *
+	 * @return IQuarkExtension
+	 */
+	public function Extension ($name = '') {
+		return $this->_call('Extension', func_get_args());
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function Compile () {
@@ -3534,6 +3552,15 @@ class QuarkView implements IQuarkContainer {
 		$sign = $this->_session ? $this->_session->Signature() : '';
 
 		return $field ? '<input type="hidden" name="' . QuarkDTO::SIGNATURE . '" value="' . $sign . '" />' : $sign;
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return IQuarkExtension
+	 */
+	public function Extension ($name = '') {
+		return Quark::Config()->Extension($name)->ExtensionInstance();
 	}
 
 	/**
@@ -4232,6 +4259,13 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function Pk () {
+		return $this->_call('PrimaryKey', func_get_args());
+	}
+
+	/**
 	 * @param array $options
 	 *
 	 * @return mixed
@@ -4354,9 +4388,11 @@ class QuarkModelSource implements IQuarkStackable {
 	}
 
 	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public function Name () {
+	public function Name ($name = '') {
 		return $this->_name;
 	}
 
@@ -4559,6 +4595,21 @@ class QuarkModel implements IQuarkContainer {
 			$source->URI(QuarkURI::FromURI($uri));
 
 		return func_num_args() == 1 ? $source->Connect() : $source;
+	}
+
+	/**
+	 * @param string $key
+	 * @param string $value = ''
+	 *
+	 * @return array
+	 */
+	public static function StructureFromKey ($key, $value = '') {
+		$structure = explode('.', $key);
+
+		return array($structure[0] => sizeof($structure) == 1
+			? $value
+			: self::StructureFromKey(substr($key, strpos($key, '.') + 1), $value)
+		);
 	}
 
 	/**
@@ -6010,9 +6061,11 @@ class QuarkSessionSource implements IQuarkStackable {
 	}
 
 	/**
+	 * @param string $name
+	 *
 	 * @return string
 	 */
-	public function &Name () {
+	public function &Name ($name = '') {
 		return $this->_name;
 	}
 
@@ -6135,16 +6188,13 @@ class QuarkSession implements IQuarkTickable {
 	}
 
 	/**
+	 * @param $user
 	 * @param $criteria
-	 * @param int $lifetime = 0 (seconds)
+	 * @param int $lifetime
 	 *
 	 * @return bool
 	 */
-	public function Login ($criteria, $lifetime = 0) {
-		if (!$this->_source) return false;
-
-		$user = $this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime);
-
+	private function _init ($user, $criteria, $lifetime) {
 		if (!$user) return false;
 
 		$this->_user = $user;
@@ -6155,6 +6205,27 @@ class QuarkSession implements IQuarkTickable {
 		return $this->_user != null
 			? $login || $login === null
 			: false;
+	}
+
+	/**
+	 * @param $criteria
+	 * @param int $lifetime = 0 (seconds)
+	 *
+	 * @return bool
+	 */
+	public function Login ($criteria, $lifetime = 0) {
+		return $this->_source
+			? $this->_init($this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime), $criteria, $lifetime)
+			: false;
+	}
+
+	/**
+	 * @param QuarkModel $user
+	 *
+	 * @return bool
+	 */
+	public function ForUser (QuarkModel $user = null) {
+		return $this->_init($user, array(), 0);
 	}
 
 	/**
@@ -7820,9 +7891,7 @@ class QuarkURI {
 	 * @return string
 	 */
 	public static function Of ($path, $full = true) {
-		$path = Quark::NormalizePath($path, false);
-
-		return Quark::WebHost($full) . $path;
+		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', Quark::WebHost($full) . Quark::NormalizePath($path, false))));
 	}
 
 	/**
@@ -8076,6 +8145,11 @@ class QuarkDTO {
 	 * @var string $_raw
 	 */
 	private $_raw = '';
+
+	/**
+	 * @var string $_rawData
+	 */
+	private $_rawData = '';
 
 	/**
 	 * @var IQuarkIOProcessor $_processor
@@ -8600,15 +8674,27 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param mixed $raw
+	 * @param string $raw
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function Raw ($raw = []) {
+	public function Raw ($raw = '') {
 		if (func_num_args() != 0)
 			$this->_raw = $raw;
 
 		return $this->_raw;
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return string
+	 */
+	public function RawData ($raw = '') {
+		if (func_num_args() != 0)
+			$this->_rawData = $raw;
+
+		return $this->_rawData;
 	}
 
 	/**
@@ -8750,6 +8836,8 @@ class QuarkDTO {
 
 			$this->_unserializeHeaders($found[4]);
 			$this->_unserializeBody($found[5]);
+
+			$this->_rawData = $found[5];
 		}
 
 		return $this;
@@ -8790,6 +8878,8 @@ class QuarkDTO {
 
 			$this->_unserializeHeaders($found[3]);
 			$this->_unserializeBody($found[4]);
+
+			$this->_rawData = $found[4];
 		}
 
 		return $this;
@@ -8915,6 +9005,7 @@ class QuarkDTO {
 
 			$this->_length = strlen($out);
 			$this->_raw = $out;
+			$this->_rawData = $out;
 		}
 
 		return $this->_raw;
@@ -10215,7 +10306,7 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Encode ($data) {
-		return http_build_query($data);
+		return is_array($data) ? http_build_query($data) : '';
 	}
 
 	/**

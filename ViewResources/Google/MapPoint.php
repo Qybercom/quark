@@ -58,9 +58,12 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	}
 
 	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
 	 * @return mixed
 	 */
-	public function BeforeExtract () {
+	public function BeforeExtract ($fields, $weak) {
 		unset($this->width);
 	}
 

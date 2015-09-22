@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SMS;
 
+use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
 /**
@@ -39,5 +40,12 @@ class SMSCenterConfig implements IQuarkExtensionConfig {
 			$this->_name = $name;
 
 		return $this->_name;
+	}
+
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance () {
+		return new SMS($this->_name);
 	}
 }

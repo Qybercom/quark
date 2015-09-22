@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Quark\REST;
 
+use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
 use Quark\Quark;
@@ -95,5 +96,12 @@ class RESTConfig implements IQuarkExtensionConfig {
 			$this->_name = $name;
 
 		return $this->_name;
+	}
+
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance () {
+		// TODO: Implement ExtensionInstance() method.
 	}
 }
