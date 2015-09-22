@@ -8,6 +8,11 @@ namespace Quark\Extensions\SocialNetwork;
  */
 interface IQuarkSocialNetworkProvider {
 	/**
+	 * @return string
+	 */
+	public function Name();
+
+	/**
 	 * @param string $appId
 	 * @param string $appSecret
 	 *

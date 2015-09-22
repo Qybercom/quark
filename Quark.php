@@ -4259,6 +4259,13 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function Pk () {
+		return $this->_call('PrimaryKey', func_get_args());
+	}
+
+	/**
 	 * @param array $options
 	 *
 	 * @return mixed
@@ -4588,6 +4595,21 @@ class QuarkModel implements IQuarkContainer {
 			$source->URI(QuarkURI::FromURI($uri));
 
 		return func_num_args() == 1 ? $source->Connect() : $source;
+	}
+
+	/**
+	 * @param string $key
+	 * @param string $value = ''
+	 *
+	 * @return array
+	 */
+	public static function StructureFromKey ($key, $value = '') {
+		$structure = explode('.', $key);
+
+		return array($structure[0] => sizeof($structure) == 1
+			? $value
+			: self::StructureFromKey(substr($key, strpos($key, '.') + 1), $value)
+		);
 	}
 
 	/**
@@ -10284,7 +10306,7 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Encode ($data) {
-		return http_build_query($data);
+		return is_array($data) ? http_build_query($data) : '';
 	}
 
 	/**

@@ -19,6 +19,15 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 class VKontakte implements IQuarkSocialNetworkProvider {
 	const CURRENT_USER = '';
 
+	const PERMISSION_ID = 'uid';
+	const PERMISSION_NAME = '';
+	const PERMISSION_PICTURE = 'photo_max_orig';
+	const PERMISSION_GENDER = 'sex';
+	const PERMISSION_LINK = 'link';
+
+	const PERMISSION_EMAIL = 'email';
+	const PERMISSION_BIRTHDAY = 'bdate';
+
 	const PERMISSION_NOTIFY = 'notify';
 	const PERMISSION_FRIENDS = 'friends';
 	const PERMISSION_PHOTOS = 'photos';
@@ -27,17 +36,16 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	const PERMISSION_DOCS = 'docs';
 	const PERMISSION_NOTES = 'notes';
 	const PERMISSION_PAGES = 'pages';
-	const PERMISSION_LINK = 'link';
 	const PERMISSION_STATUS = 'status';
 	const PERMISSION_OFFERS = 'offers';
 	const PERMISSION_QUESTIONS = 'questions';
 	const PERMISSION_WALL = 'wall';
 	const PERMISSION_GROUPS = 'groups';
 	const PERMISSION_MESSAGES = 'messages';
-	const PERMISSION_EMAIL = 'email';
 	const PERMISSION_NOTIFICATIONS = 'notifications';
 	const PERMISSION_STATS = 'stats';
 	const PERMISSION_ADS = 'ads';
+
 	const PERMISSION_OFFLINE = 'offline';
 	const PERMISSION_NOHTTPS = 'nohttps';
 
@@ -53,6 +61,22 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 * @var string $_current
 	 */
 	private $_current = '';
+
+	/**
+	 * @var string[] $_gender
+	 */
+	private static $_gender = array(
+		SocialNetworkUser::GENDER_UNKNOWN,
+		SocialNetworkUser::GENDER_FEMALE,
+		SocialNetworkUser::GENDER_MALE
+	);
+
+	/**
+	 * @return string
+	 */
+	public function Name () {
+		return 'VKontakte';
+	}
 
 	/**
 	 * @param string $appId
@@ -127,17 +151,37 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser
 	 */
 	public function Profile ($user) {
-		$response = $this->API('GET', 'users.get')->response;
+		$response = $this->API('GET', 'users.get', array(
+			'fields' => implode(',', array(
+				self::PERMISSION_GENDER,
+				self::PERMISSION_PICTURE,
+				self::PERMISSION_BIRTHDAY
+			))
+		));
+
+		if (!$response) return null;
+
+		$response = $response->response;
+
+		/**
+		 * @var \StdClass $response
+		 */
 		$response = is_array($response) && sizeof($response) != 0 ? $response[0] : null;
 
 		if ($response == null) return null;
 
-		$user = new SocialNetworkUser($response->id, $response->name);
+		$user = new SocialNetworkUser($response->uid, $response->first_name . ' ' . $response->last_name);
 
 		$user->AccessToken($this->_session);
-		$user->Gender($response->gender[0]);
-		$user->PhotoFromLink($response->picture->data->url);
-		$user->Page($response->link);
+		$user->Gender(isset(self::$_gender[$response->sex]) ? self::$_gender[$response->sex] : SocialNetworkUser::GENDER_UNKNOWN);
+		$user->PhotoFromLink($response->photo_max_orig);
+		$user->Page('http://vk.com/' . $response->uid);
+
+		if (isset($response->email))
+			$user->Email($response->email);
+
+		if (isset($response->bdate))
+			$user->BirthdayByDate('d.m.Y', $response->bdate);
 
 		return $user;
 	}
@@ -148,16 +192,20 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 * @param array  $data
 	 * @param string $base = 'https://api.vk.com/method/'
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkDTO|\StdClass
 	 */
 	public function API ($method = '', $url = '', $data = [], $base = 'https://api.vk.com/method/') {
 		$request = new QuarkDTO(new QuarkFormIOProcessor());
 		$request->Method($method);
-		$request->Data($data);
+
+		$get = $method == 'GET';
+
+		if (!$get)
+			$request->Data($data);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
+		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
 			'access_token' => $this->_session
 		)), $request, $response);
 

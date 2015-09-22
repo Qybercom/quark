@@ -13,6 +13,7 @@ use Quark\QuarkFile;
 class SocialNetworkUser {
 	const GENDER_MALE = 'm';
 	const GENDER_FEMALE = 'f';
+	const GENDER_UNKNOWN = 'u';
 
 	/**
 	 * @var string $_id
@@ -48,6 +49,11 @@ class SocialNetworkUser {
 	 * @var string $_page
 	 */
 	private $_page = '';
+
+	/**
+	 * @var string $_email
+	 */
+	private $_email = '';
 
 	/**
 	 * @param string $id
@@ -167,5 +173,17 @@ class SocialNetworkUser {
 			$this->_page = $page;
 
 		return $this->_page;
+	}
+
+	/**
+	 * @param string $email
+	 *
+	 * @return string
+	 */
+	public function Email ($email = '') {
+		if (func_num_args() != 0)
+			$this->_email = $email;
+
+		return $this->_email;
 	}
 }

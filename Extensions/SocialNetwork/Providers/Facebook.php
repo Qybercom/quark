@@ -26,6 +26,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 
 	const PERMISSION_EMAIL = 'email';
 	const PERMISSION_BIRTHDAY = 'birthday';
+
 	const PERMISSION_LIKES = 'user_likes';
 	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
 
@@ -36,6 +37,13 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 * @var string $_session
 	 */
 	private $_session;
+
+	/**
+	 * @return string
+	 */
+	public function Name () {
+		return 'Facebook';
+	}
 
 	/**
 	 * @param string $appId
@@ -103,17 +111,19 @@ class Facebook implements IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $user
+	 * @param string[] $fields
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function Profile ($user) {
+	public function Profile ($user, $fields = []) {
 		$response = $this->API('GET', '/' . $user, array('fields' => implode(',', array(
 			self::PERMISSION_ID,
 			self::PERMISSION_NAME,
 			self::PERMISSION_PICTURE,
 			self::PERMISSION_GENDER,
 			self::PERMISSION_LINK,
-			self::PERMISSION_BIRTHDAY,
+			self::PERMISSION_EMAIL,
+			self::PERMISSION_BIRTHDAY
 		))));
 
 		if ($response == null) return null;
@@ -121,10 +131,15 @@ class Facebook implements IQuarkSocialNetworkProvider {
 		$user = new SocialNetworkUser($response->id, $response->name);
 
 		$user->AccessToken($this->_session);
-		$user->Gender($response->gender[0]);
 		$user->PhotoFromLink($response->picture->data->url);
+		$user->Gender($response->gender[0]);
 		$user->Page($response->link);
-		$user->BirthdayByDate('m/d/Y', $response->birthday);
+
+		if (isset($response->email))
+			$user->Email($response->email);
+
+		if (isset($response->birthday))
+			$user->BirthdayByDate('m/d/Y', $response->birthday);
 
 		return $user;
 	}
@@ -135,16 +150,20 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 * @param array  $data
 	 * @param string $base = 'https://graph.facebook.com/'
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkDTO|\StdClass
 	 */
 	public function API ($method = '', $url = '', $data = [], $base = 'https://graph.facebook.com/') {
 		$request = new QuarkDTO(new QuarkJSONIOProcessor());
 		$request->Method($method);
-		$request->Data($data);
+
+		$get = $method == 'GET';
+
+		if (!$get)
+			$request->Data($data);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(($method == 'GET' ? $data : array()) + array(
+		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
 			'access_token' => $this->_session
 		)), $request, $response);
 
