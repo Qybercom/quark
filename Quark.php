@@ -290,27 +290,24 @@ class Quark {
 	 * @param string $name
 	 * @param IQuarkStackable $component
 	 *
-	 * @return IQuarkStackable|null
+	 * @return IQuarkStackable
+	 *
+	 * @throws QuarkArchException
 	 */
-	public static function Component ($name, $component = null) {
+	public static function Component ($name, IQuarkStackable $component = null) {
 		if (!$component)
 			return self::Stack($name);
 
-		try {
-			return self::Stack($name, $component);
-		}
-		catch (\Exception $e) {
-			Quark::Log('Unable to config \'' . $name . '\'', Quark::LOG_FATAL);
-		}
-
-		return null;
+		return self::Stack($name, $component);
 	}
 
 	/**
 	 * @param string $name
 	 * @param IQuarkStackable $object
 	 *
-	 * @return IQuarkStackable|null
+	 * @return IQuarkStackable
+	 *
+	 * @throws QuarkArchException
 	 */
 	public static function Stack ($name, IQuarkStackable $object = null) {
 		if (func_num_args() == 2) {
@@ -318,7 +315,10 @@ class Quark {
 			self::$_stack[$name] = $object;
 		}
 
-		return isset(self::$_stack[$name]) ? self::$_stack[$name] : null;
+		if (!isset(self::$_stack[$name]))
+			throw new QuarkArchException('Stackable object for ' . $name . ' does not stacked');
+
+		return self::$_stack[$name];
 	}
 
 	/**
@@ -597,13 +597,35 @@ class QuarkConfig {
 
 	/**
 	 * @param string $name
+	 * @param IQuarkStackable $object
+	 * @param string $message
+	 *
+	 * @return IQuarkStackable
+	 *
+	 * @throws QuarkArchException
+	 */
+	private static function _component ($name, IQuarkStackable $object = null, $message = '') {
+		try {
+			return Quark::Component($name, $object);
+		}
+		catch (\Exception $e) {
+			throw new QuarkArchException($message . '. Additional : ' . $e->getMessage());
+		}
+	}
+
+	/**
+	 * @param string $name
 	 * @param IQuarkAuthorizationProvider $provider
 	 * @param IQuarkAuthorizableModel $user
 	 *
 	 * @return QuarkSession
 	 */
 	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
-		return Quark::Component($name, func_num_args() != 3 ? null : new QuarkSessionSource($name, $provider, $user));
+		return self::_component(
+			$name,
+			func_num_args() != 3 ? null : new QuarkSessionSource($name, $provider, $user),
+			'AuthorizationProvider for key ' . $name . ' does not configured'
+		);
 	}
 
 	/**
@@ -614,7 +636,11 @@ class QuarkConfig {
 	 * @return QuarkModelSource
 	 */
 	public function DataProvider ($name, IQuarkDataProvider $provider = null, QuarkURI $uri = null) {
-		return Quark::Component($name, func_num_args() == 1 ? null : new QuarkModelSource($name, $provider, $uri));
+		return self::_component(
+			$name,
+			func_num_args() == 1 ? null : new QuarkModelSource($name, $provider, $uri),
+			'DataProvider for key ' . $name . ' does not configured'
+		);
 	}
 
 	/**
@@ -624,7 +650,11 @@ class QuarkConfig {
 	 * @return IQuarkExtensionConfig
 	 */
 	public function Extension ($name, IQuarkExtensionConfig $config = null) {
-		return Quark::Component($name, $config);
+		return self::_component(
+			$name,
+			$config,
+			'Extension for key ' . $name . ' does not configured'
+		);
 	}
 
 	/**
@@ -3560,7 +3590,9 @@ class QuarkView implements IQuarkContainer {
 	 * @return IQuarkExtension
 	 */
 	public function Extension ($name = '') {
-		return Quark::Config()->Extension($name)->ExtensionInstance();
+		$ext = Quark::Config()->Extension($name);
+
+		return $ext ? $ext->ExtensionInstance() : null;
 	}
 
 	/**
@@ -4586,7 +4618,12 @@ class QuarkModel implements IQuarkContainer {
 
 		$name = $model->DataProvider();
 
-		$source = Quark::Stack($name);
+		try {
+			$source = Quark::Stack($name);
+		}
+		catch (\Exception $e) {
+			$source = null;
+		}
 
 		if (!($source instanceof QuarkModelSource))
 			throw new QuarkArchException('Model source for model ' . get_class($model) . ' is not connected');
@@ -8454,7 +8491,7 @@ class QuarkDTO {
 	 */
 	public function Method ($method = '') {
 		if (func_num_args() == 1 && is_string($method))
-			$this->_method = strtoupper($method);
+			$this->_method = strtoupper(trim($method));
 
 		return $this->_method;
 	}
@@ -8467,7 +8504,7 @@ class QuarkDTO {
 	 */
 	public function Status ($code = 0, $text = 'OK') {
 		if (func_num_args() != 0 && is_scalar($code))
-			$this->_status = $code . (func_num_args() == 2 && is_scalar($text) ? ' ' . $text : '');
+			$this->_status = trim($code . (func_num_args() == 2 && is_scalar($text) ? ' ' . $text : ''));
 
 		return $this->_status;
 	}
@@ -9313,6 +9350,37 @@ class QuarkHTTPTransportClient implements IQuarkTransportProvider {
 		$transport = $client->Transport();
 
 		return $transport->Response();
+	}
+
+	/**
+	 * @param QuarkURI|string $uri
+	 * @param QuarkDTO $request
+	 * @param QuarkDTO $response
+	 * @param QuarkCertificate $certificate
+	 * @param int $timeout = 10
+	 *
+	 * @return QuarkFile
+	 */
+	public static function Download ($uri, QuarkDTO $request = null, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+		if ($request == null)
+			$request = QuarkDTO::ForGET();
+
+		$out = self::To($uri, $request, $response, $certificate, $timeout);
+
+		if (!$out || $out->Status() != QuarkDTO::STATUS_200_OK) return null;
+
+		$file = new QuarkFile();
+
+		$uri = ($uri instanceof QuarkURI ? $uri : QuarkURI::FromURI($uri));
+
+		$name = array_reverse($uri->Route())[0];
+
+		$file->type = $out->Header(QuarkDTO::HEADER_CONTENT_TYPE);
+		$file->extension = QuarkFile::ExtensionByMime($file->type);
+		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
+		$file->Content($out->RawData());
+
+		return $file;
 	}
 }
 

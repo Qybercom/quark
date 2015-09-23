@@ -53,7 +53,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		$this->_config = Quark::Config()->Extension($config);
 		$this->accessToken = (string)$token;
 		$this->id = (string)$id;
-		$this->social = $this->_config->SocialNetwork()->Name();
+		$this->social = $this->Name();
 	}
 
 	/**
@@ -75,7 +75,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 */
 	public function Fields () {
 		return array(
-			'social' => $this->_config->SocialNetwork()->Name(),
+			'social' => $this->Name(),
 			'id' => '',
 			'accessToken' => '',
 		);
@@ -106,19 +106,10 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 
 		if (!$social) return null;
 
-		/**
-		 * @var QuarkModel|SocialNetwork $network
-		 */
-		$network = QuarkModel::FindOne(new SocialNetwork($this->_config->Name()), array(
+		return QuarkModel::FindOne(new SocialNetwork($this->_config->Name()), array(
 			'social' => (string)$social->social,
 			'id' => (string)$social->id
 		));
-
-		if (!$network) return null;
-
-		$network->SessionFromToken($network->accessToken);
-
-		return $network;
 	}
 
 	/**
@@ -133,7 +124,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 */
 	public function Identifier () {
 		return base64_encode(json_encode(array(
-			'social' => (string)$this->social,
+			'social' => (string)$this->Name(),
 			'id' => (string)$this->id
 		)));
 	}
@@ -143,7 +134,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 */
 	public function StoredProfile () {
 		return QuarkModel::FindOne($this, array(
-			'social' => (string)$this->_config->SocialNetwork()->Name(),
+			'social' => (string)$this->Name(),
 			'id' => (string)$this->id
 		));
 	}
@@ -157,10 +148,12 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	public function User (IQuarkModel $model, $key) {
 		$profile = $this->StoredProfile();
 
-		if ($profile == null) {
+		if ($profile == null && $this->id != '' && $this->accessToken != '') {
 			$profile = new QuarkModel($this);
 			$profile->Create();
 		}
+
+		if ($profile == null) return null;
 
 		$id = $this->Identifier();
 
