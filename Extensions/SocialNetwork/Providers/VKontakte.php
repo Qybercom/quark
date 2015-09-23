@@ -173,9 +173,9 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 		$user = new SocialNetworkUser($response->uid, $response->first_name . ' ' . $response->last_name);
 
 		$user->AccessToken($this->_session);
-		$user->Gender(isset(self::$_gender[$response->sex]) ? self::$_gender[$response->sex] : SocialNetworkUser::GENDER_UNKNOWN);
 		$user->PhotoFromLink($response->photo_max_orig);
-		$user->Page('http://vk.com/' . $response->uid);
+		$user->Gender(isset(self::$_gender[$response->sex]) ? self::$_gender[$response->sex] : SocialNetworkUser::GENDER_UNKNOWN);
+		$user->Page('http://vk.com/id' . $response->uid);
 
 		if (isset($response->email))
 			$user->Email($response->email);

@@ -8454,7 +8454,7 @@ class QuarkDTO {
 	 */
 	public function Method ($method = '') {
 		if (func_num_args() == 1 && is_string($method))
-			$this->_method = strtoupper($method);
+			$this->_method = strtoupper(trim($method));
 
 		return $this->_method;
 	}
@@ -8467,7 +8467,7 @@ class QuarkDTO {
 	 */
 	public function Status ($code = 0, $text = 'OK') {
 		if (func_num_args() != 0 && is_scalar($code))
-			$this->_status = $code . (func_num_args() == 2 && is_scalar($text) ? ' ' . $text : '');
+			$this->_status = trim($code . (func_num_args() == 2 && is_scalar($text) ? ' ' . $text : ''));
 
 		return $this->_status;
 	}
@@ -9313,6 +9313,37 @@ class QuarkHTTPTransportClient implements IQuarkTransportProvider {
 		$transport = $client->Transport();
 
 		return $transport->Response();
+	}
+
+	/**
+	 * @param QuarkURI|string $uri
+	 * @param QuarkDTO $request
+	 * @param QuarkDTO $response
+	 * @param QuarkCertificate $certificate
+	 * @param int $timeout = 10
+	 *
+	 * @return QuarkFile
+	 */
+	public static function Download ($uri, QuarkDTO $request = null, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+		if ($request == null)
+			$request = QuarkDTO::ForGET();
+
+		$out = self::To($uri, $request, $response, $certificate, $timeout);
+
+		if (!$out || $out->Status() != QuarkDTO::STATUS_200_OK) return null;
+
+		$file = new QuarkFile();
+
+		$uri = ($uri instanceof QuarkURI ? $uri : QuarkURI::FromURI($uri));
+
+		$name = array_reverse($uri->Route())[0];
+
+		$file->type = $out->Header(QuarkDTO::HEADER_CONTENT_TYPE);
+		$file->extension = QuarkFile::ExtensionByMime($file->type);
+		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
+		$file->Content($out->RawData());
+
+		return $file;
 	}
 }
 
