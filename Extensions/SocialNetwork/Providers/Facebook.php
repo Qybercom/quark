@@ -20,7 +20,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 
 	const PERMISSION_ID = 'id';
 	const PERMISSION_NAME = 'name';
-	const PERMISSION_PICTURE = 'picture';
+	const PERMISSION_PICTURE = 'picture.width(1200).height(1200)';
 	const PERMISSION_GENDER = 'gender';
 	const PERMISSION_LINK = 'link';
 
@@ -131,7 +131,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 		$user = new SocialNetworkUser($response->id, $response->name);
 
 		$user->AccessToken($this->_session);
-		$user->PhotoFromLink('http://graph.facebook.com/' . $response->id . '/picture?width=1200&height=1200'); // $response->picture->data->url);
+		$user->PhotoFromLink($response->picture->data->url);
 		$user->Gender($response->gender[0]);
 		$user->Page($response->link);
 
