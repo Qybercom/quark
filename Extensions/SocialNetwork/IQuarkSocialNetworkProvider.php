@@ -51,11 +51,9 @@ interface IQuarkSocialNetworkProvider {
 	public function SessionFromToken($token);
 
 	/**
-	 * @param $user
-	 *
-	 * @return SocialNetworkUser
+	 * @return string
 	 */
-	public function Profile($user);
+	public function CurrentUser();
 
 	/**
 	 * @return \Quark\QuarkDTO
@@ -63,7 +61,20 @@ interface IQuarkSocialNetworkProvider {
 	public function API();
 
 	/**
-	 * @return string
+	 * @param string $user
+	 * @param string[] $fields
+	 *
+	 * @return SocialNetworkUser
 	 */
-	public function CurrentUser();
+	public function Profile($user, $fields);
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 * @param int $count
+	 * @param int $offset
+	 *
+	 * @return SocialNetworkUser[]
+	 */
+	public function Friends($user, $fields, $count, $offset);
 }

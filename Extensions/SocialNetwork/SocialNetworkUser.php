@@ -27,11 +27,6 @@ class SocialNetworkUser {
 	private $_name = '';
 
 	/**
-	 * @var string $_accessToken
-	 */
-	private $_accessToken = '';
-
-	/**
 	 * @var string $_gender
 	 */
 	private $_gender = '';
@@ -45,6 +40,11 @@ class SocialNetworkUser {
 	 * @var QuarkFile $_photo
 	 */
 	private $_photo;
+
+	/**
+	 * @var string $_photoLink
+	 */
+	private $_photoLink;
 
 	/**
 	 * @var string $_page
@@ -90,18 +90,6 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $token
-	 *
-	 * @return string
-	 */
-	public function AccessToken ($token = '') {
-		if (func_num_args() != 0)
-			$this->_accessToken = $token;
-
-		return $this->_accessToken;
-	}
-
-	/**
 	 * @param string $gender
 	 *
 	 * @return string
@@ -128,12 +116,22 @@ class SocialNetworkUser {
 	/**
 	 * @param string $format
 	 * @param string $birthday
+	 * @param string $formatAlt
 	 *
 	 * @return QuarkDate
 	 */
-	public function BirthdayByDate ($format = '', $birthday = '') {
+	public function BirthdayByDate ($format = '', $birthday = '', $formatAlt = '') {
 		if (func_num_args() != 0) {
-			$this->_birthday = QuarkDate::FromFormat($format, $birthday);
+			if (func_num_args() < 3)
+				$formatAlt = $format;
+
+			try {
+				$this->_birthday = QuarkDate::FromFormat($format, $birthday);
+			}
+			catch (\Exception $e) {
+				$this->_birthday = QuarkDate::FromFormat($formatAlt, $birthday);
+			}
+
 			$this->_birthday->Culture(new QuarkCultureISO());
 		}
 
@@ -154,14 +152,26 @@ class SocialNetworkUser {
 
 	/**
 	 * @param string $link
+	 * @param bool $download = true
 	 *
 	 * @return QuarkFile
 	 */
-	public function PhotoFromLink ($link = '') {
-		if (func_num_args() != 0)
-			$this->_photo = QuarkHTTPTransportClient::Download($link);
+	public function PhotoFromLink ($link = '', $download = true) {
+		if (func_num_args() != 0) {
+			$this->_photoLink = $link;
+
+			if ($download)
+				$this->_photo = QuarkHTTPTransportClient::Download($link);
+		}
 
 		return $this->_photo;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function PhotoLink () {
+		return $this->_photoLink;
 	}
 
 	/**

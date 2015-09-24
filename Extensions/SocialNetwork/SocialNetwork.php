@@ -4,6 +4,7 @@ namespace Quark\Extensions\SocialNetwork;
 use Quark\IQuarkModel;
 use Quark\IQuarkLinkedModel;
 use Quark\IQuarkExtensionConfig;
+use Quark\IQuarkModelWithAfterFind;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
@@ -14,25 +15,14 @@ use Quark\QuarkModelBehavior;
 /**
  * Class SocialNetwork
  *
+ * @property string $id
+ * @property string $accessToken
+ * @property string $social
+ *
  * @package Quark\Extensions\SocialNetwork
  */
-class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDataProvider {
+class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDataProvider, IQuarkModelWithAfterFind {
 	use QuarkModelBehavior;
-
-	/**
-	 * @var string $social
-	 */
-	public $social = '';
-
-	/**
-	 * @var string $id
-	 */
-	public $id = '';
-
-	/**
-	 * @var string $accessToken
-	 */
-	public $accessToken = '';
 
 	/**
 	 * @var string $_config
@@ -126,6 +116,16 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	}
 
 	/**
+	 * @param $raw
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function AfterFind ($raw, $options) {
+		$this->SessionFromToken($this->accessToken);
+	}
+
+	/**
 	 * @return string
 	 */
 	public function Identifier () {
@@ -136,23 +136,19 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	}
 
 	/**
-	 * @return QuarkModel|SocialNetwork
-	 */
-	public function StoredProfile () {
-		return QuarkModel::FindOne($this, array(
-			'social' => (string)$this->Name(),
-			'id' => (string)$this->id
-		));
-	}
-
-	/**
 	 * @param IQuarkModel $model
 	 * @param string $key
 	 *
 	 * @return QuarkModel|IQuarkModel
 	 */
 	public function User (IQuarkModel $model, $key) {
-		$profile = $this->StoredProfile();
+		/**
+		 * @var QuarkModel|SocialNetwork $profile
+		 */
+		$profile = QuarkModel::FindOne($this, array(
+			'social' => (string)$this->Name(),
+			'id' => (string)$this->id
+		));
 
 		if ($profile == null && $this->id != '' && $this->accessToken != '') {
 			$profile = new QuarkModel($this);
@@ -161,10 +157,11 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 
 		if ($profile == null) return null;
 
-		$id = $this->Identifier();
+		$profile->accessToken = (string)$this->accessToken;
+		$profile->Save();
 
 		$user = QuarkModel::FindOne($model, array(
-			$key => $id
+			$key => $this->Identifier()
 		));
 
 		if ($user == null) {
@@ -217,25 +214,41 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 
 	/**
 	 * @param string $method
-	 * @param string $token
+	 * @param string $description
+	 *
+	 * @return null
+	 */
+	private function _log ($method, $description) {
+		Quark::Log('SocialNetwork.' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. ' . $description, Quark::LOG_WARN);
+		return null;
+	}
+
+	/**
+	 * @param string $method
+	 * @param array $args
+	 *
+	 * @return mixed
+	 */
+	private function _call ($method, $args = []) {
+		return call_user_func_array(array($this->_config()->SocialNetwork(), $method), $args);
+	}
+
+	/**
+	 * @param string $method
 	 *
 	 * @return SocialNetwork
 	 */
-	private function _session ($method, $token) {
-		if ($token == null) {
-			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. Invalid token.', Quark::LOG_WARN);
-			return null;
-		}
+	private function _session ($method) {
+		if (func_num_args() < 2)
+			return $this->_log($method, 'Not enough data for session start.');
 
-		$profile = $this->Profile($this->_config()->SocialNetwork()->CurrentUser());
+		$token = $this->_call($method, array_slice(func_get_args(), 1));
 
-		if ($profile == null) {
-			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. Profile error.', Quark::LOG_WARN);
-			return null;
-		}
+		if ($token == null)
+			return $this->_log($method, 'Invalid token ' . $token);
 
 		$this->accessToken = $token;
-		$this->id = $profile->ID();
+		$this->social = $this->Name();
 
 		return $this;
 	}
@@ -247,7 +260,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return SocialNetwork
 	 */
 	public function SessionFromRedirect ($to, $code) {
-		return $this->_session('Redirect', $this->_config()->SocialNetwork()->SessionFromRedirect($to, $code));
+		return $this->_session('SessionFromRedirect', $to, $code);
 	}
 
 	/**
@@ -256,22 +269,57 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return SocialNetwork
 	 */
 	public function SessionFromToken ($token) {
-		return $this->_session('Token', $this->_config()->SocialNetwork()->SessionFromToken($token));
+		return $this->_session('SessionFromToken', $token);
+	}
+
+	/**
+	 * @return SocialNetworkUser
+	 */
+	public function Init () {
+		$profile = $this->Profile($this->_config()->SocialNetwork()->CurrentUser());
+
+		if (!$profile) return null;
+
+		$this->id = $profile->ID();
+
+		return $profile;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return string
+	 */
+	private function _user ($user) {
+		return $user === null ? $this->_config()->SocialNetwork()->CurrentUser() : $user;
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function API () {
-		return call_user_func_array(array($this->_config()->SocialNetwork(), 'API'), func_get_args());
+		return $this->_call('API', func_get_args());
 	}
 
 	/**
 	 * @param string $user
+	 * @param string[] $fields
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function Profile ($user = '') {
-		return $this->_config()->SocialNetwork()->Profile(func_num_args() != 0 ? $user : $this->id);
+	public function Profile ($user = null, $fields = null) {
+		return $this->_config()->SocialNetwork()->Profile($this->_user($user), $fields);
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 * @param int $count = 10
+	 * @param int $offset = 0
+	 *
+	 * @return SocialNetworkUser[]
+	 */
+	public function Friends ($user = null, $fields = null, $count = 10, $offset = 0) {
+		return $this->_config()->SocialNetwork()->Friends($this->_user($user), $fields, $count, $offset);
 	}
 }

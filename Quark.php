@@ -5772,6 +5772,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	const NOW_FULL = 'Y-m-d H:i:s.u';
 	const GMT = 'UTC';
 	const CURRENT = '';
+	const UNKNOWN_YEAR = '0000';
 
 	/**
 	 * @var IQuarkCulture|QuarkCultureISO $_culture

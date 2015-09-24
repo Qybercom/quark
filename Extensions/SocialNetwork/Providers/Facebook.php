@@ -26,6 +26,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 
 	const PERMISSION_EMAIL = 'email';
 	const PERMISSION_BIRTHDAY = 'birthday';
+	const PERMISSION_FRIENDS = 'user_friends';
 
 	const PERMISSION_LIKES = 'user_likes';
 	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
@@ -97,7 +98,9 @@ class Facebook implements IQuarkSocialNetworkProvider {
 			'code' => $code
 		));
 
-		return $response == null ? '' : $this->_session = $response->access_token;
+		if ($response == null) return '';
+
+		return $this->_session = $response->access_token;
 	}
 
 	/**
@@ -110,38 +113,10 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param string $user
-	 * @param string[] $fields
-	 *
-	 * @return SocialNetworkUser
+	 * @return string
 	 */
-	public function Profile ($user, $fields = []) {
-		$response = $this->API('GET', '/' . $user, array('fields' => implode(',', array(
-			self::PERMISSION_ID,
-			self::PERMISSION_NAME,
-			self::PERMISSION_PICTURE,
-			self::PERMISSION_GENDER,
-			self::PERMISSION_LINK,
-			self::PERMISSION_EMAIL,
-			self::PERMISSION_BIRTHDAY
-		))));
-
-		if ($response == null) return null;
-
-		$user = new SocialNetworkUser($response->id, $response->name);
-
-		$user->AccessToken($this->_session);
-		$user->PhotoFromLink($response->picture->data->url);
-		$user->Gender($response->gender[0]);
-		$user->Page($response->link);
-
-		if (isset($response->email))
-			$user->Email($response->email);
-
-		if (isset($response->birthday))
-			$user->BirthdayByDate('m/d/Y', $response->birthday);
-
-		return $user;
+	public function CurrentUser () {
+		return '/me';
 	}
 
 	/**
@@ -164,8 +139,8 @@ class Facebook implements IQuarkSocialNetworkProvider {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
-			'access_token' => $this->_session
-		)), $request, $response);
+					'access_token' => $this->_session
+				)), $request, $response);
 
 		if (!$out->Data()) {
 			$data = array();
@@ -175,7 +150,15 @@ class Facebook implements IQuarkSocialNetworkProvider {
 		}
 
 		if (isset($out->error)) {
-			Quark::Log('Facebook.Exception: ' . $out->error->type . ': ' . $out->error->message . '. Code: ' . $out->error->code, Quark::LOG_WARN);
+			Quark::Log('Facebook.Exception: '
+				. (isset($out->error->type) ? $out->error->type : '')
+				. ': '
+				. (isset($out->error->message) ? $out->error->message : '')
+				. '. Code: ' . (isset($out->error->code) ? $out->error->code : '')
+				, Quark::LOG_WARN);
+
+			Quark::Trace($out);
+
 			return null;
 		}
 
@@ -183,9 +166,76 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param string[] $fields
+	 *
 	 * @return string
 	 */
-	public function CurrentUser () {
-		return '/me';
+	private static function _fields ($fields) {
+		return implode(',', $fields === null ? array(
+			self::PERMISSION_ID,
+			self::PERMISSION_NAME,
+			self::PERMISSION_LINK,
+			self::PERMISSION_GENDER,
+			self::PERMISSION_PICTURE,
+			self::PERMISSION_BIRTHDAY,
+			self::PERMISSION_EMAIL
+		) : $fields);
+	}
+
+	/**
+	 * @param $item
+	 * @param bool $photo = true
+	 *
+	 * @return SocialNetworkUser
+	 */
+	private static function _user ($item, $photo = true) {
+		$user = new SocialNetworkUser($item->id, $item->name);
+
+		$user->PhotoFromLink($item->picture->data->url, $photo);
+		$user->Gender($item->gender[0]);
+		$user->Page($item->link);
+
+		if (isset($item->email))
+			$user->Email($item->email);
+
+		if (isset($item->birthday))
+			$user->BirthdayByDate('m/d/Y', $item->birthday);
+
+		return $user;
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function Profile ($user, $fields) {
+		$response = $this->API('GET', '/' . $user, array('fields' => self::_fields($fields)));
+
+		if ($response == null) return null;
+
+		return self::_user($response);
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 * @param int $count
+	 * @param int $offset
+	 *
+	 * @return SocialNetworkUser[]
+	 */
+	public function Friends ($user, $fields, $count, $offset) {
+		$response = $this->API('GET', '/' . $user . '/friends', array('fields' => self::_fields($fields)));
+
+		if ($response == null) return array();
+
+		$friends = array();
+
+		foreach ($response->data as $item)
+			$friends[] = self::_user($item, false);
+
+		return $friends;
 	}
 }

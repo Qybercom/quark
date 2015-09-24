@@ -2,6 +2,7 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
+use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
@@ -56,11 +57,6 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 * @var string $_session
 	 */
 	private $_session;
-
-	/**
-	 * @var string $_current
-	 */
-	private $_current = '';
 
 	/**
 	 * @var string[] $_gender
@@ -130,10 +126,7 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 
 		if ($response == null) return '';
 
-		$this->_session = $response->access_token;
-		$this->_current = $response->user_id;
-
-		return $this->_session;
+		return $this->_session = $response->access_token;
 	}
 
 	/**
@@ -146,44 +139,10 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param $user
-	 *
-	 * @return SocialNetworkUser
+	 * @return string
 	 */
-	public function Profile ($user) {
-		$response = $this->API('GET', 'users.get', array(
-			'fields' => implode(',', array(
-				self::PERMISSION_GENDER,
-				self::PERMISSION_PICTURE,
-				self::PERMISSION_BIRTHDAY
-			))
-		));
-
-		if (!$response) return null;
-
-		$response = $response->response;
-
-		/**
-		 * @var \StdClass $response
-		 */
-		$response = is_array($response) && sizeof($response) != 0 ? $response[0] : null;
-
-		if ($response == null) return null;
-
-		$user = new SocialNetworkUser($response->uid, $response->first_name . ' ' . $response->last_name);
-
-		$user->AccessToken($this->_session);
-		$user->PhotoFromLink($response->photo_max_orig);
-		$user->Gender(isset(self::$_gender[$response->sex]) ? self::$_gender[$response->sex] : SocialNetworkUser::GENDER_UNKNOWN);
-		$user->Page('http://vk.com/id' . $response->uid);
-
-		if (isset($response->email))
-			$user->Email($response->email);
-
-		if (isset($response->bdate))
-			$user->BirthdayByDate('d.m.Y', $response->bdate);
-
-		return $user;
+	public function CurrentUser () {
+		return '';
 	}
 
 	/**
@@ -210,7 +169,14 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 		)), $request, $response);
 
 		if (isset($out->error)) {
-			Quark::Log('VKontakte.Exception: ' . $out->error->error_code . ': ' . $out->error->error_msg, Quark::LOG_WARN);
+			Quark::Log('VKontakte.Exception: '
+				. (isset($out->error->error_code) ? $out->error->error_code : '')
+				. ': '
+				. (isset($out->error->error_msg) ? $out->error->error_msg : ''),
+				Quark::LOG_WARN);
+
+			Quark::Trace($out);
+
 			return null;
 		}
 
@@ -218,9 +184,95 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param string[] $fields
+	 *
 	 * @return string
 	 */
-	public function CurrentUser () {
-		return $this->_current;
+	private static function _fields ($fields = []) {
+		return implode(',', $fields === null ? array(
+			self::PERMISSION_GENDER,
+			self::PERMISSION_PICTURE,
+			self::PERMISSION_BIRTHDAY,
+			self::PERMISSION_EMAIL
+		) : $fields);
+	}
+
+	/**
+	 * @param $item
+	 * @param bool $photo = true
+	 *
+	 * @return SocialNetworkUser
+	 */
+	private static function _user ($item, $photo = true) {
+		if (!$item) return null;
+
+		$user = new SocialNetworkUser($item->uid, $item->first_name . ' ' . $item->last_name);
+
+		$user->PhotoFromLink($item->photo_max_orig, $photo);
+		$user->Gender(isset(self::$_gender[$item->sex]) ? self::$_gender[$item->sex] : SocialNetworkUser::GENDER_UNKNOWN);
+		$user->Page('http://vk.com/id' . $item->uid);
+
+		if (isset($item->email))
+			$user->Email($item->email);
+
+		if (isset($item->bdate)) {
+			$date = explode('.', $item->bdate);
+			$out = array();
+
+			foreach ($date as $component)
+				$out[] = (strlen($component == 1) ? '0' : '') . $component;
+
+			if (sizeof($out) == 2)
+				$out[] = QuarkDate::UNKNOWN_YEAR;
+
+			$user->BirthdayByDate('d.m.Y', implode('.', $out), 'd.m');
+		}
+
+		return $user;
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function Profile ($user, $fields) {
+		$response = $this->API('GET', 'users.get', array(
+			'user_ids' => $user,
+			'scope' => 'email',
+			'fields' => self::_fields($fields)
+		));
+
+		if (!$response || !is_array($response->response)) return null;
+
+		return self::_user(isset($response->response[0]) ? $response->response[0] : null);
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 * @param int $count
+	 * @param int $offset
+	 *
+	 * @return SocialNetworkUser[]
+	 */
+	public function Friends ($user, $fields, $count, $offset) {
+		$response = $this->API('GET', 'friends.get', array(
+			'user_id' => $user,
+			'scope' => 'email',
+			'fields' => self::_fields($fields),
+			'count' => $count,
+			'offset' => $offset
+		));
+
+		if (!$response || !is_array($response->response)) return array();
+
+		$friends = array();
+
+		foreach ($response->response as $item)
+			$friends[] = self::_user($item);
+
+		return $friends;
 	}
 }
