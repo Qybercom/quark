@@ -9840,7 +9840,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Location ($location = '', $name = '') {
 		if (func_num_args() != 0) {
-			$real = realpath($location);
+			$real = is_string($location) ? realpath($location) : '';
 
 			$this->location = Quark::NormalizePath($real ? $real : $location, false);
 			$this->name = $name ? $name : array_reverse(explode('/', $this->location))[0];
@@ -10969,7 +10969,7 @@ class QuarkSource extends QuarkFile {
 	private static $__trim = array(
 		',',';','?',':',
 		'(',')','{','}','[',']',
-		'-','+','*','/',
+		'+','*','/',
 		'>','<','>=','<=','!=','==',
 		'=','=>','->',
 		'&&', '||'

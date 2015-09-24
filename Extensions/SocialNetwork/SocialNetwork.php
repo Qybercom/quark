@@ -35,7 +35,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	public $accessToken = '';
 
 	/**
-	 * @var IQuarkExtensionConfig|SocialNetworkConfig $_config
+	 * @var string $_config
 	 */
 	private $_config;
 
@@ -50,10 +50,9 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @param string $id = ''
 	 */
 	public function __construct ($config, $token = '', $id = '') {
-		$this->_config = Quark::Config()->Extension($config);
+		$this->_config = $config;
 		$this->accessToken = (string)$token;
 		$this->id = (string)$id;
-		$this->social = $this->Name();
 	}
 
 	/**
@@ -64,10 +63,17 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	}
 
 	/**
+	 * @return IQuarkExtensionConfig|SocialNetworkConfig
+	 */
+	private function _config () {
+		return Quark::Config()->Extension($this->_config);
+	}
+
+	/**
 	 * @return string
 	 */
 	public function DataProvider () {
-		return $this->_config->DataProvider();
+		return $this->_config()->DataProvider();
 	}
 
 	/**
@@ -106,7 +112,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 
 		if (!$social) return null;
 
-		return QuarkModel::FindOne(new SocialNetwork($this->_config->Name()), array(
+		return QuarkModel::FindOne(new SocialNetwork($this->_config), array(
 			'social' => (string)$social->social,
 			'id' => (string)$social->id
 		));
@@ -187,7 +193,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return string
 	 */
 	public function Name () {
-		return $this->_config->SocialNetwork()->Name();
+		return $this->_config()->SocialNetwork()->Name();
 	}
 
 	/**
@@ -197,7 +203,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return string
 	 */
 	public function LoginURL ($to = '', $permissions = []) {
-		return $this->_config->SocialNetwork()->LoginURL($to, $permissions);
+		return $this->_config()->SocialNetwork()->LoginURL($to, $permissions);
 	}
 
 	/**
@@ -206,7 +212,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return string
 	 */
 	public function LogoutURL ($to = '') {
-		return $this->_config->SocialNetwork()->LogoutURL($to);
+		return $this->_config()->SocialNetwork()->LogoutURL($to);
 	}
 
 	/**
@@ -217,14 +223,14 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 */
 	private function _session ($method, $token) {
 		if ($token == null) {
-			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config->SocialNetwork()) . ' failed. Invalid token.', Quark::LOG_WARN);
+			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. Invalid token.', Quark::LOG_WARN);
 			return null;
 		}
 
-		$profile = $this->Profile($this->_config->SocialNetwork()->CurrentUser());
+		$profile = $this->Profile($this->_config()->SocialNetwork()->CurrentUser());
 
 		if ($profile == null) {
-			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config->SocialNetwork()) . ' failed. Profile error.', Quark::LOG_WARN);
+			Quark::Log('SocialNetwork.SessionFrom' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. Profile error.', Quark::LOG_WARN);
 			return null;
 		}
 
@@ -241,7 +247,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return SocialNetwork
 	 */
 	public function SessionFromRedirect ($to, $code) {
-		return $this->_session('Redirect', $this->_config->SocialNetwork()->SessionFromRedirect($to, $code));
+		return $this->_session('Redirect', $this->_config()->SocialNetwork()->SessionFromRedirect($to, $code));
 	}
 
 	/**
@@ -250,14 +256,14 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return SocialNetwork
 	 */
 	public function SessionFromToken ($token) {
-		return $this->_session('Token', $this->_config->SocialNetwork()->SessionFromToken($token));
+		return $this->_session('Token', $this->_config()->SocialNetwork()->SessionFromToken($token));
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function API () {
-		return call_user_func_array(array($this->_config->SocialNetwork(), 'API'), func_get_args());
+		return call_user_func_array(array($this->_config()->SocialNetwork(), 'API'), func_get_args());
 	}
 
 	/**
@@ -266,6 +272,6 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return SocialNetworkUser
 	 */
 	public function Profile ($user = '') {
-		return $this->_config->SocialNetwork()->Profile(func_num_args() != 0 ? $user : $this->id);
+		return $this->_config()->SocialNetwork()->Profile(func_num_args() != 0 ? $user : $this->id);
 	}
 }

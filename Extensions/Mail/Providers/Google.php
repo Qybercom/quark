@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Mail\Providers;
 
+use Quark\IQuarkExtension;
 use Quark\QuarkURI;
 
 use Quark\Extensions\Mail\IQuarkMailProvider;
@@ -56,5 +57,12 @@ class Google implements IQuarkMailProvider {
 			$this->_name = $name;
 
 		return $this->_name;
+	}
+
+	/**
+	 * @return IQuarkExtension
+	 */
+	public function ExtensionInstance () {
+		// TODO: Implement ExtensionInstance() method.
 	}
 }
