@@ -47,7 +47,7 @@ Quark.Event = function (events) {
 	that._events = {};
 
 	while (i < events.length) {
-		that._events[event[i]] = [];
+		that._events[events[i]] = [];
 
 		i++;
 	}

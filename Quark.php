@@ -1196,7 +1196,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
 
-				$out = $sender($session);
+				$out = $sender(null);//$session);
 
 				if (!$out) continue;
 
@@ -1205,11 +1205,12 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 					'data' => $out instanceof QuarkDTO ? $out->Data() : $out
 				);
 
+				$session->Output();
+
 				if ($session->Authorized())
 					$out['session'] = $session->ID()->Extract();
 
 				$client->Send($this->_pack($out));
-				$session->Output();
 			}
 
 			unset($out, $session, $client, $clients);
@@ -6730,6 +6731,11 @@ class QuarkClient {
 	use QuarkNetwork;
 
 	/**
+	 * @var array(string => QuarkKeyValuePair) $_session
+	 */
+	private static $_session = array();
+
+	/**
 	 * @var bool $_connected
 	 */
 	private $_connected = false;
@@ -6740,11 +6746,6 @@ class QuarkClient {
 	 * @var QuarkURI $_remote
 	 */
 	private $_remote;
-
-	/**
-	 * @var QuarkKeyValuePair $_session
-	 */
-	private $_session;
 
 	/**
 	 * @var callable $_onConnect
@@ -7009,10 +7010,12 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
-		if (func_num_args() != 0)
-			$this->_session = $session;
+		$uri = $this->ConnectionURI()->URI();
 
-		return $this->_session;
+		if (func_num_args() != 0)
+			self::$_session[$uri] = $session;
+
+		return isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
 	}
 }
 
@@ -7114,9 +7117,13 @@ class QuarkServer {
 				$this->_clients[] = $client;
 				unset($this->_read[array_search($this->_socket, $this->_read, true)]);
 			}
+
+			unset($socket, $client, $accept, $address);
 		}
 
 		$this->_read = array();
+		$this->_write = array();
+		$this->_except = array();
 
 		foreach ($this->_clients as $key => &$client) {
 			$data = $client->Receive(QuarkClient::MODE_BUCKET);
@@ -7136,7 +7143,7 @@ class QuarkServer {
 			$this->_read[] = $client->Socket();
 		}
 
-		unset($key, $client);
+		unset($key, $client, $data);
 
 		$this->_read[] = $this->_socket;
 
