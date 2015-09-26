@@ -96,23 +96,14 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		if ($raw == null) return null;
-
-		$social = json_decode(base64_decode($raw));
-
-		if (!$social) return null;
-
-		return QuarkModel::FindOne(new SocialNetwork($this->_config), array(
-			'social' => (string)$social->social,
-			'id' => (string)$social->id
-		));
+		return $raw == null ? null : QuarkModel::FindOneById(new SocialNetwork($this->_config), $raw);
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->id != '' && $this->accessToken != '' ? $this->Identifier() : null;
+		return $this->id != '' && $this->accessToken != '' ? $this->Pk() : null;
 	}
 
 	/**
@@ -123,16 +114,6 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 */
 	public function AfterFind ($raw, $options) {
 		$this->SessionFromToken($this->accessToken);
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Identifier () {
-		return base64_encode(json_encode(array(
-			'social' => (string)$this->Name(),
-			'id' => (string)$this->id
-		)));
 	}
 
 	/**
@@ -161,7 +142,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		$profile->Save();
 
 		$user = QuarkModel::FindOne($model, array(
-			$key => $this->Identifier()
+			$key => $this->Pk()
 		));
 
 		if ($user == null) {
