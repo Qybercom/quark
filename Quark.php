@@ -549,6 +549,9 @@ class QuarkConfig {
 
 		if (isset($_SERVER['SERVER_PORT']))
 			$this->_webHost->port = $_SERVER['SERVER_PORT'];
+
+		if (isset($_SERVER['DOCUMENT_ROOT']))
+			$this->_webHost->path = Quark::NormalizePath(str_replace($_SERVER['DOCUMENT_ROOT'], '', Quark::Host()));
 	}
 
 	/**
@@ -826,9 +829,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return mixed
 	 */
 	public function Thread () {
-		$offset = isset($_SERVER['DOCUMENT_ROOT'])
-			? str_replace($_SERVER['DOCUMENT_ROOT'], '', Quark::Host())
-			: '';
+		$offset = Quark::Config()->WebHost()->Query();
 
 		$service = new QuarkService(
 			substr($_SERVER['REQUEST_URI'], (int)strpos($_SERVER['REQUEST_URI'], $offset) + strlen($offset)),
@@ -3572,6 +3573,15 @@ class QuarkView implements IQuarkContainer {
 			if (get_class($resource) == $class && $resource->Location() == $location) return true;
 
 		return false;
+	}
+
+	/**
+	 * @param string $uri
+	 *
+	 * @return string
+	 */
+	public function Link ($uri) {
+		return QuarkURI::Of($uri);
 	}
 
 	/**
@@ -7936,7 +7946,7 @@ class QuarkURI {
 	 * @return string
 	 */
 	public static function Of ($path, $full = true) {
-		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', Quark::WebHost($full) . Quark::NormalizePath($path, false))));
+		return str_replace(':::', '://', Quark::NormalizePath(str_replace('://', ':::', Quark::WebHost($full) . Quark::NormalizePath($path, false)), false));
 	}
 
 	/**
