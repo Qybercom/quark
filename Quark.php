@@ -2024,10 +2024,18 @@ class QuarkTask implements IQuarkTransportProvider {
 	public function Launch ($argc, $argv) {
 		if (!$this->_service->LaunchCriteria($this->_launched)) return true;
 
-		$this->_launched = QuarkDate::Now();
-		$this->_service->Task($argc, $argv);
+		$out = true;
 
-		return true;
+		try {
+			$this->_service->Task($argc, $argv);
+		}
+		catch (\Exception $e) {
+			$out = QuarkException::ExceptionHandler($e);
+		}
+
+		$this->_launched = QuarkDate::Now();
+
+		return $out;
 	}
 
 	/**
