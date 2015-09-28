@@ -1197,7 +1197,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
 
-				$out = $sender(null);//$session);
+				$out = $sender($session);
 
 				if (!$out) continue;
 
