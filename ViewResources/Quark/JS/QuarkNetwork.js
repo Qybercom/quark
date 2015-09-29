@@ -52,7 +52,7 @@ Quark.Network.Client = function (host, port, on) {
         }
     };
 
-    that.host = host || '127.0.0.1';
+    that.host = host || document.location.hostname;
     that.port = port || 25000;
     that.socket = null;
     that.session = {};
