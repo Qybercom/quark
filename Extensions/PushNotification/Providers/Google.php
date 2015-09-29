@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPTransportClient;
 use Quark\QuarkJSONIOProcessor;
