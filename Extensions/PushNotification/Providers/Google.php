@@ -49,6 +49,8 @@ class Google implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function Send($payload, $options = []) {
+		if (sizeof($this->_devices) == 0) return true;
+
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
 		$request->Data(array(
@@ -58,11 +60,7 @@ class Google implements IQuarkPushNotificationProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$out = QuarkHTTPTransportClient::To('https://android.googleapis.com/gcm/send', $request, $response);
-
-		Quark::Trace($out);
-
-		return $out;
+		return QuarkHTTPTransportClient::To('https://android.googleapis.com/gcm/send', $request, $response)->success == 1;
 	}
 
 	/**
