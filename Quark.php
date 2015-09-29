@@ -832,7 +832,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 		$offset = Quark::Config()->WebHost()->Query();
 
 		$service = new QuarkService(
-			substr($_SERVER['REQUEST_URI'], (int)strpos($_SERVER['REQUEST_URI'], $offset) + strlen($offset)),
+			substr($_SERVER['REQUEST_URI'], ($offset != '' ? (int)strpos($_SERVER['REQUEST_URI'], $offset) : 0) + strlen($offset)),
 			$this->_processorRequest,
 			$this->_processorResponse
 		);
