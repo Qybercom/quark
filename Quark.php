@@ -954,12 +954,12 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 	private $_tasks = array();
 
 	/**
-	 * @var string $_start = ''
+	 * @var string $_start = null
 	 */
-	private $_start = '';
+	private $_start = null;
 
 	/**
-	 * @var bool $-started = false
+	 * @var bool $_started = false
 	 */
 	private $_started = false;
 
@@ -1048,7 +1048,7 @@ class QuarkCLIEnvironmentProvider implements IQuarkEnvironmentProvider {
 			$service->Task($argc, $argv);
 		}
 		else {
-			if (!$this->_started) {
+			if (!$this->_started && $this->_start !== null) {
 				$this->_started = true;
 				$service = (new QuarkService('/' . $this->_start))->Service();
 
