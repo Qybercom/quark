@@ -7028,7 +7028,7 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
-		$uri = $this->ConnectionURI()->URI();
+		$uri = $this->ConnectionURI(true)->URI();
 
 		if (func_num_args() != 0)
 			self::$_session[$uri] = $session;
