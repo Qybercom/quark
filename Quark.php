@@ -5956,7 +5956,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 */
 	public function Expired (QuarkDate $from = null, $offset = 0) {
 		if ($from == null)
-			$from = new self();
+			$from = self::Now();
 
 		return $this->Interval($from) > $offset;
 	}
