@@ -34,9 +34,9 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	 * @param float|int $width = -1
 	 */
 	public function __construct ($lat = 0.0, $lng = 0.0, $width = -1) {
-		$this->lat = $lat;
-		$this->lng = $lng;
-		$this->width = $width;
+		$this->lat = (float)$lat;
+		$this->lng = (float)$lng;
+		$this->width = (float)$width;
 	}
 
 	/**

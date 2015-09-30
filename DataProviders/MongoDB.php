@@ -37,7 +37,7 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param object $source
+	 * @param $source
 	 *
 	 * @return string
 	 */
