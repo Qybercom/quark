@@ -3378,6 +3378,7 @@ class QuarkView implements IQuarkContainer {
 	private $_vars = array();
 	private $_resources = array();
 	private $_html = '';
+	private $_inline = false;
 
 	/**
 	 * @var QuarkSession $_session
@@ -3513,6 +3514,18 @@ class QuarkView implements IQuarkContainer {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param bool $inline = false
+	 *
+	 * @return bool
+	 */
+	public function InlineStyles ($inline = false) {
+		if (func_num_args() != 0)
+			$this->_inline = $inline;
+
+		return $this->_inline;
 	}
 
 	/**
@@ -3687,7 +3700,27 @@ class QuarkView implements IQuarkContainer {
 		ob_start();
 		/** @noinspection PhpIncludeInspection */
 		include $this->_file;
-		return ob_get_clean();
+		$out = ob_get_clean();
+
+		if ($this->_inline) {
+			if (preg_match_all('#id="(.*)"#Uis', $out, $ids, PREG_SET_ORDER)) {
+				foreach ($ids as $id) {
+					$css = '';
+
+					if (preg_match_all('#\#' . $id[1] . '{(.*)}#Uis', $out, $id_css, PREG_SET_ORDER)) {
+
+						foreach ($id_css as $id_c) {
+							$css .= $id_c[1];
+							$out = str_replace('#' . $id[1] . '{' . $id_c[1] . '}', '', $out);
+						}
+					}
+
+					$out = str_replace('id="' . $id[1] . '"', 'id="' . $id[1] . '" style="' . $css . '"', $out);
+				}
+			}
+		}
+
+		return $out;
 	}
 
 	/**

@@ -12,6 +12,7 @@ use Quark\QuarkField;
 use Quark\QuarkFile;
 use Quark\QuarkHTMLIOProcessor;
 use Quark\QuarkArchException;
+use Quark\QuarkView;
 
 /**
  * Class Mail
@@ -66,17 +67,17 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	/**
 	 * @param string $config
 	 * @param string $subject
-	 * @param string $text
+	 * @param QuarkView|string $content
 	 * @param string $to
 	 */
-	public function __construct ($config, $subject, $text, $to = '') {
+	public function __construct ($config, $subject, $content, $to = '') {
 		$this->_config = Quark::Config()->Extension($config);
 
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());
 
 		$this->Subject($subject);
-		$this->Text($text);
+		$this->Content($content);
 
 		if (func_num_args() == 4)
 			$this->To($to);
@@ -138,15 +139,21 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	}
 
 	/**
-	 * @param string $text
+	 * @param QuarkView|string $content
 	 *
 	 * @return Mail|string
 	 */
-	public function Text ($text = '') {
+	public function Content ($content = '') {
 		if (func_num_args() == 0)
 			return $this->_dto->Data();
 
-		$this->_dto->Data($text);
+		if ($content instanceof QuarkView)
+			$content->InlineStyles(true);
+
+		$this->_dto->Data($content instanceof QuarkView
+			? $content->Compile()
+			: $content);
+
 		return $this;
 	}
 
@@ -192,18 +199,12 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 	/**
 	 * @param QuarkClient $client
 	 *
-	 * @return mixed
+	 * @return bool
 	 */
-	public function Client (QuarkClient $client) {
-		$conn = $client->Connect();
-
-		if (!$conn) {
-			Quark::Log('Mail. Unable to connect to mail server. Error: ' . $client->Error(true));
-			return false;
-		}
-
+	public function OnConnect (QuarkClient $client) {
 		$smtp = $this->_config->SMTP();
 		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
+		$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
 
 		try {
 			$this->_cmd($client, 220);
@@ -217,7 +218,7 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 				$this->_cmd($client, 250, 'RCPT TO: <' . $receiver . '>');
 
 			$this->_cmd($client, 354, 'DATA');
-			$this->_cmd($client, 250, $this->_dto->SerializeResponseBody() . "\r\n.");
+			$this->_cmd($client, 250, $this->_dto->SerializeResponse() . "\r\n.");
 			$this->_cmd($client, 221, 'QUIT');
 		}
 		catch (QuarkArchException $e) {
@@ -225,15 +226,6 @@ class Mail implements IQuarkExtension, IQuarkTransportProvider {
 		}
 
 		return $client->Close();
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 *
-	 * @return bool
-	 */
-	public function OnConnect (QuarkClient $client) {
-		// TODO: Implement OnConnect() method.
 	}
 
 	/**
