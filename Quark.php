@@ -10751,8 +10751,6 @@ class QuarkSQL {
 		$escape = $this->_provider->EscapeChar();
 		$query = str_replace(self::Collection($model), $escape . $collection . $escape, $query, $i);
 
-		echo $query;
-
 		return $this->_provider->Query($query, $options);
 	}
 
