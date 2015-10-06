@@ -10751,6 +10751,8 @@ class QuarkSQL {
 		$escape = $this->_provider->EscapeChar();
 		$query = str_replace(self::Collection($model), $escape . $collection . $escape, $query, $i);
 
+		echo $query;
+
 		return $this->_provider->Query($query, $options);
 	}
 
@@ -10780,7 +10782,7 @@ class QuarkSQL {
 	public function Field ($field) {
 		if (!is_string($field)) return '';
 
-		return '"' . $this->_provider->Escape($field) . '"';
+		return $this->_provider->Escape($field);
 	}
 
 	/**
