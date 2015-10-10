@@ -8004,6 +8004,15 @@ class QuarkURI {
 	 * @return string
 	 */
 	public function URI ($full = false) {
+		return $this->Hostname()
+			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+			. ($full ? '/?' . $this->query : '');
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Hostname () {
 		if (strpos(strtolower($this->scheme), strtolower('HTTP/')) !== false)
 			$this->scheme = 'http';
 
@@ -8012,9 +8021,7 @@ class QuarkURI {
 			. '://'
 			. ($this->user !== null ? $this->user . ($this->pass !== null ? ':' . $this->pass : '') . '@' : '')
 			. $this->host
-			. ($this->port !== null && $this->port != 80 ? ':' . $this->port : '')
-			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
-			. ($full ? '/?' . $this->query : '');
+			. ($this->port !== null && $this->port != 80 ? ':' . $this->port : '');
 	}
 
 	/**
@@ -8236,6 +8243,8 @@ class QuarkDTO {
 	const RANGES_BYTES = 'bytes';
 
 	const SIGNATURE = '_s';
+
+	const RESPONSE_BUFFER = 4096;
 
 	/**
 	 * @var string $_raw
@@ -8965,7 +8974,9 @@ class QuarkDTO {
 	public function UnserializeResponse ($raw = '') {
 		$this->_raw = $raw;
 
-		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, $raw, $found)) {
+		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, substr($raw, 0, self::RESPONSE_BUFFER), $found)) {
+			$this->_rawData = substr($raw, strpos($raw, $found[4]));
+
 			$this->Protocol($found[1]);
 			$this->Status($found[2]);
 
@@ -8973,9 +8984,7 @@ class QuarkDTO {
 				$this->_processor = new QuarkHTMLIOProcessor();
 
 			$this->_unserializeHeaders($found[3]);
-			$this->_unserializeBody($found[4]);
-
-			$this->_rawData = $found[4];
+			$this->_unserializeBody($this->_rawData);
 		}
 
 		return $this;
@@ -9434,10 +9443,10 @@ class QuarkHTTPTransportClient implements IQuarkTransportProvider {
 
 		$name = array_reverse($uri->Route())[0];
 
-		$file->type = $out->Header(QuarkDTO::HEADER_CONTENT_TYPE);
+		$file->Content($out->RawData());
+		$file->type = QuarkFile::MimeOf($file->Content());
 		$file->extension = QuarkFile::ExtensionByMime($file->type);
 		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
-		$file->Content($out->RawData());
 
 		return $file;
 	}
@@ -9826,6 +9835,8 @@ class QuarkLanguage {
 class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	const LOCAL_FS = 'LocalFS';
 
+	const TYPE_APPLICATION_OCTET_STREAM = 'application/octet-stream';
+
 	const MODE_DEFAULT = null;
 	const MODE_ANYONE = 0777;
 	const MODE_GROUP = 0771;
@@ -9851,7 +9862,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param $location
+	 * @param string $location
 	 *
 	 * @return mixed
 	 */
@@ -9860,6 +9871,21 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		$info = finfo_open(FILEINFO_MIME_TYPE);
 		$type = finfo_file($info, $location);
+		finfo_close($info);
+
+		return $type;
+	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return mixed
+	 */
+	public static function MimeOf ($content) {
+		if (!$content) return false;
+
+		$info = finfo_open(FILEINFO_MIME_TYPE);
+		$type = finfo_buffer($info, $content);
 		finfo_close($info);
 
 		return $type;
