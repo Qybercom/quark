@@ -8975,7 +8975,7 @@ class QuarkDTO {
 		$this->_raw = $raw;
 
 		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, substr($raw, 0, self::RESPONSE_BUFFER), $found)) {
-			$this->_rawData = substr($raw, strpos($raw, $found[4]));
+			$this->_rawData = $found[4] != '' ? substr($raw, strpos($raw, $found[4])) : '';
 
 			$this->Protocol($found[1]);
 			$this->Status($found[2]);
