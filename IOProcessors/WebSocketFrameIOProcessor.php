@@ -15,6 +15,7 @@ use Quark\Quark;
  */
 class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	public static $IFrames = array(
+		0 => 'fin',
 		1 => 'text',
 		2 => 'binary',
 		8 => 'close',
@@ -119,7 +120,7 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($data) {
-		if (strlen($data) == 1) return '';
+		if (strlen($data) < 2) return '';
 
 		$first = self::_byte($data[0]);
 		$second = self::_byte($data[1]);
