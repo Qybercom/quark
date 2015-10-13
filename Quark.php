@@ -9972,14 +9972,21 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param int $mode
+	 * @param int $mode = self::MODE_DEFAULT
+	 */
+	private function _followParent ($mode = self::MODE_DEFAULT) {
+		if (!is_dir($this->parent) && !is_file($this->parent))
+			mkdir($this->parent, $mode, true);
+	}
+
+	/**
+	 * @param int $mode = self::MODE_DEFAULT
 	 * http://php.net/manual/ru/function.mkdir.php#114960
 	 *
 	 * @return bool
 	 */
 	public function SaveContent ($mode = self::MODE_DEFAULT) {
-		if (!is_dir($this->parent) && !is_file($this->parent))
-			mkdir($this->parent, $mode, true);
+		$this->_followParent($mode);
 
 		return file_put_contents($this->location, $this->_content, LOCK_EX) !== false;
 	}
@@ -10016,15 +10023,18 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param bool $mime
+	 * @param bool $mime = true
+	 * @param int $mode = self::MODE_DEFAULT
 	 *
 	 * @return bool
 	 */
-	public function Upload ($mime = true) {
+	public function Upload ($mime = true, $mode = self::MODE_DEFAULT) {
 		if ($mime) {
 			$ext = self::ExtensionByMime(self::Mime($this->tmp_name));
 			$this->location .= $ext ? '.' . $ext : '';
 		}
+
+		$this->_followParent($mode);
 
 		return is_file($this->tmp_name) && is_dir(dirname($this->location)) && rename($this->tmp_name, $this->location);
 	}
