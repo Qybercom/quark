@@ -6,6 +6,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
@@ -98,7 +99,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return 'id';
+		return new QuarkKeyValuePair('id', 0);
 	}
 
 	/**

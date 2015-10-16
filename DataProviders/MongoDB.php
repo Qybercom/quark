@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 use Quark\QuarkArchException;
 use Quark\QuarkModel;
@@ -229,10 +230,10 @@ class MongoDB implements IQuarkDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return '_id';
+		return new QuarkKeyValuePair('_id', new \MongoId());
 	}
 
 	/**

@@ -6,6 +6,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
@@ -107,10 +108,10 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return 'id';
+		return new QuarkKeyValuePair('id', 0);
 	}
 
 	/**

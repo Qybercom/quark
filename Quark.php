@@ -2556,14 +2556,14 @@ trait QuarkServiceBehavior {
 	 * @return string
 	 */
 	public function URL (IQuarkService $service = null) {
-		return $this->_call('URL', func_get_args());
+		return $this->__call('URL', func_get_args());
 	}
 
 	/**
 	 * @return QuarkDTO
 	 */
 	public function Input () {
-		return $this->_call('Input', func_get_args());
+		return $this->__call('Input', func_get_args());
 	}
 
 	/**
@@ -2897,7 +2897,7 @@ trait QuarkContainerBehavior {
 	 *
 	 * @return mixed
 	 */
-	private function _call ($method, $args) {
+	public function __call ($method, $args) {
 		$this->_envelope();
 
 		/**
@@ -2908,16 +2908,6 @@ trait QuarkContainerBehavior {
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
 			: null;
-	}
-
-	/**
-	 * @param $method
-	 * @param $args
-	 *
-	 * @return mixed
-	 */
-	public function __call ($method, $args) {
-		return $this->_call($method, $args);
 	}
 }
 
@@ -3323,14 +3313,14 @@ trait QuarkViewBehavior {
 	 * @return mixed
 	 */
 	public function Child (IQuarkViewModel $view = null) {
-		return $this->_call('Child', func_get_args());
+		return $this->__call('Child', func_get_args());
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function User () {
-		return $this->_call('User', func_get_args());
+		return $this->__call('User', func_get_args());
 	}
 
 	/**
@@ -3339,7 +3329,7 @@ trait QuarkViewBehavior {
 	 * @return mixed
 	 */
 	public function Signature ($field = true) {
-		return $this->_call('Signature', func_get_args());
+		return $this->__call('Signature', func_get_args());
 	}
 
 	/**
@@ -3348,14 +3338,14 @@ trait QuarkViewBehavior {
 	 * @return IQuarkExtension
 	 */
 	public function Extension ($name = '') {
-		return $this->_call('Extension', func_get_args());
+		return $this->__call('Extension', func_get_args());
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function Compile () {
-		return $this->_call('Compile', func_get_args());
+		return $this->__call('Compile', func_get_args());
 	}
 }
 
@@ -4346,7 +4336,7 @@ trait QuarkModelBehavior {
 	 * @return string
 	 */
 	public function Pk () {
-		return $this->_call('PrimaryKey', func_get_args());
+		return $this->__call('PrimaryKey', func_get_args());
 	}
 
 	/**
@@ -4355,7 +4345,7 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Create ($options = []) {
-		return $this->_call('Create', func_get_args());
+		return $this->__call('Create', func_get_args());
 	}
 
 	/**
@@ -4364,7 +4354,7 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		return $this->_call('Save', func_get_args());
+		return $this->__call('Save', func_get_args());
 	}
 
 	/**
@@ -4373,14 +4363,14 @@ trait QuarkModelBehavior {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		return $this->_call('Remove', func_get_args());
+		return $this->__call('Remove', func_get_args());
 	}
 
 	/**
 	 * @return bool
 	 */
 	public function Validate () {
-		return $this->_call('Validate', func_get_args());
+		return $this->__call('Validate', func_get_args());
 	}
 
 	/**
@@ -4389,7 +4379,7 @@ trait QuarkModelBehavior {
 	 * @return QuarkModel
 	 */
 	public function PopulateWith ($source) {
-		return $this->_call('PopulateWith', func_get_args());
+		return $this->__call('PopulateWith', func_get_args());
 	}
 
 	/**
@@ -4399,14 +4389,14 @@ trait QuarkModelBehavior {
 	 * @return \StdClass
 	 */
 	public function Extract ($fields = null, $weak = false) {
-		return $this->_call('Extract', func_get_args());
+		return $this->__call('Extract', func_get_args());
 	}
 
 	/**
 	 * @return QuarkModelSource
 	 */
 	public function Source () {
-		return $this->_call('Source', func_get_args());
+		return $this->__call('Source', func_get_args());
 	}
 }
 
@@ -4753,6 +4743,20 @@ class QuarkModel implements IQuarkContainer {
 
 		$fields = $model->Fields();
 
+		if ($model instanceof IQuarkModelWithDataProvider) {
+			/**
+			 * @var IQuarkModel $model
+			 */
+			$ppk = self::_provider($model)->PrimaryKey($model);
+
+			if ($ppk instanceof QuarkKeyValuePair) {
+				$pk = $ppk->Key();
+
+				if (!isset($model->$pk))
+					$fields[$pk] = $ppk->Value();
+			}
+		}
+
 		foreach ($source as $key => $value) {
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
@@ -5010,12 +5014,14 @@ class QuarkModel implements IQuarkContainer {
 	 * @throws QuarkArchException
 	 */
 	public function PrimaryKey () {
-		$pk = self::_provider($this->_model)->PrimaryKey($this->_model);
+		if ($this->_model == null) return null;
+
+		$pk = self::_provider($this->_model)->PrimaryKey($this->_model)->Key();
 
 		if ($this->_model instanceof IQuarkModelWithCustomPrimaryKey)
 			$pk = $this->_model->PrimaryKey();
 
-		return $this->$pk;
+		return (string)$this->$pk;
 	}
 
 	/**
@@ -5324,7 +5330,7 @@ interface IQuarkDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model);
 

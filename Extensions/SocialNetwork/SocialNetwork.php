@@ -15,7 +15,7 @@ use Quark\QuarkModelBehavior;
 /**
  * Class SocialNetwork
  *
- * @property string $id
+ * @property string $userId
  * @property string $accessToken
  * @property string $social
  *
@@ -42,14 +42,14 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	public function __construct ($config, $token = '', $id = '') {
 		$this->_config = $config;
 		$this->accessToken = (string)$token;
-		$this->id = (string)$id;
+		$this->userId = (string)$id;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->id;
+		return $this->userId;
 	}
 
 	/**
@@ -72,7 +72,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	public function Fields () {
 		return array(
 			'social' => $this->Name(),
-			'id' => '',
+			'userId' => '',
 			'accessToken' => '',
 		);
 	}
@@ -81,11 +81,11 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return mixed
 	 */
 	public function Rules () {
-		$this->id = (string)$this->id;
+		$this->userId = (string)$this->userId;
 		$this->accessToken = (string)$this->accessToken;
 
 		return array(
-			QuarkField::Type($this->id, QuarkField::TYPE_STRING),
+			QuarkField::Type($this->userId, QuarkField::TYPE_STRING),
 			QuarkField::Type($this->accessToken, QuarkField::TYPE_STRING)
 		);
 	}
@@ -103,7 +103,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->id != '' && $this->accessToken != '' ? $this->Pk() : null;
+		return $this->userId != '' && $this->accessToken != '' ? $this->Pk() : null;
 	}
 
 	/**
@@ -128,10 +128,10 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		 */
 		$profile = QuarkModel::FindOne($this, array(
 			'social' => (string)$this->Name(),
-			'id' => (string)$this->id
+			'userId' => (string)$this->userId
 		));
 
-		if ($profile == null && $this->id != '' && $this->accessToken != '') {
+		if ($profile == null && $this->userId != '' && $this->accessToken != '') {
 			$profile = new QuarkModel($this);
 			$profile->Create();
 		}
@@ -142,7 +142,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		$profile->Save();
 
 		$user = QuarkModel::FindOne($model, array(
-			$key => $this->Pk()
+			$key => $profile->Pk()
 		));
 
 		if ($user == null) {
@@ -164,7 +164,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	 * @return bool
 	 */
 	public function IsConnected () {
-		return $this->id != '' && $this->accessToken != '';
+		return $this->userId != '' && $this->accessToken != '';
 	}
 
 	/**
@@ -261,7 +261,7 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 
 		if (!$profile) return null;
 
-		$this->id = $profile->ID();
+		$this->userId = $profile->ID();
 
 		return $profile;
 	}
