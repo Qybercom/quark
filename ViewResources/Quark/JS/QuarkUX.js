@@ -134,7 +134,61 @@ Quark.UX = function (selector) {
 				stop: opt.stop
 			});
 		});
-	}
+	};
+};
+
+/**
+ * @param selector
+ * @param {{n:Function,e:Function,s:Function,w:Function}} opt
+ *
+ * @constructor
+ */
+Quark.UX.KeyboardNavigation = function (selector, opt) {
+	var that = this;
+
+	const WASD = ['w','a','s','d'];
+
+	that.KeyBoard = new Quark.IO.Keyboard(selector);
+	that.Directions = opt || {};
+		that.Directions.n = opt.n || false;
+		that.Directions.e = opt.e || false;
+		that.Directions.s = opt.s || false;
+		that.Directions.w = opt.w || false;
+
+	/**
+	 * @param {String} n
+	 * @param {String} e
+	 * @param {String} s
+	 * @param {String} w
+	 */
+	that.Navigator = function (n, e, s, w) {
+		if (n instanceof Array && n.length == 4) {
+			w = n[3];
+			s = n[2];
+			e = n[1];
+			n = n[0];
+		}
+
+		that._dir('n', n);
+		that._dir('e', e);
+		that._dir('s', s);
+		that._dir('w', w);
+	};
+
+	/**
+	 * @param {String} dir
+	 * @param {String} key
+	 *
+	 * @private
+	 */
+	that._dir = function (dir, key) {
+		that.KeyBoard.Down([key], that.Directions[dir]);
+	};
+
+	that._dir('n', 'arrowUp');
+	that._dir('e', 'arrowRight');
+	that._dir('s', 'arrowDown');
+	that._dir('w', 'arrowLeft');
 };
 
 /**

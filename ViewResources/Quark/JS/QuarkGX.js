@@ -49,11 +49,11 @@ Quark.GX.Model = function (selector, opt) {
 	 */
 	that.Render = function (opt) {
 		opt = opt || {};
-		opt.continue1 = opt.continue1 || false;
+		opt.trail = opt.trail || false;
 
-		opt.position = opt.position || {};
-		opt.rotation = opt.rotation || {};
-		opt.dimension = opt.dimension || {};
+		opt.position = opt.position || {x:0,y:0,z:0};
+		opt.rotation = opt.rotation || {x:0,y:0,z:0};
+		opt.dimension = opt.dimension || {x:1,y:1,z:1};
 
 		opt.position.quantity = opt.position.quantity || 'px';
 		opt.rotation.quantity = opt.rotation.quantity || 'deg';
@@ -62,6 +62,7 @@ Quark.GX.Model = function (selector, opt) {
 		opt.origin.transform = opt.origin.transform || {};
 		opt.origin.transform.x = opt.origin.transform.x || '50%';
 		opt.origin.transform.y = opt.origin.transform.y || '50%';
+		opt.origin.transform.z = opt.origin.transform.z || '0';
 		opt.origin.perspective = opt.origin.perspective || {};
 		opt.origin.perspective.x = opt.origin.perspective.x || '50%';
 		opt.origin.perspective.y = opt.origin.perspective.y || '50%';
@@ -70,15 +71,17 @@ Quark.GX.Model = function (selector, opt) {
 		that.rotation = that._prop(opt, 'rotation');
 		that.dimension = that._prop(opt, 'dimension');
 
+		console.log(opt.origin.transform);
+
 		that.Elem.css({
 			'position': 'absolute',
 			'-webkit-transform-style': 'preserve-3d',
-			'-webkit-transform-origin': opt.origin.transform.x + ' ' + opt.origin.transform.y,
+			'-webkit-transform-origin': opt.origin.transform.x + ' ' + opt.origin.transform.y + ' ' + opt.origin.transform.z,
 			'-webkit-perspective-origin': opt.origin.perspective.x + ' ' + opt.origin.perspective.y,
 			'-webkit-transform': ''
-				+ (opt.dimension.x != undefined ? 'scaleX(' + that.dimension.x + ') ' : '')
-				+ (opt.dimension.y != undefined ? 'scaleY(' + that.dimension.y + ') ' : '')
-				+ (opt.dimension.z != undefined ? 'scaleZ(' + that.dimension.z + ') ' : '')
+				//+ 'scaleX(' + that.dimension.x + ') '
+				//+ 'scaleY(' + that.dimension.y + ') '
+				//+ 'scaleZ(' + that.dimension.z + ') '
 
 				+ 'translate3d('
 				+ that.position.x + 'px, '
@@ -86,9 +89,9 @@ Quark.GX.Model = function (selector, opt) {
 				+ that.position.z + 'px'
 				+ ') '
 
-				+ (opt.rotation.x != undefined ? 'rotateX(' + that.rotation.x + opt.rotation.quantity + ') ' : '')
-				+ (opt.rotation.y != undefined ? 'rotateY(' + that.rotation.y + opt.rotation.quantity + ') ' : '')
-				+ (opt.rotation.z != undefined ? 'rotateZ(' + that.rotation.z + opt.rotation.quantity + ')' : '')
+				+ 'rotateX(' + that.rotation.x + opt.rotation.quantity + ') '
+				+ 'rotateY(' + that.rotation.y + opt.rotation.quantity + ') '
+				+ 'rotateZ(' + that.rotation.z + opt.rotation.quantity + ')'
 		});
 	};
 
@@ -177,7 +180,7 @@ Quark.GX.Scene = function (viewport, opt) {
 
 		'-webkit-transform-style': 'preserve-3d',
 		'-webkit-transform-origin': '50% 50%',
-		'-webkit-perspective-origin': '50% 50%',
+		'-webkit-perspective-origin': '50% 50% 0',
 		'-webkit-perspective': '700px',
 
 		'overflow': 'hidden'
@@ -195,6 +198,19 @@ Quark.GX.Scene = function (viewport, opt) {
 	 */
 	that.Camera = function (point) {
 		that._scene.Render(point);
+
+		// TODO: camera stuff
+		/*that._scene.Render({
+			trail: point.trail,
+			origin: {
+				transform: {
+					x: (point.position ? (point.position.z || 0) : 0) + 'px',
+					y: (point.position ? (point.position.x || 0) : 0) + 'px'
+				}
+			},
+			position: point.position,
+			rotation: point.rotation
+		});*/
 	};
 
 	that.Light = function (point) {
