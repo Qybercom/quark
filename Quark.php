@@ -6640,7 +6640,7 @@ trait QuarkNetwork {
 	public function ConnectionURI ($remote = false, $face = false, $fresh = false) {
 		if (!$this->_socket) return null;
 
-		if (!isset($this->_conn[$remote])) {
+		if (!isset($this->_conn[(int)$remote])) {
 			$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
 
 			if ($uri == null) return null;
@@ -6650,7 +6650,7 @@ trait QuarkNetwork {
 			$this->_conn[$remote] = $uri;
 		}
 
-		$uri = $this->_conn[$remote];
+		$uri = $this->_conn[(int)$remote];
 
 		if ($face && $uri->host == QuarkServer::ALL_INTERFACES)
 			$uri->host = Quark::IP(is_bool($face) ? $uri->host : $face);
