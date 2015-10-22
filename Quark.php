@@ -6628,18 +6628,13 @@ trait QuarkNetwork {
 	/**
 	 * @param bool $remote = false
 	 * @param bool|string $face = false
-	 * @param bool $fresh = false
 	 *
 	 * @return QuarkURI
 	 */
-	public function ConnectionURI ($remote = false, $face = false, $fresh = false) {
-		Quark::Log('socket');
-
+	public function ConnectionURI ($remote = false, $face = false) {
 		if (!$this->_socket) return null;
 
-		$sock = stream_socket_get_name($this->_socket, $remote);
-		Quark::Trace($sock);
-		$uri = QuarkURI::FromURI($sock);
+		$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
 
 		if ($uri == null) return null;
 
@@ -7073,7 +7068,10 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
+		Quark::Log('session');
+		Quark::Trace(func_num_args());
 		$uri = $this->ConnectionURI(true);
+		Quark::Trace($uri);
 
 		if ($uri == null) return null;
 
