@@ -6614,11 +6614,6 @@ trait QuarkNetwork {
 	private $_errorString = '';
 
 	/**
-	 * @var array
-	 */
-	private $_conn = array();
-
-	/**
 	 * @param QuarkURI $uri
 	 *
 	 * @return QuarkURI
@@ -6638,28 +6633,22 @@ trait QuarkNetwork {
 	 * @return QuarkURI
 	 */
 	public function ConnectionURI ($remote = false, $face = false, $fresh = false) {
+		Quark::Log('socket');
+
 		if (!$this->_socket) return null;
 
-		if (!isset($this->_conn[(int)$remote])) {
-			$sock = stream_socket_get_name($this->_socket, $remote);
-			$uri = QuarkURI::FromURI($sock);
+		$sock = stream_socket_get_name($this->_socket, $remote);
+		Quark::Trace($sock);
+		$uri = QuarkURI::FromURI($sock);
 
-			Quark::Trace($sock);
+		if ($uri == null) return null;
 
-			if ($uri == null) return null;
-
-			$uri->scheme = $this->_uri->scheme;
-
-			$this->_conn[$remote] = $uri;
-		}
-
-		$uri = clone $this->_conn[(int)$remote];
+		$uri->scheme = $this->_uri->scheme;
 
 		if ($face && $uri->host == QuarkServer::ALL_INTERFACES)
 			$uri->host = Quark::IP(is_bool($face) ? $uri->host : $face);
 
 		return $uri;
-
 	}
 
 	/**
