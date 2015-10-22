@@ -6632,11 +6632,17 @@ trait QuarkNetwork {
 	 * @return QuarkURI
 	 */
 	public function ConnectionURI ($remote = false, $face = false) {
+		Quark::Log('socket');
+		Quark::Trace($this->_socket);
 		if (!$this->_socket) return null;
 
-		$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
+		$sock = stream_socket_get_name($this->_socket, $remote);
+		$uri = QuarkURI::FromURI($sock);
 
-		if (!$uri) return null;
+		Quark::Trace($uri);
+		Quark::Trace($sock);
+
+		if ($uri == null) return null;
 
 		$uri->scheme = $this->_uri->scheme;
 
