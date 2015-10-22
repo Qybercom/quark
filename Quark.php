@@ -2381,9 +2381,11 @@ class QuarkTimer {
 	 * Invoke timer callback
 	 */
 	public function Invoke () {
-		if (!$this->_last->Expired(null, $this->_time)) return;
+		$now = QuarkDate::GMTNow();
 
-		$this->_last = QuarkDate::GMTNow();
+		if (!$this->_last->Expired($now, $this->_time)) return;
+
+		$this->_last = $now;
 
 		$worker = $this->_callback;
 		$worker($this);
@@ -6660,7 +6662,7 @@ trait QuarkNetwork {
 
 		$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
 
-		if (!$uri) return null;
+		if ($uri == null) return null;
 
 		$uri->scheme = $this->_uri->scheme;
 
@@ -6668,7 +6670,6 @@ trait QuarkNetwork {
 			$uri->host = Quark::IP(is_bool($face) ? $uri->host : $face);
 
 		return $uri;
-
 	}
 
 	/**
@@ -6991,6 +6992,14 @@ class QuarkClient {
 	 */
 	public function Close ($event = true) {
 		$this->_connected = false;
+		$uri = $this->ConnectionURI(true);
+
+		if ($uri != null) {
+			$uri = $uri->URI();
+
+			if (isset(self::$_session[$uri]))
+				unset(self::$_session[$uri]);
+		}
 
 		if ($event)
 			$this->_on('Close');
@@ -7093,7 +7102,11 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
-		$uri = $this->ConnectionURI(true)->URI();
+		$uri = $this->ConnectionURI(true);
+
+		if ($uri == null) return null;
+
+		$uri = $uri->URI();
 
 		if (func_num_args() != 0)
 			self::$_session[$uri] = $session;
@@ -7215,10 +7228,10 @@ class QuarkServer {
 				$this->_transport->OnData($client, $data);
 
 			if (feof($client->Socket())) {
+				$client->Close();
 				unset($this->_clients[$key]);
 
 				$this->_transport->OnClose($client);
-				$client->Close();
 
 				continue;
 			}
