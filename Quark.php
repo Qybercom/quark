@@ -3883,6 +3883,24 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	public function CacheControl () {
 		return $this->_minimize;
 	}
+
+	/**
+	 * @param string $location
+	 *
+	 * @return QuarkProjectViewResource
+	 */
+	public static function CSS ($location) {
+		return new self($location, new QuarkCSSViewResourceType());
+	}
+
+	/**
+	 * @param string $location
+	 *
+	 * @return QuarkProjectViewResource
+	 */
+	public static function JS ($location) {
+		return new self($location, new QuarkJSViewResourceType());
+	}
 }
 
 /**
@@ -6142,6 +6160,11 @@ class QuarkSessionSource implements IQuarkStackable {
 	private $_user;
 
 	/**
+	 * @var bool $_init = false
+	 */
+	private $_init = false;
+
+	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizationProvider $provider
 	 * @param IQuarkAuthorizableModel $user
@@ -6152,8 +6175,6 @@ class QuarkSessionSource implements IQuarkStackable {
 		$this->_name = $name;
 		$this->_provider = $provider;
 		$this->_user = $user;
-
-		new QuarkModel($this->_user);
 	}
 
 	/**
@@ -6176,6 +6197,11 @@ class QuarkSessionSource implements IQuarkStackable {
 	 * @return IQuarkAuthorizableModel
 	 */
 	public function &User () {
+		if (!$this->_init) {
+			new QuarkModel($this->_user);
+			$this->_init = true;
+		}
+
 		return $this->_user;
 	}
 
