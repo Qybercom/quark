@@ -7191,10 +7191,10 @@ class QuarkServer {
 				$this->_transport->OnData($client, $data);
 
 			if (feof($client->Socket())) {
+				$client->Close();
 				unset($this->_clients[$key]);
 
 				$this->_transport->OnClose($client);
-				$client->Close();
 
 				continue;
 			}
