@@ -2381,9 +2381,11 @@ class QuarkTimer {
 	 * Invoke timer callback
 	 */
 	public function Invoke () {
-		if (!$this->_last->Expired(null, $this->_time)) return;
+		$now = QuarkDate::GMTNow();
 
-		$this->_last = QuarkDate::GMTNow();
+		if (!$this->_last->Expired($now, $this->_time)) return;
+
+		$this->_last = $now;
 
 		$worker = $this->_callback;
 		$worker($this);
