@@ -1194,6 +1194,9 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 			$clients = $this->_cluster->Server()->Clients();
 
+			Quark::Log('broadcast ' . sizeof($clients) . ' ' . sizeof(QuarkClient::_sess()));
+			Quark::Trace(QuarkClient::_sess());
+
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
 
@@ -7079,6 +7082,13 @@ class QuarkClient {
 
 		return isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
 	}
+
+	/**
+	 * @return array
+	 */
+	public static function _sess () {
+		return self::$_session;
+	}
 }
 
 /**
@@ -9975,7 +9985,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
 		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024) {
-			$this->Content(file_get_contents($this->location, LOCK_EX));
+			$this->Content(file_get_contents($this->location));
 			$this->_loaded = true;
 		}
 
