@@ -7069,23 +7069,16 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
-		Quark::Log('uri');
-
 		$uri = $this->ConnectionURI(true);
-		Quark::Trace($uri);
 
 		if ($uri == null) return null;
 
 		$uri = $uri->URI();
-		Quark::Trace($uri);
 
 		if (func_num_args() != 0)
 			self::$_session[$uri] = $session;
 
-		$out = isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
-		Quark::Trace($out);
-
-		return $out;
+		return isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
 	}
 }
 
