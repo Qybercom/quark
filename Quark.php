@@ -1194,9 +1194,6 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 			$clients = $this->_cluster->Server()->Clients();
 
-			Quark::Log('broadcast ' . sizeof($clients) . ' ' . sizeof(QuarkClient::_sess()));
-			Quark::Trace(QuarkClient::_sess());
-
 			foreach ($clients as $client) {
 				$session = QuarkSession::Restore($client->Session());
 
@@ -6969,6 +6966,14 @@ class QuarkClient {
 	 */
 	public function Close ($event = true) {
 		$this->_connected = false;
+		$uri = $this->ConnectionURI(true);
+
+		if ($uri != null) {
+			$uri = $uri->URI();
+
+			if (isset(self::$_session[$uri]))
+				unset(self::$_session[$uri]);
+		}
 
 		if ($event)
 			$this->_on('Close');
@@ -7081,13 +7086,6 @@ class QuarkClient {
 			self::$_session[$uri] = $session;
 
 		return isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
-	}
-
-	/**
-	 * @return array
-	 */
-	public static function _sess () {
-		return self::$_session;
 	}
 }
 
