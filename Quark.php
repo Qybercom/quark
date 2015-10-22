@@ -6641,7 +6641,10 @@ trait QuarkNetwork {
 		if (!$this->_socket) return null;
 
 		if (!isset($this->_conn[(int)$remote])) {
-			$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
+			$sock = stream_socket_get_name($this->_socket, $remote);
+			$uri = QuarkURI::FromURI($sock);
+
+			Quark::Trace($sock);
 
 			if ($uri == null) return null;
 
