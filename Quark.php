@@ -6650,7 +6650,7 @@ trait QuarkNetwork {
 			$this->_conn[$remote] = $uri;
 		}
 
-		$uri = $this->_conn[(int)$remote];
+		$uri = clone $this->_conn[(int)$remote];
 
 		if ($face && $uri->host == QuarkServer::ALL_INTERFACES)
 			$uri->host = Quark::IP(is_bool($face) ? $uri->host : $face);
