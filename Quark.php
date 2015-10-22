@@ -7068,10 +7068,7 @@ class QuarkClient {
 	 * @return QuarkKeyValuePair
 	 */
 	public function Session (QuarkKeyValuePair $session = null) {
-		Quark::Log('session');
-		Quark::Trace(func_num_args());
 		$uri = $this->ConnectionURI(true);
-		Quark::Trace($uri);
 
 		if ($uri == null) return null;
 
@@ -9978,7 +9975,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
 		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024) {
-			$this->Content(file_get_contents($this->location));
+			$this->Content(file_get_contents($this->location, LOCK_EX));
 			$this->_loaded = true;
 		}
 
