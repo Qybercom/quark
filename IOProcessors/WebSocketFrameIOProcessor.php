@@ -150,7 +150,7 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 			while ($i < 8) {
 				if (isset($data[$i + 2]))
 					$tmp .= self::_byte($data[$i + 2]);
-				
+
 				$i++;
 			}
 
