@@ -122,17 +122,9 @@ class WebSocketFrameIOProcessor implements IQuarkIOProcessor {
 	public function Decode ($data) {
 		if (strlen($data) < 2) return '';
 
-		$first = self::_byte($data[0]);
 		$second = self::_byte($data[1]);
-
-		$op = bindec(substr($first, 4, 4));
 		$masked = $second[0] == '1';
 		$length = ord($data[1]) & 127;
-
-		if (!isset(self::$IFrames[$op])) {
-			Quark::Log('WebSocket error 1003. Unknown op code ' . $op);
-			return '';
-		}
 
 		if ($length === 126) {
 			$mask = substr($data, 4, 4);

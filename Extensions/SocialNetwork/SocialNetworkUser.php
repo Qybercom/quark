@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
+use Quark\Quark;
 use Quark\QuarkCultureISO;
 use Quark\QuarkDate;
 use Quark\QuarkFile;
@@ -124,6 +125,8 @@ class SocialNetworkUser {
 		if (func_num_args() != 0) {
 			if (func_num_args() < 3)
 				$formatAlt = $format;
+
+			Quark::Log($birthday);
 
 			try {
 				$this->_birthday = QuarkDate::FromFormat($format, $birthday);

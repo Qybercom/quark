@@ -85,14 +85,21 @@ Quark.Cookie = {};
 
 /**
  * @param name
- * @return {string}
+ * @return {string|undefined}
  */
 Quark.Cookie.Get = function (name) {
-    var found = document.cookie.match(new RegExp(
-        "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
-    ));
+    var cookies = document.cookie.split('; '), i = 0, cookie = [];
 
-    return found ? decodeURIComponent(found[1]) : undefined;
+    while (i < cookies.length) {
+        cookie = cookies[i].trim().split('=');
+
+        if (cookie.length == 2 && cookie[0] == name)
+            return decodeURIComponent(cookie[1]);
+
+        i++;
+    }
+
+    return undefined;
 };
 
 /**
@@ -138,3 +145,14 @@ Quark.Cookie.Remove = function (name) {
         expires: -1
     });
 };
+
+/**
+ * https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/String/Trim
+ */
+if (!String.prototype.trim) {
+    (function() {
+        String.prototype.trim = function() {
+            return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+        };
+    })();
+}

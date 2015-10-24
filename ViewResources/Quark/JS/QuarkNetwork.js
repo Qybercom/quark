@@ -11,9 +11,9 @@ var Quark = Quark || {};
 Quark.Network = {};
 
 /**
- * @param host = '127.0.0.1'
- * @param port = 25000
- * @param on
+ * @param {string=} [host='127.0.0.1']
+ * @param {number=} [port=25000]
+ * @param {object=} [on={open,close,error}]
  *
  * @constructor
  */
@@ -55,7 +55,6 @@ Quark.Network.Client = function (host, port, on) {
     that.host = host || document.location.hostname;
     that.port = port || 25000;
     that.socket = null;
-    that.session = {};
 
     /**
      * API methods
@@ -83,7 +82,8 @@ Quark.Network.Client = function (host, port, on) {
     };
 
     /**
-     * @param data
+     * @param {object} data
+     *
      * @return {boolean}
      */
     that.Send = function (data) {
@@ -94,8 +94,8 @@ Quark.Network.Client = function (host, port, on) {
     };
 
     /**
-     * @param url
-     * @param listener
+     * @param {string} url
+     * @param {Function} listener
      *
      * @return {boolean}
      */
@@ -114,6 +114,7 @@ Quark.Network.Client = function (host, port, on) {
 
     /**
      * @param listener
+     *
      * @return {boolean}
      */
     that.Response = function (listener) {
@@ -125,9 +126,9 @@ Quark.Network.Client = function (host, port, on) {
     };
 
     /**
-     * @param url
-     * @param data
-     * @param session
+     * @param {string} url
+     * @param {object=} data
+     * @param {object=} session
      */
     that.Service = function (url, data, session) {
         try {
@@ -136,22 +137,14 @@ Quark.Network.Client = function (host, port, on) {
                 data: data
             };
 
-            if (session != undefined && that.session[session] != undefined)
-                out.session = {session: that.session[session]};
+            if (session != undefined)
+                out.session = session;
 
             that.Send(JSON.stringify(out));
         }
         catch (e) {
             on.error(e);
         }
-    };
-
-    /**
-     * @param name
-     * @param opt
-     */
-    that.Session = function (name, opt) {
-        that.session[name] = opt;
     };
 };
 
