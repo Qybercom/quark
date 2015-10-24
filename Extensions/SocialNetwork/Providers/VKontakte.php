@@ -208,6 +208,8 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 
 		$user = new SocialNetworkUser($item->uid, $item->first_name . ' ' . $item->last_name);
 
+		Quark::Trace($user);
+
 		$user->PhotoFromLink($item->photo_max_orig, $photo);
 		$user->Gender(isset(self::$_gender[$item->sex]) ? self::$_gender[$item->sex] : SocialNetworkUser::GENDER_UNKNOWN);
 		$user->Page('http://vk.com/id' . $item->uid);

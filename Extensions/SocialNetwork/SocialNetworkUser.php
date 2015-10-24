@@ -126,8 +126,6 @@ class SocialNetworkUser {
 			if (func_num_args() < 3)
 				$formatAlt = $format;
 
-			Quark::Log($birthday);
-
 			try {
 				$this->_birthday = QuarkDate::FromFormat($format, $birthday);
 			}
