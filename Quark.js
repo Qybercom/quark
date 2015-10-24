@@ -14,7 +14,6 @@ Quark.EventSubmitSuccess = 'quark.submit.success';
 Quark.Extend = function (target, defaults) {
 	target = target || {};
 
-	//if (target.constructor == Object || target.constructor == Array)
 	var k;
 
 	for (k in defaults) {
