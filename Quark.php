@@ -315,17 +315,9 @@ class Quark {
 
 	/**
 	 * @param IQuarkContainer $container
-	 *
-	 * @return bool
 	 */
 	public static function Container (IQuarkContainer $container) {
-		$c = get_class($container);
-
-		foreach (self::$_containers as $item)
-			if ($c == get_class($item)) return false;
-
 		self::$_containers[] = $container;
-		return true;
 	}
 
 	/**

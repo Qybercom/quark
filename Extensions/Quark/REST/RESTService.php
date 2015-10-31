@@ -53,11 +53,12 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			throw new QuarkArchException('QuarkRest API is not reachable. URI is not provided');
 
 		$this->_uri->path = $action;
+		$uri = $this->_uri->URI(true);
 
-		$data = QuarkHTTPTransportClient::To($this->_uri->URI(true), $request, $response);
+		$data = QuarkHTTPTransportClient::To($uri, $request, $response);
 
 		if ($data == null || !isset($data->status) || $data->status != 200)
-			throw new QuarkArchException('QuarkRest API is not reachable. Response: ' . print_r($data, true));
+			throw new QuarkArchException('[' . $uri . '] QuarkRest API is not reachable. Response: ' . print_r($data, true));
 
 		return $data;
 	}
