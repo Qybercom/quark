@@ -10,6 +10,11 @@ namespace Quark;
  *
  * @version 1.0.1
  * @author Alex Furnica
+ *
+ * @grandfather Furnica Alexandru Dumitru, agronomist, Deputy Chairman of the executive committee Vulc?ne?ti (Фурника Александр Дмитриевич, агроном, заместитель председателя райисполкома Вулканешты)
+ * @grandmother Furnica Nina Feodorovna, biology teacher, teaching experience 49 years (Фурника Нина Фёдоровна, учитель биологии, преподавательский стаж 49 лет)
+ * @mom Furnica Tatiana Alexandru, music teacher, teaching experience 28 years (Фурника Татьяна Александровна, учитель музыки, препоавательский стаж 28 лет)
+ * @me Furnica Alexandru Dumitru, web programmer since 2009 (Фурника Александр Дмитриевич, веб-программист с 2009 года)
  */
 class Quark {
 	const MODE_DEV = 'dev';
@@ -20,11 +25,6 @@ class Quark {
 	const LOG_WARN = 'warn';
 	const LOG_FATAL = 'fatal';
 
-	const EVENT_ARCH_EXCEPTION = 'Quark.Exception.Arch';
-	const EVENT_HTTP_EXCEPTION = 'Quark.Exception.HTTP';
-	const EVENT_CONNECTION_EXCEPTION = 'Quark.Exception.Connection';
-	const EVENT_COMMON_EXCEPTION = 'Quark.Exception.Common';
-
 	const UNIT_BYTE = 1;
 	const UNIT_KILOBYTE = 1024;
 	const UNIT_MEGABYTE = 1048576;
@@ -34,11 +34,6 @@ class Quark {
 	 * @var QuarkConfig
 	 */
 	private static $_config;
-
-	/**
-	 * @var array $_events
-	 */
-	private static $_events = array();
 
 	/**
 	 * @var string[] $_breaks
@@ -180,60 +175,13 @@ class Quark {
 	}
 
 	/**
-	 * @param $event
-	 * @param $listener
-	 * @param $unique
-	 */
-	public static function On ($event, $listener, $unique = false) {
-		if (!isset(self::$_events[$event]))
-			self::$_events[$event] = array();
-
-		if ($unique)
-			self::$_events[$event] = array();
-
-		self::$_events[$event][] = $listener;
-	}
-
-	/**
-	 * @param $event
-	 * @param $listener
-	 */
-	public static function Off ($event, $listener) {
-		if (!isset(self::$_events[$event])) return;
-
-		$workers = array();
-
-		foreach (self::$_events[$event] as $worker) {
-			if ($worker == $listener) continue;
-
-			$workers[] = $worker;
-		}
-
-		self::$_events[$event] = $workers;
-	}
-
-	/**
-	 * @param string $event
-	 *
-	 * @return bool
-	 */
-	public static function Dispatch ($event) {
-		if (!isset(self::$_events[$event])) return false;
-
-		foreach (self::$_events[$event] as $worker)
-			call_user_func_array($worker, array_slice(func_get_args(), 1));
-
-		return true;
-	}
-
-	/**
 	 * Date unique ID
 	 *
 	 * @return string
 	 */
 	public static function DuID () {
 		$micro = explode(' ', microtime());
-		return date('YmdHis', $micro[1]) . substr($micro[0], strpos($micro[0], '.'));
+		return gmdate('YmdHis', $micro[1]) . substr($micro[0], strpos($micro[0], '.'));
 	}
 
 	/**
@@ -728,6 +676,95 @@ interface IQuarkEnvironmentProvider extends IQuarkThread {
 }
 
 /**
+ * Class QuarkEvent
+ *
+ * @package Quark
+ */
+trait QuarkEvent {
+	/**
+	 * @var array $_pool
+	 */
+	private static $_pool = array();
+
+	/**
+	 * @var array $_events
+	 */
+	private $_events = array();
+
+	/**
+	 * @var string $_e_id
+	 */
+	private $_e_id = '';
+
+	/**
+	 * @return string
+	 */
+	private function _eid () {
+		if ($this->_e_id == '')
+			$this->_e_id = Quark::GuID();
+
+		return $this->_e_id;
+	}
+
+	/**
+	 * @param string $name
+	 * @param array $args
+	 *
+	 * @return bool
+	 */
+	private function _trigger ($name, $args) {
+		if (!isset($this->_events[$name])) return false;
+
+		foreach ($this->_events[$name] as $worker)
+			call_user_func_array($worker, array_slice($args, 1));
+
+		return true;
+	}
+
+	/**
+	 * @param string $event
+	 * @param callable $callback
+	 */
+	public function On ($event, callable $callback) {
+		$eid = $this->_eid();
+
+		if (!isset(self::$_pool[$eid]))
+			self::$_pool[$eid] = $this;
+
+		if (!isset($this->_events[$event]))
+			$this->_events[$event] = array();
+
+		$this->_events[$event][] = $callback;
+	}
+
+	/**
+	 * @param string $event
+	 *
+	 * @return bool
+	 */
+	public function Trigger ($event) {
+		return $this->_trigger($event, func_get_args());
+	}
+
+	/**
+	 * @param string $event
+	 *
+	 * @return bool
+	 */
+	public static function TriggerStatic ($event) {
+		$ok = true;
+
+		/**
+		 * @var QuarkEvent $worker
+		 */
+		foreach (self::$_pool as $key => $worker)
+			$ok &= $worker->_trigger($event, func_get_args());
+
+		return $ok;
+	}
+}
+
+/**
  * Class QuarkFPMEnvironmentProvider
  *
  * @package Quark
@@ -1107,6 +1144,8 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	const EVENT_BROADCAST = 'event.broadcast';
 	const EVENT_EVENT = 'event.event';
 
+	use QuarkEvent;
+
 	/**
 	 * @var string $_connect
 	 */
@@ -1148,7 +1187,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 	public function __construct (IQuarkTransportProvider $transport = null, $external = self::URI_NODE_EXTERNAL, $internal = self::URI_NODE_INTERNAL, $connect = '', $close = '', $unknown = '') {
 		$this->_dto = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		Quark::On(self::EVENT_BROADCAST, function ($data, $url) {
+		$this->On(self::EVENT_BROADCAST, function ($data, $url) {
 			$payload = array(
 				'url' => $url,
 				'data' => $data instanceof QuarkDTO ? $data->Data() : $data
@@ -1156,7 +1195,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 
 			if ($this->_cluster) $this->_cluster->Broadcast($this->_pack($payload));
 			else self::ControllerCommand('broadcast', $payload);
-		}, true);
+		});
 
 		if (func_num_args() == 0 || !Quark::CLI() || $_SERVER['argc'] > 1) return;
 
@@ -1166,7 +1205,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$this->StreamClose($close);
 		$this->StreamUnknown($unknown);
 
-		Quark::On(self::EVENT_EVENT, function ($sender, $url) {
+		$this->On(self::EVENT_EVENT, function ($sender, $url) {
 			if (!$sender) return;
 
 			$clients = $this->_cluster->Server()->Clients();
@@ -2578,7 +2617,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $data, $this->URL($service));
+		return QuarkStreamEnvironmentProvider::TriggerStatic(QuarkStreamEnvironmentProvider::EVENT_BROADCAST, $data, $this->URL($service));
 	}
 
 	/**
@@ -2587,7 +2626,7 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function Event (callable $sender = null) {
-		return Quark::Dispatch(QuarkStreamEnvironmentProvider::EVENT_EVENT, $sender, $this->URL());
+		return QuarkStreamEnvironmentProvider::TriggerStatic(QuarkStreamEnvironmentProvider::EVENT_EVENT, $sender, $this->URL());
 	}
 }
 
@@ -6774,7 +6813,8 @@ trait QuarkNetwork {
 	 * @return bool
 	 */
 	private static function _err ($msg, $number = 0) {
-		return Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, $number, $msg) && false;
+		// TODO: dispatch
+		// return Quark::Dispatch(Quark::EVENT_CONNECTION_EXCEPTION, $number, $msg) && false;
 	}
 
 	/**
