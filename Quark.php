@@ -380,10 +380,10 @@ class Quark {
 		$str = self::MemoryUnit($unit);
 
 		return "[Quark] Memory usage:\r\n" .
-		' - current:      ' . round(\memory_get_usage() / $unit, $precision) . $str . "\r\n" .
-		' - current.real: ' . round(\memory_get_usage(true) / $unit, $precision) . $str . "\r\n" .
-		' - peak:         ' . round(\memory_get_peak_usage() / $unit, $precision) . $str . "\r\n" .
-		' - peak.real:    ' . round(\memory_get_peak_usage(true) / $unit, $precision) . $str . "\r\n";
+				' - current:      ' . round(\memory_get_usage() / $unit, $precision) . $str . "\r\n" .
+				' - current.real: ' . round(\memory_get_usage(true) / $unit, $precision) . $str . "\r\n" .
+				' - peak:         ' . round(\memory_get_peak_usage() / $unit, $precision) . $str . "\r\n" .
+				' - peak.real:    ' . round(\memory_get_peak_usage(true) / $unit, $precision) . $str . "\r\n";
 	}
 
 	/**
@@ -1545,7 +1545,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$session = $service->Session()->ID();
 
 		//if ($client instanceof QuarkClient && $service->Session()->Authorized())
-		//$client->Session($session);
+			//$client->Session($session);
 
 		if ($out) {
 			$output = array(
@@ -8079,8 +8079,8 @@ class QuarkURI {
 	 */
 	public function URI ($full = false) {
 		return $this->Hostname()
-		. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
-		. ($full ? '/?' . $this->query : '');
+			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+			. ($full ? '/?' . $this->query : '');
 	}
 
 	/**
@@ -11092,8 +11092,8 @@ class QuarkSQL {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $options = []) {
 		return $this->Select($model, $criteria, $options + array(
-				'fields' => array(self::FIELD_COUNT_ALL)
-			));
+			'fields' => array(self::FIELD_COUNT_ALL)
+		));
 	}
 }
 
