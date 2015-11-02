@@ -11,10 +11,10 @@ namespace Quark;
  * @version 1.0.1
  * @author Alex Furnica
  *
- * @grandfather Furnica Alexandru Dumitru, agronomist, Deputy Chairman of the executive committee Vulc?ne?ti (Ôóðíèêà Àëåêñàíäð Äìèòðèåâè÷, àãðîíîì, çàìåñòèòåëü ïðåäñåäàòåëÿ ðàéèñïîëêîìà Âóëêàíåøòû)
- * @grandmother Furnica Nina Feodorovna, biology teacher, teaching experience 49 years (Ôóðíèêà Íèíà Ô¸äîðîâíà, ó÷èòåëü áèîëîãèè, ïðåïîäàâàòåëüñêèé ñòàæ 49 ëåò)
- * @mom Furnica Tatiana Alexandru, music teacher, teaching experience 28 years (Ôóðíèêà Òàòüÿíà Àëåêñàíäðîâíà, ó÷èòåëü ìóçûêè, ïðåïîàâàòåëüñêèé ñòàæ 28 ëåò)
- * @me Furnica Alexandru Dumitru, web programmer since 2009 (Ôóðíèêà Àëåêñàíäð Äìèòðèåâè÷, âåá-ïðîãðàììèñò ñ 2009 ãîäà)
+ * @grandfather Furnica Alexandru Dumitru, agronomist, Deputy Chairman of the executive committee VulcÄƒneÅŸti (Ð¤ÑƒÑ€Ð½Ð¸ÐºÐ° ÐÐ»ÐµÐºÑÐ°Ð½Ð´Ñ€ Ð”Ð¼Ð¸Ñ‚Ñ€Ð¸ÐµÐ²Ð¸Ñ‡, Ð°Ð³Ñ€Ð¾Ð½Ð¾Ð¼, Ð·Ð°Ð¼ÐµÑÑ‚Ð¸Ñ‚ÐµÐ»ÑŒ Ð¿Ñ€ÐµÐ´ÑÐµÐ´Ð°Ñ‚ÐµÐ»Ñ Ñ€Ð°Ð¹Ð¸ÑÐ¿Ð¾Ð»ÐºÐ¾Ð¼Ð° Ð’ÑƒÐ»ÐºÐ°Ð½ÐµÑˆÑ‚Ñ‹)
+ * @grandmother Furnica Nina Feodorovna, biology teacher, teaching experience 49 years (Ð¤ÑƒÑ€Ð½Ð¸ÐºÐ° ÐÐ¸Ð½Ð° Ð¤Ñ‘Ð´Ð¾Ñ€Ð¾Ð²Ð½Ð°, ÑƒÑ‡Ð¸Ñ‚ÐµÐ»ÑŒ Ð±Ð¸Ð¾Ð»Ð¾Ð³Ð¸Ð¸, Ð¿Ñ€ÐµÐ¿Ð¾Ð´Ð°Ð²Ð°Ñ‚ÐµÐ»ÑŒÑÐºÐ¸Ð¹ ÑÑ‚Ð°Ð¶ 49 Ð»ÐµÑ‚)
+ * @mom Furnica Tatiana Alexandru, music teacher, teaching experience 28 years (Ð¤ÑƒÑ€Ð½Ð¸ÐºÐ° Ð¢Ð°Ñ‚ÑŒÑÐ½Ð° ÐÐ»ÐµÐºÑÐ°Ð½Ð´Ñ€Ð¾Ð²Ð½Ð°, ÑƒÑ‡Ð¸Ñ‚ÐµÐ»ÑŒ Ð¼ÑƒÐ·Ñ‹ÐºÐ¸, Ð¿Ñ€ÐµÐ¿Ð¾Ð°Ð²Ð°Ñ‚ÐµÐ»ÑŒÑÐºÐ¸Ð¹ ÑÑ‚Ð°Ð¶ 28 Ð»ÐµÑ‚)
+ * @me Furnica Alexandru Dumitru, web programmer since 2009 (Ð¤ÑƒÑ€Ð½Ð¸ÐºÐ° ÐÐ»ÐµÐºÑÐ°Ð½Ð´Ñ€ Ð”Ð¼Ð¸Ñ‚Ñ€Ð¸ÐµÐ²Ð¸Ñ‡, Ð²ÐµÐ±-Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð¸ÑÑ‚ Ñ 2009 Ð³Ð¾Ð´Ð°)
  */
 class Quark {
 	const MODE_DEV = 'dev';
@@ -380,10 +380,10 @@ class Quark {
 		$str = self::MemoryUnit($unit);
 
 		return "[Quark] Memory usage:\r\n" .
-			' - current:      ' . round(\memory_get_usage() / $unit, $precision) . $str . "\r\n" .
-			' - current.real: ' . round(\memory_get_usage(true) / $unit, $precision) . $str . "\r\n" .
-			' - peak:         ' . round(\memory_get_peak_usage() / $unit, $precision) . $str . "\r\n" .
-			' - peak.real:    ' . round(\memory_get_peak_usage(true) / $unit, $precision) . $str . "\r\n";
+		' - current:      ' . round(\memory_get_usage() / $unit, $precision) . $str . "\r\n" .
+		' - current.real: ' . round(\memory_get_usage(true) / $unit, $precision) . $str . "\r\n" .
+		' - peak:         ' . round(\memory_get_peak_usage() / $unit, $precision) . $str . "\r\n" .
+		' - peak.real:    ' . round(\memory_get_peak_usage(true) / $unit, $precision) . $str . "\r\n";
 	}
 
 	/**
@@ -1545,7 +1545,7 @@ class QuarkStreamEnvironmentProvider implements IQuarkEnvironmentProvider, IQuar
 		$session = $service->Session()->ID();
 
 		//if ($client instanceof QuarkClient && $service->Session()->Authorized())
-			//$client->Session($session);
+		//$client->Session($session);
 
 		if ($out) {
 			$output = array(
@@ -7545,9 +7545,9 @@ class QuarkClusterNode implements IQuarkTransportProvider {
 	 */
 	public function Pipe () {
 		$run = $this->Bind() &&
-		$this->_server->Pipe() &&
-		$this->_controller->Pipe() &&
-		$this->_network->Pipe();
+			$this->_server->Pipe() &&
+			$this->_controller->Pipe() &&
+			$this->_network->Pipe();
 
 		if (!$this->_server->Running())
 			throw new QuarkArchException('Cluster server not started. Expected address ' . $this->_server->URI());
@@ -8079,8 +8079,8 @@ class QuarkURI {
 	 */
 	public function URI ($full = false) {
 		return $this->Hostname()
-			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
-			. ($full ? '/?' . $this->query : '');
+		. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+		. ($full ? '/?' . $this->query : '');
 	}
 
 	/**
@@ -11092,8 +11092,8 @@ class QuarkSQL {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $options = []) {
 		return $this->Select($model, $criteria, $options + array(
-			'fields' => array(self::FIELD_COUNT_ALL)
-		));
+				'fields' => array(self::FIELD_COUNT_ALL)
+			));
 	}
 }
 
