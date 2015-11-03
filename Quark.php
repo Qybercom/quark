@@ -143,12 +143,28 @@ class Quark {
 	}
 
 	/**
-	 * @param bool $full = true
+	 * @return string
+	 */
+	public static function WebHost () {
+		return self::$_config->WebHost()->URI(false);
+	}
+
+	/**
+	 * @param string $path
 	 *
 	 * @return string
 	 */
-	public static function WebHost ($full = true) {
-		return str_replace('?', '', self::$_config->WebHost()->URI($full));
+	public static function WebLocation ($path) {
+		return str_replace(':::', '://', Quark::NormalizePath(str_replace('://', ':::', Quark::WebHost() . Quark::NormalizePath($path, false)), false));
+	}
+
+	/**
+	 * @param string $url
+	 *
+	 * @return string
+	 */
+	public static function FSLocation ($url) {
+		return Quark::Host() . str_replace(Quark::WebHost(), '', $url);
 	}
 
 	/**
@@ -843,7 +859,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 	 * @return mixed
 	 */
 	public function Thread () {
-		$offset = Quark::Config()->WebHost()->Query();
+		$offset = Quark::Config()->WebHost()->path;
 
 		$service = new QuarkService(
 			substr($_SERVER['REQUEST_URI'], ($offset != '' ? (int)strpos($_SERVER['REQUEST_URI'], $offset) : 0) + strlen($offset)),
@@ -933,7 +949,7 @@ class QuarkFPMEnvironmentProvider implements IQuarkEnvironmentProvider {
 			return $this->_status($exception, $this->_statusServerError);
 
 		if ($exception instanceof QuarkHTTPException)
-			return $this->_status($exception, $this->_statusNotFound);
+			return $this->_status($exception, $exception->Status());
 
 		if ($exception instanceof \Exception)
 			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
@@ -2591,15 +2607,6 @@ trait QuarkServiceBehavior {
 	public function Input () {
 		return $this->__call('Input', func_get_args());
 	}
-
-	/**
-	 * @return string
-	 */
-	public function WebHost () {
-		$uri = $this->Input()->URI();
-
-		return str_replace($uri->path, '', $uri->URI(false));
-	}
 }
 
 /**
@@ -3622,7 +3629,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Link ($uri) {
-		return QuarkURI::Of($uri);
+		return Quark::WebLocation($uri);
 	}
 
 	/**
@@ -8055,16 +8062,6 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param string $path
-	 * @param bool $full = true
-	 *
-	 * @return string
-	 */
-	public static function Of ($path, $full = true) {
-		return str_replace(':::', '://', Quark::NormalizePath(str_replace('://', ':::', Quark::WebHost($full) . Quark::NormalizePath($path, false)), false));
-	}
-
-	/**
 	 * @param string $scheme
 	 */
 	public function __construct ($scheme = '') {
@@ -10069,7 +10066,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return string
 	 */
 	public function WebLocation () {
-		return QuarkURI::Of(Quark::SanitizePath(str_replace(Quark::Host(false), '', $this->location)), false);
+		return Quark::WebLocation(Quark::SanitizePath(str_replace(Quark::Host(false), '', $this->location)), false);
 	}
 
 	/**
@@ -10401,6 +10398,13 @@ class QuarkHTTPException extends QuarkException {
 		$this->message = $message;
 
 		$this->status = $status;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Status () {
+		return $this->status . ' ' . $this->message;
 	}
 }
 
