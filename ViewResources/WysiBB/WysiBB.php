@@ -27,6 +27,14 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 	 */
 	private $_language = null;
 
+	private static $_size = array(
+		'50' => '10px',
+		'85' => '13px',
+		'100' => '16px',
+		'150' => '18px',
+		'200' => '32px'
+	);
+
 	/**
 	 * @param IWysiBBTheme    $theme
 	 * @param IWysiBBLanguage $language
@@ -95,6 +103,12 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = preg_replace('#\[list\=1\](.*)\[\/list\]#Uis', '<ol>$1</ol>', $content);
 		$content = str_replace('[list]', '<ul>', str_replace('[/list]', '</ul>', $content));
 		$content = str_replace('[code]', '<div class="quark-document">', str_replace('[/code]', '</div>', $content));
+
+		$content = preg_replace('#\[color\=(.*)\](.*)\[/color\]#Uis', '<span style="color:$1;">$2</span>', $content);
+		$content = preg_replace_callback('#\[size\=(.*)\](.*)\[/size\]#Uis', function ($matches) {
+			return '<span style="font-size:' . self::$_size[$matches[1]] . ';">' . $matches[2] . '</span>';
+		}, $content);
+
 		$content = preg_replace('#\[url\=(.*)\](.*)\[/url\]#Uis', '<a href="$1" class="quark-button">$2</a>', $content);
 		$content = preg_replace('#\[img\](.*)\[/img\]#Uis', '<img src="$1" class="wysibb-image" alt="image" />', $content);
 		$content = preg_replace('#\[video\](.*)\[/video\]#Uis', '<iframe src="//www.youtube.com/embed/$1" class="wysibb-video" frameborder="0" allowfullscreen></iframe>', $content);
@@ -125,6 +139,20 @@ class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVie
 		$content = str_replace('<ul>', '[list]', str_replace('</ul>', '[/list]', $content));
 		$content = preg_replace('#<div class="quark-document">(.*)</div>#Uis', '[code]$1[/code]', $content);
 		$content = str_replace('&nbsp;&nbsp;&nbsp;&nbsp;', "\t", $content);
+
+		$content = preg_replace('#\<span style\=\"color:(.*);\"\>(.*)\<\/span\>#Uis', '[color=$1]$2[/color]', $content);
+		$content = preg_replace_callback('#\<span style\=\"font-size:(.*);\"\>(.*)\<\/span\>#Uis', function ($matches) {
+			$found = '';
+
+			foreach (self::$_size as $key => $size)
+				if ($size == $matches[1]) {
+					$found = $key;
+					break;
+				}
+
+			return $found == '' ? $matches[2] : '[size=' . $found . ']' . $matches[2] . '[/size]';
+		}, $content);
+
 		$content = preg_replace('#\<a href\=\"(.*)\" class\=\"quark\-button\"\>(.*)\<\/a\>#Uis', '[url=$1]$2[/url]', $content);
 		$content = preg_replace('#\<img src\=\"(.*)\" class\=\"wysibb\-image\" alt\=\"image\" \/\>#Uis', '[img]$1[/img]', $content);
 		$content = preg_replace('#<iframe src\=\"\/\/www\.youtube\.com\/embed\/(.*)\" class\=\"wysibb\-video\" frameborder\=\"0\" allowfullscreen\>\<\/iframe\>#Uis', '[video]$1[/video]', $content);
