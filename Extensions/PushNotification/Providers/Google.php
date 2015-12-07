@@ -2,7 +2,7 @@
 namespace Quark\Extensions\PushNotification\Providers;
 
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\PushNotification\Device;
@@ -59,7 +59,7 @@ class Google implements IQuarkPushNotificationProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		return QuarkHTTPTransportClient::To('https://android.googleapis.com/gcm/send', $request, $response)->success == 1;
+		return QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response)->success == 1;
 	}
 
 	/**

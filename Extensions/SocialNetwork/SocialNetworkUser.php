@@ -5,7 +5,7 @@ use Quark\Quark;
 use Quark\QuarkCultureISO;
 use Quark\QuarkDate;
 use Quark\QuarkFile;
-use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkHTTPClient;
 
 /**
  * Class SocialNetworkUser
@@ -162,7 +162,7 @@ class SocialNetworkUser {
 			$this->_photoLink = $link;
 
 			if ($download)
-				$this->_photo = QuarkHTTPTransportClient::Download($link);
+				$this->_photo = QuarkHTTPClient::Download($link);
 		}
 
 		return $this->_photo;

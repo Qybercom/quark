@@ -5,7 +5,7 @@ use Quark\IQuarkExtension;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkHTTPClient;
 use Quark\QuarkArchException;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkPlainIOProcessor;
@@ -113,7 +113,7 @@ class SMS implements IQuarkExtension {
 		if (strlen($this->_message) == 0)
 			throw new QuarkArchException('SMS: message length should be greater than 0');
 
-		return QuarkHTTPTransportClient::To(
+		return QuarkHTTPClient::To(
 			'http://smsc.ru/sys/send.php'
 			. '?login='. $this->_config->username
 			. '&psw=' . $this->_config->password

@@ -3,9 +3,11 @@ namespace Quark\Scenarios;
 
 use Quark\IQuarkTask;
 
-use Quark\QuarkStreamEnvironmentProvider;
+use Quark\QuarkURI;
+use Quark\QuarkThreadSet;
+use Quark\QuarkStreamEnvironment;
 
-use Quark\TransportProviders\WebSocketTransportServer;
+use Quark\NetworkTransports\WebSocketNetworkTransportServer;
 
 /**
  * Class ClusterController
@@ -20,7 +22,20 @@ class ClusterController implements IQuarkTask {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		$streams = new QuarkStreamEnvironmentProvider();
-		$streams->ClusterController(new WebSocketTransportServer());
+		$external = QuarkURI::FromURI(isset($argv[3]) ? $argv[3] : null);
+		$internal = QuarkURI::FromURI(isset($argv[4]) ? $argv[4] : null);
+
+		if ($external == null) $external = QuarkStreamEnvironment::URI_CONTROLLER_EXTERNAL;
+		if ($internal == null) $internal = QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL;
+
+		$stream = QuarkStreamEnvironment::ClusterController(new WebSocketNetworkTransportServer(), $external, $internal);
+
+		if (!$stream->Cluster()->ControllerBind()) return false;
+
+		QuarkThreadSet::Queue(function () use ($stream) {
+			$stream->Cluster()->ControllerPipe();
+		});
+
+		return true;
 	}
 }

@@ -1,21 +1,20 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
-use Quark\IQuarkTransportProvider;
-
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkTCPNetworkTransport;
 
-use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
+use Quark\Extensions\PushNotification\Device;
 
 /**
  * Class Apple
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider, IQuarkTransportProvider {
+class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider {
 	const TYPE = 'ios';
 
 	const OPTION_CERTIFICATE = 'certificate';
@@ -78,7 +77,7 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 	 *
 	 * @return mixed
 	 */
-	public function Send($payload, $options = []) {
+	public function Send ($payload, $options = []) {
 		if ($this->_certificate == null) return false;
 
 		$alert = isset($options[self::OPTION_ALERT]) ? $options[self::OPTION_ALERT] : '';
@@ -98,7 +97,14 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 			'data' => $data
 		);
 
-		$client = new QuarkClient($this->_host, $this, $this->_certificate, 1);
+		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 1);
+
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
+			foreach ($this->_devices as $device)
+				$client->Send($this->_msg($device));
+
+			$client->Close();
+		});
 
 		return $client->Connect();
 	}
@@ -119,36 +125,5 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 		$payload = $this->Encode($this->_payload);
 
 		return chr(0) . pack('n', 32) . pack('H*', str_replace('<', '', str_replace('>', '', str_replace(' ', '', $device->id)))) . pack('n', strlen($payload)) . $payload;
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 *
-	 * @return bool
-	 */
-	public function OnConnect (QuarkClient $client) {
-		foreach ($this->_devices as $device)
-			$client->Send($this->_msg($device));
-
-		$client->Close();
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 * @param string $data
-	 *
-	 * @return mixed
-	 */
-	public function OnData (QuarkClient $client, $data) {
-		// TODO: Implement OnData() method.
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 *
-	 * @return mixed
-	 */
-	public function OnClose (QuarkClient $client) {
-		// TODO: Implement OnClose() method.
 	}
 }

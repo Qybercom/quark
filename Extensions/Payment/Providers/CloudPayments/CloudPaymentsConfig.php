@@ -3,7 +3,7 @@ namespace Quark\Extensions\Payment\Providers\CloudPayments;
 
 use Quark\IQuarkExtension;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\Payment\IQuarkPaymentConfig;
@@ -68,7 +68,7 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 	 * @param \Quark\Extensions\Payment\IQuarkPaymentScenario $data
 	 * @param string $url
 	 *
-	 * @return QuarkHTTPTransportClient
+	 * @return QuarkHTTPClient
 	 */
 	public function API ($data, $url) {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
@@ -77,7 +77,7 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		return QuarkHTTPTransportClient::To($url, $request, $response);
+		return QuarkHTTPClient::To($url, $request, $response);
 	}
 
 	/**

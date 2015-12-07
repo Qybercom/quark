@@ -3,7 +3,7 @@ namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPTransportClient;
+use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
@@ -138,7 +138,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$out = QuarkHTTPTransportClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
+		$out = QuarkHTTPClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
 					'access_token' => $this->_session
 				)), $request, $response);
 
