@@ -52,6 +52,6 @@ class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 	 * @return string
 	 */
 	public function HTML () {
-		return '<style type="text/css">@font-face{src: url(' . Quark::NormalizePath(str_replace(Quark::Host(), '', Quark::NormalizePath($this->_font, false)), false) . ');font-family: ' . $this->_family . ';}</style>';
+		return '<style type="text/css">@font-face{src: url(' . Quark::WebLocation($this->_font) . ');font-family: ' . $this->_family . ',' . $this->_fallback . ';}</style>';
 	}
 }
