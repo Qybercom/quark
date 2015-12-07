@@ -1,22 +1,21 @@
 <?php
 namespace Quark\ViewResources\Quark\CSS;
 
-use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
+use Quark\IQuarkViewResource;
+use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
 
-use Quark\ViewResources\Quark\QuarkUI;
-
 /**
- * Class QuarkServeece
+ * Class QuarkPresenceControl
  *
  * @package Quark\ViewResources\Quark\CSS
  */
-class QuarkServeece implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
-	 * @return string
+	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
 		return new QuarkCSSViewResourceType();
@@ -26,14 +25,7 @@ class QuarkServeece implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/QuarkServeece.css';
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
+		return __DIR__ . '/QuarkPresenceControl.css';
 	}
 
 	/**
@@ -41,7 +33,14 @@ class QuarkServeece implements IQuarkViewResource, IQuarkLocalViewResource, IQua
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkUI()
+			new QuarkPresence()
 		);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function CacheControl () {
+		return true;
 	}
 }
