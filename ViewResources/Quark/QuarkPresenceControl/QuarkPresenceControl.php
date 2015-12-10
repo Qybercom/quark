@@ -1,19 +1,24 @@
 <?php
-namespace Quark\ViewResources\Quark\CSS;
+namespace Quark\ViewResources\Quark\QuarkPresenceControl;
 
 use Quark\IQuarkLocalViewResource;
+use Quark\IQuarkViewModel;
+use Quark\IQuarkViewModelWithResources;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
 
+use Quark\ViewResources\ChartJS\ChartJS;
+use Quark\ViewResources\Quark\CSS\QuarkPresence;
+
 /**
  * Class QuarkPresenceControl
  *
- * @package Quark\ViewResources\Quark\CSS
+ * @package Quark\ViewResources\Quark\QuarkPresenceControl
  */
-class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies, IQuarkViewModel, IQuarkViewModelWithResources {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -42,5 +47,19 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 */
 	public function CacheControl () {
 		return true;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function View () {
+		return __DIR__ . '/QuarkPresenceControlLayout.php';
+	}
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function Resources () {
+		return array($this);
 	}
 }

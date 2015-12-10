@@ -6,17 +6,17 @@ use Quark\ViewResources\ChartJS\IQuarkChartJSChart;
 use Quark\ViewResources\ChartJS\ChartJSMultipleChartBehavior;
 
 /**
- * Class LineChart
+ * Class RadarChart
  *
  * @package Quark\ViewResources\ChartJS\Charts
  */
-class LineChart implements IQuarkChartJSChart {
+class RadarChart implements IQuarkChartJSChart {
 	use ChartJSMultipleChartBehavior;
 
 	/**
 	 * @return string
 	 */
 	public function ChartJSType () {
-		return 'Line';
+		return 'Radar';
 	}
 }

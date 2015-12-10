@@ -1762,13 +1762,9 @@ class QuarkThreadSet {
 
 	/**
 	 * @param int $sleep = 10000 (microseconds)
-	 * @param callable $before
-	 * @param callable $after
 	 */
-	public function Pipeline ($sleep = self::TICK, callable $before = null, callable $after = null) {
-		self::Queue(function () use ($before, $after) {
-			return $this->Invoke($before, $after);
-		}, $sleep);
+	public function Pipeline ($sleep = self::TICK) {
+		self::Queue(function () { return $this->Invoke(); }, $sleep);
 	}
 
 	/**
@@ -2432,7 +2428,7 @@ trait QuarkContainerBehavior {
 	/**
 	 * @var $_null null
 	 */
-	private $_null = null;
+	protected $_null = null;
 
 	/**
 	 * @return IQuarkContainer
@@ -2867,6 +2863,15 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param IQuarkViewModel $view = null
+	 *
+	 * @return mixed
+	 */
+	public function Layout (IQuarkViewModel $view = null) {
+		return $this->__call('Layout', func_get_args());
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function User () {
@@ -2936,7 +2941,11 @@ class QuarkView implements IQuarkContainer {
 	 */
 	public function __construct (IQuarkViewModel $view, $vars = [], $resources = []) {
 		$this->_view = $view;
+
 		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS) . '/' . $this->_view->View() . '.php', false);
+
+		if (!is_file($this->_file))
+			$this->_file = $this->_view->View();
 
 		if (!is_file($this->_file))
 			throw new QuarkArchException('Unknown view file ' . $this->_file);
@@ -2995,10 +3004,13 @@ class QuarkView implements IQuarkContainer {
 	 * @throws QuarkArchException
 	 */
 	public function __call ($method, $args) {
-		if (method_exists($this->_view, $method))
+		if ($this->_view != null && method_exists($this->_view, $method))
 			return call_user_func_array(array($this->_view, $method), $args);
 
-		if (method_exists($this->_layout->ViewModel(), $method))
+		if ($this->_child != null && method_exists($this->_child, $method))
+			return call_user_func_array(array($this->_child, $method), $args);
+
+		if ($this->_layout != null && method_exists($this->_layout->ViewModel(), $method))
 			return call_user_func_array(array($this->_layout, $method), $args);
 
 		throw new QuarkArchException('Method ' . $method . ' not exists in ' . get_class($this->_view) . ' environment');
@@ -3124,6 +3136,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return bool
 	 */
 	private function _resource_loaded (IQuarkViewResource $dependency) {
+		if ($dependency instanceof IQuarkMultipleViewResource) return false;
+
 		$class = get_class($dependency);
 		$location = $dependency->Location();
 
@@ -3388,6 +3402,13 @@ interface IQuarkInlineViewResource {
 	 */
 	public function HTML();
 }
+
+/**
+ * Interface IQuarkMultipleViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkMultipleViewResource { }
 
 /**
  * Class QuarkProjectViewResource

@@ -2,16 +2,23 @@
 namespace Quark\ViewResources\ChartJS;
 
 use Quark\IQuarkInlineViewResource;
+use Quark\IQuarkMultipleViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
+use Quark\Quark;
 
 /**
  * Class ChartJSChart
  *
  * @package Quark\ViewResources\ChartJS
  */
-class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewResourceWithDependencies {
+class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewResourceWithDependencies, IQuarkMultipleViewResource {
+	/**
+	 * @var int $_id = 0
+	 */
+	private static $_id = 0;
+
 	/**
 	 * @var string $_selector
 	 */
@@ -21,16 +28,6 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	 * @var IQuarkChartJSChart $_chart
 	 */
 	private $_chart;
-
-	/**
-	 * @var string[] $labels
-	 */
-	private $_labels = array();
-
-	/**
-	 * @var ChartJSDataSet[] $_data
-	 */
-	private $_data = array();
 
 	/**
 	 * @var ChartJSOptions $_options
@@ -45,31 +42,9 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	public function __construct ($selector, IQuarkChartJSChart $chart, $labels = []) {
 		$this->_selector = $selector;
 		$this->_chart = $chart;
-		$this->_labels = $labels;
+
 		$this->_options = new ChartJSOptions();
-	}
-
-	/**
-	 * @param string[] $labels
-	 *
-	 * @return string[]
-	 */
-	public function &Labels ($labels = []) {
-		if (func_num_args() != 0 && is_array($labels))
-			$this->_labels = $labels;
-
-		return $this->_labels;
-	}
-
-	/**
-	 * @param ChartJSDataSet $set
-	 *
-	 * @return ChartJSChart
-	 */
-	public function DataSet (ChartJSDataSet $set) {
-		$this->_data[] = $set;
-
-		return $this;
+		$this->_chart->ChartJSLabels($labels);
 	}
 
 	/**
@@ -91,8 +66,8 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	 */
 	public function Render ($script = true) {
 		return ($script ? '<script type="text/javascript">' : '')
-				. '$(\'' . $this->_selector . '\').each(function(){var chart=new Chart($(this)[0].getContext(\'2d\')).'
-				. $this->_chart->ChartJSType() . '({labels:' . json_encode($this->_labels) . ',datasets:' . json_encode($this->_data) . '},' . json_encode($this->_options) . ');});'
+				. '$(\'' . $this->_selector . '\').each(function(){if(!$(this).is(\'canvas\'))throw new Error(\'Selector "' . $this->_selector . '" is not a canvas\');var chart' . self::$_id++ . '=new Chart($(this)[0].getContext(\'2d\')).'
+				. $this->_chart->ChartJSType() . '(' . json_encode($this->_chart->ChartJSData()) . ',' . json_encode($this->_options) . ');});'
 			 	. ($script ? '</script>' : '');
 	}
 
