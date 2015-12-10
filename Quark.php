@@ -1236,11 +1236,11 @@ interface IQuarkExtensionConfig extends IQuarkStackable {
 }
 
 /**
- * Interface IQuarkAuthorizableLiteService
+ * Interface IQuarkAuthorizableService
  *
  * @package Quark
  */
-interface IQuarkAuthorizableLiteService {
+interface IQuarkAuthorizableService {
 	/**
 	 * @param QuarkDTO $request
 	 *
@@ -1250,11 +1250,11 @@ interface IQuarkAuthorizableLiteService {
 }
 
 /**
- * Interface IQuarkAuthorizableService
+ * Interface IQuarkAuthorizableServiceWithAuthentication
  *
  * @package Quark
  */
-interface IQuarkAuthorizableService extends IQuarkAuthorizableLiteService {
+interface IQuarkAuthorizableServiceWithAuthentication extends IQuarkAuthorizableService {
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
@@ -2118,7 +2118,7 @@ trait QuarkStreamBehavior {
  */
 class QuarkService implements IQuarkContainer {
 	/**
-	 * @var IQuarkService|IQuarkAuthorizableLiteService|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone $_service
+	 * @var IQuarkService|IQuarkAuthorizableService|IQuarkServiceWithAccessControl|IQuarkServiceWithRequestBackbone $_service
 	 */
 	private $_service;
 
@@ -2329,7 +2329,7 @@ class QuarkService implements IQuarkContainer {
 		if ($this->_service instanceof IQuarkServiceWithRequestBackbone)
 			$this->_input->Data(QuarkObject::Normalize($this->_input->Data(), $this->_service->RequestBackbone()));
 
-		if ($auth && $this->_service instanceof IQuarkAuthorizableLiteService) {
+		if ($auth && $this->_service instanceof IQuarkAuthorizableService) {
 			if (!$this->_input->AuthorizationProvider())
 				$this->_input->AuthorizationProvider(new QuarkKeyValuePair($this->_service->AuthorizationProvider($this->_input), false));
 
@@ -2354,7 +2354,7 @@ class QuarkService implements IQuarkContainer {
 
 			Quark::Tickable(QuarkSession::TICKABLE_KEY, $this->_session);
 
-			if ($this->_service instanceof IQuarkAuthorizableService) {
+			if ($this->_service instanceof IQuarkAuthorizableServiceWithAuthentication) {
 				$criteria = $this->_service->AuthorizationCriteria($this->_input, $this->_session);
 
 				if ($criteria !== true)
@@ -2393,7 +2393,17 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	public function Authorize () {
-		if (!($this->_service instanceof IQuarkAuthorizableLiteService)) return true;
+		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
+
+		$provider = $this->_service->AuthorizationProvider($this->_input);
+
+		if ($provider == null)
+			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not specified AuthorizationProvider');
+
+		$this->_session = QuarkSession::Init($provider, $this->_input);
+
+		if ($this->_session == null)
+			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not initialized session for key "' . $provider . '"');
 
 		return true;
 	}
@@ -2405,7 +2415,9 @@ class QuarkService implements IQuarkContainer {
 		$output = call_user_func_array(array(&$this->_service, $method), $args);
 
 		$this->_output->Merge($output);
-		$this->_output->Merge($this->_session->Output(), false);
+
+		if ($this->_service instanceof IQuarkAuthorizableService)
+			$this->_output->Merge($this->_session->Output(), false);
 	}
 
 	/**
@@ -2454,6 +2466,43 @@ trait QuarkContainerBehavior {
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
 			: null;
+	}
+
+	/**
+	 * @return IQuarkEnvironment
+	 */
+	public function &CurrentEnvironment () {
+		return Quark::CurrentEnvironment();
+	}
+
+	/**
+	 * @param IQuarkEnvironment $provider
+	 *
+	 * @return bool
+	 */
+	public function EnvironmentIs (IQuarkEnvironment $provider) {
+		return $this->CurrentEnvironment() instanceof $provider;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentIsFPM () {
+		return $this->CurrentEnvironment() instanceof QuarkFPMEnvironment;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentIsStream () {
+		return $this->CurrentEnvironment() instanceof QuarkStreamEnvironment;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentIsCLI () {
+		return $this->CurrentEnvironment() instanceof QuarkCLIEnvironment;
 	}
 }
 
@@ -5814,7 +5863,7 @@ class QuarkSession implements IQuarkTickable {
 	 *
 	 * @return mixed
 	 */
-	public function __get ($key) {
+	public function &__get ($key) {
 		return isset($this->_user->$key) ? $this->_user->$key : $this->_null;
 	}
 
@@ -6019,6 +6068,61 @@ class QuarkSession implements IQuarkTickable {
 		$session->Input($input);
 
 		return $session;
+	}
+}
+
+/**
+ * Class QuarkSession
+ *
+ * @package Quark
+ */
+class QuarkSession2 {
+	/**
+	 * @var QuarkModel|IQuarkAuthorizableModel $user
+	 */
+	private $_user;
+
+	/**
+	 * @return QuarkModel|IQuarkAuthorizableModel
+	 */
+	public function &User () {
+		return $this->_user;
+	}
+
+	public function Input (QuarkDTO $input) {
+
+	}
+
+	public function Login ($criteria, $lifetime = 0) {
+
+	}
+
+	public function Logout () {
+
+	}
+
+	public function Output () {
+
+	}
+
+	/**
+	 * @param string $provider
+	 * @param QuarkDTO $input
+	 *
+	 * @return QuarkSession
+	 * @throws QuarkArchException
+	 */
+	public static function Init ($provider, QuarkDTO $input) {
+		$source = Quark::Stack($provider);
+
+		if ($source == null) return null;
+	}
+
+	/**
+	 * Destructor
+	 */
+	public function __destruct () {
+		unset($this->_user);
 	}
 }
 
@@ -7725,13 +7829,13 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		foreach ($clients as $i => &$client) {
 			$session = QuarkSession::Restore($client->Session());
-			$data = $sender ? $sender($session) : null;
+			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
 
 			if (!$data) continue;
 
-			$session->Output();
+			//$session->Output();
 
-			$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data, $session->Authorized() ? $session : null));
+			$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data));//, $session->Authorized() ? $session : null));
 		}
 
 		unset($out, $session, $i, $client, $clients, $sender);
