@@ -36,11 +36,15 @@
 		<div class="quark-presence-container">
 			<div class="quark-presence-column left">
 				<div class="quark-presence-container left" id="presence-menu-side">
-					<a class="quark-button">Lorem ipsum</a>
-					<a class="quark-button">Lorem ipsum</a>
-					<a class="quark-button">Lorem ipsum</a>
-					<a class="quark-button">Lorem ipsum</a>
-					<a class="quark-button">Lorem ipsum</a>
+					<a class="quark-button">Dashboard</a>
+					<a class="quark-button">Posts</a>
+					<a class="quark-button">Users</a>
+					<a class="quark-button">Storage</a>
+					<a class="quark-button">News</a>
+					<a class="quark-button">Hover map</a>
+					<a class="quark-button">Tasks</a>
+					<a class="quark-button">Support</a>
+					<a class="quark-button">Help</a>
 				</div>
 			</div>
 			<?php echo $this->View(); ?>
