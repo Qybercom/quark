@@ -56,16 +56,6 @@ class Quark {
 	private static $_containers = array();
 
 	/**
-	 * @var IQuarkTickable[] $_tick
-	 */
-	private static $_tick = array();
-
-	/**
-	 * @var string[] $_breaks
-	 */
-	private static $_breaks = array();
-
-	/**
 	 * @return bool
 	 */
 	public static function CLI () {
@@ -263,7 +253,7 @@ class Quark {
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Component ($name, IQuarkStackable $component = null) {
+	public static function &Component ($name, IQuarkStackable $component = null) {
 		if (!$component)
 			return self::Stack($name);
 
@@ -278,11 +268,9 @@ class Quark {
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Stack ($name, IQuarkStackable $object = null) {
-		if (func_num_args() == 2) {
-			$object->Name($name);
+	public static function &Stack ($name, IQuarkStackable $object = null) {
+		if (func_num_args() == 2)
 			self::$_stack[$name] = $object;
-		}
 
 		if (!isset(self::$_stack[$name]))
 			throw new QuarkArchException('Stackable object for ' . $name . ' does not stacked');
@@ -317,7 +305,7 @@ class Quark {
 	 *
 	 * @return IQuarkContainer|null
 	 */
-	public static function ContainerOf (IQuarkPrimitive $primitive) {
+	public static function &ContainerOf (IQuarkPrimitive $primitive) {
 		$class = get_class($primitive);
 
 		foreach (self::$_containers as $container) {
@@ -424,6 +412,16 @@ class Quark {
 
 
 
+
+	/**
+	 * @var IQuarkTickable[] $_tick
+	 */
+	private static $_tick = array();
+
+	/**
+	 * @var string[] $_breaks
+	 */
+	private static $_breaks = array();
 
 	/**
 	 * @param string $name
@@ -687,11 +685,9 @@ class QuarkConfig {
  */
 interface IQuarkStackable {
 	/**
-	 * @param string $name
-	 *
 	 * @return string
 	 */
-	public function Name($name = '');
+	public function Name();
 }
 
 /**
@@ -2236,8 +2232,6 @@ class QuarkService implements IQuarkContainer {
 		if ($this->_service instanceof IQuarkServiceWithCustomResponseProcessor)
 			$this->_output->Processor($this->_service->ResponseProcessor());
 
-		$this->_session = new QuarkSession();
-
 		Quark::Container($this);
 	}
 
@@ -2298,6 +2292,48 @@ class QuarkService implements IQuarkContainer {
 	public static function URLOf (IQuarkService $service) {
 		return Quark::NormalizePath(str_replace('Service', '', str_replace('Services', '', get_class($service))), false);
 	}
+
+	public function Authorize () {
+		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
+
+		$provider = $this->_service->AuthorizationProvider($this->_input);
+
+		if ($provider == null)
+			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not specified AuthorizationProvider');
+
+		$this->_session = QuarkSession::Init($provider, $this->_input);
+
+		if ($this->_session == null)
+			throw new QuarkArchException('Session for key "' . $provider . '" not initialized');
+
+		return true;
+	}
+
+	public function Invoke ($method, $args = [], $session = false) {
+		if ($session)
+			$args[] = &$this->_session;
+
+		$output = call_user_func_array(array(&$this->_service, $method), $args);
+
+		$this->_output->Merge($output);
+
+		if ($this->_service instanceof IQuarkAuthorizableService)
+			$this->_output->Merge($this->_session->Output(), false);
+	}
+
+	/**
+	 * reset service
+	 */
+	public function __destruct () {
+		unset($this->_service);
+		unset($this->_session);
+		unset($this->_input);
+		unset($this->_output);
+	}
+
+
+
+
 
 	/**
 	 * @param array $args
@@ -2390,44 +2426,6 @@ class QuarkService implements IQuarkContainer {
 		unset($output);
 
 		return $this;
-	}
-
-	public function Authorize () {
-		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
-
-		$provider = $this->_service->AuthorizationProvider($this->_input);
-
-		if ($provider == null)
-			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not specified AuthorizationProvider');
-
-		$this->_session = QuarkSession::Init($provider, $this->_input);
-
-		if ($this->_session == null)
-			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not initialized session for key "' . $provider . '"');
-
-		return true;
-	}
-
-	public function Invoke ($method, $args = [], $session = false) {
-		if ($session)
-			$args[] = &$this->_session;
-
-		$output = call_user_func_array(array(&$this->_service, $method), $args);
-
-		$this->_output->Merge($output);
-
-		if ($this->_service instanceof IQuarkAuthorizableService)
-			$this->_output->Merge($this->_session->Output(), false);
-	}
-
-	/**
-	 * reset service
-	 */
-	public function __destruct () {
-		unset($this->_service);
-		unset($this->_session);
-		unset($this->_input);
-		unset($this->_output);
 	}
 }
 
@@ -4086,7 +4084,7 @@ class QuarkModelSource implements IQuarkStackable {
 	/**
 	 * @return IQuarkDataProvider
 	 */
-	public function Connect () {
+	public function &Connect () {
 		$this->_connection = $this->_provider->Connect($this->_uri);
 
 		return $this->_provider;
@@ -4095,16 +4093,14 @@ class QuarkModelSource implements IQuarkStackable {
 	/**
 	 * @return mixed
 	 */
-	public function Connection () {
+	public function &Connection () {
 		return $this->_connection;
 	}
 
 	/**
-	 * @param string $name
-	 *
 	 * @return string
 	 */
-	public function Name ($name = '') {
+	public function &Name () {
 		return $this->_name;
 	}
 
@@ -4113,7 +4109,7 @@ class QuarkModelSource implements IQuarkStackable {
 	 *
 	 * @return IQuarkDataProvider
 	 */
-	public function Provider (IQuarkDataProvider $provider = null) {
+	public function &Provider (IQuarkDataProvider $provider = null) {
 		if (func_num_args() != 0)
 			$this->_provider = $provider;
 
@@ -4125,7 +4121,7 @@ class QuarkModelSource implements IQuarkStackable {
 	 *
 	 * @return QuarkURI
 	 */
-	public function URI (QuarkURI $uri = null) {
+	public function &URI (QuarkURI $uri = null) {
 		if (func_num_args() != 0)
 			$this->_uri = $uri;
 
@@ -5780,29 +5776,20 @@ class QuarkSessionSource implements IQuarkStackable {
 	private $_user;
 
 	/**
-	 * @var bool $_init = false
-	 */
-	private $_init = false;
-
-	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizationProvider $provider
 	 * @param IQuarkAuthorizableModel $user
 	 */
 	public function __construct ($name = '', IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
-		if (func_num_args() == 0) return;
-
 		$this->_name = $name;
 		$this->_provider = $provider;
 		$this->_user = $user;
 	}
 
 	/**
-	 * @param string $name
-	 *
 	 * @return string
 	 */
-	public function &Name ($name = '') {
+	public function &Name () {
 		return $this->_name;
 	}
 
@@ -5817,21 +5804,7 @@ class QuarkSessionSource implements IQuarkStackable {
 	 * @return IQuarkAuthorizableModel
 	 */
 	public function &User () {
-		if (!$this->_init) {
-			new QuarkModel($this->_user);
-			$this->_init = true;
-		}
-
 		return $this->_user;
-	}
-
-	/**
-	 * @param QuarkDTO $input
-	 *
-	 * @return bool
-	 */
-	public function Recognize (QuarkDTO $input) {
-		return $input->AuthorizationProvider()->Key() == $this->_name || $this->_provider->Recognize($this->_name, $this->_user, $input);
 	}
 }
 
@@ -5840,7 +5813,7 @@ class QuarkSessionSource implements IQuarkStackable {
  *
  * @package Quark
  */
-class QuarkSession implements IQuarkTickable {
+class QuarkSession1 implements IQuarkTickable {
 	const TICKABLE_KEY = 'Quark.QuarkSession';
 
 	/**
@@ -6076,7 +6049,7 @@ class QuarkSession implements IQuarkTickable {
  *
  * @package Quark
  */
-class QuarkSession2 {
+class QuarkSession {
 	/**
 	 * @var QuarkModel|IQuarkAuthorizableModel $user
 	 */
@@ -6087,6 +6060,20 @@ class QuarkSession2 {
 	 */
 	public function &User () {
 		return $this->_user;
+	}
+
+	/**
+	 * @return QuarkKeyValuePair
+	 */
+	public function ID () {
+
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Signature () {
+
 	}
 
 	public function Input (QuarkDTO $input) {
@@ -6101,6 +6088,9 @@ class QuarkSession2 {
 
 	}
 
+	/**
+	 * @return QuarkDTO
+	 */
 	public function Output () {
 
 	}
@@ -6113,9 +6103,32 @@ class QuarkSession2 {
 	 * @throws QuarkArchException
 	 */
 	public static function Init ($provider, QuarkDTO $input) {
+		/**
+		 * @var QuarkModelSource $source
+		 */
 		$source = Quark::Stack($provider);
 
 		if ($source == null) return null;
+	}
+
+	/**
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return QuarkSession
+	 */
+	public static function Get (QuarkKeyValuePair $id = null) {
+		if ($id == null) return null;
+
+		/**
+		 * @var QuarkModelSource $source
+		 */
+		$source = Quark::Stack($id->Key());
+
+		if ($source == null) return null;
+
+		$session = new self();
+
+		return $session;
 	}
 
 	/**
@@ -7828,14 +7841,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$clients = $this->_cluster->Server()->Clients();
 
 		foreach ($clients as $i => &$client) {
-			$session = QuarkSession::Restore($client->Session());
+			$session = QuarkSession::Get($client->Session());
 			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
 
-			if (!$data) continue;
-
-			//$session->Output();
-
-			$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data));//, $session->Authorized() ? $session : null));
+			if ($data)
+				$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data, $session));
 		}
 
 		unset($out, $session, $i, $client, $clients, $sender);
@@ -8893,12 +8903,12 @@ class QuarkDTO {
 				$this->_languages = QuarkLanguage::FromAcceptLanguage($value);
 				break;
 
-			case self::HEADER_CONTENT_LENGTH:
-				$this->_length = $value;
-				break;
-
 			case self::HEADER_CONTENT_LANGUAGE:
 				$this->_languages = QuarkLanguage::FromContentLanguage($value);
+				break;
+
+			case self::HEADER_CONTENT_LENGTH:
+				$this->_length = $value;
 				break;
 
 			case self::HEADER_CONTENT_TYPE:

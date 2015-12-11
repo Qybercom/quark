@@ -15,11 +15,20 @@ use Quark\QuarkModelBehavior;
 use Quark\QuarkObject;
 
 /**
+ * Class QuarkSession
+ *
+ * @package Quark\AuthorizationProviders
+ */
+class QuarkSession {
+
+}
+
+/**
  * Class Session
  *
  * @package Quark\AuthorizationProviders
  */
-class Session implements IQuarkAuthorizationProvider {
+class Session1 implements IQuarkAuthorizationProvider {
 	const COOKIE_NAME = 'PHPSESSID';
 
 	use QuarkModelBehavior;
