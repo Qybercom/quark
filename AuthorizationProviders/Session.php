@@ -4,6 +4,7 @@ namespace Quark\AuthorizationProviders;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\IQuarkAuthorizationProvider1;
 use Quark\Quark;
 use Quark\QuarkConfig;
 use Quark\QuarkCookie;
@@ -12,6 +13,7 @@ use Quark\QuarkKeyValuePair;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
+use Quark\QuarkModelSource;
 use Quark\QuarkObject;
 
 /**
@@ -19,8 +21,40 @@ use Quark\QuarkObject;
  *
  * @package Quark\AuthorizationProviders
  */
-class QuarkSession {
+class QuarkSession implements IQuarkAuthorizationProvider {
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkDTO $input
+	 *
+	 * @return IQuarkAuthorizableModel
+	 */
+	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
+		// TODO: Implement Session() method.
+	}
 
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param $criteria
+	 * @param $lifetime
+	 *
+	 * @return bool
+	 */
+	public function Login ($name, IQuarkAuthorizableModel $model, $criteria, $lifetime) {
+		// TODO: Implement Login() method.
+	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		// TODO: Implement Logout() method.
+	}
 }
 
 /**
@@ -28,7 +62,7 @@ class QuarkSession {
  *
  * @package Quark\AuthorizationProviders
  */
-class Session1 implements IQuarkAuthorizationProvider {
+class Session1 implements IQuarkAuthorizationProvider1 {
 	const COOKIE_NAME = 'PHPSESSID';
 
 	use QuarkModelBehavior;

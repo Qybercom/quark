@@ -2293,6 +2293,11 @@ class QuarkService implements IQuarkContainer {
 		return Quark::NormalizePath(str_replace('Service', '', str_replace('Services', '', get_class($service))), false);
 	}
 
+	/**
+	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 */
 	public function Authorize () {
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
 
@@ -2309,6 +2314,11 @@ class QuarkService implements IQuarkContainer {
 		return true;
 	}
 
+	/**
+	 * @param $method
+	 * @param array $args
+	 * @param bool $session
+	 */
 	public function Invoke ($method, $args = [], $session = false) {
 		if ($session)
 			$args[] = &$this->_session;
@@ -2375,10 +2385,12 @@ class QuarkService implements IQuarkContainer {
 			$sessions = Quark::StackOf(new QuarkSessionSource());
 
 			foreach ($sessions as $session) {
-				if (!$session->Recognize($this->_input)) continue;
+				// TODO: handle
+				
+				//if (!$session->Recognize($this->_input)) continue;
 
-				$this->_session = new QuarkSession($session);
-				break;
+				//$this->_session = new QuarkSession($session);
+				//break;
 			}
 
 			unset($session, $sessions);
@@ -2388,7 +2400,8 @@ class QuarkService implements IQuarkContainer {
 
 			$this->_session->Input($this->_input);
 
-			Quark::Tickable(QuarkSession::TICKABLE_KEY, $this->_session);
+			// TODO: handle
+			//Quark::Tickable(QuarkSession::TICKABLE_KEY, $this->_session);
 
 			if ($this->_service instanceof IQuarkAuthorizableServiceWithAuthentication) {
 				$criteria = $this->_service->AuthorizationCriteria($this->_input, $this->_session);
@@ -2962,6 +2975,7 @@ class QuarkView implements IQuarkContainer {
 	 */
 	private $_view = null;
 	private $_child = null;
+
 	/**
 	 * @var QuarkView $_layout
 	 */
@@ -2971,11 +2985,6 @@ class QuarkView implements IQuarkContainer {
 	private $_resources = array();
 	private $_html = '';
 	private $_inline = false;
-
-	/**
-	 * @var QuarkSession $_session
-	 */
-	private $_session;
 
 	private $_null = null;
 
@@ -3003,7 +3012,6 @@ class QuarkView implements IQuarkContainer {
 			$this->_view->$key = $value;
 
 		$this->_resources = $resources;
-		$this->_session = Quark::Tickable(QuarkSession::TICKABLE_KEY);
 
 		Quark::Container($this);
 	}
@@ -3212,7 +3220,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Signature ($field = true) {
-		$sign = $this->_session ? $this->_session->Signature() : '';
+		$sign = QuarkSession::Current() ? QuarkSession::Current()->Signature() : '';
 
 		return $field ? '<input type="hidden" name="' . QuarkDTO::SIGNATURE . '" value="' . $sign . '" />' : $sign;
 	}
@@ -3232,7 +3240,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return QuarkModel
 	 */
 	public function User () {
-		return $this->_session ? $this->_session->User() : null;
+		return QuarkSession::Current() ? QuarkSession::Current()->User() : null;
 	}
 
 	/**
@@ -5915,7 +5923,8 @@ class QuarkSession1 implements IQuarkTickable {
 		$this->_user = $user;
 		$this->_source->Provider()->User($this->_user);
 
-		$login = $this->_source->Provider()->Login($criteria, $lifetime);
+		// TODO: handle
+		$login = true;//$this->_source->Provider()->Login($criteria, $lifetime);
 
 		return $this->_user != null
 			? $login || $login === null
@@ -5954,7 +5963,8 @@ class QuarkSession1 implements IQuarkTickable {
 		if ($logout === null) $logout = true;
 		if (!$logout) return false;
 
-		$logout = $this->_source->Provider()->Logout();
+		// TODO: handle
+		$logout = true;//$this->_source->Provider()->Logout();
 
 		if ($logout === null) $logout = true;
 		if (!$logout) return false;
@@ -6051,9 +6061,64 @@ class QuarkSession1 implements IQuarkTickable {
  */
 class QuarkSession {
 	/**
+	 * @var QuarkSession $_current
+	 */
+	private static $_current;
+
+	/**
 	 * @var QuarkModel|IQuarkAuthorizableModel $user
 	 */
 	private $_user;
+
+	/**
+	 * @var QuarkSessionSource $_source
+	 */
+	private $_source;
+
+	/**
+	 * @var null $_null
+	 */
+	private $_null = null;
+
+	/**
+	 * @param $key
+	 *
+	 * @return mixed
+	 */
+	public function &__get ($key) {
+		return isset($this->_user->$key) ? $this->_user->$key : $this->_null;
+	}
+
+	/**
+	 * @param $key
+	 * @param $value
+	 */
+	public function __set ($key, $value) {
+		$this->_user->$key = $value;
+	}
+
+	/**
+	 * @param $key
+	 *
+	 * @return bool
+	 */
+	public function __isset ($key) {
+		return isset($this->_user->$key);
+	}
+
+	/**
+	 * @param $name
+	 */
+	public function __unset ($name) {
+		unset($this->_user->$name);
+	}
+
+	/**
+	 * Private constructor
+	 */
+	public function __construct () {
+		self::$_current = &$this;
+	}
 
 	/**
 	 * @return QuarkModel|IQuarkAuthorizableModel
@@ -6076,14 +6141,26 @@ class QuarkSession {
 
 	}
 
+	/**
+	 * @param QuarkDTO $input
+	 */
 	public function Input (QuarkDTO $input) {
 
 	}
 
+	/**
+	 * @param $criteria
+	 * @param $lifetime
+	 *
+	 * @return bool
+	 */
 	public function Login ($criteria, $lifetime = 0) {
 
 	}
 
+	/**
+	 * @return bool
+	 */
 	public function Logout () {
 
 	}
@@ -6100,6 +6177,7 @@ class QuarkSession {
 	 * @param QuarkDTO $input
 	 *
 	 * @return QuarkSession
+	 *
 	 * @throws QuarkArchException
 	 */
 	public static function Init ($provider, QuarkDTO $input) {
@@ -6132,6 +6210,13 @@ class QuarkSession {
 	}
 
 	/**
+	 * @return QuarkSession
+	 */
+	public static function &Current () {
+		return self::$_current;
+	}
+
+	/**
 	 * Destructor
 	 */
 	public function __destruct () {
@@ -6145,6 +6230,41 @@ class QuarkSession {
  * @package Quark
  */
 interface IQuarkAuthorizationProvider {
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkDTO $input
+	 *
+	 * @return IQuarkAuthorizableModel
+	 */
+	public function Session($name, IQuarkAuthorizableModel $model, QuarkDTO $input);
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param $criteria
+	 * @param $lifetime
+	 *
+	 * @return bool
+	 */
+	public function Login($name, IQuarkAuthorizableModel $model, $criteria, $lifetime);
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function Logout($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
+}
+
+/**
+ * Interface IQuarkAuthorizationProvider
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizationProvider1 {
 	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizableModel $user
