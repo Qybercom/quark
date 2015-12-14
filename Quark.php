@@ -2421,6 +2421,7 @@ class QuarkService implements IQuarkContainer {
 			}
 		}
 
+		$this->_session = new QuarkSession();
 		$args = $this->Arguments();
 
 		if ($beforeInvoke)

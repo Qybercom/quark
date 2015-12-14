@@ -10,6 +10,9 @@
  * @constructor
  */
 var GoogleMap = function (selector, opt) {
+	opt = opt || {};
+		opt.type = opt.mapTypeId || opt.type || GoogleMap.Type.Roadmap;
+
 	var that = this;
 
 	that._maps = [];
@@ -22,7 +25,7 @@ var GoogleMap = function (selector, opt) {
             disableDefaultUI: true,
             disableDoubleClickZoom: true,
             scrollwheel: true,
-            mapTypeId: GoogleMap.Type.Roadmap,
+            mapTypeId: opt.type,
             center: GoogleMap.Point(opt.center || {
                 lat: 0,
                 lng: 0
@@ -127,7 +130,10 @@ GoogleMap.Distance = function (p1, p2) {
  * GoogleMap types
  */
 GoogleMap.Type = {
-	Roadmap: google.maps.MapTypeId.ROADMAP
+	Roadmap: google.maps.MapTypeId.ROADMAP,
+	Satellite: google.maps.MapTypeId.SATELLITE,
+	Hybrid: google.maps.MapTypeId.Hybrid,
+	Terrain: google.maps.MapTypeId.TERRAIN
 };
 
 /**

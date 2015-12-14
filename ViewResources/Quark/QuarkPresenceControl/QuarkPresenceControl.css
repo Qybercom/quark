@@ -7,6 +7,7 @@ body {
     color: rgb(255,255,255);
     line-height: 0;
     font-size: 0;
+    position: relative;
 }
 
 #presence-logo {
@@ -36,8 +37,7 @@ body {
 
 #presence-user-photo .quark-presence-container {
     background-size: cover;
-    background-position: center center;
-    background-repeat: no-repeat;
+    background: center center no-repeat;
     width: 45px;
     height: 45px;
     margin: 0;
@@ -53,27 +53,47 @@ body {
     margin: 0 10px 0 0;
 }
 
+#presence-search {
+    margin: 10px;
+}
+
+#presence-search .quark-input {
+    margin: 0 15px 0 0;
+}
+
 #presence-menu-side {
-    background: rgb(250,250,250);
     text-align: left;
+    background: rgba(255,255,255,0.5);
 }
 
 #presence-menu-side .quark-button {
     display: block;
-    padding: 5px 15px;
+    padding: 5px 50px 3px 20px;
     margin: 0;
     color: rgb(0,0,0);
 }
 
 #presence-menu-side .quark-button:hover {
     background: rgb(235,235,235);
-    color: rgb(0,0,0);
+}
+
+#presence-menu-side .quark-button.fa:before {
+    margin: 0 10px 0 0;
+}
+
+#presence-content {
+    position: relative;
+}
+
+#presence-content > .quark-presence-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
 }
 
 .presence-block {
     text-align: left;
-    background: rgb(245,245,245);
-    border: 1px solid rgb(235,235,235);
+    background: rgba(255,255,255,0.9);
     padding: 10px;
 }
 
@@ -85,5 +105,5 @@ body {
 
 .presence-block h1 {
     padding: 0;
-    margin: 0;
+    margin: 0 0 10px 0;
 }
