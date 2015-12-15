@@ -2154,6 +2154,8 @@ class QuarkService implements IQuarkContainer {
 	 * @throws QuarkHTTPException
 	 */
 	public static function Resolve ($uri = '') {
+		if ($uri == 'index.php') $uri = '';
+
 		$bundle = null;
 		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
 		$path = QuarkURI::ParseRoute($route->path);
@@ -2328,6 +2330,11 @@ class QuarkService implements IQuarkContainer {
 	 * @param bool $session
 	 */
 	public function Invoke ($method, $args = [], $session = false) {
+		$empty = $this->_session == null;
+
+		if ($empty)
+			$this->_session = new QuarkSession();
+
 		if ($session)
 			$args[] = &$this->_session;
 
@@ -2335,7 +2342,7 @@ class QuarkService implements IQuarkContainer {
 
 		$this->_output->Merge($output);
 
-		if ($this->_service instanceof IQuarkAuthorizableService && $this->_session != null)
+		if ($this->_service instanceof IQuarkAuthorizableService && !$empty)
 			$this->_output->Merge($this->_session->Output(), false);
 	}
 
@@ -5919,11 +5926,12 @@ class QuarkSession {
 	}
 
 	/**
-	 * @param QuarkSessionSource $source
+	 * @param QuarkSessionSource $source = null
 	 */
-	private function __construct (QuarkSessionSource $source) {
-		$this->_source = clone $source;
+	public function __construct (QuarkSessionSource $source = null) {
+		if (func_num_args() == 0) return;
 
+		$this->_source = clone $source;
 		self::$_current = &$this;
 	}
 
@@ -8189,12 +8197,13 @@ class QuarkURI {
 
 	/**
 	 * @param string $location
+	 * @param bool $endSlash = false
 	 *
 	 * @return QuarkURI
 	 */
-	public static function FromFile ($location = '') {
+	public static function FromFile ($location = '', $endSlash = false) {
 		$uri = new self();
-		$uri->path = Quark::NormalizePath($location);
+		$uri->path = Quark::NormalizePath($location, $endSlash);
 		return $uri;
 	}
 

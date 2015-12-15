@@ -8,6 +8,16 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule .* index.php
 </IfModule>
 
-Options -Indexes
+Options All -Indexes
+
+<FilesMatch ".*\.(php|log|qd)$">
+Order Deny,Allow
+Deny from All
+</FilesMatch>
+
+<Files "index.php">
+Order Deny,Allow
+Allow from All
+</Files>
 
 AddDefaultCharset utf-8
