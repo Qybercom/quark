@@ -6006,11 +6006,16 @@ class QuarkSession {
 	 * @return bool
 	 */
 	public function Login ($criteria, $lifetime = 0) {
-		$data = $this->_source->Provider()->Login($this->_source->Name(), $this->_source->User(), $criteria, $lifetime);
-		if ($data == null) return false;
-
 		$this->_user = $this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime);
 		if ($this->_user == null) return false;
+
+		/**
+		 * @var IQuarkAuthorizableModel $user
+		 */
+		$user = $this->_user->Model();
+
+		$data = $this->_source->Provider()->Login($this->_source->Name(), $user, $criteria, $lifetime);
+		if ($data == null) return false;
 
 		$this->_output = $data;
 
@@ -6021,11 +6026,16 @@ class QuarkSession {
 	 * @return bool
 	 */
 	public function Logout () {
-		$data = $this->_source->Provider()->Logout($this->_source->Name(), $this->_source->User(), $this->ID());
-		if ($data == null) return false;
-
 		$logout = $this->_source->User()->Logout($this->_source->Name(), $this->ID());
 		if ($logout === false) return false;
+
+		/**
+		 * @var IQuarkAuthorizableModel $user
+		 */
+		$user = $this->_user->Model();
+
+		$data = $this->_source->Provider()->Logout($this->_source->Name(), $user, $this->ID());
+		if ($data == null) return false;
 
 		$this->_output = $data;
 		$this->_user = null;

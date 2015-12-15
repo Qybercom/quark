@@ -18,6 +18,7 @@ use Quark\QuarkModel;
  *
  * @property string $name
  * @property string $sid
+ * @property string $signature
  * @property $user
  *
  * @package Quark\AuthorizationProviders
@@ -33,7 +34,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	/**
 	 * @param string $storage
 	 */
-	public function __construct ($storage) {
+	public function __construct ($storage = '') {
 		$this->_storage = $storage;
 	}
 
@@ -66,6 +67,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider($session);
+		$output->Signature($record->signature);
 		$output->Data($record->user);
 
 		if ($cookie != null)
@@ -89,6 +91,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$session = new QuarkModel($this, array(
 			'name' => $name,
 			'sid' => Quark::GuID(),
+			'signature' => Quark::GuID(),
 			'lifetime' => $lifetime,
 			'user' => $model
 		));
@@ -97,6 +100,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $session->sid));
+		$output->Signature($session->signature);
 		$output->Cookie(new QuarkCookie(self::COOKIE_NAME, $session->sid, $lifetime));
 
 		return $output;
@@ -137,6 +141,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		return array(
 			'name' => '',
 			'sid' => '',
+			'signature' => '',
 			'lifetime' => 0,
 			'user' => new QuarkGenericModel()
 		);

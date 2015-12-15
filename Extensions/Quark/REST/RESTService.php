@@ -55,6 +55,9 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$this->_uri->path = $action;
 		$uri = $this->_uri->URI(true);
 
+		/**
+		 * @var \StdClass $data
+		 */
 		$data = QuarkHTTPClient::To($uri, $request, $response);
 
 		if ($data == null || !isset($data->status) || $data->status != 200)
@@ -195,6 +198,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return isset($api->list) ? $api->list : array();
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return array();
 		}
 	}
@@ -236,6 +240,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return $this->_api('Get', '/' . $class . '/' . $id)->$class;
 		}
 		catch (QuarkArchException $e) {
+			Quark::Log($e->message, $e->lvl);
 			return null;
 		}
 	}
