@@ -15,9 +15,9 @@
 	</style>
 </head>
 <body>
-	<div id="map-container">
+	<!--<div id="map-container">
 		<div id="map"></div>
-	</div>
+	</div>-->
 	<div class="quark-presence-screen" id="presence-header">
 		<div class="quark-presence-container">
 			<div class="quark-presence-column left" id="presence-logo">
@@ -52,8 +52,8 @@
 		</div>
 	</div>
 	<div class="quark-presence-screen" id="presence-content">
-		<div class="quark-presence-container" style="position: absolute; width: 100%; height: 100%;">
-			<div class="quark-presence-column left">
+		<div class="quark-presence-container">
+			<div class="quark-presence-column left" id="presence-menu-parent">
 				<div class="quark-presence-container left" id="presence-menu-side">
 					<a class="quark-button fa fa-bars">Dashboard</a>
 					<a class="quark-button fa fa-newspaper-o">Posts</a>

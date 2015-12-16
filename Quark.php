@@ -960,10 +960,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		if (isset($_POST[$service->Input()->Processor()->MimeType()]))
 			$service->Input()->Merge($service->Input()->Processor()->Decode($_POST[$service->Input()->Processor()->MimeType()]));
 
-		if ($service->Authorize())
-			$service->Invoke(ucfirst(strtolower($service->Input()->Method())), $input !== null ? array($service->Input()) : array(), true);
-
-		echo $ok = $service->Output()->SerializeResponseBody();
+		echo QuarkHTTPServer::ServicePipeline($service, $input);
 
 		$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, ob_get_length());
 		$headers = $service->Output()->SerializeResponseHeadersToArray();
@@ -1291,11 +1288,18 @@ interface IQuarkAuthorizableModelWithSessionKey {
 interface IQuarkService extends IQuarkPrimitive { }
 
 /**
+ * Interface IQuarkHTTPService
+ *
+ * @package Quark
+ */
+interface IQuarkHTTPService extends IQuarkService { }
+
+/**
  * Interface IQuarkAnyService
  *
  * @package Quark
  */
-interface IQuarkAnyService extends IQuarkService {
+interface IQuarkAnyService extends IQuarkHTTPService {
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
@@ -1310,7 +1314,7 @@ interface IQuarkAnyService extends IQuarkService {
  *
  * @package Quark
  */
-interface IQuarkGetService extends IQuarkService {
+interface IQuarkGetService extends IQuarkHTTPService {
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
@@ -1325,7 +1329,7 @@ interface IQuarkGetService extends IQuarkService {
  *
  * @package Quark
  */
-interface IQuarkPostService extends IQuarkService {
+interface IQuarkPostService extends IQuarkHTTPService {
 	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkSession $session
@@ -2299,17 +2303,20 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
+	 * @param bool $checkSignature = false
+	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Authorize () {
+	public function Authorize ($checkSignature = false) {
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
 
+		$service = get_class($this->_service);
 		$provider = $this->_service->AuthorizationProvider($this->_input);
 
 		if ($provider == null)
-			throw new QuarkArchException('Service ' . get_class($this->_service) . ' does not specified AuthorizationProvider');
+			throw new QuarkArchException('Service ' . $service . ' does not specified AuthorizationProvider');
 
 		$this->_session = QuarkSession::Init($provider, $this->_input);
 
@@ -2317,9 +2324,26 @@ class QuarkService implements IQuarkContainer {
 
 		$criteria = $this->_service->AuthorizationCriteria($this->_input, $this->_session);
 
-		if ($criteria === true) return true;
+		if ($criteria !== true) {
+			$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria));
 
-		$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria));
+			return false;
+		}
+
+		if (!$checkSignature) return true;
+		if (!($this->_service instanceof IQuarkSignedService)) return true;
+
+		$method = ucfirst(strtolower($this->_input->Method()));
+		$action = 'SignatureCheckFailedOn' . $method;
+
+		if (!method_exists($this->_service, $action))
+			throw new QuarkArchException('Service ' . $service . ' marked as IQuarkSignedService, but does not implements IQuarkSigned' . $method . 'Service');
+
+		$sign = $this->_session->Signature();
+
+		if ($sign != '' && $this->_input->Signature() == $sign) return true;
+
+		$this->_output->Merge($this->_service->$action($this->_input));
 
 		return false;
 	}
@@ -2328,6 +2352,8 @@ class QuarkService implements IQuarkContainer {
 	 * @param $method
 	 * @param array $args
 	 * @param bool $session
+	 *
+	 * @throws QuarkArchException
 	 */
 	public function Invoke ($method, $args = [], $session = false) {
 		$empty = $this->_session == null;
@@ -2337,6 +2363,9 @@ class QuarkService implements IQuarkContainer {
 
 		if ($session)
 			$args[] = &$this->_session;
+
+		if (!method_exists($this->_service, $method))
+			throw new QuarkArchException('Method ' . $method . ' is not allowed for service ' . get_class($this->_service));
 
 		$output = call_user_func_array(array(&$this->_service, $method), $args);
 
@@ -9685,7 +9714,7 @@ class QuarkHTTPClient {
  *
  * @package Quark
  */
-class QuarkHTTPServer {
+class QuarkHTTPServer implements IQuarkNetworkProtocol {
 	/**
 	 * @var QuarkURI $_uri
 	 */
@@ -9709,14 +9738,10 @@ class QuarkHTTPServer {
 	}
 
 	/**
-	 * @param QuarkURI $uri
-	 * @param QuarkCertificate $certificate
-	 *
-	 * @return mixed
+	 * @return IQuarkNetworkTransport
 	 */
-	public function Setup (QuarkURI $uri, QuarkCertificate $certificate = null) {
-		$this->_uri = $uri;
-		$this->_certificate = $certificate;
+	public function Transport () {
+		return new QuarkTCPNetworkTransport();
 	}
 
 	/**
@@ -9759,8 +9784,26 @@ class QuarkHTTPServer {
 		return $this->_protocol;
 	}
 
-	public function ServicePipeline (IQuarkService $service) {
+	/**
+	 * @param QuarkService $service
+	 * @param array $input
+	 *
+	 * @return string
+	 * @throws QuarkArchException
+	 */
+	public static function ServicePipeline (QuarkService &$service, &$input = []) {
+		$method = ucfirst(strtolower($service->Input()->Method()));
 
+		if (!($service->Service() instanceof IQuarkHTTPService))
+			throw new QuarkArchException('Method ' . $method . ' is not allowed for service ' . get_class($service->Service()));
+
+		if (!method_exists($service->Service(), $method) && $service->Service() instanceof IQuarkAnyService)
+			$method = 'Any';
+
+		if ($service->Authorize(true))
+			$service->Invoke($method, $input !== null ? array($service->Input()) : array(), true);
+
+		return $service->Output()->SerializeResponseBody();
 	}
 }
 

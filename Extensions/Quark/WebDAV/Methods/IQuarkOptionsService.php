@@ -1,12 +1,17 @@
 <?php
-namespace Quark;
+namespace Quark\Extensions\Quark\WebDAV\Methods;
+
+use Quark\IQuarkHTTPService;
+
+use Quark\QuarkDTO;
+use Quark\QuarkSession;
 
 /**
  * Interface IQuarkOptionsService
  *
- * @package Services
+ * @package Quark\Extensions\Quark\WebDAV\Methods
  */
-interface IQuarkOptionsService extends IQuarkService {
+interface IQuarkOptionsService extends IQuarkHTTPService {
 	/**
 	 * @param QuarkDTO     $request
 	 * @param QuarkSession $session

@@ -64,13 +64,19 @@ body {
 #presence-menu-side {
     text-align: left;
     background: rgba(255,255,255,0.5);
+    padding: 15px;
+}
+
+#presence-menu-parent {
+    margin-right: 30px;
 }
 
 #presence-menu-side .quark-button {
     display: block;
-    padding: 5px 50px 3px 20px;
+    padding: 5px 50px 5px 20px;
     margin: 0;
     color: rgb(0,0,0);
+    font-size: 14px;
 }
 
 #presence-menu-side .quark-button:hover {
@@ -94,7 +100,7 @@ body {
 .presence-block {
     text-align: left;
     background: rgba(255,255,255,0.9);
-    padding: 10px;
+    padding: 20px;
 }
 
 .presence-block .quark-presence-container {
