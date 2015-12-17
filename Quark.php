@@ -226,8 +226,7 @@ class Quark {
 				foreach (self::$_environment as $environment)
 					if ($environment instanceof $provider) return self::$_environment;
 
-			if ($provider->UsageCriteria())
-				self::$_environment[] = $provider;
+			self::$_environment[] = $provider;
 		}
 
 		return self::$_environment;
@@ -501,9 +500,14 @@ class QuarkConfig {
 	private $_webHost;
 
 	/**
-	 * @var QuarkURI|string $_cluster
+	 * @var QuarkURI $_clusterController
 	 */
-	private $_cluster = QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL;
+	private $_clusterController;
+
+	/**
+	 * @var QuarkURI $_clusterMonitor
+	 */
+	private $_clusterMonitor;
 
 	/**
 	 * @var QuarkURI $_selfHosted
@@ -517,7 +521,10 @@ class QuarkConfig {
 		$this->_mode = $mode;
 		$this->_culture = new QuarkCultureISO();
 		$this->_webHost = new QuarkURI();
-		$this->_cluster = new QuarkURI();
+
+		$this->_clusterController = QuarkURI::FromURI(QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL);
+		$this->_clusterMonitor = QuarkURI::FromURI(QuarkStreamEnvironment::URI_CONTROLLER_EXTERNAL);
+		$this->_selfHosted = QuarkURI::FromURI(QuarkFPMEnvironment::SELF_HOSTED);
 
 		if (isset($_SERVER['SERVER_PROTOCOL']))
 			$this->_webHost->scheme = $_SERVER['SERVER_PROTOCOL'];
@@ -679,9 +686,21 @@ class QuarkConfig {
 	 */
 	public function ClusterController ($uri = '') {
 		if (func_num_args() != 0)
-			$this->_cluster = QuarkURI::FromURI($uri);
+			$this->_clusterController = QuarkURI::FromURI($uri);
 
-		return $this->_cluster;
+		return $this->_clusterController;
+	}
+
+	/**
+	 * @param QuarkURI|string $uri
+	 *
+	 * @return QuarkURI
+	 */
+	public function ClusterMonitor ($uri = '') {
+		if (func_num_args() != 0)
+			$this->_clusterMonitor = QuarkURI::FromURI($uri);
+
+		return $this->_clusterMonitor;
 	}
 
 	/**
@@ -731,11 +750,6 @@ interface IQuarkEnvironment extends IQuarkThread {
 	 * @return bool
 	 */
 	public function Multiple();
-
-	/**
-	 * @return bool
-	 */
-	public function UsageCriteria();
 }
 
 /**
@@ -840,6 +854,8 @@ interface IQuarkEventable {
  * @package Quark
  */
 class QuarkFPMEnvironment implements IQuarkEnvironment {
+	const SELF_HOSTED = 'http://127.0.0.1:25080';
+
 	const PROCESSOR_REQUEST = '_processorRequest';
 	const PROCESSOR_RESPONSE = '_processorResponse';
 	const PROCESSOR_BOTH = '_processorBoth';
@@ -1759,7 +1775,7 @@ class QuarkThreadSet {
 		$this->Trigger(self::EVENT_BEFORE_INVOKE);
 
 		foreach ($this->_threads as &$thread) {
-			if (!($thread instanceof IQuarkThread)) continue;
+			if (!($thread instanceof IQuarkThread) || !$thread->UsageCriteria()) continue;
 
 			try {
 				$run_tmp = call_user_func_array(array($thread, 'Thread'), $this->_args);
@@ -1926,6 +1942,11 @@ class QuarkTimer {
  * @package Quark
  */
 interface IQuarkThread {
+	/**
+	 * @return bool
+	 */
+	public function UsageCriteria();
+
 	/**
 	 * @return mixed
 	 */
@@ -2252,7 +2273,7 @@ class QuarkService implements IQuarkContainer {
 		}
 
 		if ($this->_service instanceof IQuarkServiceWithCustomRequestProcessor)
-			$this->_output->Processor($this->_service->RequestProcessor());
+			$this->_input->Processor($this->_service->RequestProcessor());
 
 		if ($this->_service instanceof IQuarkServiceWithCustomResponseProcessor)
 			$this->_output->Processor($this->_service->ResponseProcessor());
@@ -2352,8 +2373,7 @@ class QuarkService implements IQuarkContainer {
 		$method = ucfirst(strtolower($this->_input->Method()));
 		$action = 'SignatureCheckFailedOn' . $method;
 
-		if (!method_exists($this->_service, $action))
-			throw new QuarkArchException('Service ' . $service . ' marked as IQuarkSignedService, but does not implements IQuarkSigned' . $method . 'Service');
+		if (!method_exists($this->_service, $action)) return true;
 
 		$sign = $this->_session->Signature();
 
@@ -8526,6 +8546,11 @@ class QuarkDTO {
 	private $_signature = '';
 
 	/**
+	 * @var bool $_fullControl = false
+	 */
+	private $_fullControl = false;
+
+	/**
 	 * @var null $_null
 	 */
 	private $_null = null;
@@ -9043,6 +9068,18 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param bool $fullControl = false
+	 *
+	 * @return bool
+	 */
+	public function FullControl ($fullControl = false) {
+		if (func_num_args() != 0)
+			$this->_fullControl = $fullControl;
+
+		return $this->_fullControl;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function SerializeRequest () {
@@ -9208,15 +9245,17 @@ class QuarkDTO {
 		if (!isset($this->_headers[self::HEADER_AUTHORIZATION]) && $this->_authorization != null)
 			$this->_headers[self::HEADER_AUTHORIZATION] = $this->_authorization->Key() . ' ' . $this->_authorization->Value();
 
-		if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
-			$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
+		if (!$this->_fullControl) {
+			if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
+				$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
 
-		$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
-			? $typeValue
-			: ($this->_multipart
-				? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
-				: $this->_processor->MimeType() . '; charset=' . $this->_charset
-			);
+			$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
+				? $typeValue
+				: ($this->_multipart
+					? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
+					: $this->_processor->MimeType() . '; charset=' . $this->_charset
+				);
+		}
 
 		if ($client) {
 			$this->_headers[self::HEADER_HOST] = $this->_uri->host;
