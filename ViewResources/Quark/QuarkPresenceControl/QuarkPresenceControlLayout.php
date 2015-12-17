@@ -15,9 +15,9 @@
 	</style>
 </head>
 <body>
-	<!--<div id="map-container">
+	<div id="map-container">
 		<div id="map"></div>
-	</div>-->
+	</div>
 	<div class="quark-presence-screen" id="presence-header">
 		<div class="quark-presence-container">
 			<div class="quark-presence-column left" id="presence-logo">
