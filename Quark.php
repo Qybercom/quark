@@ -8405,6 +8405,7 @@ class QuarkDTO {
 	const HEADER_WWW_AUTHENTICATE = 'WWW-Authenticate';
 
 	const STATUS_200_OK = '200 OK';
+	const STATUS_302_FOUND = '302 Found';
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
 	const STATUS_403_FORBIDDEN = '403 Forbidden';
 	const STATUS_404_NOT_FOUND = '404 Not Found';
@@ -8637,6 +8638,7 @@ class QuarkDTO {
 	 */
 	public static function ForRedirect ($url) {
 		$response = new self();
+		$response->Status(self::STATUS_302_FOUND);
 		$response->Header(self::HEADER_LOCATION, $url);
 		return $response;
 	}
@@ -8665,13 +8667,13 @@ class QuarkDTO {
 	/**
 	 * @param mixed $data
 	 * @param bool $processor = true
+	 * @param bool $status = true
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Merge ($data = [], $processor = true) {
+	public function Merge ($data = [], $processor = true, $status = true) {
 		if (!($data instanceof QuarkDTO)) $this->MergeData($data);
 		else {
-			$this->_status = $data->Status();
 			$this->_method = $data->Method();
 			$this->_boundary = $data->Boundary();
 			$this->_headers += $data->Headers();
@@ -8680,6 +8682,9 @@ class QuarkDTO {
 			$this->_uri = $data->URI() == null ? $this->_uri : $data->URI();
 			$this->_remote = $data->Remote() == null ? $this->_remote : $data->Remote();
 			$this->_charset = $data->Charset();
+
+			if ($status)
+				$this->_status = $data->Status();
 
 			if ($processor)
 				$this->_processor = $data->Processor();
@@ -9150,6 +9155,9 @@ class QuarkDTO {
 
 			parse_str($this->URI()->query, $this->_data);
 
+			$this->_data = (object)$this->_data;
+
+			// get signature from GET params
 			$sign = self::SIGNATURE;
 			$this->Signature(isset($this->_data->$sign) ? $this->_data->$sign : '');
 
@@ -9158,6 +9166,10 @@ class QuarkDTO {
 
 			$this->_unserializeHeaders($found[4]);
 			$this->_unserializeBody($found[5]);
+
+			// re-fill signature, if sign transported in body
+			$sign = self::SIGNATURE;
+			$this->Signature(isset($this->_data->$sign) ? $this->_data->$sign : $this->Signature());
 
 			$this->_rawData = $found[5];
 		}

@@ -21,6 +21,18 @@ use Quark\QuarkThreadSet;
  */
 class SelfHostedFPM implements IQuarkTask {
 	/**
+	 * @var array $_secure
+	 */
+	private $_secure = array(
+		'/Services',
+		'/Models',
+		'/ViewModels',
+		'/Views',
+		'/runtime',
+		'.htaccess',
+	);
+
+	/**
 	 * @param int $argc
 	 * @param array $argv
 	 *
@@ -39,12 +51,22 @@ class SelfHostedFPM implements IQuarkTask {
 
 			try {
 				if ($file->Exists()) {
-					$file->Load();
+					/**
+					 * http://stackoverflow.com/a/684005/2097055
+					 */
+					if (preg_match('#' . implode('|', $this->_secure) . '#Uis', $request->URI()->Query())) {
+						$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_403_FORBIDDEN);
 
-					$response = new QuarkDTO();
-					$response->Data($file);
+						$out = $response->SerializeResponse();
+					}
+					else {
+						$file->Load();
 
-					$out = $response->SerializeResponse();
+						$response = new QuarkDTO();
+						$response->Data($file);
+
+						$out = $response->SerializeResponse();
+					}
 				}
 				else {
 					$env = Quark::Environment();
@@ -62,13 +84,13 @@ class SelfHostedFPM implements IQuarkTask {
 
 					$request->Processor($service->Input()->Processor());
 					$service->Input()->Merge($request->UnserializeRequest($request->Raw()));
+					$service->Input()->Signature($request->Signature());
 
 					$body = QuarkHTTPServer::ServicePipeline($service);
 
 					if ($service->Output()->Header(QuarkDTO::HEADER_LOCATION)) {
 						$response = QuarkDTO::ForRedirect($service->Output()->Header(QuarkDTO::HEADER_LOCATION));
-						$response->FullControl(true);
-						$response->Merge($service->Session()->Output());
+						$response->Merge($service->Session()->Output(), true, false);
 
 						$out = $response->SerializeResponse();
 					}
@@ -81,7 +103,7 @@ class SelfHostedFPM implements IQuarkTask {
 				}
 			}
 			catch (QuarkHTTPException $e) {
-				Quark::Log($e);
+				Quark::Log($e->message);
 
 				$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND);
 				$out = $response->SerializeResponse();
