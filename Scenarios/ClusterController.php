@@ -5,6 +5,7 @@ use Quark\IQuarkTask;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
+use Quark\QuarkDate;
 use Quark\QuarkThreadSet;
 use Quark\QuarkStreamEnvironment;
 
@@ -38,6 +39,8 @@ class ClusterController implements IQuarkTask {
 
 		if (!$stream->Cluster()->ControllerBind())
 			throw new QuarkArchException('Can not bind cluster controller on [' . $internal . ' ' . $external . ']');
+
+		echo '[info] ', QuarkDate::Now(), ' Cluster controller started at [', $internal, ' ', $external, "]\r\n";
 
 		QuarkThreadSet::Queue(function () use (&$stream) {
 			$stream->Cluster()->ControllerPipe();
