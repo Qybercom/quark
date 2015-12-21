@@ -13,7 +13,7 @@ namespace Quark;
  *
  * @grandfather Furnica Alexandru Dumitru, agronomist, Deputy Chairman of the executive committee Vulcăneşti (Фурника Александр Дмитриевич, агроном, заместитель председателя райисполкома Вулканешты)
  * @grandmother Furnica Nina Feodorovna, biology teacher, teaching experience 49 years (Фурника Нина Фёдоровна, учитель биологии, преподавательский стаж 49 лет)
- * @mom Furnica Tatiana Alexandru, music teacher, teaching experience 28 years (Фурника Татьяна Александровна, учитель музыки, препоавательский стаж 28 лет)
+ * @mom Furnica Tatiana Alexandru, music teacher, teaching experience 28 years (Фурника Татьяна Александровна, учитель музыки, преподавательский стаж 28 лет)
  * @me Furnica Alexandru Dumitru, web programmer since 2009 (Фурника Александр Дмитриевич, веб-программист с 2009 года)
  */
 class Quark {
@@ -31,7 +31,7 @@ class Quark {
 	const UNIT_GIGABYTE = 1073741824;
 
 	/**
-	 * @var QuarkConfig
+	 * @var QuarkConfig $_config
 	 */
 	private static $_config;
 
@@ -106,7 +106,7 @@ class Quark {
 	}
 
 	/**
-	 * @param $host
+	 * @param string $host
 	 *
 	 * @return string
 	 */
@@ -150,7 +150,6 @@ class Quark {
 	 * @return string
 	 */
 	public static function WebLocation ($path) {
-		//return str_replace(':::', '://', Quark::NormalizePath(str_replace('://', ':::', Quark::WebHost() . Quark::NormalizePath($path, false)), false));
 		return Quark::WebHost() . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
 	}
 
@@ -216,7 +215,7 @@ class Quark {
 	}
 
 	/**
-	 * @param IQuarkEnvironment $provider
+	 * @param IQuarkEnvironment $provider = null
 	 *
 	 * @return IQuarkEnvironment[]
 	 */
@@ -233,7 +232,7 @@ class Quark {
 	}
 
 	/**
-	 * @param IQuarkEnvironment $provider
+	 * @param IQuarkEnvironment $provider = null
 	 *
 	 * @return IQuarkEnvironment
 	 */
@@ -246,7 +245,7 @@ class Quark {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkStackable $component
+	 * @param IQuarkStackable $component = null
 	 *
 	 * @return IQuarkStackable
 	 *
@@ -261,7 +260,7 @@ class Quark {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkStackable $object
+	 * @param IQuarkStackable $object = null
 	 *
 	 * @return IQuarkStackable
 	 *
@@ -328,7 +327,7 @@ class Quark {
 
 	/**
 	 * @param string $path
-	 * @param callable $process
+	 * @param callable $process = null
 	 *
 	 * @return bool
 	 */
@@ -351,7 +350,7 @@ class Quark {
 
 	/**
 	 * @param string $message
-	 * @param string $lvl
+	 * @param string $lvl = self::LOG_INFO
 	 * @param string $domain = 'application'
 	 *
 	 * @return int|bool
@@ -409,45 +408,6 @@ class Quark {
 
 		return '-';
 	}
-
-
-
-
-
-	/**
-	 * @var IQuarkTickable[] $_tick
-	 */
-	private static $_tick = array();
-
-	/**
-	 * @var string[] $_breaks
-	 */
-	private static $_breaks = array();
-
-	/**
-	 * @param string $name
-	 * @param IQuarkTickable $object
-	 *
-	 * @return IQuarkTickable
-	 */
-	public static function Tickable ($name, IQuarkTickable $object = null) {
-		if (func_num_args() == 2 && (!isset(self::$_tick[$name]) || !self::$_tick[$name]->Exclusive()))
-			self::$_tick[$name] = $object;
-
-		return isset(self::$_tick[$name]) ? self::$_tick[$name] : null;
-	}
-
-	/**
-	 * @param string $branch = 'main'
-	 * @param string $domain = 'application'
-	 *
-	 * @return int|bool
-	 */
-	public static function BreakPoint ($branch = 'main', $domain = 'application') {
-		self::$_breaks[$branch] = isset(self::$_breaks[$branch]) ? ++self::$_breaks[$branch] : 0;
-
-		return self::Log('[TRACE ' . $branch . ':' . self::$_breaks[$branch] . ']', self::LOG_INFO, $domain);
-	}
 }
 
 spl_autoload_extensions('.php');
@@ -466,7 +426,7 @@ class QuarkConfig {
 	const RUNTIME = 'runtime';
 
 	/**
-	 * @var IQuarkCulture
+	 * @var IQuarkCulture $_culture
 	 */
 	private $_culture;
 
@@ -486,7 +446,7 @@ class QuarkConfig {
 	private $_mode = Quark::MODE_DEV;
 
 	/**
-	 * @var array
+	 * @var array $_location
 	 */
 	private $_location = array(
 		self::SERVICES => 'Services',
@@ -515,7 +475,7 @@ class QuarkConfig {
 	private $_selfHosted;
 
 	/**
-	 * @param string $mode
+	 * @param string $mode = Quark::MODE_DEV
 	 */
 	public function __construct ($mode = Quark::MODE_DEV) {
 		$this->_mode = $mode;
@@ -540,7 +500,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param IQuarkCulture $culture
+	 * @param IQuarkCulture $culture = null
 	 *
 	 * @return IQuarkCulture|QuarkCultureISO
 	 */
@@ -574,6 +534,7 @@ class QuarkConfig {
 
 	/**
 	 * @param string $mode = Quark::MODE_DEV
+	 *
 	 * @return string
 	 */
 	public function Mode ($mode = Quark::MODE_DEV) {
@@ -585,8 +546,8 @@ class QuarkConfig {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkStackable $object
-	 * @param string $message
+	 * @param IQuarkStackable $object = null
+	 * @param string $message = ''
 	 *
 	 * @return IQuarkStackable
 	 *
@@ -603,8 +564,8 @@ class QuarkConfig {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizationProvider $provider
-	 * @param IQuarkAuthorizableModel $user
+	 * @param IQuarkAuthorizationProvider $provider = null
+	 * @param IQuarkAuthorizableModel $user = null
 	 *
 	 * @return QuarkSession
 	 */
@@ -618,8 +579,8 @@ class QuarkConfig {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkDataProvider $provider
-	 * @param QuarkURI $uri
+	 * @param IQuarkDataProvider $provider = null
+	 * @param QuarkURI $uri = null
 	 *
 	 * @return QuarkModelSource
 	 */
@@ -633,7 +594,7 @@ class QuarkConfig {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkExtensionConfig $config
+	 * @param IQuarkExtensionConfig $config = null
 	 *
 	 * @return IQuarkExtensionConfig
 	 */
@@ -646,7 +607,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param IQuarkEnvironment $provider
+	 * @param IQuarkEnvironment $provider = null
 	 *
 	 * @return IQuarkEnvironment[]
 	 */
@@ -656,7 +617,7 @@ class QuarkConfig {
 
 	/**
 	 * @param string $component
-	 * @param string $location
+	 * @param string $location = ''
 	 *
 	 * @return string
 	 */
@@ -668,7 +629,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param QuarkURI|string $uri
+	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
 	 */
@@ -680,7 +641,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param QuarkURI|string $uri
+	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
 	 */
@@ -692,7 +653,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param QuarkURI|string $uri
+	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
 	 */
@@ -704,7 +665,7 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param QuarkURI|string $uri
+	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
 	 */
@@ -726,18 +687,6 @@ interface IQuarkStackable {
 	 * @return string
 	 */
 	public function Name();
-}
-
-/**
- * Interface IQuarkTickable
- *
- * @package Quark
- */
-interface IQuarkTickable {
-	/**
-	 * @return bool
-	 */
-	public function Exclusive();
 }
 
 /**
@@ -883,7 +832,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	}
 
 	/**
-	 * @param string $status
+	 * @param string $status = ''
 	 *
 	 * @return string
 	 */
@@ -895,7 +844,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	}
 
 	/**
-	 * @param string $status
+	 * @param string $status = ''
 	 *
 	 * @return string
 	 */
@@ -908,7 +857,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 
 	/**
 	 * @param string $direction
-	 * @param IQuarkIOProcessor $processor
+	 * @param IQuarkIOProcessor $processor = null
 	 *
 	 * @return IQuarkIOProcessor
 	 */
@@ -1106,7 +1055,7 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	}
 
 	/**
-	 * @param string $uri
+	 * @param string $uri = ''
 	 *
 	 * @return string
 	 */
@@ -1588,9 +1537,9 @@ class QuarkTask implements IQuarkNetworkProtocol {
 	}
 
 	/**
-	 * @param QuarkURI|string $listen
-	 * @param IQuarkNetworkProtocol $protocol
-	 * @param int $tick = 10000 (microseconds)
+	 * @param QuarkURI|string $listen = self::QUEUE
+	 * @param IQuarkNetworkProtocol $protocol = null
+	 * @param int $tick = QuarkThreadSet::TICK (microseconds)
 	 *
 	 * @return bool
 	 */
@@ -1796,7 +1745,7 @@ class QuarkThreadSet {
 	}
 
 	/**
-	 * @param int $sleep = 10000 (microseconds)
+	 * @param int $sleep = self::TICK (microseconds)
 	 */
 	public function Pipeline ($sleep = self::TICK) {
 		self::Queue(function () { return $this->Invoke(); }, $sleep);
@@ -1804,7 +1753,7 @@ class QuarkThreadSet {
 
 	/**
 	 * @param callable $pipe
-	 * @param int $sleep = 10000 (microseconds)
+	 * @param int $sleep = self::TICK (microseconds)
 	 */
 	public static function Queue (callable $pipe, $sleep = self::TICK) {
 		$run = true;
@@ -1835,7 +1784,7 @@ class QuarkTimer {
 	private static $_timers = array();
 
 	/**
-	 * @var int $time
+	 * @var int $_time
 	 */
 	private $_time;
 
@@ -1869,7 +1818,7 @@ class QuarkTimer {
 	}
 
 	/**
-	 * @param int $time
+	 * @param int $time = 0
 	 *
 	 * @return int
 	 */
@@ -1881,7 +1830,7 @@ class QuarkTimer {
 	}
 
 	/**
-	 * @param callable $callback
+	 * @param callable $callback = null
 	 *
 	 * @return callable
 	 */
@@ -2081,7 +2030,7 @@ trait QuarkServiceBehavior {
 	}
 
 	/**
-	 * @param IQuarkService $service
+	 * @param IQuarkService $service = null
 	 *
 	 * @return string
 	 */
@@ -2107,7 +2056,7 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param QuarkDTO|object|array $data
-	 * @param IQuarkStreamNetwork $service
+	 * @param IQuarkStreamNetwork $service = null
 	 *
 	 * @return bool
 	 */
@@ -2125,7 +2074,7 @@ trait QuarkStreamBehavior {
 	}
 
 	/**
-	 * @param callable(QuarkSession $client) $sender
+	 * @param callable(QuarkSession $client) $sender = null
 	 *
 	 * @return bool
 	 *
@@ -2187,7 +2136,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $uri
+	 * @param string $uri = ''
 	 *
 	 * @return IQuarkService
 	 *
@@ -2246,8 +2195,8 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkService|string $uri
-	 * @param IQuarkIOProcessor $input
-	 * @param IQuarkIOProcessor $output
+	 * @param IQuarkIOProcessor $input = null
+	 * @param IQuarkIOProcessor $output = null
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
@@ -2282,7 +2231,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkPrimitive $primitive
+	 * @param IQuarkPrimitive $primitive = null
 	 *
 	 * @return IQuarkPrimitive
 	 */
@@ -2322,7 +2271,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkService $service
+	 * @param IQuarkService $service = null
 	 *
 	 * @return string
 	 */
@@ -2385,9 +2334,9 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param $method
-	 * @param array $args
-	 * @param bool $session
+	 * @param string $method
+	 * @param array $args = []
+	 * @param bool $session = false
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -2532,9 +2481,9 @@ class QuarkObject {
 	private $_null = null;
 
 	/**
-	 * @param object|array $source
-	 * @param object|array $min
-	 * @param object|array $max
+	 * @param object|array $source = null
+	 * @param object|array $min = null
+	 * @param object|array $max = null
 	 */
 	public function __construct ($source = null, $min = null, $max = null) {
 		$this->Source($source);
@@ -2578,8 +2527,8 @@ class QuarkObject {
 
 	/**
 	 * @param mixed $source
-	 * @param mixed $backbone
-	 * @param callable $iterator
+	 * @param mixed $backbone = []
+	 * @param callable $iterator = null
 	 *
 	 * @return mixed
 	 */
@@ -2630,8 +2579,8 @@ class QuarkObject {
 	/**
 	 * @param $source
 	 * @param callable $iterator
-	 * @param string $key
-	 * @param $parent
+	 * @param string $key = ''
+	 * @param $parent = null
 	 */
 	public static function Walk (&$source, callable $iterator, $key = '', &$parent = null) {
 		if (self::isIterative($source)) {
@@ -2714,8 +2663,8 @@ class QuarkObject {
 
 	/**
 	 * @param $class
-	 * @param string|array $interface
-	 * @param bool $silent
+	 * @param string|array $interface = ''
+	 * @param bool $silent = false
 	 *
 	 * @return bool
 	 */
@@ -2743,7 +2692,7 @@ class QuarkObject {
 
 	/**
 	 * @param $interface
-	 * @param callable $filter
+	 * @param callable $filter = null
 	 *
 	 * @return array
 	 */
@@ -2767,7 +2716,7 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param $file
+	 * @param string $file
 	 *
 	 * @return string
 	 */
@@ -2801,7 +2750,7 @@ class QuarkObject {
 	/**
 	 * @param $source
 	 * @param $name
-	 * @param $default
+	 * @param $default = null
 	 *
 	 * @return mixed
 	 */
@@ -2832,7 +2781,7 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param object|array $source
+	 * @param object|array $source = null
 	 *
 	 * @return object|array
 	 */
@@ -2844,7 +2793,7 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param object|array $min
+	 * @param object|array $min = null
 	 *
 	 * @return object|array
 	 */
@@ -2856,7 +2805,7 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param object|array $max
+	 * @param object|array $max = null
 	 *
 	 * @return object|array
 	 */
@@ -2868,7 +2817,7 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param callable $builder
+	 * @param callable $builder = null
 	 *
 	 * @return object
 	 */
@@ -2928,7 +2877,7 @@ trait QuarkViewBehavior {
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = ''
 	 *
 	 * @return IQuarkExtension
 	 */
@@ -2970,8 +2919,8 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
-	 * @param array|object $vars
-	 * @param array $resources
+	 * @param array|object $vars = []
+	 * @param array $resources = []
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -3052,7 +3001,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param bool $obfuscate
+	 * @param bool $obfuscate = true
 	 *
 	 * @return string
 	 */
@@ -3206,7 +3155,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = ''
 	 *
 	 * @return IQuarkExtension
 	 */
@@ -3224,9 +3173,9 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkViewModel $view
-	 * @param array|object $vars
-	 * @param array $resources
+	 * @param IQuarkViewModel $view = null
+	 * @param array|object $vars = []
+	 * @param array $resources = []
 	 *
 	 * @return QuarkView
 	 */
@@ -3241,7 +3190,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $html
+	 * @param string $html = ''
 	 *
 	 * @return string
 	 */
@@ -3255,7 +3204,7 @@ class QuarkView implements IQuarkContainer {
 	/**
 	 * @param IQuarkViewModel $view
 	 * @param IQuarkViewModel $layout
-	 * @param array|object $vars
+	 * @param array|object $vars = []
 	 *
 	 * @return QuarkView
 	 */
@@ -3313,7 +3262,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkViewModel $view
+	 * @param IQuarkViewModel $view = null
 	 *
 	 * @return IQuarkViewModel
 	 */
@@ -3325,7 +3274,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkViewModel $view
+	 * @param IQuarkViewModel $view = null
 	 *
 	 * @return IQuarkViewModel
 	 */
@@ -3337,7 +3286,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkPrimitive $primitive
+	 * @param IQuarkPrimitive $primitive = null
 	 *
 	 * @return IQuarkPrimitive
 	 */

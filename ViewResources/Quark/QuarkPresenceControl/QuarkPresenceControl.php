@@ -10,7 +10,8 @@ use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
 
-use Quark\ViewResources\ChartJS\ChartJS;
+use Quark\QuarkViewBehavior;
+use Quark\ViewResources\Google\GoogleMap;
 use Quark\ViewResources\Quark\CSS\QuarkPresence;
 
 /**
@@ -19,6 +20,8 @@ use Quark\ViewResources\Quark\CSS\QuarkPresence;
  * @package Quark\ViewResources\Quark\QuarkPresenceControl
  */
 class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies, IQuarkViewModel, IQuarkViewModelWithResources {
+	use QuarkViewBehavior;
+
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -38,7 +41,10 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkPresence()
+			new QuarkPresence(),
+			$this->Child() instanceof IQuarkPresenceControlOverlaidViewModel
+				? new GoogleMap($this->Child()->PresenceOverlaidMapAPIKey())
+				: null
 		);
 	}
 
@@ -61,5 +67,14 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 */
 	public function Resources () {
 		return array($this);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OverlaidContainer () {
+		return $this->Child() instanceof IQuarkPresenceControlOverlaidViewModel
+			? $this->Child()->PresenceOverlaidContainer()
+			: '';
 	}
 }

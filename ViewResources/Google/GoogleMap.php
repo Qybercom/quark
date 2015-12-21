@@ -23,10 +23,10 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	const FORMAT_JPG = 'jpg';
 	const FORMAT_JPG_BASELINE = 'jpg-baseline';
 
-	const TYPE_ROADMAP = 'roadmap';
-	const TYPE_SATELLITE = 'satellite';
-	const TYPE_TERRAIN = 'terrain';
-	const TYPE_HYBRID = 'hybrid';
+	const TYPE_ROADMAP = 'GoogleMap.Type.Roadmap';
+	const TYPE_SATELLITE = 'GoogleMap.Type.Satellite';
+	const TYPE_TERRAIN = 'GoogleMap.Type.Terrain';
+	const TYPE_HYBRID = 'GoogleMap.Type.Hybrid';
 
 	private $_center = '0.0-0.0';
 	private $_zoom = 8;

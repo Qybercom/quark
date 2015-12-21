@@ -41,24 +41,6 @@ body {
     background: rgb(0,225,80);
 }
 
-.quark-presence-logo {
-    display: block;
-    font-size: 92px;
-    margin: 50px 5%;
-}
-
-.quark-presence-call {
-    display: block;
-    font-size: 16px;
-    margin: 50px 5%;
-}
-
-.quark-presence-section {
-    display: block;
-    font-size: 32px;
-    margin: 35px 5%;
-}
-
 
 
 .quark-presence-container {
@@ -72,38 +54,6 @@ body {
     text-align: left;
     vertical-align: top;
     margin: 10px;
-}
-
-.quark-presence-container.c2 .quark-presence-column {
-    width: 48%;
-    min-width: 240px;
-}
-
-.quark-presence-container.c3 .quark-presence-column {
-    width: 33%;
-    min-width: 240px;
-}
-
-.quark-presence-column.quark-presence-stand {
-    font-size: 80px;
-    text-align: center;
-}
-
-.quark-presence-column.quark-presence-stand .exhibit {
-    display: block;
-    text-align: center;
-}
-
-.quark-presence-column.quark-presence-stand p {
-    font-size: 16px;
-    font-family: FontAwesome, 'Open Sans', sans-serif;
-    font-weight: 300;
-
-    max-width: 180px;
-}
-
-.quark-presence-column.fill {
-    width: 92%;
 }
 
 .quark-presence-column.left {
@@ -134,39 +84,6 @@ body {
     float: none;
 }
 
-.quark-presence-plan {
-    text-align: right;
-    margin: 10px;
-}
-
-.quark-presence-plan h2 {
-    font-size: 28px;
-    display: inline-block;
-    vertical-align: top;
-}
-
-.quark-presence-plan .description {
-    display: inline-block;
-    vertical-align: top;
-    text-align: left;
-}
-
-.quark-presence-plan .description ul {
-    margin: 0 0 0 -25px;
-}
-
-.quark-presence-annotation {
-    color: rgb(200,200,200);
-    font-size: 12px;
-    text-align: center;
-    margin: 10px 0;
-}
-
-.quark-presence-annotation:before {
-    content: '*';
-    font-size: 16px;
-}
-
 .quark-presence-screen-overlay {
     min-height: 100%;
 }
@@ -175,6 +92,11 @@ body {
     margin: 25px 5% 10px 5%;
     font-size: 10px;
     color: rgb(150,150,150);
+}
+
+.quark-presence-copyright:before {
+    content: '(c)';
+    margin: 0 3px 0 0;
 }
 
 .quark-presence-trademark:after {
