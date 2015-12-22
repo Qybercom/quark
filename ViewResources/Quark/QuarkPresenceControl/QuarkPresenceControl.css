@@ -124,6 +124,13 @@ body {
     width: auto;
 }
 
+.presence-block.main {
+    max-width: 700px;
+}
+
+.presence-block.satellite {
+    max-width: 300px;
+}
 
 
 /* Presence label */
