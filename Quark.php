@@ -6013,7 +6013,15 @@ class QuarkSession {
 		 */
 		$source = Quark::Stack($id->Key());
 
-		return $source == null ? null : new self($source);
+		if ($source == null) return null;
+
+		$input = new QuarkDTO();
+		$input->AuthorizationProvider($id);
+
+		$session = new self($source);
+		$session->Input($input);
+
+		return $session;
 	}
 
 	/**
@@ -7611,6 +7619,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			if ($session != null) {
 				$session = each($session);
 				$service->Input()->AuthorizationProvider(new QuarkKeyValuePair($session['key'], $session['value']));
+				$client->Session($service->Input()->AuthorizationProvider());
 			}
 
 			if ($connected)
