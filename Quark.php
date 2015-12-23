@@ -1458,7 +1458,7 @@ interface IQuarkSignedPostService extends IQuarkSignedService {
  *
  * @package Quark
  */
-class QuarkTask implements IQuarkNetworkProtocol {
+class QuarkTask {
 	const PREDEFINED = '--quark';
 	const QUEUE = 'tcp://127.0.0.1:25500';
 
@@ -1548,6 +1548,15 @@ class QuarkTask implements IQuarkNetworkProtocol {
 
 		$client = new QuarkClient($queue, ($protocol ? $protocol->Transport() : $this->Transport()), null, 30);
 
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
+			$this->_io->Data(array(
+				'task' => get_class($this->_service),
+				'args' => $this->_io->Data()
+			));
+
+			return $client->Send($this->_io->SerializeRequestBody()) && $client->Close();
+		});
+
 		if (!$client->Connect()) return false;
 
 		return $out;
@@ -1561,7 +1570,25 @@ class QuarkTask implements IQuarkNetworkProtocol {
 	 * @return bool
 	 */
 	public static function AsyncQueue ($listen = self::QUEUE, IQuarkNetworkProtocol $protocol = null, $tick = QuarkThreadSet::TICK) {
-		$server = new QuarkServer($listen, $protocol ? $protocol->Transport() : (new QuarkTask())->Transport());
+		$task = new QuarkTask();
+		$server = new QuarkServer($listen, $protocol ? $protocol->Transport() : $task->Transport());
+
+		/** @noinspection PhpUnusedParameterInspection
+		 */
+		$server->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$task) {
+			$json = $task->_io->Processor()->Decode($data);
+
+			if (!isset($json->task) || !isset($json->args)) return;
+
+			$args = (array)$json->args;
+			$class = $json->task;
+			$service = new $class();
+
+			if ($service instanceof IQuarkTask)
+				$service->Task(sizeof($args), $args);
+
+			unset($service, $class, $args, $json, $task);
+		});
 
 		if (!$server->Bind()) return false;
 
@@ -1576,52 +1603,8 @@ class QuarkTask implements IQuarkNetworkProtocol {
 	 * @return IQuarkNetworkTransport
 	 */
 	public function Transport () {
-		return new QuarkTCPNetworkTransport(function ($buffer) {
-			return $this->_io->Processor()->Batch($buffer);
-		});
+		return new QuarkTCPNetworkTransport(array($this->_io->Processor(), 'Batch'));
 	}
-
-	/**
-	 * @param QuarkClient $client
-	 *
-	 * @return bool
-	 */
-	public function OnConnect (QuarkClient $client) {
-		if (!$this->_client) return true;
-
-		$this->_io->Data(array(
-			'task' => get_class($this->_service),
-			'args' => $this->_io->Data()
-		));
-
-		return $client->Send($this->_io->SerializeRequestBody()) && $client->Close();
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 * @param string $data
-	 *
-	 * @return mixed
-	 */
-	public function OnData (QuarkClient $client, $data) {
-		$json = $this->_io->Processor()->Decode($data);
-
-		if (!isset($json->task) || !isset($json->args)) return;
-
-		$args = (array)$json->args;
-		$class = $json->task;
-		$task = new $class();
-
-		if ($task instanceof IQuarkTask)
-			$task->Task(sizeof($args), $args);
-	}
-
-	/**
-	 * @param QuarkClient $client
-	 *
-	 * @return mixed
-	 */
-	public function OnClose (QuarkClient $client) { }
 }
 
 /**
