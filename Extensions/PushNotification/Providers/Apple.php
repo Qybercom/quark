@@ -97,7 +97,7 @@ class Apple extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvid
 			'data' => $data
 		);
 
-		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 1);
+		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60);
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			foreach ($this->_devices as $device)

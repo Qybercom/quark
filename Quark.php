@@ -6439,7 +6439,7 @@ class QuarkClient implements IQuarkEventable {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$this->_socket = @stream_socket_client(
+		$this->_socket = stream_socket_client(
 			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
@@ -6473,10 +6473,10 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Send ($data) {
-		if ($this->Closed())
-			return $this->Close();
+		$out = $this->_socket && $this->_transport instanceof IQuarkNetworkTransport
+			? fwrite($this->_socket, $this->_transport->Send($data))
+			: false;
 
-		$out = $this->_socket ? @fwrite($this->_socket, $this->_transport->Send($data)) : false;
 		usleep($this->_timeoutSend);
 
 		return $out;
@@ -6602,6 +6602,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Closed () {
+		echo 'end:',var_dump(!$this->_socket || (feof($this->_socket) === true && $this->_connected));
 		return !$this->_socket || (feof($this->_socket) === true && $this->_connected);
 	}
 
