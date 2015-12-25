@@ -18,7 +18,6 @@ body {
 }
 
 #presence-user {
-    line-height: 0;
     margin: 0;
 }
 
@@ -167,6 +166,7 @@ body {
     float: right;
 }
 
+
 /* Overlaid controls */
 .presence-overlaid-container {
     position: fixed;
@@ -174,4 +174,47 @@ body {
     top: 0;
     width: 100%;
     height: 100%;
+}
+
+
+/* Cluster controls */
+.presence-cluster-node {
+    background: rgb(240,240,240);
+    padding: 15px;
+    margin: 5px;
+    border-radius: 3px;
+}
+
+.presence-cluster-node:before {
+    display: inline-block;
+    font-size: 16px;
+    content: 'Node';
+    margin: 0 0 10px 0;
+}
+
+.presence-cluster-node.controller {
+    background: rgb(200,255,200);
+}
+
+.presence-cluster-node.controller:before {
+    content: 'Controller';
+}
+
+.presence-cluster-node .addr {
+    font-size: 14px;
+}
+
+.presence-cluster-node .addr.external {
+    font-weight: 600;
+}
+
+.presence-cluster-node .addr.internal { }
+
+.presence-cluster-node .node-state {
+    display: none;
+    margin: 10px 0 0 0;
+}
+
+.presence-cluster-node:hover .node-state {
+    display: block;
 }

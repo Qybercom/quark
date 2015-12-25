@@ -11,4 +11,9 @@ interface IQuarkPresenceControlViewModel {
 	 * @return string
 	 */
 	public function PresenceTitle();
+
+	/**
+	 * @return string
+	 */
+	public function PresenceLogo();
 }

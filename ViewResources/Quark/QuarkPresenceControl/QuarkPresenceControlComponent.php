@@ -17,7 +17,7 @@ trait QuarkPresenceControlComponent {
 	 *
 	 * @return string
 	 */
-	public static function MenuSideItem ($href = '', $title = '', $fa = '') {
+	public static function MenuWidgetItem ($href = '', $title = '', $fa = '') {
 		return '<a class="quark-button fa ' . $fa . '" href="' . $href . '">' . $title . '</a>';
 	}
 
@@ -26,7 +26,21 @@ trait QuarkPresenceControlComponent {
 	 *
 	 * @return string
 	 */
-	public function MenuSide ($links = []) {
+	public function MenuTopWidget ($links = []) {
+		$items = '';
+
+		foreach ($links as $link)
+			$items .= $link;
+
+		return $items;
+	}
+
+	/**
+	 * @param string[] $links
+	 *
+	 * @return string
+	 */
+	public function MenuSideWidget ($links = []) {
 		$items = '';
 
 		foreach ($links as $link)
@@ -45,8 +59,45 @@ trait QuarkPresenceControlComponent {
 	 *
 	 * @return string
 	 */
-	public function Label ($text = '', $color = 'green') {
+	public function LabelWidget ($text = '', $color = 'green') {
 		return '<p class="presence-label ' . $color . '">' . $text . '</p>';
+	}
+
+	/**
+	 * @param string $action = ''
+	 * @param string $method = 'POST'
+	 * @param string $placeholder = 'Search'
+	 * @param string $fa = 'fa-search'
+	 *
+	 * @return string
+	 */
+	public function SearchWidget ($action = '', $method = 'POST', $placeholder = 'Search', $fa = 'fa-search') {
+		return '
+			<form id="presence-search-form" action="' . $action . '" method="' . $method . '" enctype="multipart/form-data">
+				<input class="quark-input" placeholder="' . $placeholder . '" />
+				<a class="quark-button fa ' . $fa . '"></a>
+			</form>
+		';
+	}
+
+	/**
+	 * @param string $name = 'FooBar'
+	 * @param string $photo = 'http://placehold.it/45x45'
+	 * @param string $logoutAddr = '/user/logout'
+	 * @param string $logoutTitle = 'Exit'
+	 *
+	 * @return string
+	 */
+	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutAddr = '/user/logout', $logoutTitle = 'Exit') {
+		return '
+			<div class="quark-presence-column left-inverse">
+				' . $name . '<br />
+				<a href="' . $logoutAddr . '" class="quark-button">' . $logoutTitle . '</a>
+			</div>
+			<div class="quark-presence-column right" id="presence-user-photo">
+				<div class="quark-presence-container" style="background-image: url(' . $photo . ');"></div>
+			</div>
+		';
 	}
 
 	/**
@@ -54,14 +105,16 @@ trait QuarkPresenceControlComponent {
 	 * @param MapPoint $center
 	 * @param string $type = GoogleMap::TYPE_ROADMAP
 	 * @param int $zoom = 15
+	 * @param string $var = 'map'
 	 *
 	 * @return string
 	 */
-	public function OverlaidMap ($selector, MapPoint $center, $type = GoogleMap::TYPE_ROADMAP, $zoom = 16) {
+	public function OverlaidMapWidget ($selector, MapPoint $center, $type = GoogleMap::TYPE_ROADMAP, $zoom = 16, $var = 'map') {
 		return '
 			<script type="text/javascript">
+			var ' . $var . ' = null;
 			$(function () {
-				var map = new GoogleMap(\''. $selector . '\', {
+				' . $var . ' = new GoogleMap(\''. $selector . '\', {
 					zoom: ' . $zoom . ',
 					type: ' . $type . ',
 					center: {
@@ -73,6 +126,41 @@ trait QuarkPresenceControlComponent {
 			</script>
 			<div id="map-container" class="presence-overlaid-container">
 				<div id="map" style="position: fixed; left: 0; top: 0; width: 100%; height: 100%;"></div>
+			</div>
+		';
+	}
+
+	/**
+	 * @param string $external = 'ws://80.25.81.147:25900'
+	 * @param string $internal = 'tcp://192.168.1.10:25800'
+	 *
+	 * @return string
+	 */
+	public function ClusterControllerWidget ($external = 'ws://80.25.81.147:25900', $internal = 'tcp://192.168.1.10:25800') {
+		return '
+			<div class="presence-cluster-node controller">
+				<div class="addr external">' . $external . '</div>
+				<div class="addr internal">' . $internal . '</div>
+			</div>
+		';
+	}
+
+	/**
+	 * @param string $external = 'ws://80.25.81.147:25000'
+	 * @param string $internal = 'tcp://192.168.1.10:34567'
+	 *
+	 * @return string
+	 */
+	public function ClusterNodeWidget ($external = 'ws://80.25.81.147:25000', $internal = 'tcp://192.168.1.10:34567') {
+		return '
+			<div class="presence-cluster-node">
+				<div class="addr external">' . $external . '</div>
+				<div class="addr internal">' . $internal . '</div>
+				<div class="node-state">
+					menu item<br />
+					menu item<br />
+					menu item<br />
+				</div>
 			</div>
 		';
 	}

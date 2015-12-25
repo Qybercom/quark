@@ -11,6 +11,7 @@ use Quark\IQuarkViewResourceWithDependencies;
 use Quark\QuarkCSSViewResourceType;
 
 use Quark\QuarkViewBehavior;
+
 use Quark\ViewResources\Google\GoogleMap;
 use Quark\ViewResources\Quark\CSS\QuarkPresence;
 
@@ -72,9 +73,54 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	/**
 	 * @return string
 	 */
-	public function OverlaidContainer () {
+	public function TitleWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
+			? $this->Child()->PresenceTitle()
+			: 'QuarkPresence Control';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function LogoWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
+			? $this->Child()->PresenceLogo()
+			: 'QuarkPresence Control';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OverlaidContainerWidget () {
 		return $this->Child() instanceof IQuarkPresenceControlOverlaidViewModel
 			? $this->Child()->PresenceOverlaidContainer()
+			: '';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function UserWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlAuthorizableViewModel
+			? $this->Child()->PresenceUser($this->User())
+			: '';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function SearchWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlSearchableViewModel
+			? $this->Child()->PresenceSearch()
+			: '';
+	}
+
+	/**
+	 * @return string
+	 */
+	public function MenuTopWidget () {
+		return $this->Child() instanceof IQuarkPresenceViewModelWithTopMenu
+			? $this->Child()->PresenceMenuTop()
 			: '';
 	}
 }
