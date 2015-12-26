@@ -26,7 +26,7 @@ trait QuarkPresenceControlComponent {
 	 *
 	 * @return string
 	 */
-	public function MenuTopWidget ($links = []) {
+	public function MenuHeaderWidget ($links = []) {
 		$items = '';
 
 		foreach ($links as $link)
@@ -73,7 +73,7 @@ trait QuarkPresenceControlComponent {
 	 */
 	public function SearchWidget ($action = '', $method = 'POST', $placeholder = 'Search', $fa = 'fa-search') {
 		return '
-			<form id="presence-search-form" action="' . $action . '" method="' . $method . '" enctype="multipart/form-data">
+			<form id="presence-search" action="' . $action . '" method="' . $method . '" enctype="multipart/form-data">
 				<input class="quark-input" placeholder="' . $placeholder . '" />
 				<a class="quark-button fa ' . $fa . '"></a>
 			</form>

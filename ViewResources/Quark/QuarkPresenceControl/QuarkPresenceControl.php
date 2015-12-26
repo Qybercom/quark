@@ -12,7 +12,6 @@ use Quark\QuarkCSSViewResourceType;
 
 use Quark\QuarkViewBehavior;
 
-use Quark\ViewResources\Google\GoogleMap;
 use Quark\ViewResources\Quark\CSS\QuarkPresence;
 
 /**
@@ -42,10 +41,7 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkPresence(),
-			$this->Child() instanceof IQuarkPresenceControlOverlaidViewModel
-				? new GoogleMap($this->Child()->PresenceOverlaidMapAPIKey())
-				: null
+			new QuarkPresence()
 		);
 	}
 
@@ -91,9 +87,9 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	/**
 	 * @return string
 	 */
-	public function OverlaidContainerWidget () {
-		return $this->Child() instanceof IQuarkPresenceControlOverlaidViewModel
-			? $this->Child()->PresenceOverlaidContainer()
+	public function MenuHeaderWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
+			? $this->Child()->PresenceMenuHeader()
 			: '';
 	}
 
@@ -101,7 +97,7 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 * @return string
 	 */
 	public function UserWidget () {
-		return $this->Child() instanceof IQuarkPresenceControlAuthorizableViewModel
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
 			? $this->Child()->PresenceUser($this->User())
 			: '';
 	}
@@ -109,18 +105,9 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	/**
 	 * @return string
 	 */
-	public function SearchWidget () {
-		return $this->Child() instanceof IQuarkPresenceControlSearchableViewModel
-			? $this->Child()->PresenceSearch()
-			: '';
-	}
-
-	/**
-	 * @return string
-	 */
-	public function MenuTopWidget () {
-		return $this->Child() instanceof IQuarkPresenceViewModelWithTopMenu
-			? $this->Child()->PresenceMenuTop()
+	public function OverlaidContainerWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
+			? $this->Child()->PresenceOverlaidContainer()
 			: '';
 	}
 }

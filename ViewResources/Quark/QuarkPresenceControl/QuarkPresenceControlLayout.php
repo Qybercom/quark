@@ -16,12 +16,7 @@
 			</div>
 			<div class="quark-presence-column left" id="presence-menu-header">
 				<div class="quark-presence-container">
-					<?php echo $this->MenuTopWidget(); ?>
-				</div>
-			</div>
-			<div class="quark-presence-column left" id="presence-search">
-				<div class="quark-presence-container">
-					<?php echo $this->SearchWidget(); ?>
+					<?php echo $this->MenuHeaderWidget(); ?>
 				</div>
 			</div>
 			<div class="quark-presence-column right" id="presence-user">

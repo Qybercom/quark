@@ -44,16 +44,17 @@ body {
 }
 
 #presence-menu-header {
-    margin: 15px;
+    margin: 10px 10px 10px 15px;
 }
 
 #presence-menu-header .quark-button {
     vertical-align: middle;
-    margin: 0 10px 0 0;
+    margin: -4px 10px 6px 0;
 }
 
 #presence-search {
-    margin: 10px;
+    display: inline-block;
+    margin: 0 0 0 15px;
 }
 
 #presence-search .quark-input {
