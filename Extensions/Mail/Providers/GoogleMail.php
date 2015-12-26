@@ -8,11 +8,11 @@ use Quark\Extensions\Mail\IQuarkMailProvider;
 use Quark\Extensions\Mail\Mail;
 
 /**
- * Class Google
+ * Class GoogleMail
  *
  * @package Quark\Extensions\Mail\Providers
  */
-class Google implements IQuarkMailProvider {
+class GoogleMail implements IQuarkMailProvider {
 	private $_username;
 	private $_password;
 	private $_fullname;

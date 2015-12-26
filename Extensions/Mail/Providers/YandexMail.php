@@ -8,11 +8,11 @@ use Quark\Extensions\Mail\IQuarkMailProvider;
 use Quark\Extensions\Mail\Mail;
 
 /**
- * Class Yandex
+ * Class YandexMail
  *
  * @package Quark\Extensions\Mail\Providers
  */
-class Yandex implements IQuarkMailProvider {
+class YandexMail implements IQuarkMailProvider {
 	private $_username;
 	private $_password;
 	private $_fullname;

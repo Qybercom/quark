@@ -26,7 +26,7 @@ class ClusterController implements IQuarkTask {
 	 * @throws QuarkArchException
 	 */
 	public function Task ($argc, $argv) {
-		$internal = Quark::Config()->ClusterController();
+		$internal = Quark::Config()->ClusterControllerListen();
 		$external = Quark::Config()->ClusterMonitor();
 
 		if ($internal == null)

@@ -11,11 +11,11 @@ use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 
 /**
- * Class Microsoft
+ * Class MicrosoftWNS
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Microsoft implements IQuarkPushNotificationProvider {
+class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	const TYPE = 'windows';
 
 	const OPTION_CLIENT_ID = 'client_id';

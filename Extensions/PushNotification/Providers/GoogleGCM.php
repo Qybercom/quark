@@ -9,11 +9,11 @@ use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 
 /**
- * Class Google
+ * Class GoogleGCM
  *
  * @package Quark\Extensions\PushNotification\Providers
  */
-class Google implements IQuarkPushNotificationProvider {
+class GoogleGCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
 
 	private $_devices = array();
