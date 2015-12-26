@@ -7657,7 +7657,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$session = $service->Session();
 
 			if ($connected) {
-				$client->Session($session->ID());
+				//$client->Session($session->ID());
 				$client->Send(self::Package(self::PACKAGE_RESPONSE, $service->URL(), $service->Output()->Data(), $session));
 			}
 		}
