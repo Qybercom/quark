@@ -3712,6 +3712,15 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 
 	/**
+	 * @return QuarkCollection
+	 */
+	public function Reverse () {
+		$this->_list = array_reverse($this->_list);
+
+		return $this;
+	}
+
+	/**
 	 * @param          $needle
 	 * @param callable $compare
 	 *
@@ -3883,7 +3892,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function offsetSet ($offset, $value) {
 		if ($this->_type($value))
-			$this->_list[$offset] = $value;
+			$this->_list[(int)$offset] = $value;
 	}
 
 	/**
@@ -3899,7 +3908,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function offsetUnset ($offset) {
-		unset($this->_list[$offset]);
+		unset($this->_list[(int)$offset]);
 	}
 
 	/**
@@ -6501,7 +6510,7 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function Send ($data) {
 		$out = $this->_socket && $this->_transport instanceof IQuarkNetworkTransport
-			? fwrite($this->_socket, $this->_transport->Send($data))
+			? @fwrite($this->_socket, $this->_transport->Send($data))
 			: false;
 
 		usleep($this->_timeoutSend);
@@ -6534,7 +6543,9 @@ class QuarkClient implements IQuarkEventable {
 	public function Pipe ($max = -1) {
 		$data = $this->Receive($max);
 
-		return is_string($data) ? $this->_transport->EventData($this, $data) : false;
+		return is_string($data) && $this->_transport instanceof IQuarkNetworkTransport
+			? $this->_transport->EventData($this, $data)
+			: false;
 	}
 
 	/**
@@ -7645,7 +7656,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			if ($session != null) {
 				$session = each($session);
 				$service->Input()->AuthorizationProvider(new QuarkKeyValuePair($session['key'], $session['value']));
-				//$client->Session($service->Input()->AuthorizationProvider());
+				$client->Session($service->Input()->AuthorizationProvider());
 			}
 
 			if ($connected)
@@ -7868,7 +7879,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($url, callable $sender = null) {
+	public function BroadcastLocal ($url, callable &$sender = null) {
 		$ok = true;
 		$clients = $this->_cluster->Server()->Clients();
 
@@ -7879,6 +7890,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 			if ($data)
 				$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data, $session));
+
+			unset($data, $session);
 		}
 
 		unset($out, $session, $i, $client, $clients, $sender);

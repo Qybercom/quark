@@ -30,8 +30,8 @@ Quark.Network.Socket = {
     port: 0,
     socket: null,
     on: {
-        message: null,
-        error: null
+        message: function () {},
+        error: function (e) { console.warn(e.message); }
     },
 
     /**
@@ -92,19 +92,19 @@ Quark.Network.Socket = {
  * @constructor
  */
 Quark.Network.Client = function (host, port, on) {
-    on = on || {};
+    on = on || this.on;
 
     var that = this;
 
     var events = {};
-    var _response = function () {};
+    var _response = [];
 
     on.message = function (e) {
         try {
             var input = JSON.parse(e.data);
 
-            if (input.response != undefined)
-                _response(input.response, input.data, input.session);
+            if (input.response != undefined && _response[input.response] instanceof Function)
+                _response[input.response](input.response, input.data, input.session);
 
             if (input.event != undefined) {
                 input.event = input.event.toLowerCase();
@@ -145,15 +145,16 @@ Quark.Network.Client = function (host, port, on) {
     };
 
     /**
+     * @param {string} url
      * @param {Function=} [response]
      *
-     * @return {Function}
+     * @return {Function|undefined}
      */
-    that.Response = function (response) {
+    that.Response = function (url, response) {
         if (response instanceof Function)
-            _response = response;
+            _response[url] = response;
 
-        return _response;
+        return _response[url] == undefined ? undefined : _response[url];
     };
 
     /**
@@ -208,7 +209,7 @@ Quark.Network.Client.From = function (host, port, available, error) {
  * @constructor
  */
 Quark.Network.Terminal = function (host, port, on) {
-    on = on || {};
+    on = on || this.on;
 
     var that = this;
 

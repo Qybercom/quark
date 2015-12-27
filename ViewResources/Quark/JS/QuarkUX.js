@@ -6,7 +6,7 @@
 var Quark = Quark || {};
 
 /**
- * @param selector
+ * @param {string} selector
  * @constructor
  */
 Quark.UX = function (selector) {
@@ -138,7 +138,7 @@ Quark.UX = function (selector) {
 };
 
 /**
- * @param selector
+ * @param {string} selector
  * @param {{n:Function,e:Function,s:Function,w:Function}} opt
  *
  * @constructor
@@ -192,9 +192,9 @@ Quark.UX.KeyboardNavigation = function (selector, opt) {
 };
 
 /**
- * @param selector
- * @param submit
- * @param type
+ * @param {string} selector
+ * @param {Function} submit
+ * @param {Function} type
  */
 Quark.UX.Command = function (selector, submit, type) {
     $(document).on('keydown', selector, function (e) {
@@ -213,4 +213,71 @@ Quark.UX.Command = function (selector, submit, type) {
 
         return false;
     });
+};
+
+/**
+ * @type {Quark.UX._commandHistoryListener[]}
+ * @private
+ */
+Quark.UX._commandHistoryListeners = [];
+
+/**
+ * @type {Quark.UX._commandHistoryListener[]}
+ * @private
+ */
+Quark.UX._commandTimer = setInterval(function () {
+    var i = 0;
+
+    while (i < Quark.UX._commandHistoryListeners.length) {
+        if (Quark.UX._commandHistoryListeners[i] instanceof Quark.UX._commandHistoryListener)
+            Quark.UX._commandHistoryListeners[i].Check();
+
+        i++;
+    }
+}, 50);
+
+/**
+ * Attention!
+ * Scrollable element MUST HAVE `position: absolute`. Take at mind this fact and create
+ * your UI corresponding to it
+ *
+ * http://stackoverflow.com/a/1877007/2097055
+ *
+ * @param {string} selector
+ * @param {Function} change
+ * @param {boolean} [scroll=true]
+ *
+ * @private
+ * @constructor
+ */
+Quark.UX._commandHistoryListener = function (selector, change, scroll) {
+    scroll = scroll == undefined ? true : scroll;
+
+    var that = this;
+
+    that.height = 0;
+    that.heightPrevious = 0;
+
+    that.Check = function () {
+        that.height = $(selector).prop('scrollHeight') || 0;
+
+        if (that.height == 0 || that.height == that.heightPrevious) return;
+
+        if (change instanceof Function)
+            change(that.height, that.heightPrevious);
+
+        if (scroll)
+            $(selector).animate({ scrollTop: that.height }, 'fast');
+
+        that.heightPrevious = that.height;
+    };
+};
+
+/**
+ * @param {string} selector
+ * @param {Function} [change=]
+ * @param {boolean} [scroll=true]
+ */
+Quark.UX.CommandHistory = function (selector, change, scroll) {
+    Quark.UX._commandHistoryListeners.push(new Quark.UX._commandHistoryListener(selector, change, scroll));
 };
