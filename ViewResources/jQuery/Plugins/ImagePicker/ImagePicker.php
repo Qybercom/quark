@@ -1,20 +1,20 @@
 <?php
-namespace Quark\ViewResources\TwitterBootstrap;
+namespace Quark\ViewResources\jQuery\Plugins\ImagePicker;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 /**
- * Class TwitterBootstrap
+ * Class ImagePicker
  *
- * @package Quark\ViewResources\TwitterBootstrap
+ * @package Quark\ViewResources\jQuery\Plugins\ImagePicker
  */
-class TwitterBootstrap implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '3.3.5';
+class ImagePicker implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
+	const CURRENT_VERSION = '0.2.4';
 
 	/**
-	 * @var string $_version
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
 	private $_version = self::CURRENT_VERSION;
 
@@ -44,8 +44,8 @@ class TwitterBootstrap implements IQuarkViewResource, IQuarkViewResourceWithDepe
 	 */
 	public function Dependencies () {
 		return array(
-			new TwitterBootstrapCSS($this->_version),
-			new TwitterBootstrapJS($this->_version)
+			new ImagePickerCSS(),
+			new ImagePickerJS()
 		);
 	}
 }

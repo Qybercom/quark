@@ -12,7 +12,10 @@ use Quark\QuarkCSSViewResourceType;
  * @package Quark\ViewResources\TwitterBootstrap
  */
 class TwitterBootstrapCSS implements IQuarkViewResource {
-	private $_version = '';
+	/**
+	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
+	 */
+	private $_version = TwitterBootstrap::CURRENT_VERSION;
 
 	/**
 	 * @param string $version = TwitterBootstrap::CURRENT_VERSION

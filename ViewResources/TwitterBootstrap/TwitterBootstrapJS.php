@@ -15,7 +15,10 @@ use Quark\ViewResources\jQuery\jQueryCore;
  * @package Quark\ViewResources\TwitterBootstrap
  */
 class TwitterBootstrapJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	private $_version = '';
+	/**
+	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
+	 */
+	private $_version = TwitterBootstrap::CURRENT_VERSION;
 
 	/**
 	 * @param string $version = TwitterBootstrap::CURRENT_VERSION
