@@ -170,7 +170,7 @@ class Quark {
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
 		return is_scalar($path)
-			? trim(preg_replace('#(/+)#', '/', self::RealPath(str_replace('\\', '/', $path))))
+			? trim(preg_replace('#/+#', '/', self::RealPath(str_replace('\\', '/', $path))))
 				. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : '')
 			: ($path instanceof QuarkFile ? $path->location : '');
 	}
@@ -923,7 +923,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 			$this->_processorResponse
 		);
 
-		$uri = QuarkURI::FromURI($_SERVER['REQUEST_URI']);
+		$uri = QuarkURI::FromURI(Quark::NormalizePath($_SERVER['REQUEST_URI'], false));
 		$service->Input()->URI($uri);
 		$service->Output()->URI($uri);
 
@@ -2233,7 +2233,6 @@ class QuarkService implements IQuarkContainer {
 		$this->_input->Processor($input ? $input : new QuarkFormIOProcessor());
 		$this->_output = new QuarkDTO();
 		$this->_output->Processor($output ? $output : new QuarkHTMLIOProcessor());
-
 		$this->_input->URI(QuarkURI::FromURI(Quark::NormalizePath($uri, false), false));
 
 		if ($this->_service instanceof IQuarkServiceWithCustomProcessor) {
@@ -8419,7 +8418,7 @@ class QuarkURI {
 		if (!is_string($source)) return array();
 
 		$query = preg_replace('#(((\/)*)((\?|\&)(.*)))*#', '', $source);
-		$route = explode('/', trim(Quark::NormalizePath(preg_replace('#\.php$#Uis', '', $query))));
+		$route = explode('/', trim(Quark::NormalizePath(preg_replace('#\.php$#Uis', '', $query), false)));
 		$buffer = array();
 
 		foreach ($route as $component)
