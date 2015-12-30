@@ -7930,8 +7930,6 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public function ClientClose (QuarkClient $client) {
 		echo '[cluster.node.client.close] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
 
-		Quark::Trace($client->Session());
-
 		$this->_announce();
 		$this->_pipe($this->_connect, 'StreamClose', $client, null, $client->Session() ? $client->Session()->Extract() : null);
 	}
