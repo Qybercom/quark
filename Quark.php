@@ -6406,11 +6406,6 @@ class QuarkClient implements IQuarkEventable {
 	use QuarkNetwork;
 
 	/**
-	 * @var array(string => QuarkKeyValuePair) $_session
-	 */
-	private static $_session = array();
-
-	/**
 	 * @var bool $_connected
 	 */
 	private $_connected = false;
@@ -6419,6 +6414,11 @@ class QuarkClient implements IQuarkEventable {
 	 * @var QuarkURI $_remote
 	 */
 	private $_remote;
+
+	/**
+	 * @var QuarkKeyValuePair $_session
+	 */
+	private $_session;
 
 	/**
 	 * @var int $_rps
@@ -6554,14 +6554,6 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function Close ($event = true) {
 		$this->_connected = false;
-		$uri = $this->ConnectionURI(true);
-
-		if ($uri != null) {
-			$uri = $uri->URI();
-
-			if (isset(self::$_session[$uri]))
-				unset(self::$_session[$uri]);
-		}
 
 		if ($event && $this->_transport instanceof IQuarkNetworkTransport)
 			$this->_transport->EventClose($this);
@@ -6659,17 +6651,11 @@ class QuarkClient implements IQuarkEventable {
 	 *
 	 * @return QuarkKeyValuePair
 	 */
-	public function Session (QuarkKeyValuePair $session = null) {
-		$uri = $this->ConnectionURI(true);
-
-		if ($uri == null) return null;
-
-		$uri = $uri->URI();
-
+	public function &Session (QuarkKeyValuePair $session = null) {
 		if (func_num_args() != 0)
-			self::$_session[$uri] = $session;
+			$this->_session = $session;
 
-		return isset(self::$_session[$uri]) ? self::$_session[$uri] : null;
+		return $this->_session;
 	}
 
 	/**
@@ -7633,8 +7619,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param string $url
 	 * @param string $method
 	 * @param QuarkClient $client = null
-	 * @param array $input = null
-	 * @param array $session = null
+	 * @param array|object $input = null
+	 * @param array|object $session = null
 	 */
 	private function _pipe ($url, $method, QuarkClient &$client = null, $input = null, $session = null) {
 		$service = null;
@@ -7945,7 +7931,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		echo '[cluster.node.client.close] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
 
 		$this->_announce();
-		$this->_pipe($this->_connect, 'StreamClose', $client);
+		$this->_pipe($this->_connect, 'StreamClose', $client, null, $client->Session()->Extract());
 	}
 
 	/**
