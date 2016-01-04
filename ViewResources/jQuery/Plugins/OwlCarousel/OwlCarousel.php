@@ -1,17 +1,17 @@
 <?php
-namespace Quark\ViewResources\jQuery\Plugins\ImagePicker;
+namespace Quark\ViewResources\jQuery\Plugins\OwlCarousel;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 /**
- * Class ImagePicker
+ * Class OwlCarousel
  *
- * @package Quark\ViewResources\jQuery\Plugins\ImagePicker
+ * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
-class ImagePicker implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '0.2.4';
+class OwlCarousel implements IQuarkViewResource, IQuarkViewResourceWithDependencies{
+	const CURRENT_VERSION = '1.3.3';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
@@ -44,8 +44,10 @@ class ImagePicker implements IQuarkViewResource, IQuarkViewResourceWithDependenc
 	 */
 	public function Dependencies () {
 		return array(
-			new ImagePickerCSS($this->_version),
-			new ImagePickerJS($this->_version)
+			new OwlCarouselCSS($this->_version),
+			new OwlCarouselTheme($this->_version),
+			new OwlCarouselTransitions($this->_version),
+			new OwlCarouselJS($this->_version)
 		);
 	}
 }
