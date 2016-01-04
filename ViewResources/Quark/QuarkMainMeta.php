@@ -48,9 +48,6 @@ class QuarkMainMeta implements IQuarkViewResource, IQuarkInlineViewResource {
 	 * @return string
 	 */
 	public function HTML () {
-		return '
-			<meta name="description" content="' . $this->_description . '" />
-			<meta name="keywords" content="' . implode(', ', $this->_keywords) . '" />
-		';
+		return '<meta name="description" content="' . $this->_description . '" /><meta name="keywords" content="' . implode(', ', $this->_keywords) . '" />';
 	}
 }
