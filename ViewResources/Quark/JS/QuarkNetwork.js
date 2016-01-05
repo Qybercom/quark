@@ -30,6 +30,8 @@ Quark.Network.Socket = {
     port: 0,
     socket: null,
     on: {
+        open: function () {},
+        close: function () {},
         message: function () {},
         error: function (e) { console.warn(e.message); }
     },
