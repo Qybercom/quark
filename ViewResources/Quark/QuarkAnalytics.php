@@ -99,7 +99,6 @@ class QuarkAnalytics implements IQuarkViewResource, IQuarkInlineViewResource {
 						} else { f(); }
 					})(document, window, "yandex_metrika_callbacks");
 				</script>
-				<noscript><div><img src="https://mc.yandex.ru/watch/34551500" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 			';
 
 		return QuarkSource::ObfuscateString($out);
