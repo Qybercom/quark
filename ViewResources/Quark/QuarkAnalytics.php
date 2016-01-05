@@ -4,6 +4,7 @@ namespace Quark\ViewResources\Quark;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\QuarkSource;
 
 /**
  * Class QuarkAnalytics
@@ -101,6 +102,6 @@ class QuarkAnalytics implements IQuarkViewResource, IQuarkInlineViewResource {
 				<noscript><div><img src="https://mc.yandex.ru/watch/34551500" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 			';
 
-		return $out;
+		return QuarkSource::ObfuscateString($out);
 	}
 }
