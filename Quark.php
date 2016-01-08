@@ -3084,18 +3084,28 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @return array
+	 * @return IQuarkViewResource[]
 	 */
 	public function ResourceList () {
-		if (!($this->_view instanceof IQuarkViewModelWithResources)) return $this->_resources;
+		if ($this->_view instanceof IQuarkViewModelWithResources) {
+			$resources = $this->_view->Resources();
 
-		$resources = $this->_view->Resources();
+			if (!is_array($resources))
+				return $this->_resources;
 
-		if (!is_array($resources))
-			return $this->_resources;
+			foreach ($resources as $resource)
+				$this->_resource($resource);
+		}
 
-		foreach ($resources as $resource)
-			$this->_resource($resource);
+		if ($this->_view instanceof IQuarkViewModelWithComponents) {
+			if ($this->_view->ViewStylesheet() instanceof IQuarkViewResource)
+				$this->_resource($this->_view->ViewStylesheet());
+			else $this->_resources[] = QuarkProjectViewResource::CSS($this->_view->ViewStylesheet());
+
+			if ($this->_view->ViewController() instanceof IQuarkViewResource)
+				$this->_resource($this->_view->ViewController());
+			else $this->_resources[] = QuarkProjectViewResource::JS($this->_view->ViewController());
+		}
 
 		return $this->_resources;
 	}
@@ -3108,29 +3118,39 @@ class QuarkView implements IQuarkContainer {
 	 * @throws QuarkArchException
 	 */
 	private function _resource (IQuarkViewResource $resource) {
-		if ($resource instanceof IQuarkViewResourceWithDependencies) {
-			$resources = $resource->Dependencies();
-
-			if (!is_array($resources))
-				throw new QuarkArchException('ViewResource ' . get_class($resource) . ' specified invalid value for `Dependencies`. Expected array of IQuarkViewResource.');
-
-			/**
-			 * @var IQuarkViewResource $dependency
-			 */
-			foreach ($resources as $dependency) {
-				if ($dependency == null) continue;
-
-				if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
-				if ($this->_resource_loaded($dependency)) continue;
-
-				$this->_resources[] = $dependency;
-			}
-		}
+		if ($resource instanceof IQuarkViewResourceWithDependencies)
+			$this->_resource_dependencies($resource->Dependencies(), 'ViewResource ' . get_class($resource) . ' specified invalid value for `Dependencies`. Expected array of IQuarkViewResource.');
 
 		if (!$this->_resource_loaded($resource))
 			$this->_resources[] = $resource;
 
+		if ($resource instanceof IQuarkViewResourceWithBackwardDependencies)
+			$this->_resource_dependencies($resource->BackwardDependencies(), 'ViewResource ' . get_class($resource) . ' specified invalid value for `BackwardDependencies`. Expected array of IQuarkViewResource.');
+
 		return $this;
+	}
+
+	/**
+	 * @param IQuarkViewResource[] $resources
+	 * @param string $error
+	 *
+	 * @throws QuarkArchException
+	 */
+	private function _resource_dependencies ($resources = [], $error = '') {
+		if (!is_array($resources))
+			throw new QuarkArchException($error);
+
+		/**
+		 * @var IQuarkViewResource $dependency
+		 */
+		foreach ($resources as $dependency) {
+			if ($dependency == null) continue;
+
+			if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
+			if ($this->_resource_loaded($dependency)) continue;
+
+			$this->_resources[] = $dependency;
+		}
 	}
 
 	/**
@@ -3349,6 +3369,23 @@ interface IQuarkViewModelWithResources extends IQuarkViewModel {
 }
 
 /**
+ * Interface IQuarkViewModelWithComponents
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelWithComponents extends IQuarkViewModel {
+	/**
+	 * @return IQuarkViewResource|string
+	 */
+	public function ViewStylesheet();
+
+	/**
+	 * @return IQuarkViewResource|string
+	 */
+	public function ViewController();
+}
+
+/**
  * Interface IQuarkViewResource
  *
  * @package Quark
@@ -3375,6 +3412,18 @@ interface IQuarkViewResourceWithDependencies {
 	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies();
+}
+
+/**
+ * Interface IQuarkViewResourceWithBackwardDependencies
+ *
+ * @package Quark
+ */
+interface IQuarkViewResourceWithBackwardDependencies {
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function BackwardDependencies();
 }
 
 /**

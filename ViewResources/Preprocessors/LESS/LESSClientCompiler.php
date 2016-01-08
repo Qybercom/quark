@@ -1,23 +1,21 @@
 <?php
-namespace Quark\ViewResources\jQuery;
+namespace Quark\ViewResources\Preprocessors\LESS;
 
 use Quark\IQuarkViewResource;
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
-use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
 
 /**
- * Class Core
+ * Class LESSClientCompiler
  *
- * @package Quark\ViewResources\jQuery
+ * @package Quark\ViewResources\Preprocessors\LESS
  */
-class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
-	const CURRENT_VERSION = '2.1.1';
+class LESSClientCompiler implements IQuarkViewResource {
+	const CURRENT_VERSION = '2.5.3';
 
 	/**
-	 * @var string $_VERSION = self::CURRENT_VERSION
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
 	private $_version = self::CURRENT_VERSION;
 
@@ -39,13 +37,6 @@ class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://code.jquery.com/jquery-' . $this->_version . '.min.js';
-	}
-
-	/**
-	 * @return QuarkDTO
-	 */
-	public function RequestDTO () {
-		// TODO: Implement RequestDTO() method.
+		return 'https://cdnjs.cloudflare.com/ajax/libs/less.js/' . $this->_version . '/less.min.js';
 	}
 }
