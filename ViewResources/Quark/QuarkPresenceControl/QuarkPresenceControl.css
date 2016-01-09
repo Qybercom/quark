@@ -46,6 +46,7 @@ body {
 
 #presence-menu-header {
     margin: 10px 10px 10px 15px;
+    vertical-align: middle;
 }
 
 #presence-menu-header .quark-button {
