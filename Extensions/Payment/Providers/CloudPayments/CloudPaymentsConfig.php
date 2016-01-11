@@ -21,11 +21,6 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 	public $currency;
 
 	/**
-	 * @var string $_name
-	 */
-	private $_name = '';
-
-	/**
 	 * @param string $user
 	 * @param string $password
 	 */
@@ -53,18 +48,6 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 	}
 
 	/**
-	 * @param string $name
-	 *
-	 * @return string
-	 */
-	public function Name ($name = '') {
-		if (func_num_args() != 0)
-			$this->_name = $name;
-
-		return $this->_name;
-	}
-
-	/**
 	 * @param \Quark\Extensions\Payment\IQuarkPaymentScenario $data
 	 * @param string $url
 	 *
@@ -78,6 +61,13 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		return QuarkHTTPClient::To($url, $request, $response);
+	}
+
+	/**
+	 * @param string $name
+	 */
+	public function Stacked ($name) {
+		// TODO: Implement Stacked() method.
 	}
 
 	/**

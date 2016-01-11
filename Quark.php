@@ -522,7 +522,10 @@ class QuarkConfig {
 	 * @return IQuarkCulture|QuarkCultureISO
 	 */
 	public function &Culture (IQuarkCulture $culture = null) {
-		return $this->_culture = ($culture === null) ? $this->_culture : $culture;
+		if (func_num_args() != 0 && $culture != null)
+			$this->_culture = $culture;
+
+		return $this->_culture;
 	}
 
 	/**
@@ -3119,13 +3122,20 @@ class QuarkView implements IQuarkContainer {
 		}
 
 		if ($this->_view instanceof IQuarkViewModelWithComponents) {
-			if ($this->_view->ViewStylesheet() instanceof IQuarkViewResource)
-				$this->_resource($this->_view->ViewStylesheet());
-			else $this->_resources[] = QuarkProjectViewResource::CSS($this->_view->ViewStylesheet());
+			$css = $this->_view->ViewStylesheet();
+			$js = $this->_view->ViewController();
 
-			if ($this->_view->ViewController() instanceof IQuarkViewResource)
-				$this->_resource($this->_view->ViewController());
-			else $this->_resources[] = QuarkProjectViewResource::JS($this->_view->ViewController());
+			if ($css !== null) {
+				if ($css instanceof IQuarkViewResource)
+					$this->_resource($css);
+				else $this->_resources[] = QuarkProjectViewResource::CSS($css);
+			}
+
+			if ($js !== null) {
+				if ($js instanceof IQuarkViewResource)
+					$this->_resource($js);
+				else $this->_resources[] = QuarkProjectViewResource::JS($js);
+			}
 		}
 
 		return $this->_resources;
