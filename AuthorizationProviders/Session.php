@@ -1,17 +1,21 @@
 <?php
 namespace Quark\AuthorizationProviders;
 
+use Quark\DataProviders\QuarkDNA;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkModel;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkConfig;
 use Quark\QuarkCookie;
 use Quark\QuarkGenericModel;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
+use Quark\QuarkModelSource;
+use Quark\QuarkURI;
 
 /**
  * Class Session
@@ -25,6 +29,7 @@ use Quark\QuarkModel;
  */
 class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWithDataProvider {
 	const COOKIE_NAME = 'PHPSESSID';
+	const STORAGE = 'quark.session';
 
 	/**
 	 * @var string $_storage
@@ -32,10 +37,16 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	private $_storage = '';
 
 	/**
-	 * @param string $storage
+	 * @var bool $_init = false
 	 */
-	public function __construct ($storage = '') {
+	private $_init = false;
+
+	/**
+	 * @param string $storage = self::STORAGE
+	 */
+	public function __construct ($storage = self::STORAGE) {
 		$this->_storage = $storage;
+		$this->_init = func_num_args() != 0;
 	}
 
 	/**
@@ -131,6 +142,11 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	 * @return string
 	 */
 	public function DataProvider () {
+		if (!$this->_init) {
+			QuarkModelSource::Register($this->_storage, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/session.qd'));
+			$this->_init = true;
+		}
+
 		return $this->_storage;
 	}
 

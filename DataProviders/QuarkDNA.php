@@ -180,13 +180,47 @@ class QuarkDNA implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $criteria
+	 * @param $options
+	 * @param bool|true $one
+	 *
+	 * @return array|null
+	 */
+	private function _find (IQuarkModel $model, $criteria, $options, $one = true) {
+		$collection = $this->_collection($model);
+		$pk = $this->PrimaryKey($model)->Key();
+		$query = new QuarkDNAQuery($criteria);
+		$out = $one ? null : array();
+
+		foreach ($this->_db->$collection as $i => &$document) {
+			if (!isset($document->$pk)) continue;
+			if (!QuarkDNAID::IsValid($document->$pk)) continue;
+
+			$document->$pk = new QuarkDNAID($document->$pk);
+
+			if (!$query->Match($document, $options)) continue;
+
+			if (!$one) $out[] = $document;
+			else {
+				$out = $document;
+				break;
+			}
+		}
+
+		unset($i, $document, $query, $collection);
+
+		return $out;
+	}
+
+	/**
+	 * @param IQuarkModel $model
 	 * @param             $criteria
 	 * @param             $options
 	 *
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options) {
-		// TODO: Implement Find() method.
+		return $this->_find($model, $criteria, $options, false);
 	}
 
 	/**
@@ -197,7 +231,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options) {
-		// TODO: Implement FindOne() method.
+		return $this->_find($model, $criteria, $options);
 	}
 
 	/**
@@ -210,22 +244,11 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @throws QuarkArchException
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options) {
-		$collection = $this->_collection($model);
-
-		$pk = $this->PrimaryKey($model)->Key();
-
-		foreach ($this->_db->$collection as $i => &$document) {
-			if (!isset($document->$pk)) continue;
-			if (!QuarkDNAID::IsValid($document->$pk)) continue;
-
-			$document->$pk = new QuarkDNAID($document->$pk);
-
-			if ($document->$pk == $id || $document->$pk->Short() == $id) return $document;
-		}
-
-		unset($i, $document, $pk, $collection);
-
-		return null;
+		return $this->_find(
+			$model,
+			array($this->PrimaryKey($model)->Key() => $id),
+			$options
+		);
 	}
 
 	/**
@@ -299,7 +322,7 @@ class QuarkDNAID {
 	}
 
 	/**
-	 * @param int $length
+	 * @param int $length = self::SHORT_ID
 	 *
 	 * @return string
 	 */
@@ -315,11 +338,96 @@ class QuarkDNAID {
 	}
 
 	/**
-	 * @param $id
+	 * @param string $id
 	 *
 	 * @return bool
 	 */
 	public static function IsValid ($id) {
 		return is_scalar($id) || (is_object($id) && method_exists($id, '__toString'));
+	}
+
+	/**
+	 * @param string $id
+	 * @param int $length = self::SHORT_ID
+	 *
+	 * @return bool
+	 */
+	public function Eq ($id, $length = self::SHORT_ID) {
+		return $this->_id == $id || $this->Short($length) == $id;
+	}
+}
+
+/**
+ * Class QuarkDNAQuery
+ *
+ * @package Quark\DataProviders
+ */
+class QuarkDNAQuery {
+	/**
+	 * @var array $_query
+	 */
+	private $_query;
+
+	/**
+	 * @param array $query
+	 */
+	public function __construct ($query) {
+		$this->_query = $query;
+	}
+
+	/**
+	 * @param $document
+	 * @param array $options
+	 * @param array $query
+	 *
+	 * @return bool
+	 */
+	public function Match ($document, $options = [], $query = []) {
+		$output = true;
+		$query = func_num_args() == 3 ? $query : $this->_query;
+
+		if (!is_array($query) || sizeof($query) == 0) return true;
+
+		foreach ($query as $key => $rule) {
+			$value = $rule;
+
+			switch ($key) {
+				case '$lte': $output &= $document <= $value; break;
+				case '$lt': $output &= $document < $value; break;
+				case '$gt': $output &= $document > $value; break;
+				case '$gte': $output &= $document >= $value; break;
+				case '$ne': $output &= $document != $value; break;
+
+				case '$and':
+					$value = $this->Match($rule, ' AND ');
+					$output &= ' (' . $value . ') ';
+					break;
+
+				case '$or':
+					$value = $this->Match($rule, ' OR ');
+					$output &= ' (' . $value . ') ';
+					break;
+
+				case '$nor':
+					$value = $this->Match($rule, ' NOT OR ');
+					$output &= ' (' . $value . ') ';
+					break;
+
+				default:
+					$field = eval('return $document->' . str_replace('.', '->', $key) . ';');
+					$output &= is_string($key)
+						? ($field instanceof QuarkDNAID
+							? $field->Eq($value)
+							: (is_array($rule)
+								? $this->Match($field, $options, $rule)
+								: $field == $value
+							)
+						)
+						: false;
+					break;
+			}
+		}
+
+		return $output;
 	}
 }

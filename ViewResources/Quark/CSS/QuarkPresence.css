@@ -122,13 +122,13 @@ body {
 .quark-presence-contrast, .quark-button.contrast {
     color: rgb(255,255,255);
     text-shadow:
-        -1px -1px 2px rgb(0,0,0),
-        -1px 0 2px rgb(0,0,0),
-        0 -1px 2px rgb(0,0,0),
-        0 0 2px rgb(0,0,0),
-        0 1px 2px rgb(0,0,0),
-        1px 0 2px rgb(0,0,0),
-        1px 1px 2px rgb(0,0,0);
+        -1px -1px 3px rgb(0,0,0),
+        -1px 0 3px rgb(0,0,0),
+        0 -1px 3px rgb(0,0,0),
+        0 0 3px rgb(0,0,0),
+        0 1px 3px rgb(0,0,0),
+        1px 0 3px rgb(0,0,0),
+        1px 1px 3px rgb(0,0,0);
 }
 
 .quark-button.contrast:hover {

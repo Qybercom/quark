@@ -88,14 +88,9 @@ class RESTConfig implements IQuarkExtensionConfig {
 
 	/**
 	 * @param string $name
-	 *
-	 * @return string
 	 */
-	public function Name ($name = '') {
-		if (func_num_args() != 0)
-			$this->_name = $name;
-
-		return $this->_name;
+	public function Stacked ($name) {
+		// TODO: Implement Stacked() method.
 	}
 
 	/**

@@ -18,11 +18,6 @@ class YandexMail implements IQuarkMailProvider {
 	private $_fullname;
 
 	/**
-	 * @var string $_name
-	 */
-	private $_name = '';
-
-	/**
 	 * @param string $username
 	 * @param string $password
 	 * @param string $name
@@ -49,14 +44,9 @@ class YandexMail implements IQuarkMailProvider {
 
 	/**
 	 * @param string $name
-	 *
-	 * @return string
 	 */
-	public function Name ($name = '') {
-		if (func_num_args() != 0)
-			$this->_name = $name;
-
-		return $this->_name;
+	public function Stacked ($name) {
+		// TODO: Implement Stacked() method.
 	}
 
 	/**

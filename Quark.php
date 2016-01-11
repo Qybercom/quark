@@ -150,7 +150,8 @@ class Quark {
 	 * @return string
 	 */
 	public static function WebLocation ($path) {
-		return Quark::WebHost() . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+		$uri = Quark::WebHost() . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', $uri)));
 	}
 
 	/**
@@ -268,7 +269,7 @@ class Quark {
 	 */
 	public static function &Stack ($name, IQuarkStackable $object = null) {
 		if (func_num_args() == 2) {
-			$object->Name($name);
+			$object->Stacked($name);
 			self::$_stack[$name] = $object;
 		}
 
@@ -446,6 +447,11 @@ class QuarkConfig {
 	private $_mode = Quark::MODE_DEV;
 
 	/**
+	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settings
+	 */
+	private $_settings;
+
+	/**
 	 * @var array $_location
 	 */
 	private $_location = array(
@@ -515,7 +521,7 @@ class QuarkConfig {
 	 *
 	 * @return IQuarkCulture|QuarkCultureISO
 	 */
-	public function Culture (IQuarkCulture $culture = null) {
+	public function &Culture (IQuarkCulture $culture = null) {
 		return $this->_culture = ($culture === null) ? $this->_culture : $culture;
 	}
 
@@ -524,7 +530,7 @@ class QuarkConfig {
 	 *
 	 * @return int
 	 */
-	public function Alloc ($mb = 5) {
+	public function &Alloc ($mb = 5) {
 		if (func_num_args() != 0)
 			$this->_alloc = $mb;
 
@@ -536,7 +542,7 @@ class QuarkConfig {
 	 *
 	 * @return int
 	 */
-	public function Tick ($ms = QuarkThreadSet::TICK) {
+	public function &Tick ($ms = QuarkThreadSet::TICK) {
 		if (func_num_args() != 0)
 			$this->_tick = $ms;
 
@@ -548,7 +554,7 @@ class QuarkConfig {
 	 *
 	 * @return string
 	 */
-	public function Mode ($mode = Quark::MODE_DEV) {
+	public function &Mode ($mode = Quark::MODE_DEV) {
 		if (func_num_args() != 0)
 			$this->_mode = $mode;
 
@@ -627,6 +633,21 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param IQuarkApplicationSettingsModel $model = null
+	 *
+	 * @return QuarkModel
+	 */
+	public function &ApplicationSettings (IQuarkApplicationSettingsModel $model = null) {
+		if (func_num_args() != null)
+			$this->_settings = QuarkModel::FindOne($model, $model->LoadCriteria());
+
+		if ($this->_settings == null)
+			$this->_settings = new QuarkModel($model);
+
+		return $this->_settings;
+	}
+
+	/**
 	 * @param string $component
 	 * @param string $location = ''
 	 *
@@ -644,7 +665,7 @@ class QuarkConfig {
 	 *
 	 * @return QuarkURI
 	 */
-	public function WebHost ($uri = '') {
+	public function &WebHost ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_webHost = QuarkURI::FromURI($uri);
 
@@ -656,7 +677,7 @@ class QuarkConfig {
 	 *
 	 * @return QuarkURI
 	 */
-	public function ClusterControllerListen ($uri = '') {
+	public function &ClusterControllerListen ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_clusterControllerListen = QuarkURI::FromURI($uri);
 
@@ -668,7 +689,7 @@ class QuarkConfig {
 	 *
 	 * @return QuarkURI
 	 */
-	public function ClusterControllerConnect ($uri = '') {
+	public function &ClusterControllerConnect ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_clusterControllerConnect = QuarkURI::FromURI($uri);
 
@@ -680,7 +701,7 @@ class QuarkConfig {
 	 *
 	 * @return QuarkURI
 	 */
-	public function ClusterMonitor ($uri = '') {
+	public function &ClusterMonitor ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_clusterMonitor = QuarkURI::FromURI($uri);
 
@@ -692,7 +713,7 @@ class QuarkConfig {
 	 *
 	 * @return string
 	 */
-	public function ClusterKey ($key = '') {
+	public function &ClusterKey ($key = '') {
 		if (func_num_args() != 0)
 			$this->_clusterKey = $key;
 
@@ -704,7 +725,7 @@ class QuarkConfig {
 	 *
 	 * @return QuarkURI
 	 */
-	public function SelfHostedFPM ($uri = '') {
+	public function &SelfHostedFPM ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_selfHosted = QuarkURI::FromURI($uri);
 
@@ -719,9 +740,9 @@ class QuarkConfig {
  */
 interface IQuarkStackable {
 	/**
-	 * @return string
+	 * @param string $name
 	 */
-	public function Name();
+	public function Stacked($name);
 }
 
 /**
@@ -4091,6 +4112,13 @@ class QuarkModelSource implements IQuarkStackable {
 	}
 
 	/**
+	 * @param string $name
+	 */
+	public function Stacked ($name) {
+		// TODO: Implement Stacked() method.
+	}
+
+	/**
 	 * @param $method
 	 * @param $args
 	 *
@@ -4119,13 +4147,6 @@ class QuarkModelSource implements IQuarkStackable {
 	}
 
 	/**
-	 * @return string
-	 */
-	public function &Name () {
-		return $this->_name;
-	}
-
-	/**
 	 * @param IQuarkDataProvider $provider
 	 *
 	 * @return IQuarkDataProvider
@@ -4147,6 +4168,17 @@ class QuarkModelSource implements IQuarkStackable {
 			$this->_uri = $uri;
 
 		return $this->_uri;
+	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkDataProvider $provider
+	 * @param QuarkURI $uri
+	 *
+	 * @return QuarkModelSource|IQuarkStackable
+	 */
+	public static function Register ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
+		return Quark::Component($name, new self($name, $provider, $uri));
 	}
 }
 
@@ -4947,6 +4979,18 @@ interface IQuarkModelWithBeforeExtract {
 	 * @return mixed
 	 */
 	public function BeforeExtract($fields, $weak);
+}
+
+/**
+ * Interface IQuarkApplicationSettingsModel
+ *
+ * @package Quark
+ */
+interface IQuarkApplicationSettingsModel extends IQuarkModel, IQuarkModelWithDataProvider {
+	/**
+	 * @return array
+	 */
+	public function LoadCriteria();
 }
 
 /**
@@ -5832,6 +5876,13 @@ class QuarkSessionSource implements IQuarkStackable {
 		$this->_name = $name;
 		$this->_provider = $provider;
 		$this->_user = $user;
+	}
+
+	/**
+	 * @param string $name
+	 */
+	public function Stacked ($name) {
+		// TODO: Implement Stacked() method.
 	}
 
 	/**
@@ -11287,7 +11338,7 @@ class QuarkSQL {
 			$value = $this->Value($rule);
 
 			if (is_array($rule))
-				$value = self::Condition($rule, ' AND ');
+				$value = $this->Condition($rule, ' AND ');
 
 			switch ($field) {
 				case '`$lte`': $output[] = '<=' . $value; break;

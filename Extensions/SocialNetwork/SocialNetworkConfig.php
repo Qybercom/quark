@@ -1,8 +1,13 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
+use Quark\DataProviders\QuarkDNA;
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+use Quark\Quark;
+use Quark\QuarkConfig;
+use Quark\QuarkModelSource;
+use Quark\QuarkURI;
 
 /**
  * Class SocialNetworkConfig
@@ -10,6 +15,8 @@ use Quark\IQuarkExtensionConfig;
  * @package Quark\Extensions\SocialNetwork
  */
 class SocialNetworkConfig implements IQuarkExtensionConfig {
+	const STORAGE = 'quark.social';
+
 	/**
 	 * @var IQuarkSocialNetworkProvider $social
 	 */
@@ -76,19 +83,17 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 		if (func_num_args() != 0)
 			$this->_dataProvider = $dataProvider;
 
+		if ($this->_dataProvider == '')
+			$this->_dataProvider = QuarkModelSource::Register(self::STORAGE, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/social.qd'));
+
 		return $this->_dataProvider;
 	}
 
 	/**
 	 * @param string $name
-	 *
-	 * @return string
 	 */
-	public function Name ($name = '') {
-		if (func_num_args() != 0)
-			$this->_name = $name;
-
-		return $this->_name;
+	public function Stacked ($name) {
+		$this->_name = $name;
 	}
 
 	/**
