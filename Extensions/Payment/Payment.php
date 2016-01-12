@@ -83,4 +83,23 @@ class Payment implements IQuarkExtension {
 	public function Response () {
 		return $this->_scenario->Response();
 	}
+
+	/**
+	 * @param string $config = ''
+	 * @param string $redirect = ''
+	 * @param string[] $scope = []
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function Authorization ($config = '', $redirect = '', $scope = []) {
+		/**
+		 * @var IQuarkPaymentConfig $_config
+		 */
+		$_config = Quark::Config()->Extension($config);
+
+		return QuarkDTO::ForRedirect(call_user_func_array(
+			array($_config, 'AuthorizationEndpoint'),
+			array_slice(func_get_args(), 1)
+		));
+	}
 }

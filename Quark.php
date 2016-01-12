@@ -8599,6 +8599,9 @@ class QuarkDTO {
 
 	const METHOD_GET = 'GET';
 	const METHOD_POST = 'POST';
+	const METHOD_PUT = 'PUT';
+	const METHOD_PATCH = 'PATCH';
+	const METHOD_DELETE = 'DELETE';
 
 	const HEADER_HOST = 'Host';
 	const HEADER_ACCEPT = 'Accept';

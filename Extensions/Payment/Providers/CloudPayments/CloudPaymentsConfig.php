@@ -76,4 +76,14 @@ class CloudPaymentsConfig implements IQuarkPaymentConfig {
 	public function ExtensionInstance () {
 		// TODO: Implement ExtensionInstance() method.
 	}
+
+	/**
+	 * @param string $redirect
+	 * @param string[] $scope
+	 *
+	 * @return string
+	 */
+	public function AuthorizationEndpoint ($redirect, $scope) {
+		// TODO: Implement AuthorizationEndpoint() method.
+	}
 }

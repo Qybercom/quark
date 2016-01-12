@@ -16,4 +16,12 @@ interface IQuarkPaymentConfig extends IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function Money($currency, $amount);
+
+	/**
+	 * @param string $redirect
+	 * @param string[] $scope
+	 *
+	 * @return string
+	 */
+	public function AuthorizationEndpoint($redirect, $scope);
 }
