@@ -18,7 +18,7 @@ interface IQuarkSocialNetworkProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Init($appId, $appSecret);
+	public function SocialNetworkApplication($appId, $appSecret);
 
 	/**
 	 * @param string $to

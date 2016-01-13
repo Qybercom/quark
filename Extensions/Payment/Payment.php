@@ -18,7 +18,7 @@ class Payment implements IQuarkExtension {
 	const CURRENCY_EUR = 'EUR';
 
 	/**
-	 * @var IQuarkPaymentConfig $_config
+	 * @var PaymentConfig $_config
 	 */
 	private $_config;
 
@@ -28,12 +28,20 @@ class Payment implements IQuarkExtension {
 	private $_scenario;
 
 	/**
-	 * @param string $config
-	 * @param IQuarkPaymentScenario $scenario
+	 * @var IQuarkPaymentInstrument $_instrument
 	 */
-	public function __construct ($config, IQuarkPaymentScenario $scenario) {
+	private $_instrument;
+
+	/**
+	 * @param string $config
+	 * @param IQuarkPaymentScenario $scenario = null
+	 * @param IQuarkPaymentInstrument $instrument = null
+	 */
+	public function __construct ($config, IQuarkPaymentScenario $scenario = null, IQuarkPaymentInstrument $instrument = null) {
 		$this->_config = Quark::Config()->Extension($config);
+
 		$this->_scenario = $scenario;
+		$this->_instrument = $instrument;
 	}
 
 	/**
@@ -63,18 +71,34 @@ class Payment implements IQuarkExtension {
 	}
 
 	/**
-	 * @param string $currency
-	 * @param int|float $amount
+	 * @param IQuarkPaymentScenario $scenario = null
 	 *
-	 * @return mixed
+	 * @return IQuarkPaymentScenario
 	 */
-	public function Pay ($currency = self::CURRENCY_USD, $amount = 0) {
-		if ($this->_config == null) return false;
-
+	public function Scenario (IQuarkPaymentScenario $scenario = null) {
 		if (func_num_args() != 0)
-			$this->_config->Money($currency, $amount);
+			$this->_scenario = $scenario;
 
-		return $this->_scenario->Pay($this->_config);
+		return $this->_scenario;
+	}
+
+	/**
+	 * @param IQuarkPaymentInstrument $instrument = null
+	 *
+	 * @return IQuarkPaymentInstrument
+	 */
+	public function Instrument (IQuarkPaymentInstrument $instrument = null) {
+		if (func_num_args() != 0)
+			$this->_instrument = $instrument;
+
+		return $this->_instrument;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Proceed () {
+		return $this->_scenario->Proceed($this->_config->PaymentProvider(), $this->_instrument);
 	}
 
 	/**
@@ -82,24 +106,5 @@ class Payment implements IQuarkExtension {
 	 */
 	public function Response () {
 		return $this->_scenario->Response();
-	}
-
-	/**
-	 * @param string $config = ''
-	 * @param string $redirect = ''
-	 * @param string[] $scope = []
-	 *
-	 * @return QuarkDTO
-	 */
-	public static function Authorization ($config = '', $redirect = '', $scope = []) {
-		/**
-		 * @var IQuarkPaymentConfig $_config
-		 */
-		$_config = Quark::Config()->Extension($config);
-
-		return QuarkDTO::ForRedirect(call_user_func_array(
-			array($_config, 'AuthorizationEndpoint'),
-			array_slice(func_get_args(), 1)
-		));
 	}
 }

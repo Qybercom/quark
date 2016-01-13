@@ -15,7 +15,7 @@ class GooglePlus implements IQuarkSocialNetworkProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Init ($appId, $appSecret) {
+	public function SocialNetworkApplication ($appId, $appSecret) {
 		// TODO: Implement Init() method.
 	}
 

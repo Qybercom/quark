@@ -10,11 +10,12 @@ use Quark\QuarkDTO;
  */
 interface IQuarkPaymentScenario {
 	/**
-	 * @param IQuarkPaymentConfig $config
+	 * @param IQuarkPaymentProvider $provider
+	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
 	 * @return bool
 	 */
-	public function Pay(IQuarkPaymentConfig $config);
+	public function Proceed(IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null);
 
 	/**
 	 * @return QuarkDTO

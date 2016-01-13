@@ -18,9 +18,9 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	const STORAGE = 'quark.social';
 
 	/**
-	 * @var IQuarkSocialNetworkProvider $social
+	 * @var IQuarkSocialNetworkProvider $_provider
 	 */
-	public $social;
+	private $_provider;
 
 	/**
 	 * @var string $appId
@@ -43,25 +43,25 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	private $_name = '';
 
 	/**
-	 * @param IQuarkSocialNetworkProvider $social
+	 * @param IQuarkSocialNetworkProvider $provider
 	 * @param string $id
 	 * @param string $secret
 	 * @param string $dataProvider
 	 */
-	public function __construct (IQuarkSocialNetworkProvider $social, $id, $secret, $dataProvider = '') {
-		$this->social = $social;
+	public function __construct (IQuarkSocialNetworkProvider $provider, $id, $secret, $dataProvider = '') {
+		$this->_provider = $provider;
 		$this->appId = $id;
 		$this->appSecret = $secret;
 		$this->_dataProvider = $dataProvider;
 
-		$this->social->Init($this->appId, $this->appSecret);
+		$this->_provider->SocialNetworkApplication($this->appId, $this->appSecret);
 	}
 
 	/**
 	 * @return array
 	 */
 	public function Credentials () {
-		return array(
+		return (object)array(
 			'appId' => $this->appId,
 			'secret' => $this->appSecret
 		);
@@ -70,8 +70,8 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	/**
 	 * @return IQuarkSocialNetworkProvider
 	 */
-	public function SocialNetwork () {
-		return $this->social;
+	public function &SocialNetwork () {
+		return $this->_provider;
 	}
 
 	/**
@@ -79,7 +79,7 @@ class SocialNetworkConfig implements IQuarkExtensionConfig {
 	 *
 	 * @return string
 	 */
-	public function DataProvider ($dataProvider = '') {
+	public function &DataProvider ($dataProvider = '') {
 		if (func_num_args() != 0)
 			$this->_dataProvider = $dataProvider;
 

@@ -80,7 +80,7 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Init ($appId, $appSecret) {
+	public function SocialNetworkApplication ($appId, $appSecret) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
 	}

@@ -17,19 +17,50 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	const COUNTRY_GB = 'GB';
 	const COUNTRY_CA = 'CA';
 
-	public $number;
+	/**
+	 * @var string|int $number = ''
+	 */
+	public $number = '';
+
+	/**
+	 * @var string $type = self::TYPE_VISA
+	 */
 	public $type = self::TYPE_VISA;
-	public $expire_month;
-	public $expire_year;
-	public $cvv2;
-	public $first_name;
-	public $last_name;
-	public $billing_address;
+
+	/**
+	 * @var string|int $expire_month = ''
+	 */
+	public $expire_month = '';
+
+	/**
+	 * @var string|int $expire_year = ''
+	 */
+	public $expire_year = '';
+
+	/**
+	 * @var string|int $cvv2 = ''
+	 */
+	public $cvv2 = '';
+
+	/**
+	 * @var string $first_name = ''
+	 */
+	public $first_name = '';
+
+	/**
+	 * @var string $last_name = ''
+	 */
+	public $last_name = '';
+
+	/**
+	 * @var string $billing_address = ''
+	 */
+	public $billing_address = '';
 
 	/**
 	 * @param string|int $number
 	 * @param string|int $cvv2
-	 * @param string $type
+	 * @param string $type = self::TYPE_VISA
 	 */
 	public function __construct ($number, $cvv2, $type = self::TYPE_VISA) {
 		$this->number = $number;
@@ -38,8 +69,8 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	}
 
 	/**
-	 * @param int $month
-	 * @param int $year
+	 * @param string|int $month
+	 * @param string|int $year
 	 *
 	 * @return CreditCardInstrument
 	 */
@@ -64,15 +95,15 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	}
 
 	/**
-	 * @param $country
-	 * @param $state
-	 * @param $city
-	 * @param $postal
-	 * @param $line1
+	 * @param string $country = ''
+	 * @param string $state = ''
+	 * @param string $city = ''
+	 * @param string|int $postal = ''
+	 * @param string $line1 = ''
 	 *
 	 * @return CreditCardInstrument
 	 */
-	public function BillingAddress ($country, $state, $city, $postal, $line1) {
+	public function BillingAddress ($country = '', $state = '', $city = '', $postal = '', $line1 = '') {
 		$this->billing_address = array(
 			'line1' => $line1,
 			'city' => $city,
@@ -88,6 +119,9 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	 * @return array
 	 */
 	public function PaymentInstrument () {
-		return $this;
+		return array(
+			'payment_method' => 'credit_card',
+			'funding_instruments' => array($this)
+		);
 	}
 }

@@ -4,9 +4,11 @@ namespace Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios;
 use Quark\QuarkDTO;
 
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
-use Quark\Extensions\Payment\IQuarkPaymentConfig;
+use Quark\Extensions\Payment\IQuarkPaymentProvider;
+use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 
-use Quark\Extensions\Payment\Providers\CloudPayments\CloudPaymentsConfig;
+use Quark\Extensions\Payment\Payment;
+use Quark\Extensions\Payment\Providers\CloudPayments\CloudPayments;
 
 /**
  * Class CardChargeScenario
@@ -25,33 +27,78 @@ use Quark\Extensions\Payment\Providers\CloudPayments\CloudPaymentsConfig;
  * @package Quark\Extensions\Payment\Providers\CloudPayments\PaymentScenarios
  */
 class CardChargeScenario implements IQuarkPaymentScenario {
+	/**
+	 * @var float $Amount = 0.0
+	 */
+	public $Amount = 0.0;
+
+	/**
+	 * @var string $Currency = Payment::CURRENCY_USD
+	 */
+	public $Currency = Payment::CURRENCY_USD;
+
+	/**
+	 * @var string $Name = ''
+	 */
 	public $Name = '';
+
+	/**
+	 * @var string $IpAddress
+	 */
+	public $IpAddress = '';
+
+	/**
+	 * @var string $AccountId = ''
+	 */
+	public $AccountId = '';
+
+	/**
+	 * @var string $CardCryptogramPacket = ''
+	 */
 	public $CardCryptogramPacket = '';
 
+	/**
+	 * @var QuarkDTO $_response
+	 */
 	private $_response;
 
 	/**
-	 * @param string $name
-	 * @param string $cryptogram
-	 * @param string $ip
+	 * @param string $currency = Payment::CURRENCY_USD
+	 * @param float $amount = 0.0
+	 * @param string $name = ''
+	 * @param string $cryptogram = ''
+	 * @param string $ip = ''
 	 */
-	public function __construct ($name, $cryptogram, $ip) {
+	public function __construct ($currency = Payment::CURRENCY_USD, $amount = 0.0, $name = '', $cryptogram = '', $ip = '') {
+		$this->Money($currency, $amount);
 		$this->Name = $name;
 		$this->CardCryptogramPacket = $cryptogram;
 		$this->IpAddress = $ip;
 	}
 
 	/**
-	 * @param IQuarkPaymentConfig|CloudPaymentsConfig $config
+	 * @param string $currency = Payment::CURRENCY_USD
+	 * @param float $amount = 0.0
+	 *
+	 * @return TokenChargeScenario
+	 */
+	public function Money ($currency = Payment::CURRENCY_USD, $amount = 0.0) {
+		$this->Currency = $currency;
+		$this->Amount = $amount;
+
+		return $this;
+	}
+
+	/**
+	 * @param IQuarkPaymentProvider|CloudPayments $provider
+	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
 	 * @return bool
 	 */
-	public function Pay (IQuarkPaymentConfig $config) {
-		$this->Currency = $config->currency;
-		$this->Amount = $config->amount;
-		$this->AccountId = $config->user;
+	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
+		$this->AccountId = $provider->user;
 
-		$this->_response = $config->API($this, 'https://api.cloudpayments.ru/payments/cards/charge');
+		$this->_response = $provider->API($this, 'https://api.cloudpayments.ru/payments/cards/charge');
 
 		return isset($this->_response->Success) && $this->_response->Success;
 	}
