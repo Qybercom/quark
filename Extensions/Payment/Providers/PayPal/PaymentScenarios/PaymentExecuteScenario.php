@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios;
 
-use Quark\Quark;
 use Quark\QuarkDTO;
 
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
@@ -11,11 +10,11 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
 
 /**
- * Class DirectPaymentApproveScenario
+ * Class PaymentExecuteScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class DirectPaymentApproveScenario implements IQuarkPaymentScenario {
+class PaymentExecuteScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -90,7 +89,7 @@ class DirectPaymentApproveScenario implements IQuarkPaymentScenario {
 	/**
 	 * @param QuarkDTO $request
 	 *
-	 * @return DirectPaymentApproveScenario
+	 * @return PaymentExecuteScenario
 	 */
 	public static function FromRedirect (QuarkDTO $request) {
 		return new self($request->paymentId, $request->PayerID);

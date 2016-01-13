@@ -9,13 +9,15 @@ use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
+use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\CreditCardInstrument;
+use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\PayPalAccountInstrument;
 
 /**
- * Class DirectPaymentCreateScenario
+ * Class PaymentCreateScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class DirectPaymentCreateScenario implements IQuarkPaymentScenario {
+class PaymentCreateScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var float $_amount = 0.0
 	 */
@@ -71,7 +73,7 @@ class DirectPaymentCreateScenario implements IQuarkPaymentScenario {
 	 * @param string $currency = Payment::CURRENCY_USD
 	 * @param float $amount = 0.0
 	 *
-	 * @return DirectPaymentCreateScenario
+	 * @return PaymentCreateScenario
 	 */
 	public function Money ($currency = Payment::CURRENCY_USD, $amount = 0.0) {
 		$this->_currency = $currency;
@@ -145,14 +147,18 @@ class DirectPaymentCreateScenario implements IQuarkPaymentScenario {
 			)
 		);
 
-		if (!isset($this->_response->state) || $this->_response->state != 'created') return false;
+		$state = $instrument instanceof PayPalAccountInstrument ? 'created' : 'approved';
+
+		if (!isset($this->_response->state) || $this->_response->state != $state) return false;
 		if (!isset($this->_response->links) || !is_array($this->_response->links)) return false;
 
 		foreach ($this->_response->links as $link)
 			if (isset($link->rel) && isset($link->href))
 				$this->_links->{$link->rel} = $link->href;
 
-		return isset($this->_links->approval_url);
+		return
+			($instrument instanceof PayPalAccountInstrument && isset($this->_links->approval_url)) ||
+			($instrument instanceof CreditCardInstrument && isset($this->_links->self));
 	}
 
 	/**

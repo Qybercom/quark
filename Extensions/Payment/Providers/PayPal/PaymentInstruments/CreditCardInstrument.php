@@ -10,6 +10,7 @@ use Quark\Extensions\Payment\IQuarkPaymentInstrument;
  */
 class CreditCardInstrument implements IQuarkPaymentInstrument {
 	const TYPE_VISA = 'visa';
+	const TYPE_MASTERCARD = 'mastercard';
 
 	const COUNTRY_US = 'US';
 	const COUNTRY_MD = 'MD';
@@ -53,28 +54,32 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	public $last_name = '';
 
 	/**
-	 * @var string $billing_address = ''
+	 * @var string $billing_address = []
 	 */
-	public $billing_address = '';
+	public $billing_address = null;
 
 	/**
-	 * @param string|int $number
-	 * @param string|int $cvv2
 	 * @param string $type = self::TYPE_VISA
+	 * @param string|int $number = ''
+	 * @param string|int $cvv2 = ''
+	 * @param string|int $month = ''
+	 * @param string|int $year = ''
+	 * @param string $first_name = ''
+	 * @param string $last_name = ''
 	 */
-	public function __construct ($number, $cvv2, $type = self::TYPE_VISA) {
+	public function __construct ($type = self::TYPE_VISA, $number = '', $cvv2 = '', $month = '', $year = '', $first_name = '', $last_name = '') {
 		$this->number = $number;
 		$this->cvv2 = $cvv2;
 		$this->type = $type;
 	}
 
 	/**
-	 * @param string|int $month
-	 * @param string|int $year
+	 * @param string|int $month = ''
+	 * @param string|int $year = ''
 	 *
 	 * @return CreditCardInstrument
 	 */
-	public function Expiration ($month, $year) {
+	public function Expiration ($month = '', $year = '') {
 		$this->expire_month = $month;
 		$this->expire_year = $year;
 
@@ -82,14 +87,14 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	}
 
 	/**
-	 * @param string $first
-	 * @param string $last
+	 * @param string $first_name = ''
+	 * @param string $last_name = ''
 	 *
 	 * @return CreditCardInstrument
 	 */
-	public function Name ($first, $last) {
-		$this->first_name = $first;
-		$this->last_name = $last;
+	public function Holder ($first_name = '', $last_name = '') {
+		$this->first_name = $first_name;
+		$this->last_name = $last_name;
 
 		return $this;
 	}
@@ -119,9 +124,14 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	 * @return array
 	 */
 	public function PaymentInstrument () {
+		if ($this->billing_address == null)
+			unset($this->billing_address);
+
 		return array(
 			'payment_method' => 'credit_card',
-			'funding_instruments' => array($this)
+			'funding_instruments' => array(
+				array('credit_card' => $this)
+			)
 		);
 	}
 }
