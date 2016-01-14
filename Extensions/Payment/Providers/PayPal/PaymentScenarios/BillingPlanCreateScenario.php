@@ -13,6 +13,12 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
 class BillingPlanCreateScenario implements IQuarkPaymentScenario {
+	const TYPE_PLAN_TRIAL = 'TRIAL';
+	const TYPE_PLAN_REGULAR = 'REGULAR';
+
+	const TYPE_CHARGE_TAX = 'TAX';
+	const TYPE_CHARGE_SHIPPING = 'SHIPPING';
+
 	/**
 	 * @var QuarkDTO $_response
 	 */

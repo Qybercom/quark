@@ -60,7 +60,7 @@ class PaymentCreateScenario implements IQuarkPaymentScenario {
 	 * @param string $cancel = ''
 	 * @param string $description = ''
 	 */
-	public function __construct ($currency, $amount = 0.0, $return = '', $cancel = '', $description = '') {
+	public function __construct ($currency = Payment::CURRENCY_USD, $amount = 0.0, $return = '', $cancel = '', $description = '') {
 		$this->Money($currency, $amount);
 		$this->ReturnURL($return);
 		$this->CancelURL($cancel);

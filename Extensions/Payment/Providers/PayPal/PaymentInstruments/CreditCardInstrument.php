@@ -54,7 +54,7 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	public $last_name = '';
 
 	/**
-	 * @var string $billing_address = []
+	 * @var array $billing_address = null
 	 */
 	public $billing_address = null;
 
