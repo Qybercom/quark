@@ -63,6 +63,11 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 	private $_response;
 
 	/**
+	 * @var object $_model
+	 */
+	private $_model;
+
+	/**
 	 * @param string $currency = Payment::CURRENCY_USD
 	 * @param float $amount = 0.0
 	 * @param string $name = ''
@@ -99,8 +104,9 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 		$this->AccountId = $provider->user;
 
 		$this->_response = $provider->API($this, 'https://api.cloudpayments.ru/payments/cards/charge');
+		$this->_model = isset($this->_response->Model) ? $this->_response->Model : null;
 
-		return isset($this->_response->Success) && $this->_response->Success;
+		return isset($this->_response->Success) && $this->_response->Success && isset($this->_model->AcsUrl);
 	}
 
 	/**
@@ -108,5 +114,12 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 	 */
 	public function Response () {
 		return $this->_response;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function Model () {
+		return isset($this->_model->AcsUrl) ? $this->_model : (object)array('CardHolderMessage' => $this->_response->Message);
 	}
 }

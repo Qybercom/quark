@@ -20,6 +20,8 @@ use Quark\QuarkJSONIOProcessor;
  * @package Quark\Extensions\Quark\REST
  */
 class RESTService implements IQuarkDataProvider, IQuarkExtension {
+	const OPTION_PAGE = 'page';
+
 	/**
 	 * @var QuarkURI
 	 */
@@ -104,12 +106,14 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	}
 
 	/**
+	 * http://php.net/manual/ru/function.preg-split.php#104602
+	 *
 	 * @param IQuarkModel $model
 	 *
 	 * @return string
 	 */
 	private static function _class (IQuarkModel $model) {
-		return strtolower(QuarkObject::ClassOf($model));
+		return implode('/', preg_split('/([[:upper:]][[:lower:]]+)/', QuarkObject::ClassOf($model), null, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY));
 	}
 
 	/**
@@ -190,8 +194,8 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
 		try {
-			if (isset($options['page']))
-				$this->_uri->query .= '&page=' . $options['page'];
+			if (isset($options[self::OPTION_PAGE]))
+				$this->_uri->query .= '&page=' . $options[self::OPTION_PAGE];
 
 			$api = $this->_api('Get', '/' . self::_class($model) . '/list', $criteria);
 

@@ -51,6 +51,11 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 	private $_response;
 
 	/**
+	 * @var object $_model
+	 */
+	private $_model;
+
+	/**
 	 * @param string $currency = Payment::CURRENCY_USD
 	 * @param float $amount = 0.0
 	 * @param string $token = ''
@@ -83,6 +88,7 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 		$this->AccountId = $provider->user;
 
 		$this->_response = $provider->API($this, 'https://api.cloudpayments.ru/payments/tokens/charge');
+		$this->_model = isset($this->_response->Model) ? $this->_response->Model : null;
 
 		return isset($this->_response->Success) && $this->_response->Success;
 	}
@@ -92,5 +98,12 @@ class TokenChargeScenario implements IQuarkPaymentScenario {
 	 */
 	public function Response () {
 		return $this->_response;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function Model () {
+		return $this->_model;
 	}
 }
