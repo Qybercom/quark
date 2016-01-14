@@ -12,9 +12,9 @@ class CreditCardInstrument implements IQuarkPaymentInstrument {
 	const TYPE_VISA = 'visa';
 	const TYPE_MASTERCARD = 'mastercard';
 
-	const COUNTRY_US = 'US';
 	const COUNTRY_MD = 'MD';
 	const COUNTRY_RU = 'RU';
+	const COUNTRY_US = 'US';
 	const COUNTRY_GB = 'GB';
 	const COUNTRY_CA = 'CA';
 
