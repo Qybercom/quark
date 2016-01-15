@@ -3785,7 +3785,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function Add ($item) {
 		if ($this->_type($item))
-			$this->_list[] = $item;
+			$this->_list[] = $item instanceof QuarkModel ? $item : new QuarkModel($item);
 
 		return $this;
 	}
@@ -3836,7 +3836,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return array
 	 */
 	public function Collection (callable $iterator = null) {
-		if ($iterator == null) return $this->_list;
+		if ($iterator == null)
+			$iterator = function (QuarkModel $item = null) { return $item ? $item->Model() : null; };
 
 		$output = array();
 
