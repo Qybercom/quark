@@ -10,6 +10,7 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
+use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\CreditCardInstrument;
 use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\PayPalAccountInstrument;
 
@@ -147,10 +148,11 @@ class BillingAgreementCreateScenario implements IQuarkPaymentScenario {
 	 * @param float $setupValue = 0.0
 	 * @param string $return = ''
 	 * @param string $cancel = ''
+	 * @param int $maxFailAttempts = 1
 	 *
 	 * @return array
 	 */
-	public function &MerchantPreferences ($setupCurrency = Payment::CURRENCY_USD, $setupValue = 0.0, $return = '', $cancel = '') {
+	public function &MerchantPreferences ($setupCurrency = Payment::CURRENCY_USD, $setupValue = 0.0, $return = '', $cancel = '', $maxFailAttempts = 1) {
 		if (func_num_args() != 0)
 			$this->_merchant = array(
 				'cancel_url' => $cancel,
@@ -158,7 +160,11 @@ class BillingAgreementCreateScenario implements IQuarkPaymentScenario {
 				'setup_fee' => array(
 					'currency' => $setupCurrency,
 					'value' => $setupValue
-				)
+				),
+				'max_fail_attempts' => $maxFailAttempts,
+				'initial_fail_amount_action' => $maxFailAttempts == 0
+					? PayPalBilling::FAIL_AMOUNT_CONTINUE
+					: PayPalBilling::FAIL_AMOUNT_CANCEL
 			);
 
 		return $this->_merchant;

@@ -133,3 +133,29 @@ body {
 .quark-button.contrast:hover {
     color: rgb(0,225,80);
 }
+
+.quark-button.toggle {
+    color: rgb(0,0,0);
+}
+
+.quark-button.toggle:before {
+    font-size: 24px;
+    margin: -3px 5px 0 0;
+    vertical-align: middle;
+}
+
+.quark-button.toggle.on:before {
+    color: rgb(0,250,75);
+}
+
+.quark-button.toggle.off:before {
+    color: rgb(225,75,0);
+}
+
+.quark-button.toggle.disabled {
+    color: rgb(200,200,200);
+}
+
+.quark-button.toggle.disabled:before {
+    color: rgb(200,200,200);
+}

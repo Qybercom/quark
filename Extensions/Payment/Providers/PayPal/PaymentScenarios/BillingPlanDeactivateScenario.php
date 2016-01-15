@@ -11,11 +11,11 @@ use Quark\Extensions\Payment\Providers\PayPal\PayPal;
 use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 
 /**
- * Class BillingPlanActivateScenario
+ * Class BillingPlanDeactivateScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class BillingPlanActivateScenario implements IQuarkPaymentScenario {
+class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -58,7 +58,7 @@ class BillingPlanActivateScenario implements IQuarkPaymentScenario {
 			array(
 				array(
 					'path' => '/',
-					'value' => array('state' => PayPalBilling::STATE_ACTIVE),
+					'value' => array('state' => PayPalBilling::STATE_CREATED),
 					'op' => 'replace'
 				)
 			)

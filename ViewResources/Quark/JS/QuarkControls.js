@@ -189,3 +189,92 @@ Quark.Controls.File.To = function (url, name, opt) {
 		})
 		.click();
 };
+
+/**
+ * @param {string} selector
+ * @param {object} opt
+ *
+ * @constructor
+ */
+Quark.Controls.Toggle = function (selector, opt) {
+	opt = opt || {};
+		opt.enabled = opt.enabled || {};
+			opt.enabled.title = opt.enabled.title || '';
+			opt.enabled.html = opt.enabled.html || '';
+			opt.enabled.action = opt.enabled.action || false;
+		opt.disabled = opt.disabled || {};
+			opt.disabled.title = opt.disabled.title || '';
+			opt.disabled.html = opt.disabled.html || '';
+			opt.disabled.action = opt.disabled.action || false;
+
+	var that = this;
+
+	that.Elem = $(selector);
+
+	/**
+	 * @param elem
+	 * @param {boolean} available
+	 */
+	that.Available = function (elem, available) {
+		elem.removeClass(available ? 'disabled' : '');
+		elem.addClass(available ? '' : 'disabled');
+	};
+
+	that._attr = function (enabled, elem) {
+		elem.removeClass(enabled ? 'fa-toggle-off off' : 'fa-toggle-on on');
+		elem.addClass(enabled ? 'fa-toggle-on on' : 'fa-toggle-off off');
+		elem.attr('quark-enabled', enabled ? 'true' : 'false');
+
+		if (elem.attr('disabled') == 'disabled')
+			that.Available(elem, false);
+
+		var name = opt.name == undefined
+			? (elem.attr('name') || '')
+			: opt.name;
+
+		if (name == '') return;
+
+		var input = elem.find('input[type="hidden"]');
+
+		if (input.length == 0)
+			elem.append('<input type="hidden" name="' + name + '" value="' + (enabled ? 'on' : 'off') + '" />');
+
+		input.val(enabled ? 'on' : 'off');
+	};
+
+	if (opt.enable != undefined)
+		that._attr(enabled, that.Elem);
+
+	$(document).on('click', selector, function (e) {
+		e.preventDefault();
+
+		if ($(this).attr('disabled') != 'disabled')
+			that.Toggle($(this));
+	});
+
+	that.Elem.each(function () {
+		that._attr($(this).attr('quark-enabled') == 'true', $(this));
+	});
+
+	/**
+	 * @param elem
+	 */
+	that.Toggle = function (elem) {
+		if (elem.attr('quark-enabled') == 'true') opt.enabled.action(that, elem);
+		else opt.disabled.action(that, elem);
+
+		if (opt.autoState) that.State(elem);
+	};
+
+	/**
+	 * @param elem
+	 */
+	that.State = function (elem) {
+		var enabled = elem.attr('quark-enabled') != 'true';
+
+		elem.attr('title', enabled ? opt.enabled.title : opt.disabled.title);
+		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
+
+		that._attr(enabled, elem);
+	};
+};
