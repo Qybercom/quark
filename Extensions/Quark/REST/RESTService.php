@@ -110,16 +110,17 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * http://php.net/manual/ru/function.preg-split.php#104602
 	 *
 	 * @param IQuarkModel $model
+	 * @param string $implode = '/'
 	 *
 	 * @return string
 	 */
-	private static function _class (IQuarkModel $model) {
+	private static function _class (IQuarkModel $model, $implode = '/') {
 		$words = preg_split('/([[:upper:]][[:lower:]]+)/', QuarkObject::ClassOf($model), null, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 		if (sizeof($words) == 1)
 			$words[0] = strtolower($words[0]);
 
-		return implode('/', $words);
+		return implode($implode, $words);
 	}
 
 	/**
@@ -224,10 +225,11 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @return IQuarkModel|null
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options) {
-		$class = self::_class($model);
+		$path = self::_class($model);
+		$class = self::_class($model, '');
 
 		try {
-			return $this->_api('Get', '/' . $class, $criteria)->$class;
+			return $this->_api('Get', '/' . $path, $criteria)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
@@ -247,10 +249,11 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		if (!is_scalar($id))
 			throw new QuarkArchException('Parameter $id must have scalar value, Given: ' . print_r($id, true));
 
-		$class = self::_class($model);
+		$path = self::_class($model);
+		$class = self::_class($model, '');
 
 		try {
-			return $this->_api('Get', '/' . $class . '/' . $id)->$class;
+			return $this->_api('Get', '/' . $path . '/' . $id)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
