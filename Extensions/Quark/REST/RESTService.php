@@ -10,6 +10,7 @@ use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
+use Quark\QuarkModel;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkJSONIOProcessor;
@@ -197,6 +198,9 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			if (isset($options[self::OPTION_PAGE]))
 				$this->_uri->query .= '&page=' . $options[self::OPTION_PAGE];
 
+			if (isset($options[QuarkModel::OPTION_LIMIT]))
+				$this->_uri->query .= '&limit=' . $options[QuarkModel::OPTION_LIMIT];
+
 			$api = $this->_api('Get', '/' . self::_class($model) . '/list', $criteria);
 
 			return isset($api->list) ? $api->list : array();
@@ -215,10 +219,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @return IQuarkModel|null
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options) {
-		$class = self::_class($model);
+		$class = QuarkObject::ClassOf($model);
 
 		try {
-			return $this->_api('Get', '/' . $class, $criteria)->$class;
+			return $this->_api('Get', '/' . self::_class($model), $criteria)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
@@ -238,10 +242,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		if (!is_scalar($id))
 			throw new QuarkArchException('Parameter $id must have scalar value, Given: ' . print_r($id, true));
 
-		$class = self::_class($model);
+		$class = QuarkObject::ClassOf($model);
 
 		try {
-			return $this->_api('Get', '/' . $class . '/' . $id)->$class;
+			return $this->_api('Get', '/' . self::_class($model) . '/' . $id)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
