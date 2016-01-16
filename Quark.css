@@ -179,6 +179,22 @@ textarea.quark-input {
 
 
 /**
+ * .quark-table nice look of tables
+ */
+.quark-table {
+    border-collapse: collapse;
+}
+
+.quark-table thead {
+    background: rgb(180, 255, 125);
+}
+
+.quark-table td {
+    padding: 10px;
+}
+
+
+/**
  * Social network buttons
  * http://designpieces.com/2012/12/social-media-colours-hex-and-rgb/
  */

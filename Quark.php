@@ -573,7 +573,7 @@ class QuarkConfig {
 	 *
 	 * @throws QuarkArchException
 	 */
-	private static function _component ($name, IQuarkStackable $object = null, $message = '') {
+	private function _component ($name, IQuarkStackable $object = null, $message = '') {
 		try {
 			return Quark::Component($name, $object);
 		}
@@ -590,7 +590,7 @@ class QuarkConfig {
 	 * @return QuarkSession
 	 */
 	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
-		return self::_component(
+		return $this->_component(
 			$name,
 			func_num_args() != 3 ? null : new QuarkSessionSource($name, $provider, $user),
 			'AuthorizationProvider for key ' . $name . ' does not configured'
@@ -605,7 +605,7 @@ class QuarkConfig {
 	 * @return QuarkModelSource
 	 */
 	public function DataProvider ($name, IQuarkDataProvider $provider = null, QuarkURI $uri = null) {
-		return self::_component(
+		return $this->_component(
 			$name,
 			func_num_args() == 1 ? null : new QuarkModelSource($name, $provider, $uri),
 			'DataProvider for key ' . $name . ' does not configured'
@@ -619,7 +619,7 @@ class QuarkConfig {
 	 * @return IQuarkExtensionConfig
 	 */
 	public function Extension ($name, IQuarkExtensionConfig $config = null) {
-		return self::_component(
+		return $this->_component(
 			$name,
 			$config,
 			'Extension for key ' . $name . ' does not configured'
@@ -642,12 +642,38 @@ class QuarkConfig {
 	 */
 	public function &ApplicationSettings (IQuarkApplicationSettingsModel $model = null) {
 		if (func_num_args() != null)
-			$this->_settings = QuarkModel::FindOne($model, $model->LoadCriteria());
-
-		if ($this->_settings == null)
 			$this->_settings = new QuarkModel($model);
+		else $this->_loadSettings();
 
 		return $this->_settings;
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function _loadSettings () {
+		$settings = QuarkModel::FindOne($this->_settings->Model(), $this->_settings->LoadCriteria());
+
+		if ($settings == null) return false;
+
+		$this->_settings = $settings;
+		return true;
+	}
+
+	/**
+	 * @param $data
+	 *
+	 * @return bool
+	 */
+	public function UpdateApplicationSettings ($data = null) {
+		if ($this->_settings == null) return false;
+
+		$ok = $this->_loadSettings();
+
+		if (func_num_args() != 0)
+			$this->_settings->PopulateWith($data);
+
+		return $ok ? $this->_settings->Save() : $this->_settings->Create();
 	}
 
 	/**
