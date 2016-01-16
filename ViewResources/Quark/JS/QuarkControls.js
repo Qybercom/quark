@@ -47,17 +47,40 @@ Quark.Controls._field = function (key, value) {
 };
 
 /**
- * @param selector
- * @param data
+ * @param {string} selector
  *
  * @constructor
  */
-Quark.Controls.Chart = function (selector, data) {
+Quark.Controls.Form = function (selector) {
 	var that = this;
 
-	that.Render = function () {
-
+	that._message = function (form, show) {
+		form.find('.quark-message').slideUp();
+		form.find('.quark-message' + show).slideDown();
 	};
+
+	$(document).on('submit', selector || 'form', function (e) {
+		e.preventDefault();
+
+		var form = $(this);
+
+		that._message(form, '.info');
+
+		$.ajax({
+			url: form.attr('action'),
+			type: form.attr('method'),
+			dataType: 'json',
+			data: form.serialize(),
+
+			success: function (data) {
+				that._message(form, data.status != undefined && data.status == 200 ? '.ok' : '.warn');
+			},
+
+			error: function () {
+				that._message(form, '.warn');
+			}
+		});
+	});
 };
 
 /**
