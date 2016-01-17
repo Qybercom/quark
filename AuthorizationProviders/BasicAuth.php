@@ -4,9 +4,8 @@ namespace Quark\AuthorizationProviders;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
-use Quark\Quark;
 use Quark\QuarkDTO;
-use Quark\QuarkModel;
+use Quark\QuarkKeyValuePair;
 
 /**
  * Class BasicAuth
@@ -16,64 +15,35 @@ use Quark\QuarkModel;
 class BasicAuth implements IQuarkAuthorizationProvider {
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $user
+	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkDTO $input
 	 *
-	 * @return bool
+	 * @return QuarkDTO
 	 */
-	public function Recognize ($name, IQuarkAuthorizableModel $user, QuarkDTO $input) {
-		// TODO: Implement Recognize() method.
+	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
+		// TODO: Implement Session() method.
 	}
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $user
-	 * @param QuarkDTO $input
-	 * @param bool $http
-	 *
-	 * @return bool
-	 */
-	public function Input ($name, IQuarkAuthorizableModel $user, QuarkDTO $input, $http) {
-		// TODO: Implement Input() method.
-	}
-
-	/**
+	 * @param IQuarkAuthorizableModel $model
 	 * @param $criteria
-	 * @param int $lifetime (seconds)
+	 * @param $lifetime
 	 *
-	 * @return bool
+	 * @return QuarkDTO
 	 */
-	public function Login ($criteria, $lifetime) {
+	public function Login ($name, IQuarkAuthorizableModel $model, $criteria, $lifetime) {
 		// TODO: Implement Login() method.
 	}
 
 	/**
-	 * @param QuarkModel $user
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
 	 *
-	 * @return QuarkModel
-	 */
-	public function User (QuarkModel $user = null) {
-		// TODO: Implement User() method.
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function Logout () {
-		// TODO: Implement Logout() method.
-	}
-
-	/**
 	 * @return QuarkDTO
 	 */
-	public function Output () {
-		// TODO: Implement Output() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Signature () {
-		// TODO: Implement Signature() method.
+	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		// TODO: Implement Logout() method.
 	}
 }

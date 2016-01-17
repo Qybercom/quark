@@ -29,7 +29,7 @@ class GDColor {
 	public $b = 0;
 
 	/**
-	 * @var float $a = 1.0
+	 * @var int|float $a = 1.0
 	 */
 	public $a = 1;
 

@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkURI;
 
 /**
@@ -13,7 +14,6 @@ use Quark\QuarkURI;
  * @package Quark\DataProviders
  */
 class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
-
 	/**
 	 * @param QuarkURI $uri
 	 *
@@ -52,31 +52,43 @@ class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function PrimaryKey (IQuarkModel $model) {
+		// TODO: Implement PrimaryKey() method.
+	}
+
+	/**
+	 * @param IQuarkModel $model
 	 * @param             $criteria
+	 * @param             $options
 	 *
 	 * @return array
 	 */
-	public function Find (IQuarkModel $model, $criteria) {
+	public function Find (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement Find() method.
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $criteria
+	 * @param             $options
 	 *
 	 * @return mixed
 	 */
-	public function FindOne (IQuarkModel $model, $criteria) {
+	public function FindOne (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement FindOne() method.
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $id
+	 * @param             $options
 	 *
 	 * @return mixed
 	 */
-	public function FindOneById (IQuarkModel $model, $id) {
+	public function FindOneById (IQuarkModel $model, $id, $options) {
 		// TODO: Implement FindOneById() method.
 	}
 
@@ -107,36 +119,11 @@ class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @param             $criteria
 	 * @param             $limit
 	 * @param             $skip
+	 * @param             $options
 	 *
 	 * @return int
 	 */
-	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
+	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.
-	}
-
-	/**
-	 * @param string $query
-	 * @param array  $options
-	 *
-	 * @return mixed
-	 */
-	public function Query ($query, $options) {
-		// TODO: Implement Query() method.
-	}
-
-	/**
-	 * @param string $value
-	 *
-	 * @return string
-	 */
-	public function Escape ($value) {
-		// TODO: Implement Escape() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function EscapeChar () {
-		// TODO: Implement EscapeChar() method.
 	}
 }

@@ -125,6 +125,9 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	 * @return QuarkDTO
 	 */
 	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		/**
+		 * @var QuarkModel|Session $session
+		 */
 		$session = QuarkModel::FindOne($this, array(
 			'name' => $name,
 			'sid' => $id->Value()

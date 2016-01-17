@@ -4,6 +4,7 @@ namespace Quark\DataProviders;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkURI;
 
 /**
@@ -50,31 +51,43 @@ class PDO implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function PrimaryKey (IQuarkModel $model) {
+		// TODO: Implement PrimaryKey() method.
+	}
+
+	/**
+	 * @param IQuarkModel $model
 	 * @param             $criteria
+	 * @param             $options
 	 *
 	 * @return array
 	 */
-	public function Find (IQuarkModel $model, $criteria) {
+	public function Find (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement Find() method.
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $criteria
+	 * @param             $options
 	 *
 	 * @return mixed
 	 */
-	public function FindOne (IQuarkModel $model, $criteria) {
+	public function FindOne (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement FindOne() method.
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param             $id
+	 * @param             $options
 	 *
 	 * @return mixed
 	 */
-	public function FindOneById (IQuarkModel $model, $id) {
+	public function FindOneById (IQuarkModel $model, $id, $options) {
 		// TODO: Implement FindOneById() method.
 	}
 
@@ -105,10 +118,11 @@ class PDO implements IQuarkDataProvider {
 	 * @param             $criteria
 	 * @param             $limit
 	 * @param             $skip
+	 * @param             $options
 	 *
 	 * @return int
 	 */
-	public function Count (IQuarkModel $model, $criteria, $limit, $skip) {
+	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.
 	}
 }
