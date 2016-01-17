@@ -11,12 +11,12 @@ use Quark\IQuarkExtensionConfig;
  */
 class PushNotificationConfig implements IQuarkExtensionConfig {
 	/**
-	 * @var IQuarkPushNotificationProvider[] $_providers
+	 * @var IQuarkPushNotificationProvider[] $_providers = []
 	 */
 	private $_providers = array();
 
 	/**
-	 * @var string $_name
+	 * @var string $_name = ''
 	 */
 	private $_name = '';
 

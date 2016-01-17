@@ -126,4 +126,30 @@ class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.
 	}
+
+	/**
+	 * @param string $query
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Query ($query, $options) {
+		// TODO: Implement Query() method.
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Escape ($value) {
+		// TODO: Implement Escape() method.
+	}
+
+	/**
+	 * @return string
+	 */
+	public function EscapeChar () {
+		// TODO: Implement EscapeChar() method.
+	}
 }

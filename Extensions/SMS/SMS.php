@@ -21,7 +21,14 @@ class SMS implements IQuarkExtension {
 	 */
 	private $_config;
 
+	/**
+	 * @var string $_message = ''
+	 */
 	private $_message = '';
+
+	/**
+	 * @var string[] $_phones = []
+	 */
 	private $_phones = array();
 
 	/**
@@ -106,7 +113,7 @@ class SMS implements IQuarkExtension {
 	/**
 	 * @param string $append
 	 *
-	 * @return QuarkDTO!bool
+	 * @return QuarkDTO|bool
 	 * @throws QuarkArchException
 	 */
 	private function _main ($append = '') {

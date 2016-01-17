@@ -34,22 +34,22 @@ class Mail implements IQuarkExtension {
 	private $_dto;
 
 	/**
-	 * @var string $_sender
+	 * @var string $_sender = ''
 	 */
 	private $_sender = '';
 
 	/**
-	 * @var string[] $_receivers
+	 * @var string[] $_receivers = []
 	 */
 	private $_receivers = array();
 
 	/**
-	 * @var QuarkFile[] $_files
+	 * @var QuarkFile[] $_files = []
 	 */
 	private $_files = array();
 
 	/**
-	 * @var string $_log
+	 * @var string $_log = ''
 	 */
 	private $_log = '';
 
@@ -72,10 +72,12 @@ class Mail implements IQuarkExtension {
 	 * @param string $config
 	 * @param string $subject
 	 * @param QuarkView|string $content
-	 * @param string $to
+	 * @param string $to = ''
 	 */
 	public function __construct ($config, $subject, $content, $to = '') {
 		$this->_config = Quark::Config()->Extension($config);
+
+		if (!($this->_config instanceof IQuarkMailProvider)) return;
 
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());

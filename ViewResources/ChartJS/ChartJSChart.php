@@ -72,7 +72,7 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	}
 
 	/**
-	 * @return IQuarkViewResourceType;
+	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
 		// TODO: Implement Type() method.

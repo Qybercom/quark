@@ -97,7 +97,9 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	 * @return OpenGraphResource
 	 */
 	public function App ($config) {
-		return $this->Property(self::PROPERTY_FB_APP_ID, Quark::Config()->Extension($config)->appId);
+		$extension = Quark::Config()->Extension($config);
+
+		return $extension instanceof SocialNetworkConfig ? $this->Property(self::PROPERTY_FB_APP_ID, $extension->appId) : '';
 	}
 
 	/**

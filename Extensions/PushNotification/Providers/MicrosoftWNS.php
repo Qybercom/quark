@@ -84,8 +84,8 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	}
 
 	/**
-	 * @param $payload
-	 * @param $options
+	 * @param object|array $payload
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */

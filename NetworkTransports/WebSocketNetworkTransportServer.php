@@ -54,9 +54,9 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 		$this->_buffer .= $data;
 
 		if ($this->_connected) {
-			$input = $this->_input($client);
+			$input = $this->_input();
 
-			if ($input)
+			if ($input !== false)
 				$client->TriggerData($input);
 		}
 		else {

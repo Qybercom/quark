@@ -10,8 +10,19 @@ use Quark\IQuarkExtensionConfig;
  * @package Quark\Extensions\SMS
  */
 class SMSCenterConfig implements IQuarkExtensionConfig {
+	/**
+	 * @var string $username = ''
+	 */
 	public $username = '';
+
+	/**
+	 * @var string $password = ''
+	 */
 	public $password = '';
+
+	/**
+	 * @var string $sender = ''
+	 */
 	public $sender = '';
 
 	/**
@@ -22,7 +33,7 @@ class SMSCenterConfig implements IQuarkExtensionConfig {
 	/**
 	 * @param string $username
 	 * @param string $password
-	 * @param string $sender
+	 * @param string $sender = ''
 	 */
 	public function __construct ($username, $password, $sender = '') {
 		$this->username = $username;

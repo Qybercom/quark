@@ -72,8 +72,8 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
-	 * @param $payload
-	 * @param $options
+	 * @param object|array $payload
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */

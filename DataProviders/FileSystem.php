@@ -6,6 +6,7 @@ use Quark\IQuarkModel;
 
 use Quark\Quark;
 use Quark\QuarkFile;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkConnectionException;
@@ -91,7 +92,7 @@ class FileSystem implements IQuarkDataProvider {
 	 * @return string
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return self::LOCATION;
+		return new QuarkKeyValuePair(self::LOCATION, '');
 	}
 
 	/**

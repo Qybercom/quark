@@ -14,7 +14,7 @@ use Quark\QuarkJSViewResourceType;
  */
 class QuarkNetwork implements IQuarkViewResource, IQuarkLocalViewResource {
 	/**
-	 * @return IQuarkViewResourceType;
+	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
 		return new QuarkJSViewResourceType();

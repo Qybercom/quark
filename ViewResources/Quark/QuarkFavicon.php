@@ -24,7 +24,7 @@ class QuarkFavicon implements IQuarkViewResource, IQuarkLocalViewResource, IQuar
 	}
 
 	/**
-	 * @return IQuarkViewResourceType;
+	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
 		// TODO: Implement Type() method.

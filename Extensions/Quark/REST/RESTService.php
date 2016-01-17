@@ -10,6 +10,7 @@ use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
@@ -186,10 +187,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	/**
 	 * @param IQuarkModel $model
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return $this->_pk($model);
+		return new QuarkKeyValuePair($this->_pk($model), '');
 	}
 
 	/**

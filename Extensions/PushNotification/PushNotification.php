@@ -17,7 +17,7 @@ class PushNotification implements IQuarkExtension {
 	private $_config;
 
 	/**
-	 * @var $_payload
+	 * @var object|array $_payload
 	 */
 	private $_payload = array();
 
@@ -33,7 +33,7 @@ class PushNotification implements IQuarkExtension {
 
 	/**
 	 * @param string $config
-	 * @param mixed $payload
+	 * @param object|array $payload
 	 */
 	public function __construct ($config, $payload = []) {
 		$this->_config = Quark::Config()->Extension($config);
@@ -41,9 +41,9 @@ class PushNotification implements IQuarkExtension {
 	}
 
 	/**
-	 * @param array $payload
+	 * @param object|array $payload
 	 *
-	 * @return array
+	 * @return object|array
 	 */
 	public function Payload ($payload = []) {
 		if (func_num_args() == 1)

@@ -29,11 +29,6 @@ class RESTConfig implements IQuarkExtensionConfig {
 	private $_source = '';
 
 	/**
-	 * @var string $_name
-	 */
-	private $_name = '';
-
-	/**
 	 * @param IQuarkRESTServiceDescriptor $descriptor
 	 * @param string $endpoint
 	 * @param string $source

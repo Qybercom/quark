@@ -101,6 +101,8 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
+		if (!($provider instanceof CloudPayments)) return false;
+
 		$this->AccountId = $provider->user;
 
 		$this->_response = $provider->API($this, 'https://api.cloudpayments.ru/payments/cards/charge');

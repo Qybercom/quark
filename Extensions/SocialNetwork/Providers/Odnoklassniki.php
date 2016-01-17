@@ -2,6 +2,7 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
+use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
  * Class Odnoklassniki
@@ -10,13 +11,20 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
  */
 class Odnoklassniki implements IQuarkSocialNetworkProvider {
 	/**
+	 * @return string
+	 */
+	public function Name () {
+		// TODO: Implement Name() method.
+	}
+
+	/**
 	 * @param string $appId
 	 * @param string $appSecret
 	 *
 	 * @return mixed
 	 */
 	public function SocialNetworkApplication ($appId, $appSecret) {
-		// TODO: Implement Init() method.
+		// TODO: Implement SocialNetworkApplication() method.
 	}
 
 	/**
@@ -40,35 +48,56 @@ class Odnoklassniki implements IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $to
+	 * @param string $code
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function SessionFromRedirect ($to) {
+	public function SessionFromRedirect ($to, $code) {
 		// TODO: Implement SessionFromRedirect() method.
 	}
 
 	/**
 	 * @param string $token
 	 *
-	 * @return mixed
+	 * @return string
 	 */
 	public function SessionFromToken ($token) {
 		// TODO: Implement SessionFromToken() method.
 	}
 
 	/**
-	 * @param $user
-	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function Profile ($user) {
+	public function CurrentUser () {
+		// TODO: Implement CurrentUser() method.
+	}
+
+	/**
+	 * @return \Quark\QuarkDTO
+	 */
+	public function API () {
+		// TODO: Implement API() method.
+	}
+
+	/**
+	 * @param string $user
+	 * @param string[] $fields
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function Profile ($user, $fields) {
 		// TODO: Implement Profile() method.
 	}
 
 	/**
-	 * @return mixed
+	 * @param string $user
+	 * @param string[] $fields
+	 * @param int $count
+	 * @param int $offset
+	 *
+	 * @return SocialNetworkUser[]
 	 */
-	public function API () {
-		// TODO: Implement API() method.
+	public function Friends ($user, $fields, $count, $offset) {
+		// TODO: Implement Friends() method.
 	}
 }

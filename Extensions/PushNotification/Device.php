@@ -12,11 +12,11 @@ use Quark\QuarkField;
  */
 class Device implements IQuarkModel {
 	/**
-	 * @var string
+	 * @var string $type = ''
 	 */
 	public $type = '';
 	/**
-	 * @var string
+	 * @var string $id = ''
 	 */
 	public $id = '';
 

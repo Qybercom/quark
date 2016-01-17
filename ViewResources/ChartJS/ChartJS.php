@@ -29,7 +29,7 @@ class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkVi
 	}
 
 	/**
-	 * @return IQuarkViewResourceType;
+	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
 		return new QuarkJSViewResourceType();
