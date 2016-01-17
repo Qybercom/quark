@@ -3232,11 +3232,12 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param string $uri
+	 * @param bool $signed = false
 	 *
 	 * @return string
 	 */
-	public function Link ($uri) {
-		return Quark::WebLocation($uri);
+	public function Link ($uri, $signed = false) {
+		return Quark::WebLocation($uri . ($signed ? ((strpos($uri, '?') !== false ? '&' : '?') . QuarkDTO::SIGNATURE . '=' . $this->Signature(false)) : ''));
 	}
 
 	/**

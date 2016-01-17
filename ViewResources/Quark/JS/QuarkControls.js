@@ -83,6 +83,91 @@ Quark.Controls.Form = function (selector) {
 	});
 };
 
+Quark.Controls.Dialog = function (selector, opt) {
+	opt = opt || {};
+		opt.reset = opt.reset != undefined ? opt.reset : true;
+
+	var that = this;
+
+	that.Reset = function (dialog) {
+		dialog.find('.quark-message').slideUp();
+		dialog.find('.quark-dialog-confirm').slideDown();
+	};
+
+	that.Success = function (dialog, trigger) {
+		dialog.find('.quark-message').slideUp();
+		dialog.find('.quark-message.ok').slideDown();
+		dialog.find('.quark-dialog-confirm').slideUp();
+
+		if (opt.success instanceof Function)
+			opt.success(trigger, dialog);
+	};
+
+	that.Error = function (dialog) {
+		dialog.find('.quark-message').slideUp();
+		dialog.find('.quark-message.warn').slideDown();
+	};
+
+	$(function () {
+		if ($('body > .quark-dialog-box').length == 0)
+			$('body').prepend('<div id="quark-dialog-box"></div>');
+
+		$('#quark-dialog-box').hide(0);
+
+		$('.quark-dialog').each(function () {
+			var dialog = $(this);
+
+			dialog.hide(0);
+
+			dialog.appendTo('#quark-dialog-box');
+			dialog.find('.quark-message').hide(0);
+		});
+	});
+
+	$(document).on('click', '.quark-dialog-confirm', function (e) {
+		e.preventDefault();
+
+		var action = $(this);
+		var dialog = action.parent('.quark-dialog');
+
+		$.ajax({
+			url: action.attr('href'),
+			dataType: 'json',
+
+			success: function (data) {
+				if (data.status != undefined && data.status == 200) that.Success(dialog, dialog.data('button'));
+				else that.Error(dialog);
+			}
+		});
+	});
+
+	$(document).on('click', '.quark-dialog-close', function (e) {
+		e.preventDefault();
+
+		var action = $(this);
+		var dialog = action.parent('.quark-dialog');
+
+		dialog.slideUp(500);
+		$('#quark-dialog-box').fadeOut(500);
+	});
+
+	$(document).on('click', selector, function (e) {
+		e.preventDefault();
+
+		var button = $(this);
+		var dialog = $(button.attr('quark-dialog'));
+
+		that.Reset(dialog);
+
+		dialog.data('button', button);
+
+		dialog.find('.quark-dialog-confirm').attr('href', button.attr('href'));
+		dialog.slideDown(500);
+
+		$('#quark-dialog-box').fadeIn(500);
+	});
+};
+
 /**
  * @param selector
  * @param opt

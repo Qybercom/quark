@@ -28,6 +28,15 @@ body {
     margin: 0;
 }
 
+.quark-button.block.white {
+    background: rgb(255,255,255);
+    color: rgb(0,0,0);
+}
+
+.quark-button.block.white:hover {
+    background: rgb(230,230,230);
+}
+
 .quark-button.block.ok {
     background: rgb(0,176,80);
     border: none;
@@ -134,28 +143,32 @@ body {
     color: rgb(0,225,80);
 }
 
-.quark-button.toggle {
+.toggle {
     color: rgb(0,0,0);
 }
 
-.quark-button.toggle:before {
+.toggle:before {
     font-size: 24px;
     margin: -3px 5px 0 0;
     vertical-align: middle;
 }
 
-.quark-button.toggle.on:before {
+.toggle.on:before {
     color: rgb(0,250,75);
 }
 
-.quark-button.toggle.off:before {
+.toggle.off:before {
     color: rgb(225,75,0);
 }
 
-.quark-button.toggle.disabled {
+.toggle.disabled {
     color: rgb(200,200,200);
 }
 
-.quark-button.toggle.disabled:before {
+.toggle.disabled:before {
     color: rgb(200,200,200);
+}
+
+.quark-dialog {
+    border-top: 10px solid rgb(0,225,80);
 }

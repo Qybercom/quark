@@ -236,3 +236,38 @@ textarea.quark-input {
 .quark-button.social.fa.fa-google-plus:hover {
     background: rgba(221, 75, 57, 0.75);
 }
+
+
+/**
+ * .quark-dialog UX component
+ */
+.quark-dialog {
+    display: inline-block;
+    margin: 5% 10px 10px 10px;
+    padding: 20px;
+    max-width: 360px;
+    vertical-align: middle;
+    text-align: left;
+    background: rgb(255,255,255);
+    border-radius: 5px;
+    border: 1px solid rgb(240,240,240);
+}
+
+.quark-dialog .quark-message {
+    display: inline-block;
+}
+
+.quark-dialog .quark-dialog-confirm, .quark-dialog .quark-dialog-close {
+    float: right;
+    margin: 0 0 0 5px !important;
+}
+
+#quark-dialog-box {
+    display: block;
+    position: fixed;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    background: rgba(240,240,240,0.85);
+    z-index: 10;
+}
