@@ -137,12 +137,12 @@ class MongoDB implements IQuarkDataProvider {
 			if (is_array($uri->options))
 				$options = $uri->options;
 
-			$this->_connection = new \MongoClient($uri->URI(), $options);
+			$connection = new \MongoClient($uri->URI(), $options);
 			$uri->path = str_replace('/', '', $uri->path);
 
 			if (strlen(trim($uri->path)) != 0) {
 				$db = $uri->path;
-				$this->_connection = $this->_connection->$db;
+				$this->_connection = $connection->$db;
 			}
 		}
 		catch (\Exception $e) {
