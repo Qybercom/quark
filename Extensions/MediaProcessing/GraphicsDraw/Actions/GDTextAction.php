@@ -17,7 +17,7 @@ use Quark\Extensions\MediaProcessing\GraphicsDraw\IQuarkGDAction;
  */
 class GDTextAction implements IQuarkGDAction {
 	const DEFAULT_FONT = 'Arial';
-	CONST DEFAULT_SIZE = 20;
+	const DEFAULT_SIZE = 20;
 
 	/**
 	 * @var string $_text
