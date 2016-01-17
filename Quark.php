@@ -2528,7 +2528,7 @@ interface IQuarkContainer {
 	/**
 	 * @param IQuarkPrimitive $primitive
 	 *
-	 * @return IQuarkPrimitive
+	 * @return IQuarkPrimitive|QuarkContainerBehavior
 	 */
 	public function Primitive(IQuarkPrimitive $primitive = null);
 }
@@ -2934,6 +2934,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function Link ($uri, $signed = false) {
+		return $this->__call('Link', func_get_args());
+	}
+
+	/**
 	 * @param bool $field = true
 	 *
 	 * @return mixed
@@ -3261,7 +3271,9 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Link ($uri, $signed = false) {
-		return Quark::WebLocation($uri . ($signed ? ((strpos($uri, '?') !== false ? '&' : '?') . QuarkDTO::SIGNATURE . '=' . $this->Signature(false)) : ''));
+		return Quark::WebLocation($uri . ($signed ? QuarkURI::AppendQuery($uri, array(
+				QuarkDTO::SIGNATURE => $this->Signature(false)
+			)) : ''));
 	}
 
 	/**
@@ -4370,7 +4382,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @return IQuarkModel
+	 * @return IQuarkModel|QuarkModelBehavior
 	 */
 	public function Model () {
 		return $this->_model;
@@ -4502,10 +4514,10 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
-	 * @param             $source
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param $source
 	 *
-	 * @return IQuarkModel
+	 * @return IQuarkModel|QuarkModelBehavior
 	 */
 	private static function _import (IQuarkModel $model, $source) {
 		if (!is_array($source) && !is_object($source)) return $model;
@@ -4559,10 +4571,10 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
-	 * @param             $options
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param $options
 	 *
-	 * @return IQuarkModel|bool
+	 * @return IQuarkModel|QuarkModelBehavior|bool
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
 		$fields = $model->Fields();
@@ -4606,7 +4618,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param bool $check = true
 	 *
 	 * @return bool|array
@@ -4621,12 +4633,12 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param mixed $data
 	 * @param array $options
 	 * @param callable $after = null
 	 *
-	 * @return QuarkModel|\StdClass
+	 * @return QuarkModel|QuarkModelBehavior|\StdClass
 	 */
 	private static function _record (IQuarkModel $model, $data, $options = [], callable $after = null) {
 		if ($data == null) return null;
@@ -4654,7 +4666,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @return IQuarkModel
+	 * @return IQuarkModel|QuarkModelBehavior|bool
 	 */
 	public function Export () {
 		return self::_export($this->_model);
@@ -4795,7 +4807,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria
 	 * @param $options
 	 * @param callable(QuarkModel $model) $after = null
@@ -4816,31 +4828,31 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria
 	 * @param $options
 	 * @param callable(QuarkModel $model) $after = null
 	 *
-	 * @return QuarkModel
+	 * @return QuarkModel|\StdClass
 	 */
 	public static function FindOne (IQuarkModel $model, $criteria = [], $options = [], callable $after = null) {
 		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options, $after);
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $id
 	 * @param $options
 	 * @param callable(QuarkModel $model) $after = null
 	 *
-	 * @return QuarkModel
+	 * @return QuarkModel|\StdClass
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = [], callable $after= null) {
 		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options, $after);
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria
 	 * @param $limit
 	 * @param $skip
@@ -4853,7 +4865,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria
 	 * @param $options
 	 *
@@ -4872,7 +4884,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkModel $model
+	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria
 	 * @param $options
 	 *
@@ -8383,14 +8395,49 @@ class QuarkURI {
 	const HOST_LOCALHOST = '127.0.0.1';
 	const HOST_ALL_INTERFACES = '0.0.0.0';
 
+	/**
+	 * @var string $scheme
+	 */
 	public $scheme;
+
+	/**
+	 * @var string $user
+	 */
 	public $user;
+
+	/**
+	 * @var string $pass
+	 */
 	public $pass;
+
+	/**
+	 * @var string $host
+	 */
 	public $host;
+
+	/**
+	 * @var string|int $port
+	 */
 	public $port;
+
+	/**
+	 * @var string $query
+	 */
 	public $query;
+
+	/**
+	 * @var string $path
+	 */
 	public $path;
+
+	/**
+	 * @var string $fragment
+	 */
 	public $fragment;
+
+	/**
+	 * @var string|array $options
+	 */
 	public $options;
 
 	/**
@@ -8398,6 +8445,9 @@ class QuarkURI {
 	 */
 	private $_route = array();
 
+	/**
+	 * @var array $_transports
+	 */
 	private static $_transports = array(
 		'tcp' => 'tcp',
 		'ssl' => 'ssl',
@@ -8411,6 +8461,9 @@ class QuarkURI {
 		'wss' => 'ssl',
 	);
 
+	/**
+	 * @var array $_ports
+	 */
 	private static $_ports = array(
 		'ftp' => '21',
 		'ftps' => '22',
@@ -8428,13 +8481,13 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param QuarkURI|string $uri = ''
+	 * @param QuarkURI|string|null $uri = ''
 	 * @param bool $local
 	 *
 	 * @return QuarkURI|null
 	 */
 	public static function FromURI ($uri = '', $local = true) {
-		if ($uri == null) return null;
+		if ($uri == null) $uri = '';
 		if ($uri instanceof QuarkURI) return $uri;
 		if (!is_string($uri)) return null;
 
@@ -8622,6 +8675,16 @@ class QuarkURI {
 		unset($buffer);
 
 		return $route;
+	}
+
+	/**
+	 * @param string $uri
+	 * @param string $query
+	 *
+	 * @return string
+	 */
+	public static function AppendQuery ($uri, $query) {
+		return (strpos($uri, '?') !== false ? '&' : '?') . http_build_query($query);
 	}
 
 	/**

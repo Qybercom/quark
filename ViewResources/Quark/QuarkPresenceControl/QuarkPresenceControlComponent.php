@@ -1,6 +1,8 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkPresenceControl;
 
+use Quark\QuarkViewBehavior;
+
 use Quark\ViewResources\Google\GoogleMap;
 use Quark\ViewResources\Google\MapPoint;
 
@@ -10,6 +12,8 @@ use Quark\ViewResources\Google\MapPoint;
  * @package Quark\ViewResources\Quark\QuarkPresenceControl
  */
 trait QuarkPresenceControlComponent {
+	use QuarkViewBehavior;
+
 	/**
 	 * @param string $href
 	 * @param string $title
@@ -83,16 +87,17 @@ trait QuarkPresenceControlComponent {
 	/**
 	 * @param string $name = 'FooBar'
 	 * @param string $photo = 'http://placehold.it/45x45'
-	 * @param string $logoutAddr = '/user/logout'
 	 * @param string $logoutTitle = 'Exit'
+	 * @param string $logoutAddr = '/user/logout'
+	 * @param bool $logoutSigned = false
 	 *
 	 * @return string
 	 */
-	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutAddr = '/user/logout', $logoutTitle = 'Exit') {
+	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutTitle = 'Exit', $logoutAddr = '/user/logout', $logoutSigned = false) {
 		return '
 			<div class="quark-presence-column left-inverse">
 				' . $name . '<br />
-				<a href="' . $logoutAddr . '" class="quark-button">' . $logoutTitle . '</a>
+				<a href="' . (func_num_args() == 5 ? $this->Link($logoutAddr, $logoutSigned) : $logoutAddr). '" class="quark-button">' . $logoutTitle . '</a>
 			</div>
 			<div class="quark-presence-column right" id="presence-user-photo">
 				<div class="quark-presence-container" style="background-image: url(' . $photo . ');"></div>
