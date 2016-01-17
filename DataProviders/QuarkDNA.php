@@ -27,10 +27,11 @@ class QuarkDNA implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return string
 	 */
-	private function _collection (IQuarkModel $model) {
+	private function _collection (IQuarkModel $model, $options = []) {
 		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
 			? $options[QuarkModel::OPTION_COLLECTION]
 			: QuarkObject::ClassOf($model);
@@ -77,10 +78,11 @@ class QuarkDNA implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Create (IQuarkModel $model) {
+	public function Create (IQuarkModel $model, $options = []) {
 		$collection = $this->_collection($model);
 
 		$pk = $this->PrimaryKey($model)->Key();
@@ -97,10 +99,11 @@ class QuarkDNA implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Save (IQuarkModel $model) {
+	public function Save (IQuarkModel $model, $options = []) {
 		$collection = $this->_collection($model);
 
 		$pk = $this->PrimaryKey($model)->Key();
@@ -142,12 +145,13 @@ class QuarkDNA implements IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Remove (IQuarkModel $model) {
+	public function Remove (IQuarkModel $model, $options = []) {
 		$collection = $this->_collection($model);
 
 		$pk = $this->PrimaryKey($model)->Key();
@@ -187,7 +191,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return array|null
 	 */
 	private function _find (IQuarkModel $model, $criteria, $options, $one = true) {
-		$collection = $this->_collection($model);
+		$collection = $this->_collection($model, $options);
 		$pk = $this->PrimaryKey($model)->Key();
 		$query = new QuarkDNAQuery($criteria);
 		$out = $one ? null : array();
