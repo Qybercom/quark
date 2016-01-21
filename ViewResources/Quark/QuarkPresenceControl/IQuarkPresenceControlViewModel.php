@@ -30,6 +30,11 @@ interface IQuarkPresenceControlViewModel {
 	public function PresenceMenuHeader();
 
 	/**
+	 * @return string
+	 */
+	public function PresenceMenuSide();
+
+	/**
 	 * @param QuarkModel $user = null
 	 *
 	 * @return string

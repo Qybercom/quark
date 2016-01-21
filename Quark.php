@@ -6669,7 +6669,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Connect () {
-		if ($this->_uri->IsNull())
+		if ($this->_uri == null || $this->_uri->IsNull())
 			return $this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient URI is null'));
 
 		$stream = stream_context_create();
@@ -6920,7 +6920,7 @@ class QuarkServer implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Bind () {
-		if ($this->_uri->IsNull())
+		if ($this->_uri == null || $this->_uri->IsNull())
 			return $this->TriggerArgs(self::EVENT_ERROR_LISTEN, array('QuarkServer URI is null'));
 
 		$stream = stream_context_create();

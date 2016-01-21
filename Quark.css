@@ -193,6 +193,10 @@ textarea.quark-input {
     padding: 10px;
 }
 
+.quark-table .quark-table-section {
+    background: rgb(240,240,240);
+}
+
 
 /**
  * Social network buttons

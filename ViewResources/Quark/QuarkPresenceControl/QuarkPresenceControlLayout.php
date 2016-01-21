@@ -28,7 +28,7 @@
 	</div>
 	<div class="quark-presence-screen" id="presence-content">
 		<div class="quark-presence-container">
-			<?php echo $this->View(); ?>
+			<?php echo $this->MenuSideWidget(), $this->View(); ?>
 		</div>
 	</div>
 </body>

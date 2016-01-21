@@ -361,7 +361,11 @@ Quark.Controls.Toggle = function (selector, opt) {
 	});
 
 	that.Elem.each(function () {
-		that._attr($(this).attr('quark-enabled') == 'true', $(this));
+		var val = $(this).attr('quark-enabled'),
+			enabled = val == 'true' || val == '1';
+
+		that._attr(enabled, $(this));
+		$(this).html(enabled ? opt.enabled.html : opt.disabled.html);
 	});
 
 	/**

@@ -15,9 +15,9 @@ trait QuarkPresenceControlComponent {
 	use QuarkViewBehavior;
 
 	/**
-	 * @param string $href
-	 * @param string $title
-	 * @param string $fa
+	 * @param string $href = ''
+	 * @param string $title = ''
+	 * @param string $fa = ''
 	 *
 	 * @return string
 	 */
@@ -26,7 +26,7 @@ trait QuarkPresenceControlComponent {
 	}
 
 	/**
-	 * @param string[] $links
+	 * @param string[] $links = []
 	 *
 	 * @return string
 	 */
@@ -40,11 +40,12 @@ trait QuarkPresenceControlComponent {
 	}
 
 	/**
-	 * @param string[] $links
+	 * @param string[] $links = []
+	 * @param string $additional = ''
 	 *
 	 * @return string
 	 */
-	public function MenuSideWidget ($links = []) {
+	public function MenuSideWidget ($links = [], $additional = '') {
 		$items = '';
 
 		foreach ($links as $link)
@@ -52,13 +53,13 @@ trait QuarkPresenceControlComponent {
 
 		return '
 			<div class="quark-presence-column left" id="presence-menu-side-parent">
-				<div class="quark-presence-container left" id="presence-menu-side">' . $items . '</div>
+				<div class="quark-presence-container left" id="presence-menu-side">' . $items . '</div>' . $additional . '
 			</div>
 		';
 	}
 
 	/**
-	 * @param string $text
+	 * @param string $text = ''
 	 * @param string $color = green
 	 *
 	 * @return string

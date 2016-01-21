@@ -96,6 +96,15 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	/**
 	 * @return string
 	 */
+	public function MenuSideWidget () {
+		return $this->Child() instanceof IQuarkPresenceControlViewModel
+			? $this->Child()->PresenceMenuSide()
+			: '';
+	}
+
+	/**
+	 * @return string
+	 */
 	public function UserWidget () {
 		return $this->Child() instanceof IQuarkPresenceControlViewModel
 			? $this->Child()->PresenceUser($this->User())
