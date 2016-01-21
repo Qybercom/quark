@@ -2169,6 +2169,30 @@ trait QuarkStreamBehavior {
 }
 
 /**
+ * Trait QuarkCLIBehavior
+ *
+ * @package Quark
+ */
+trait QuarkCLIBehavior {
+	use QuarkServiceBehavior;
+
+	/**
+	 * @param string $command = ''
+	 * @param string[] &$output = []
+	 * @param int &$status = 0
+	 *
+	 * @return bool
+	 */
+	public function Shell ($command = '', &$output = [], &$status = 0) {
+		if (strlen($command) == 0) return false;
+
+		exec($command, $output, $status);
+
+		return $status == 0;
+	}
+}
+
+/**
  * Class QuarkService
  *
  * @package Quark
