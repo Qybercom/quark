@@ -8,41 +8,40 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
-use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 
 /**
- * Class BillingPlanDeactivateScenario
+ * Class BillingPlanGetScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
+class BillingPlanGetScenario implements IQuarkPaymentScenario {
+	/**
+	 * @var string $_id = ''
+	 */
+	private $_id = '';
+
 	/**
 	 * @var QuarkDTO $_response
 	 */
 	private $_response;
 
 	/**
-	 * @var string $_plan = ''
+	 * @param string $id = ''
 	 */
-	private $_plan = '';
-
-	/**
-	 * @param string $plan = ''
-	 */
-	public function __construct ($plan = '') {
-		$this->Plan($plan);
+	public function __construct ($id = '') {
+		$this->Id($id);
 	}
 
 	/**
-	 * @param string $plan = ''
+	 * @param string $id = ''
 	 *
 	 * @return string
 	 */
-	public function Plan ($plan = '') {
+	public function Id ($id = '') {
 		if (func_num_args() != 0)
-			$this->_plan = $plan;
+			$this->_id = $id;
 
-		return $this->_plan;
+		return $this->_id;
 	}
 
 	/**
@@ -52,19 +51,9 @@ class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
-		$this->_response = $provider->API(
-			QuarkDTO::METHOD_PATCH,
-			'/v1/payments/billing-plans/' . $this->_plan,
-			array(
-				array(
-					'path' => '/',
-					'value' => array('state' => PayPalBilling::STATE_INACTIVE),
-					'op' => 'replace'
-				)
-			)
-		);
+		$this->_response = $provider->API(QuarkDTO::METHOD_GET, '/v1/payments/billing-plans/' . $this->_id);
 
-		return $this->_response->Status() == 200;
+		return isset($this->_response->id) ? $this->_response : null;
 	}
 
 	/**

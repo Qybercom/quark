@@ -79,6 +79,7 @@ class PayPal implements IQuarkPaymentProvider {
 	 */
 	public function ApplicationToken () {
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
 		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, $this->AuthorizationForToken());
 		$request->Data(array(
 			'grant_type' => 'client_credentials'
@@ -98,14 +99,15 @@ class PayPal implements IQuarkPaymentProvider {
 	/**
 	 * @param $method
 	 * @param $url
-	 * @param $data
+	 * @param $data = []
 	 *
 	 * @return bool|QuarkDTO
 	 */
-	public function API ($method, $url, $data) {
+	public function API ($method, $url, $data = []) {
 		if ($this->token == '' && !$this->ApplicationToken()) return false;
 
 		$request = new QuarkDTO(new QuarkJSONIOProcessor());
+		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
 		$request->URI(QuarkURI::FromURI('https://api.' . ($this->live ? '' : 'sandbox.') . 'paypal.com/' . $url, false));
 		$request->Method($method);
 		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, $this->AuthorizationForCall());

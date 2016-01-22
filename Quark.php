@@ -9661,6 +9661,8 @@ class QuarkDTO {
 	 * @return string|array
 	 */
 	private function _serializeHeaders ($client, $str) {
+		if ($this->_uri == null) return $str ? '' : array();
+
 		$this->_serializeBody($client);
 
 		$headers = array($client

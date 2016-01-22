@@ -9,6 +9,7 @@ namespace Quark\Extensions\Payment\Providers\PayPal;
 class PayPalBilling {
 	const STATE_CREATED = 'CREATED';
 	const STATE_ACTIVE = 'ACTIVE';
+	const STATE_INACTIVE = 'INACTIVE';
 
 	const TYPE_DURATION_FIXED = 'FIXED';
 	const TYPE_DURATION_INFINITE = 'INFINITE';

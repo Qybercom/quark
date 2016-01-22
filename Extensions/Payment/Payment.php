@@ -71,11 +71,18 @@ class Payment implements IQuarkExtension {
 	}
 
 	/**
+	 * @return PaymentConfig
+	 */
+	public function &Config () {
+		return $this->_config;
+	}
+
+	/**
 	 * @param IQuarkPaymentScenario $scenario = null
 	 *
 	 * @return IQuarkPaymentScenario
 	 */
-	public function Scenario (IQuarkPaymentScenario $scenario = null) {
+	public function &Scenario (IQuarkPaymentScenario $scenario = null) {
 		if (func_num_args() != 0)
 			$this->_scenario = $scenario;
 
@@ -87,7 +94,7 @@ class Payment implements IQuarkExtension {
 	 *
 	 * @return IQuarkPaymentInstrument
 	 */
-	public function Instrument (IQuarkPaymentInstrument $instrument = null) {
+	public function &Instrument (IQuarkPaymentInstrument $instrument = null) {
 		if (func_num_args() != 0)
 			$this->_instrument = $instrument;
 
