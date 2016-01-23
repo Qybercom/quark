@@ -19,9 +19,14 @@ use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\PayPalAccountIn
  */
 class PaymentCreateScenario implements IQuarkPaymentScenario {
 	/**
-	 * @var float $_amount = 0.0
+	 * @var QuarkDTO $_response
 	 */
-	private $_amount = 0.0;
+	private $_response;
+
+	/**
+	 * @var float $_value = 0.0
+	 */
+	private $_value = 0.0;
 
 	/**
 	 * @var string $_currency = Payment::CURRENCY_USD
@@ -44,24 +49,19 @@ class PaymentCreateScenario implements IQuarkPaymentScenario {
 	private $_description = '';
 
 	/**
-	 * @var QuarkDTO $_response
-	 */
-	private $_response;
-
-	/**
 	 * @var object $_links
 	 */
 	private $_links;
 
 	/**
 	 * @param string $currency = Payment::CURRENCY_USD
-	 * @param float $amount = 0.0
+	 * @param float $value = 0.0
 	 * @param string $return = ''
 	 * @param string $cancel = ''
 	 * @param string $description = ''
 	 */
-	public function __construct ($currency = Payment::CURRENCY_USD, $amount = 0.0, $return = '', $cancel = '', $description = '') {
-		$this->Money($currency, $amount);
+	public function __construct ($currency = Payment::CURRENCY_USD, $value = 0.0, $return = '', $cancel = '', $description = '') {
+		$this->Money($currency, $value);
 		$this->ReturnURL($return);
 		$this->CancelURL($cancel);
 		$this->Description($description);
@@ -71,13 +71,13 @@ class PaymentCreateScenario implements IQuarkPaymentScenario {
 
 	/**
 	 * @param string $currency = Payment::CURRENCY_USD
-	 * @param float $amount = 0.0
+	 * @param float $value = 0.0
 	 *
 	 * @return PaymentCreateScenario
 	 */
-	public function Money ($currency = Payment::CURRENCY_USD, $amount = 0.0) {
+	public function Money ($currency = Payment::CURRENCY_USD, $value = 0.0) {
 		$this->_currency = $currency;
-		$this->_amount = $amount;
+		$this->_value = $value;
 
 		return $this;
 	}
@@ -125,26 +125,28 @@ class PaymentCreateScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
+		$request = array(
+			'intent' => 'sale',
+			'redirect_urls' => array(
+				'return_url' => $this->_return_url,
+				'cancel_url' => $this->_cancel_url
+			),
+			'payer' => $instrument->PaymentInstrument(),
+			'transactions' => array(
+				array(
+					'amount' => array(
+						'total' => (string)((float)$this->_value),
+						'currency' => $this->_currency
+					),
+					'description' => $this->_description
+				)
+			)
+		);
+
 		$this->_response = $provider->API(
 			QuarkDTO::METHOD_POST,
 			'/v1/payments/payment',
-			array(
-				'intent' => 'sale',
-				'redirect_urls' => array(
-					'return_url' => $this->_return_url,
-					'cancel_url' => $this->_cancel_url
-				),
-				'payer' => $instrument->PaymentInstrument(),
-				'transactions' => array(
-					array(
-						'amount' => array(
-							'total' => (string)((float)$this->_amount),
-							'currency' => $this->_currency
-						),
-						'description' => $this->_description
-					)
-				)
-			)
+			$request
 		);
 
 		$state = $instrument instanceof PayPalAccountInstrument ? 'created' : 'approved';

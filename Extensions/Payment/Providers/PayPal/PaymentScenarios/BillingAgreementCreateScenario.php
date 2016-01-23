@@ -10,7 +10,6 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
-use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\CreditCardInstrument;
 use Quark\Extensions\Payment\Providers\PayPal\PaymentInstruments\PayPalAccountInstrument;
 
@@ -163,8 +162,8 @@ class BillingAgreementCreateScenario implements IQuarkPaymentScenario {
 				),
 				'max_fail_attempts' => $maxFailAttempts,
 				'initial_fail_amount_action' => $maxFailAttempts == 0
-					? PayPalBilling::FAIL_AMOUNT_CONTINUE
-					: PayPalBilling::FAIL_AMOUNT_CANCEL
+					? PayPal::BILLING_FAIL_AMOUNT_CONTINUE
+					: PayPal::BILLING_FAIL_AMOUNT_CANCEL
 			);
 
 		return $this->_merchant;
@@ -177,6 +176,9 @@ class BillingAgreementCreateScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
+		if ($this->_start == null)
+			$this->_start = QuarkDate::GMTNow();
+
 		$request = array(
 			'name' => $this->_name,
 			'description' => $this->_description,
@@ -197,7 +199,7 @@ class BillingAgreementCreateScenario implements IQuarkPaymentScenario {
 			$request
 		);
 
-		$state = $instrument instanceof PayPalAccountInstrument ? 'PENDING' : 'ACTIVE';
+		$state = $instrument instanceof PayPalAccountInstrument ? PayPal::BILLING_STATE_PENDING : PayPal::BILLING_STATE_ACTIVE;
 
 		if (!isset($this->_response->state) || $this->_response->state != $state) return false;
 		if (!isset($this->_response->links) || !is_array($this->_response->links)) return false;

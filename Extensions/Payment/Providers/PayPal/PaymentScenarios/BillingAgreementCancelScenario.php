@@ -7,6 +7,8 @@ use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
+use Quark\Extensions\Payment\Providers\PayPal\PayPal;
+
 /**
  * Class BillingAgreementCancelScenario
  *
@@ -19,13 +21,42 @@ class BillingAgreementCancelScenario implements IQuarkPaymentScenario {
 	private $_response;
 
 	/**
-	 * @param IQuarkPaymentProvider $provider
+	 * @var string $_agreement = ''
+	 */
+	private $_agreement = '';
+
+	/**
+	 * @param string $agreement = ''
+	 */
+	public function __construct ($agreement = '') {
+		$this->Agreement($agreement);
+	}
+
+	/**
+	 * @param string $agreement = ''
+	 *
+	 * @return string
+	 */
+	public function Agreement ($agreement = '') {
+		if (func_num_args() != 0)
+			$this->_agreement = $agreement;
+
+		return $this->_agreement;
+	}
+
+	/**
+	 * @param IQuarkPaymentProvider|PayPal $provider
 	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
-		// TODO: Implement Proceed() method.
+		$this->_response = $provider->API(
+			QuarkDTO::METHOD_POST,
+			'/v1/payments/billing-agreements/' . $this->_agreement . '/cancel'
+		);
+
+		return $this->_response->Status() == QuarkDTO::STATUS_200_OK;
 	}
 
 	/**

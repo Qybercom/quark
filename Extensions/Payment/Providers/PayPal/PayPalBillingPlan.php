@@ -29,13 +29,15 @@ class PayPalBillingPlan implements IQuarkModel, IQuarkLinkedModel {
 	private $_payment;
 
 	/**
-	 * @param string $config
+	 * @param string $config = ''
+	 * @param string $id = ''
 	 *
 	 * @return QuarkModel|PayPalBillingPlan
 	 */
-	public static function Config ($config = '') {
+	public static function Config ($config = '', $id = '') {
 		$plan = new self();
 		$plan->_payment = new Payment($config);
+		$plan->id = $id;
 
 		return $plan->_payment->Config()->PaymentProvider() instanceof PayPal ? new QuarkModel($plan) : null;
 	}
@@ -57,55 +59,66 @@ class PayPalBillingPlan implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $name = ''
 	 * @param string $description = ''
-	 * @param string $duration = PayPalBilling::TYPE_DURATION_INFINITE
+	 * @param string $duration = PayPal::BILLING_TYPE_DURATION_INFINITE
 	 *
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanCreateScenario
+	 * @return BillingPlanCreateScenario
 	 */
-	public function PlanCreate ($name = '', $description = '', $duration = PayPalBilling::TYPE_DURATION_INFINITE) {
+	public function PlanCreate ($name = '', $description = '', $duration = PayPal::BILLING_TYPE_DURATION_INFINITE) {
 		return $this->_payment->Scenario(new BillingPlanCreateScenario($name, $description, $duration));
 	}
 
 	/**
-	 * @param string $plan = ''
+	 * @param string $id = ''
 	 *
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanActivateScenario
+	 * @return BillingPlanActivateScenario
 	 */
-	public function PlanActivate ($plan = '') {
-		return $this->_payment->Scenario(new BillingPlanActivateScenario($plan));
+	public function PlanActivate ($id = '') {
+		if (func_num_args() != 0)
+			$this->id = $id;
+
+		return $this->_payment->Scenario(new BillingPlanActivateScenario($this->id));
 	}
 
 	/**
-	 * @param string $plan = ''
+	 * @param string $id = ''
 	 *
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanDeactivateScenario
+	 * @return BillingPlanDeactivateScenario
 	 */
-	public function PlanDeactivate ($plan = '') {
-		return $this->_payment->Scenario(new BillingPlanDeactivateScenario($plan));
+	public function PlanDeactivate ($id = '') {
+		if (func_num_args() != 0)
+			$this->id = $id;
+
+		return $this->_payment->Scenario(new BillingPlanDeactivateScenario($this->id));
 	}
 
 	/**
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanUpdateScenario
+	 * @return BillingPlanUpdateScenario
 	 */
 	public function PlanUpdate () {
 		return $this->_payment->Scenario(new BillingPlanUpdateScenario());
 	}
 
 	/**
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanUpdateScenario
+	 * @param string $id = ''
+	 *
+	 * @return BillingPlanGetScenario
 	 */
-	public function PlanGet () {
+	public function PlanGet ($id = '') {
+		if (func_num_args() != 0)
+			$this->id = $id;
+
 		return $this->_payment->Scenario(new BillingPlanGetScenario($this->id));
 	}
 
 	/**
 	 * @param int $page = 0
-	 * @param string $state = PayPalBilling::STATE_CREATED
+	 * @param string $state = PayPal::BILLING_STATE_CREATED
 	 * @param int $page_size = 10
 	 * @param bool $total = true
 	 *
-	 * @return \Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios\BillingPlanUpdateScenario
+	 * @return BillingPlanListScenario
 	 */
-	public function PlanList ($page = 0, $state = PayPalBilling::STATE_CREATED, $page_size = 10, $total = true) {
+	public function PlanList ($page = 0, $state = PayPal::BILLING_STATE_CREATED, $page_size = 10, $total = true) {
 		return $this->_payment->Scenario(new BillingPlanListScenario($page, $state, $page_size, $total));
 	}
 

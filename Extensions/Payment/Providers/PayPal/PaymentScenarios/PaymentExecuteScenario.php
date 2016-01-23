@@ -70,13 +70,17 @@ class PaymentExecuteScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
+		$request = array(
+			'payer_id' => $this->_payer
+		);
+
 		$this->_response = $provider->API(
 			QuarkDTO::METHOD_POST,
 			'/v1/payments/payment/' . $this->_payment . '/execute',
-			array('payer_id' => $this->_payer)
+			$request
 		);
 
-		return isset($this->_response->state) && $this->_response->state == 'approved';
+		return isset($this->_response->state) && $this->_response->state == PayPal::PAYMENT_STATE_APPROVED;
 	}
 
 	/**

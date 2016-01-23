@@ -10,11 +10,11 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
 
 /**
- * Class BillingPlanGetScenario
+ * Class BillingAgreementGetScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class BillingPlanGetScenario implements IQuarkPaymentScenario {
+class BillingAgreementGetScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -51,7 +51,7 @@ class BillingPlanGetScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
-		$this->_response = $provider->API(QuarkDTO::METHOD_GET, '/v1/payments/billing-plans/' . $this->_id);
+		$this->_response = $provider->API(QuarkDTO::METHOD_GET, '/v1/payments/billing-agreements/' . $this->_id . '/transactions');
 
 		return isset($this->_response->id);
 	}

@@ -8,7 +8,6 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
-use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 
 /**
  * Class BillingPlanListScenario
@@ -17,14 +16,19 @@ use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
  */
 class BillingPlanListScenario implements IQuarkPaymentScenario {
 	/**
+	 * @var QuarkDTO $_response
+	 */
+	private $_response;
+
+	/**
 	 * @var int $_page = 0
 	 */
 	private $_page = 0;
 
 	/**
-	 * @var string $_state = PayPalBilling::STATE_CREATED
+	 * @var string $_state = PayPal::BILLING_STATE_CREATED
 	 */
-	private $_state = PayPalBilling::STATE_CREATED;
+	private $_state = PayPal::BILLING_STATE_CREATED;
 
 	/**
 	 * @var int $_page_size = 10
@@ -37,17 +41,12 @@ class BillingPlanListScenario implements IQuarkPaymentScenario {
 	private $_total = true;
 
 	/**
-	 * @var QuarkDTO $_response
-	 */
-	private $_response;
-
-	/**
 	 * @param int $page = 0
-	 * @param string $state = PayPalBilling::STATE_CREATED
+	 * @param string $state = PayPal::BILLING_STATE_CREATED
 	 * @param int $page_size = 10
 	 * @param bool $total = true
 	 */
-	public function __construct ($page = 0, $state = PayPalBilling::STATE_CREATED, $page_size = 10, $total = true) {
+	public function __construct ($page = 0, $state = PayPal::BILLING_STATE_CREATED, $page_size = 10, $total = true) {
 		$this->Page($page);
 		$this->State($state);
 		$this->PageSize($page_size);
@@ -67,11 +66,11 @@ class BillingPlanListScenario implements IQuarkPaymentScenario {
 	}
 
 	/**
-	 * @param string $state = PayPalBilling::STATE_CREATED
+	 * @param string $state = PayPal::BILLING_STATE_CREATED
 	 *
 	 * @return string
 	 */
-	public function State ($state = PayPalBilling::STATE_CREATED) {
+	public function State ($state = PayPal::BILLING_STATE_CREATED) {
 		if (func_num_args() != 0)
 			$this->_state = $state;
 

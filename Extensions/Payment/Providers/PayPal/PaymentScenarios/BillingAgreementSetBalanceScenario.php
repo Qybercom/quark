@@ -7,14 +7,15 @@ use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
+use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
 
 /**
- * Class BillingPlanDeactivateScenario
+ * Class BillingAgreementSetBalanceScenario
  *
  * @package Quark\Extensions\Payment\Providers\PayPal\PaymentScenarios
  */
-class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
+class BillingAgreementSetBalanceScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -26,10 +27,23 @@ class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
 	private $_id = '';
 
 	/**
-	 * @param string $id = ''
+	 * @var float $_value = 0.0
 	 */
-	public function __construct ($id = '') {
+	private $_value = 0.0;
+
+	/**
+	 * @var string $_currency = Payment::CURRENCY_USD
+	 */
+	private $_currency = Payment::CURRENCY_USD;
+
+	/**
+	 * @param string $id = ''
+	 * @param $currency = Payment::CURRENCY_USD
+	 * @param int|float $value = 0.0
+	 */
+	public function __construct ($id = '', $currency = Payment::CURRENCY_USD, $value = 0.0) {
 		$this->Id($id);
+		$this->Money($currency, $value);
 	}
 
 	/**
@@ -45,6 +59,19 @@ class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
 	}
 
 	/**
+	 * @param string $currency = Payment::CURRENCY_USD
+	 * @param float $value = 0.0
+	 *
+	 * @return PaymentCreateScenario
+	 */
+	public function Money ($currency = Payment::CURRENCY_USD, $value = 0.0) {
+		$this->_currency = $currency;
+		$this->_value = $value;
+
+		return $this;
+	}
+
+	/**
 	 * @param IQuarkPaymentProvider|PayPal $provider
 	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
@@ -52,16 +79,13 @@ class BillingPlanDeactivateScenario implements IQuarkPaymentScenario {
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
 		$request = array(
-			array(
-				'path' => '/',
-				'value' => array('state' => PayPal::BILLING_STATE_INACTIVE),
-				'op' => 'replace'
-			)
+			'currency' => $this->_currency,
+			'value' => $this->_value
 		);
 
 		$this->_response = $provider->API(
-			QuarkDTO::METHOD_PATCH,
-			'/v1/payments/billing-plans/' . $this->_id,
+			QuarkDTO::METHOD_POST,
+			'/v1/payments/billing-agreements/' . $this->_id . '/set-balance',
 			$request
 		);
 

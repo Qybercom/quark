@@ -9,7 +9,6 @@ use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\PayPal\PayPal;
-use Quark\Extensions\Payment\Providers\PayPal\PayPalBilling;
 
 /**
  * Class BillingPlanCreateScenario
@@ -33,9 +32,9 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 	private $_description = '';
 
 	/**
-	 * @var string $_duration = PayPalBilling::TYPE_DURATION_INFINITE
+	 * @var string $_duration = PayPal::BILLING_TYPE_DURATION_INFINITE
 	 */
-	private $_duration = PayPalBilling::TYPE_DURATION_INFINITE;
+	private $_duration = PayPal::BILLING_TYPE_DURATION_INFINITE;
 
 	/**
 	 * @var array $_periods = []
@@ -55,9 +54,9 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 	/**
 	 * @param string $name = ''
 	 * @param string $description = ''
-	 * @param string $duration = PayPalBilling::TYPE_DURATION_INFINITE
+	 * @param string $duration = PayPal::BILLING_TYPE_DURATION_INFINITE
 	 */
-	public function __construct ($name = '', $description = '', $duration = PayPalBilling::TYPE_DURATION_INFINITE) {
+	public function __construct ($name = '', $description = '', $duration = PayPal::BILLING_TYPE_DURATION_INFINITE) {
 		$this->Name($name);
 		$this->Description($description);
 		$this->Duration($duration);
@@ -104,21 +103,21 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 	/**
 	 * @param string $name = ''
 	 * @param string $currency = Payment::CURRENCY_USD
-	 * @param float $amount = 0.0
-	 * @param string $frequency = PayPalBilling::FREQUENCY_MONTH
+	 * @param float $value = 0.0
+	 * @param string $frequency = PayPal::BILLING_FREQUENCY_MONTH
 	 * @param int $cycles = 0
 	 * @param int $interval = 1
 	 *
 	 * @return BillingPlanCreateScenario
 	 */
-	public function TrialPeriod ($name = '', $currency = Payment::CURRENCY_USD, $amount = 0.0, $frequency = PayPalBilling::FREQUENCY_MONTH, $cycles = 0, $interval = 1) {
+	public function TrialPeriod ($name = '', $currency = Payment::CURRENCY_USD, $value = 0.0, $frequency = PayPal::BILLING_FREQUENCY_MONTH, $cycles = 0, $interval = 1) {
 		$this->_periods[] = array(
 			'name' => $name,
-			'type' => PayPalBilling::TYPE_PLAN_TRIAL,
+			'type' => PayPal::BILLING_TYPE_PLAN_TRIAL,
 			'frequency' => $frequency,
 			'frequency_interval' => $interval,
 			'amount' => array(
-				'value' => $amount,
+				'value' => $value,
 				'currency' => $currency
 			),
 			'cycles' => $cycles,
@@ -131,21 +130,21 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 	/**
 	 * @param string $name = ''
 	 * @param string $currency = Payment::CURRENCY_USD
-	 * @param float $amount = 0.0
+	 * @param float $value = 0.0
 	 * @param string $frequency = self::FREQUENCY_MONTH
 	 * @param int $cycles = 0
 	 * @param int $interval = 1
 	 *
 	 * @return BillingPlanCreateScenario
 	 */
-	public function RegularPeriod ($name = '', $currency = Payment::CURRENCY_USD, $amount = 0.0, $frequency = PayPalBilling::FREQUENCY_MONTH, $cycles = 0, $interval = 1) {
+	public function RegularPeriod ($name = '', $currency = Payment::CURRENCY_USD, $value = 0.0, $frequency = PayPal::BILLING_FREQUENCY_MONTH, $cycles = 0, $interval = 1) {
 		$this->_periods[] = array(
 			'name' => $name,
-			'type' => PayPalBilling::TYPE_PLAN_REGULAR,
+			'type' => PayPal::BILLING_TYPE_PLAN_REGULAR,
 			'frequency' => $frequency,
 			'frequency_interval' => $interval,
 			'amount' => array(
-				'value' => $amount,
+				'value' => $value,
 				'currency' => $currency
 			),
 			'cycles' => $cycles,
@@ -175,8 +174,8 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 				),
 				'max_fail_attempts' => $maxFailAttempts,
 				'initial_fail_amount_action' => $maxFailAttempts == 0
-					? PayPalBilling::FAIL_AMOUNT_CONTINUE
-					: PayPalBilling::FAIL_AMOUNT_CANCEL
+					? PayPal::BILLING_FAIL_AMOUNT_CONTINUE
+					: PayPal::BILLING_FAIL_AMOUNT_CANCEL
 			);
 
 		return $this->_merchant;
@@ -203,7 +202,7 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 			$request
 		);
 
-		if (!isset($this->_response->state) || $this->_response->state != PayPalBilling::STATE_CREATED) return false;
+		if (!isset($this->_response->state) || $this->_response->state != PayPal::BILLING_STATE_CREATED) return false;
 		if (!isset($this->_response->links) || !is_array($this->_response->links)) return false;
 
 		foreach ($this->_response->links as $link)

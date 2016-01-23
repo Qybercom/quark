@@ -7,6 +7,8 @@ use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
+use Quark\Extensions\Payment\Providers\PayPal\PayPal;
+
 /**
  * Class BillingPlanUpdateScenario
  *
@@ -19,7 +21,7 @@ class BillingPlanUpdateScenario implements IQuarkPaymentScenario {
 	private $_response;
 
 	/**
-	 * @param IQuarkPaymentProvider $provider
+	 * @param IQuarkPaymentProvider|PayPal $provider
 	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
 	 * @return bool

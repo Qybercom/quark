@@ -8702,13 +8702,18 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param string $uri
-	 * @param string $query
+	 * @param string $uri = ''
+	 * @param array $query = []
+	 * @param bool $weak = false
 	 *
 	 * @return string
 	 */
-	public static function AppendQuery ($uri, $query) {
-		return (strpos($uri, '?') !== false ? '&' : '?') . http_build_query($query);
+	public static function AppendQuery ($uri = '', $query = [], $weak = false) {
+		$params = http_build_query($query);
+
+		return $weak && strlen($params) == 0
+			? ''
+			: (strpos($uri, '?') !== false ? '&' : '?') . $params;
 	}
 
 	/**
