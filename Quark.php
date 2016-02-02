@@ -1870,15 +1870,21 @@ class QuarkTimer {
 	private $_id;
 
 	/**
+	 * @var null $_null = null
+	 */
+	private static $_null = null;
+
+	/**
 	 * @param int $time (seconds)
 	 * @param callable(QuarkTimer, ..$) $callback
 	 * @param int $offset = 0
+	 * @param string $id = ''
 	 */
-	public function __construct ($time, callable $callback, $offset = 0) {
+	public function __construct ($time, callable $callback, $offset = 0, $id = '') {
 		$this->_time = $time > $offset ? $time - $offset : $time;
 		$this->_callback = $callback;
 		$this->_last = QuarkDate::Now();
-		$this->_id = Quark::GuID();
+		$this->_id = func_num_args() == 4 ? $id : Quark::GuID();
 
 		self::$_timers[] = $this;
 	}
@@ -1948,6 +1954,18 @@ class QuarkTimer {
 	 */
 	public static function Timers () {
 		return self::$_timers;
+	}
+
+	/**
+	 * @param string $id
+	 *
+	 * @return QuarkTimer
+	 */
+	public static function &Get ($id) {
+		foreach (self::$_timers as $i => &$timer)
+			if ($timer->_id == $id) return $timer;
+
+		return self::$_null;
 	}
 }
 
@@ -9666,7 +9684,7 @@ class QuarkDTO {
 	 * @return string|array
 	 */
 	private function _serializeHeaders ($client, $str) {
-		if ($this->_uri == null) return $str ? '' : array();
+		if ($client && $this->_uri == null) return $str ? '' : array();
 
 		$this->_serializeBody($client);
 
