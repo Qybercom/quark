@@ -3,6 +3,7 @@ namespace Quark\Scenarios;
 
 use Quark\IQuarkTask;
 
+use Quark\QuarkArchException;
 use Quark\QuarkTask;
 
 /**
@@ -16,8 +17,11 @@ class AsyncQueue implements IQuarkTask {
 	 * @param array $argv
 	 *
 	 * @return mixed
+	 *
+	 * @throws QuarkArchException
 	 */
 	public function Task ($argc, $argv) {
-		QuarkTask::AsyncQueue();
+		if (!QuarkTask::AsyncQueue())
+			throw new QuarkArchException('Can not bind async queue on [' . QuarkTask::QUEUE . ']');
 	}
 }
