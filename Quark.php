@@ -5771,6 +5771,13 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @return int
+	 */
+	public function Timestamp () {
+		return $this->_date->getTimestamp();
+	}
+
+	/**
 	 * @param QuarkDate $with
 	 *
 	 * @return int
