@@ -4092,8 +4092,10 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function offsetSet ($offset, $value) {
-		if ($this->_type($value))
-			$this->_list[(int)$offset] = $value;
+		if (!$this->_type($value)) return;
+
+		if ($offset === null) $this->_list[] = $value;
+		else $this->_list[(int)$offset] = $value;
 	}
 
 	/**

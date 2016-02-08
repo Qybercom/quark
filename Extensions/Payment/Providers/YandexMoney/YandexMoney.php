@@ -55,8 +55,24 @@ class YandexMoney implements IQuarkPaymentProvider {
 		$this->appSecret = $appSecret;
 	}
 
+	/**
+	 * @param $redirect
+	 * @param array $scope
+	 *
+	 * @return string
+	 */
 	public function ApplicationAuthorize ($redirect, $scope = []) {
-		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$form = new QuarkFormIOProcessor();
+		$params = $form->Encode(array(
+			'response_type' => 'code',
+			'redirect_uri' => $redirect,
+			'client_id' => $this->appId,
+			'scope' => implode(' ', $scope)
+		));
+
+		return 'https://money.yandex.ru/oauth/token?' . $params;
+
+		/*$request = QuarkDTO::ForPOST();
 		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
 		$request->Data(array(
 			'response_type' => 'code',
@@ -73,7 +89,7 @@ class YandexMoney implements IQuarkPaymentProvider {
 
 		$this->token = $token->access_token;
 
-		return true;
+		return true;*/
 	}
 
 	/**
