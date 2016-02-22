@@ -232,23 +232,22 @@ Quark.Controls.File = function (selector, opt) {
 	var that = this;
 
 	that.Elem = $(selector);
-	that.Elem.on('click', opt, Quark.Controls.File._send);
-};
-
-Quark.Controls.File._send = function (e) {
-	Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(e.data, {
-		data: {
-			_s: $(this).attr('quark-signature')
-		}
-	}));
+	that.Elem.on('click', opt, function (e) {
+		Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(e.data, {
+			data: {
+				_s: $(this).attr('quark-signature')
+			}
+		}), $(this));
+	});
 };
 
 /**
  * @param url
  * @param name
  * @param opt
+ * @param uploader
  */
-Quark.Controls.File.To = function (url, name, opt) {
+Quark.Controls.File.To = function (url, name, opt, uploader) {
 	opt = Quark.Extend(opt, {
 		multiple: false,
 		json: true,
@@ -259,7 +258,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 		error: function (response) { }
 	});
 
-	var key = '-upload';
+	var key = '-upload-' + Quark.GuID();
 
 	if ($('#target' + key).length == 0)
 		$('body').append(
@@ -279,7 +278,7 @@ Quark.Controls.File.To = function (url, name, opt) {
 		if (opt.json)
 			response = JSON.parse(response);
 
-		opt.success(response);
+		opt.success(response, uploader);
 	});
 
 	form

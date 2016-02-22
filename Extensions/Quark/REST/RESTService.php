@@ -12,6 +12,7 @@ use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
+use Quark\QuarkModelSource;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkJSONIOProcessor;
@@ -30,12 +31,65 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	private $_uri = null;
 
 	/**
+	 * @param string $connection
+	 * @param string $method
+	 * @param string $action
+	 * @param mixed $data
+	 *
+	 * @return \StdClass
+	 * @throws QuarkArchException
+	 */
+	public static function DirectCommand ($connection, $method, $action, $data = []) {
+		try {
+			$source = Quark::Stack($connection);
+		}
+		catch (\Exception $e) {
+			$source = null;
+		}
+
+		if (!($source instanceof QuarkModelSource))
+			throw new QuarkArchException('Specified connection for RESTService::DirectCommand is not a valid QuarkModelSource');
+
+		return self::_ll_api($source->URI(), $method, $action, $data);
+	}
+
+	/**
 	 * @param QuarkURI $uri
 	 *
 	 * @return mixed
 	 */
 	public function Connect (QuarkURI $uri) {
 		$this->_uri = $uri;
+	}
+
+	/**
+	 * @param QuarkURI $uri
+	 * @param string $method
+	 * @param string $action
+	 * @param mixed $data
+	 *
+	 * @return \StdClass
+	 * @throws QuarkArchException
+	 */
+	private static function _ll_api (QuarkURI $uri, $method, $action, $data = []) {
+		$request = new QuarkDTO(new QuarkJSONIOProcessor());
+		$request->Method($method);
+		$request->Merge($data);
+
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$uri->path = $action;
+		$uri = $uri->URI(true);
+
+		/**
+		 * @var \StdClass $data
+		 */
+		$data = QuarkHTTPClient::To($uri, $request, $response);
+
+		if ($data == null || !isset($data->status) || $data->status != 200)
+			throw new QuarkArchException('[' . $uri . '] QuarkRest API is not reachable. Response: ' . print_r($data, true));
+
+		return $data;
 	}
 
 	/**
@@ -47,27 +101,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @throws QuarkArchException
 	 */
 	private function _api ($method, $action, $data = []) {
-		$request = new QuarkDTO(new QuarkJSONIOProcessor());
-		$request->Method($method);
-		$request->Merge($data);
-
-		$response = new QuarkDTO(new QuarkJSONIOProcessor());
-
 		if (!$this->_uri)
 			throw new QuarkArchException('QuarkRest API is not reachable. URI is not provided');
 
-		$this->_uri->path = $action;
-		$uri = $this->_uri->URI(true);
-
-		/**
-		 * @var \StdClass $data
-		 */
-		$data = QuarkHTTPClient::To($uri, $request, $response);
-
-		if ($data == null || !isset($data->status) || $data->status != 200)
-			throw new QuarkArchException('[' . $uri . '] QuarkRest API is not reachable. Response: ' . print_r($data, true));
-
-		return $data;
+		return self::_ll_api($this->_uri, $method, $action, $data);
 	}
 
 	/**
