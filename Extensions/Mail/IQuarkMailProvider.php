@@ -1,8 +1,6 @@
 <?php
 namespace Quark\Extensions\Mail;
 
-use Quark\IQuarkExtensionConfig;
-
 use Quark\QuarkURI;
 
 /**
@@ -10,14 +8,12 @@ use Quark\QuarkURI;
  *
  * @package Quark\Extensions\Mail
  */
-interface IQuarkMailProvider extends IQuarkExtensionConfig {
+interface IQuarkMailProvider {
 	/**
+	 * @param string $username
+	 * @param string $password
+	 *
 	 * @return QuarkURI
 	 */
-	public function SMTP();
-
-	/**
-	 * @return string
-	 */
-	public function From();
+	public function MailSMTP($username, $password);
 }

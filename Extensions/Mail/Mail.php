@@ -2,7 +2,6 @@
 namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
-use Quark\IQuarkExtensionConfig;
 
 use Quark\Quark;
 use Quark\QuarkClient;
@@ -24,7 +23,7 @@ class Mail implements IQuarkExtension {
 	const HEADER_FROM = 'From';
 
 	/**
-	 * @var IQuarkExtensionConfig|IQuarkMailProvider $_config
+	 * @var MailConfig $_config
 	 */
 	private $_config;
 
@@ -70,14 +69,14 @@ class Mail implements IQuarkExtension {
 
 	/**
 	 * @param string $config
-	 * @param string $subject
-	 * @param QuarkView|string $content
+	 * @param string $subject = ''
+	 * @param QuarkView|string $content = ''
 	 * @param string $to = ''
 	 */
-	public function __construct ($config, $subject, $content, $to = '') {
+	public function __construct ($config, $subject = '', $content = '', $to = '') {
 		$this->_config = Quark::Config()->Extension($config);
 
-		if (!($this->_config instanceof IQuarkMailProvider)) return;
+		if (!($this->_config instanceof MailConfig)) return;
 
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
 		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());
@@ -174,13 +173,13 @@ class Mail implements IQuarkExtension {
 					'files' => $this->_files
 				));
 
-		$client = new QuarkClient($this->_config->SMTP(), new QuarkTCPNetworkTransport(), null, 5, false);
+		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), null, 5, false);
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
 			$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
 
-			$smtp = $this->_config->SMTP();
+			$smtp = $this->_config->MailSMTPEndpoint();
 			$response = $this->_dto->SerializeResponse();
 
 			$this->_cmd($client);

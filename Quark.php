@@ -1870,15 +1870,21 @@ class QuarkTimer {
 	private $_id;
 
 	/**
+	 * @var null $_null = null
+	 */
+	private static $_null = null;
+
+	/**
 	 * @param int $time (seconds)
 	 * @param callable(QuarkTimer, ..$) $callback
 	 * @param int $offset = 0
+	 * @param string $id = ''
 	 */
-	public function __construct ($time, callable $callback, $offset = 0) {
+	public function __construct ($time, callable $callback, $offset = 0, $id = '') {
 		$this->_time = $time > $offset ? $time - $offset : $time;
 		$this->_callback = $callback;
 		$this->_last = QuarkDate::Now();
-		$this->_id = Quark::GuID();
+		$this->_id = func_num_args() == 4 ? $id : Quark::GuID();
 
 		self::$_timers[] = $this;
 	}
@@ -1948,6 +1954,18 @@ class QuarkTimer {
 	 */
 	public static function Timers () {
 		return self::$_timers;
+	}
+
+	/**
+	 * @param string $id
+	 *
+	 * @return QuarkTimer
+	 */
+	public static function &Get ($id) {
+		foreach (self::$_timers as $i => &$timer)
+			if ($timer->_id == $id) return $timer;
+
+		return self::$_null;
 	}
 }
 
@@ -2174,7 +2192,10 @@ trait QuarkStreamBehavior {
  * @package Quark
  */
 trait QuarkCLIBehavior {
-	use QuarkServiceBehavior;
+	/**
+	 * @var array $-shellOutput = []
+	 */
+	private $_shellOutput = array();
 
 	/**
 	 * @param string $command = ''
@@ -2187,8 +2208,32 @@ trait QuarkCLIBehavior {
 		if (strlen($command) == 0) return false;
 
 		exec($command, $output, $status);
+		$this->_shellOutput = $output;
 
 		return $status == 0;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function ShellOutput () {
+		return $this->_shellOutput;
+	}
+
+	/**
+	 * @param IQuarkAsyncTask $task
+	 * @param array $args = []
+	 * @param string $queue = QuarkTask::QUEUE
+	 * @param IQuarkNetworkProtocol $protocol = null
+	 *
+	 * @return mixed
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function AsyncTask (IQuarkAsyncTask $task, $args = [], $queue = QuarkTask::QUEUE, IQuarkNetworkProtocol $protocol = null) {
+		$cmd = new QuarkTask($task);
+
+		return $cmd->AsyncLaunch($args, $queue, $protocol);
 	}
 }
 
@@ -3296,7 +3341,7 @@ class QuarkView implements IQuarkContainer {
 	 */
 	public function Link ($uri, $signed = false) {
 		return Quark::WebLocation($uri . ($signed ? QuarkURI::AppendQuery($uri, array(
-				QuarkDTO::SIGNATURE => $this->Signature(false)
+				QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
 			)) : ''));
 	}
 
@@ -3308,7 +3353,7 @@ class QuarkView implements IQuarkContainer {
 	public function Signature ($field = true) {
 		$sign = QuarkSession::Current() ? QuarkSession::Current()->Signature() : '';
 
-		return $field ? '<input type="hidden" name="' . QuarkDTO::SIGNATURE . '" value="' . $sign . '" />' : $sign;
+		return $field ? '<input type="hidden" name="' . QuarkDTO::KEY_SIGNATURE . '" value="' . $sign . '" />' : $sign;
 	}
 
 	/**
@@ -4074,8 +4119,10 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function offsetSet ($offset, $value) {
-		if ($this->_type($value))
-			$this->_list[(int)$offset] = $value;
+		if (!$this->_type($value)) return;
+
+		if ($offset === null) $this->_list[] = $value;
+		else $this->_list[(int)$offset] = $value;
 	}
 
 	/**
@@ -5753,6 +5800,13 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	}
 
 	/**
+	 * @return int
+	 */
+	public function Timestamp () {
+		return $this->_date->getTimestamp();
+	}
+
+	/**
 	 * @param QuarkDate $with
 	 *
 	 * @return int
@@ -6415,6 +6469,20 @@ class QuarkKeyValuePair {
 	 */
 	public function Extract () {
 		return (object)array($this->_key => $this->_value);
+	}
+
+	/**
+	 * @param array $field
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function FromField ($field = []) {
+		if (!is_array($field) && !is_object($field)) return null;
+
+		$field = (array)$field;
+		$pair = each($field);
+
+		return new self($pair['key'], $pair['value']);
 	}
 }
 
@@ -7880,8 +7948,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 				$service->Input()->Data($input);
 
 			if ($session != null) {
-				$session = each($session);
-				$service->Input()->AuthorizationProvider(new QuarkKeyValuePair($session['key'], $session['value']));
+				$service->Input()->AuthorizationProvider(QuarkKeyValuePair::FromField($session));
 
 				if ($connected)
 					$client->Session($service->Input()->AuthorizationProvider());
@@ -8854,7 +8921,8 @@ class QuarkDTO {
 
 	const RANGES_BYTES = 'bytes';
 
-	const SIGNATURE = '_s';
+	const KEY_AUTHORIZATION = '_a';
+	const KEY_SIGNATURE = '_s';
 
 	const RESPONSE_BUFFER = 4096;
 
@@ -9114,7 +9182,11 @@ class QuarkDTO {
 			$this->MergeData($data->Data());
 		}
 
-		$sign = self::SIGNATURE;
+		$auth = self::KEY_AUTHORIZATION;
+		$sign = self::KEY_SIGNATURE;
+
+		if (isset($this->_data->$auth))
+			$this->AuthorizationProvider(QuarkKeyValuePair::FromField($this->_data->$auth));
 
 		if (isset($this->_data->$sign))
 			$this->Signature($this->_data->$sign);
@@ -9394,7 +9466,7 @@ class QuarkDTO {
 		if (func_num_args() != 0) {
 			$this->_data = $data;
 
-			$sign = self::SIGNATURE;
+			$sign = self::KEY_SIGNATURE;
 
 			if (isset($this->_data->$sign))
 				$this->Signature($this->_data->$sign);
@@ -9579,8 +9651,11 @@ class QuarkDTO {
 
 			$this->_data = (object)$this->_data;
 
-			// get signature from GET params
-			$sign = self::SIGNATURE;
+			$auth = self::KEY_AUTHORIZATION;
+			$sign = self::KEY_SIGNATURE;
+
+			// get keys from GET params
+			$this->AuthorizationProvider(isset($this->_data->$auth) ? QuarkKeyValuePair::FromField($this->_data->$auth) : null);
 			$this->Signature(isset($this->_data->$sign) ? $this->_data->$sign : '');
 
 			if ($this->_processor == null)
@@ -9589,8 +9664,8 @@ class QuarkDTO {
 			$this->_unserializeHeaders($found[4]);
 			$this->_unserializeBody($found[5]);
 
-			// re-fill signature, if sign transported in body
-			$sign = self::SIGNATURE;
+			// re-fill keys, if they are transported in body
+			$this->AuthorizationProvider(isset($this->_data->$auth) ? QuarkKeyValuePair::FromField($this->_data->$auth) : $this->AuthorizationProvider());
 			$this->Signature(isset($this->_data->$sign) ? $this->_data->$sign : $this->Signature());
 
 			$this->_rawData = $found[5];
@@ -9666,7 +9741,7 @@ class QuarkDTO {
 	 * @return string|array
 	 */
 	private function _serializeHeaders ($client, $str) {
-		if ($this->_uri == null) return $str ? '' : array();
+		if ($client && $this->_uri == null) return $str ? '' : array();
 
 		$this->_serializeBody($client);
 
