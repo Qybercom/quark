@@ -677,6 +677,15 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $path
+	 *
+	 * @return bool
+	 */
+	public function SharedResource ($path = '') {
+		return Quark::Import($path);
+	}
+
+	/**
 	 * @param string $component
 	 * @param string $location = ''
 	 *
@@ -1166,7 +1175,7 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 				if (!isset($argv[2]))
 					throw new QuarkArchException('Predefined scenario not selected');
 
-				$class = '\\Quark\\Scenarios\\' . $argv[2];
+				$class = '\\Quark\\Scenarios\\' . str_replace('/', '\\', $argv[2]);
 
 				if (!class_exists($class))
 					throw new QuarkArchException('Unknown predefined scenario ' . $class);
