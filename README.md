@@ -26,25 +26,27 @@ First of all, we need to understand the best project file structure *(D - direct
     [D] Views
     [D] storage
     [D] static
-    [D] logs
+    [D] runtime
     [F] .gitignore
     [F] .htaccess
     [F] index.php
 
 Depending on project type, there can be no folders such as `ViewModels`, `Views` and `static`, or `storage`. The `.htaccess` can be found in Quark repository. Of course, if You use `NginX`+`php-fpm` You need to put rewrite rule in your virtual host configuration.
-In the `.gitignore` can be `logs` and `index.php`
+In the `.gitignore` can be `runtime` and `index.php`
 
 Now, let's take a look of `index.php`. Minimal required set is:
-    
-    <?php
-    include '/path/to/quark/Quark.php';
-    
-    use Quark\Quark;
-    use Quark\QuarkConfig;
-    
-    $config = new QuarkConfig();
-    
-    Quark::Run($config);
+
+```php
+<?php
+include '/path/to/quark/Quark.php';
+
+use Quark\Quark;
+use Quark\QuarkConfig;
+
+$config = new QuarkConfig();
+
+Quark::Run($config);
+```
     
 In this file You can configure all `DataProviders`, `AuthProviders`, `Extensions` and application settings.
 
@@ -62,31 +64,33 @@ Filenames of services must be formed as service' class name + `.php`. E.g.: `Ind
 
 Simple service which responds on GET requests at `/` web path can look like this:
 
-    <?php
-    namespace Services;
-    
-    use Quark\IQuarkGetService;
-    
-    use Quark\QuarkDTO;
-    use Quark\QuarkSession;
-    
+```php
+<?php
+namespace Services;
+
+use Quark\IQuarkGetService;
+
+use Quark\QuarkDTO;
+use Quark\QuarkSession;
+
+/**
+ * Class IndexService
+ *
+ * @package Services
+ */
+class IndexService implements IQuarkGetService {
     /**
-     * Class IndexService
+     * @param QuarkDTO $request
+     * @param QuarkSession $session
      *
-     * @package Services
+     * @return mixed
      */
-    class IndexService implements IQuarkGetService {
-    	/**
-	     * @param QuarkDTO     $request
-	     * @param QuarkSession $session
-    	 *
-    	 * @return mixed
-    	 */
-    	public function Get (QuarkDTO $request, QuarkSession $session) {
-    		echo 'Hello World!';
-    	}
+    public function Get (QuarkDTO $request, QuarkSession $session) {
+    	echo 'Hello World!';
     }
-    
+}
+```
+
 Put this code at file `IndexService.php` and put it into the root of `Services` directory. Your first service already done =)
 
 
@@ -101,39 +105,42 @@ As was sayed in the beginning, Quark was designed for using in complex web appli
 
 Let's create a service, named `HelloService`, which will respond with JSON string of `{"hello":"world"}`:
 
-    <?php
-    namespace Services;
-    
-    use Quark\IQuarkGetService;
-    use Quark\IQuarkServiceWithCustomProcessor;
-    
-    use Quark\QuarkDTO;
-    use Quark\QuarkSession;
+```php
+<?php
+namespace Services;
+
+use Quark\IQuarkGetService;
+use Quark\IQuarkServiceWithCustomProcessor;
+
+use Quark\QuarkDTO;
+use Quark\QuarkSession;
+
+/**
+ * Class HelloService
+ *
+ * @package Services
+ */
+class HelloService implements IQuarkGetService, IQuarkServiceWithCustomProcessor {
+    /**
+     * @return IQuarkIOProcessor
+     */
+    public function Processor () {
+    	return new QuarkJSONIOProcessor();
+    }
     
     /**
-     * Class HelloService
+     * @param QuarkDTO $request
+     * @param QuarkSession $session
      *
-     * @package Services
+     * @return mixed
      */
-    class HelloService implements IQuarkGetService, IQuarkServiceWithCustomProcessor {
-    	/**
-    	 * @return IQuarkIOProcessor
-    	 */
-    	public function Processor () {
-    		return new QuarkJSONIOProcessor();
-    	}
-    	/**
-    	 * @param QuarkDTO     $request
-    	 * @param QuarkSession $session
-    	 *
-    	 * @return mixed
-    	 */
-    	public function Get (QuarkDTO $request, QuarkSession $session) {
-    		return array(
-    		  'hello' => 'world'
-    		);
-    	}
+    public function Get (QuarkDTO $request, QuarkSession $session) {
+    	return array(
+    	    'hello' => 'world'
+    	);
     }
+}
+```
     
 As You can see, we only defined the data processor for this service and returned data, which need to be processed. Simple =)
 
