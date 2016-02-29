@@ -302,15 +302,14 @@ class Quark {
 	}
 
 	/**
+	 * @param string $id
 	 * @param IQuarkPrimitive $primitive
 	 *
 	 * @return IQuarkContainer|null
 	 */
-	public static function &ContainerOf (IQuarkPrimitive $primitive) {
-		$class = get_class($primitive);
-
+	public static function &ContainerOf ($id, IQuarkPrimitive $primitive) {
 		foreach (self::$_containers as $container) {
-			if (!$primitive || get_class($container->Primitive()) != $class) continue;
+			if ($container->PrimitiveID() != $id) continue;
 
 			$container->Primitive($primitive);
 			return $container;
@@ -2258,6 +2257,11 @@ class QuarkService implements IQuarkContainer {
 	private $_service;
 
 	/**
+	 * @var string $_serviceId = ''
+	 */
+	private $_serviceId = '';
+
+	/**
 	 * @var QuarkDTO $_input
 	 */
 	private $_input;
@@ -2384,6 +2388,18 @@ class QuarkService implements IQuarkContainer {
 			$this->_service = $primitive;
 
 		return $this->_service;
+	}
+
+	/**
+	 * @param string $id = ''
+	 *
+	 * @return string
+	 */
+	public function PrimitiveID ($id = '') {
+		if (func_num_args() != 0)
+			$this->_serviceId = $id;
+
+		return $this->_serviceId;
 	}
 
 	/**
@@ -2534,18 +2550,26 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @var string $_oid = ''
+	 */
+	private $_oid = '';
+
+	/**
 	 * @param $method
 	 * @param $args
 	 *
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		$this->_envelope();
+		if ($this->_oid == '') {
+			$this->_oid = Quark::GuID();
+			$this->_envelope()->PrimitiveID($this->_oid);
+		}
 
 		/**
-		 * @var IQuarkPrimitive $this
+		 * @var IQuarkPrimitive|QuarkModelBehavior $this
 		 */
-		$container = Quark::ContainerOf($this);
+		$container = Quark::ContainerOf($this->_oid, $this);
 
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
@@ -2604,11 +2628,18 @@ interface IQuarkPrimitive { }
  */
 interface IQuarkContainer {
 	/**
-	 * @param IQuarkPrimitive $primitive
+	 * @param IQuarkPrimitive $primitive = null
 	 *
 	 * @return IQuarkPrimitive|QuarkContainerBehavior
 	 */
 	public function Primitive(IQuarkPrimitive $primitive = null);
+
+	/**
+	 * @param string $id = ''
+	 *
+	 * @return string
+	 */
+	public function PrimitiveID($id = '');
 }
 
 /**
@@ -3099,6 +3130,11 @@ class QuarkView implements IQuarkContainer {
 	private $_null = null;
 
 	/**
+	 * @var string $_viewId = ''
+	 */
+	private $_viewId = '';
+
+	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
 	 * @param QuarkDTO|object|array $vars = []
 	 * @param IQuarkViewResource[] $resources = []
@@ -3509,10 +3545,22 @@ class QuarkView implements IQuarkContainer {
 	 * @return IQuarkPrimitive
 	 */
 	public function Primitive (IQuarkPrimitive $primitive = null) {
-		if (func_num_args() != 0)
+		if (func_num_args() != 0 && $primitive instanceof IQuarkViewModel)
 			$this->_view = $primitive;
 
 		return $this->_view;
+	}
+
+	/**
+	 * @param string $id = ''
+	 *
+	 * @return string
+	 */
+	public function PrimitiveID ($id = '') {
+		if (func_num_args() != 0)
+			$this->_viewId = $id;
+
+		return $this->_viewId;
 	}
 }
 
@@ -4380,6 +4428,11 @@ class QuarkModel implements IQuarkContainer {
 	private $_model = null;
 
 	/**
+	 * @var string $_modelId = ''
+	 */
+	private $_modelId = '';
+
+	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $source
 	 */
@@ -4478,6 +4531,18 @@ class QuarkModel implements IQuarkContainer {
 			$this->_model = $primitive;
 
 		return $this->_model;
+	}
+
+	/**
+	 * @param string $id = ''
+	 *
+	 * @return string
+	 */
+	public function PrimitiveID ($id = '') {
+		if (func_num_args() != 0)
+			$this->_modelId = $id;
+
+		return $this->_modelId;
 	}
 
 	/**
@@ -10685,7 +10750,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public function Location ($location = '', $name = '') {
 		if (func_num_args() != 0) {
 			$this->location = $location;
-			$this->name = $name ? $name : array_reverse(explode('/', $this->location))[0];
+			$this->name = $name ? $name : array_reverse(explode('/', (string)$this->location))[0];
 			$this->parent = str_replace($this->name, '', $this->location);
 		}
 
