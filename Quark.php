@@ -4563,8 +4563,8 @@ class QuarkModel implements IQuarkContainer {
 	public function PopulateWith ($source) {
 		$this->_model = self::_import($this->_model, $source);
 
-		if ($this->_model instanceof IQuarkModelWithOnPopulate) {
-			$out = $this->_model->OnPopulate($source);
+		if ($this->_model instanceof IQuarkModelWithAfterPopulate) {
+			$out = $this->_model->AfterPopulate($source);
 
 			if ($out === false)
 				$this->_model = null;
@@ -4890,12 +4890,11 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private function _op ($name, $options = []) {
 		$name = ucfirst(strtolower($name));
-
-		$hook = 'Before' . $name;
 		$model = self::_export(clone $this->_model, $options);
 
 		if (!$model) return false;
 
+		$hook = 'Before' . $name;
 		$ok = QuarkObject::is($model, 'Quark\IQuarkModelWith' . $hook)
 			? $model->$hook($options)
 			: true;
@@ -4905,6 +4904,13 @@ class QuarkModel implements IQuarkContainer {
 		$out = self::_provider($model)->$name($model, $options);
 
 		$this->PopulateWith($model);
+
+		$hook = 'After' . $name;
+		$ok = QuarkObject::is($model, 'Quark\IQuarkModelWith' . $hook)
+			? $model->$hook($options)
+			: true;
+
+		if ($ok !== null && !$ok) return false;
 
 		return $out;
 	}
@@ -5138,17 +5144,17 @@ interface IQuarkModelWithAfterFind {
 }
 
 /**
- * Interface IQuarkModelWithOnPopulate
+ * Interface IQuarkModelWithAfterPopulate
  *
  * @package Quark
  */
-interface IQuarkModelWithOnPopulate {
+interface IQuarkModelWithAfterPopulate {
 	/**
 	 * @param $raw
 	 *
 	 * @return mixed
 	 */
-	public function OnPopulate($raw);
+	public function AfterPopulate($raw);
 }
 
 /**
@@ -5166,6 +5172,20 @@ interface IQuarkModelWithBeforeCreate {
 }
 
 /**
+ * Interface IQuarkModelWithAfterCreate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterCreate {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function AfterCreate($options);
+}
+
+/**
  * Interface IQuarkModelWithBeforeSave
  *
  * @package Quark
@@ -5180,6 +5200,20 @@ interface IQuarkModelWithBeforeSave {
 }
 
 /**
+ * Interface IQuarkModelWithAfterSave
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterSave {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function AfterSave($options);
+}
+
+/**
  * Interface IQuarkModelWithBeforeRemove
  *
  * @package Quark
@@ -5191,6 +5225,20 @@ interface IQuarkModelWithBeforeRemove {
 	 * @return mixed
 	 */
 	public function BeforeRemove($options);
+}
+
+/**
+ * Interface IQuarkModelWithAfterRemove
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterRemove {
+	/**
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function AfterRemove($options);
 }
 
 /**
@@ -5771,7 +5819,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
  *
  * @package Quark
  */
-class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopulate, IQuarkModelWithBeforeExtract {
+class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterPopulate, IQuarkModelWithBeforeExtract {
 	const NOW = 'now';
 	const NOW_FULL = 'Y-m-d H:i:s.u';
 	const GMT = 'UTC';
@@ -6058,7 +6106,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithOnPopu
 	 *
 	 * @return mixed
 	 */
-	public function OnPopulate ($raw) {
+	public function AfterPopulate ($raw) {
 		$this->Value($raw);
 	}
 
