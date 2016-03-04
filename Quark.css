@@ -118,6 +118,8 @@ textarea.quark-input {
 }
 
 .quark-message .content {
+    padding: 0;
+	margin: 0;
     vertical-align: middle;
     display: inline-block;
 }

@@ -115,6 +115,26 @@ class Quark {
 	}
 
 	/**
+	 * @param string $ip = ''
+	 *
+	 * @return mixed
+	 */
+	public static function IPInfo ($ip = '') {
+		return QuarkHTTPClient::To('http://ipinfo.io/' . $ip, QuarkDTO::ForGET(), new QuarkDTO(new QuarkJSONIOProcessor()))->Data();
+	}
+
+	/**
+	 * http://mycrimea.su/partners/web/access/ipsearch.php
+	 *
+	 * @param int $mask = 24
+	 *
+	 * @return string
+	 */
+	public static function CIDR ($mask = 24) {
+		return long2ip(pow(2, 32) - pow(2, (32 - $mask)));
+	}
+
+	/**
 	 * @return string
 	 */
 	public static function HostIP () {
@@ -1017,6 +1037,8 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 
 		$service->Input()->Method(ucfirst(strtolower($_SERVER['REQUEST_METHOD'])));
 		$service->Input()->Headers($headers);
+
+		QuarkView::ExpectedLanguage($service->Input()->ExpectedLanguage());
 
 		$input = array_replace_recursive(
 			$_GET,
@@ -3084,6 +3106,8 @@ trait QuarkViewBehavior {
  * @package Quark
  */
 class QuarkView implements IQuarkContainer {
+	const FIELD_ERROR_TEMPLATE = '<div class="quark-message warn fa fa-warning"><p class="content">{error}</p></div>';
+
 	/**
 	 * @var IQuarkViewModel|IQuarkViewModelWithResources $_view = null
 	 */
@@ -3135,6 +3159,16 @@ class QuarkView implements IQuarkContainer {
 	private $_viewId = '';
 
 	/**
+	 * @var string $_language = QuarkLocalizedString::LANGUAGE_ANY
+	 */
+	private $_language = QuarkLocalizedString::LANGUAGE_ANY;
+
+	/**
+	 * @var string $_languageExpected = QuarkLocalizedString::LANGUAGE_ANY
+	 */
+	private static $_languageExpected = QuarkLocalizedString::LANGUAGE_ANY;
+
+	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
 	 * @param QuarkDTO|object|array $vars = []
 	 * @param IQuarkViewResource[] $resources = []
@@ -3158,6 +3192,7 @@ class QuarkView implements IQuarkContainer {
 			$this->_view->$key = $value;
 
 		$this->_resources = $resources;
+		$this->_language = self::$_languageExpected;
 
 		Quark::Container($this);
 	}
@@ -3438,6 +3473,7 @@ class QuarkView implements IQuarkContainer {
 			$this->_layout = new QuarkView($view, $vars, $resources);
 			$this->_layout->View($this->Compile());
 			$this->_layout->Child($this->_view);
+			$this->_language = $this->_layout->Language();
 		}
 
 		return $this->_layout;
@@ -3480,6 +3516,47 @@ class QuarkView implements IQuarkContainer {
 				: QuarkObject::Normalize(new \StdClass(), (object)$params);
 
 		return $this->_vars;
+	}
+
+	/**
+	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 *
+	 * @return string
+	 */
+	public function Language ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+		if (func_num_args() != 0)
+			$this->_language = $language;
+
+		return $this->_language;
+	}
+
+	/**
+	 * @param string $language
+	 *
+	 * @return string
+	 */
+	public static function ExpectedLanguage ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+		if (func_num_args() != 0)
+			self::$_languageExpected = $language;
+
+		return self::$_languageExpected;
+	}
+
+	/**
+	 * @param QuarkModel $model
+	 * @param string $field
+	 * @param string $template = self::FIELD_ERROR_TEMPLATE
+	 *
+	 * @return string
+	 */
+	public function FieldError (QuarkModel $model = null, $field = '', $template = self::FIELD_ERROR_TEMPLATE) {
+		$errors = $model->RawValidationErrors();
+
+		foreach ($errors as $error)
+			if ($error->Key() == $field)
+				return str_replace('{error}', $error->Value()->Of($this->_language), $template);
+
+		return '';
 	}
 
 	/**
@@ -4336,9 +4413,7 @@ class QuarkModelSource implements IQuarkStackable {
 	/**
 	 * @param string $name
 	 */
-	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
-	}
+	public function Stacked ($name) { }
 
 	/**
 	 * @param $method
@@ -4431,6 +4506,16 @@ class QuarkModel implements IQuarkContainer {
 	 * @var string $_modelId = ''
 	 */
 	private $_modelId = '';
+
+	/**
+	 * @var QuarkKeyValuePair[] $_errors
+	 */
+	private $_errors = array();
+
+	/**
+	 * @var QuarkKeyValuePair[] $_errorFlux
+	 */
+	private static $_errorFlux = array();
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
@@ -4767,14 +4852,37 @@ class QuarkModel implements IQuarkContainer {
 	 * @param bool $check = true
 	 *
 	 * @return bool|array
-	 *
-	 * TODO: validate sub-models
 	 */
 	private static function _validate (IQuarkModel $model, $check = true) {
-		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
-		if ($model instanceof IQuarkModelWithBeforeValidate && $model->BeforeValidate() === false) return false;
+		QuarkField::FlushValidationErrors();
 
-		return $check ? QuarkField::Rules($model->Rules()) : $model->Rules();
+		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
+
+		$output = clone $model;
+
+		if ($model instanceof IQuarkStrongModel) {
+			$fields = $model->Fields();
+
+			if (is_array($fields) || is_object($fields))
+				foreach ($fields as $key => $field) {
+					if (isset($model->$key)) continue;
+
+					$output->$key = $field instanceof IQuarkModel
+						? QuarkModel::Build($field, empty($model->$key) ? null : $model->$key)
+						: $field;
+				}
+		}
+
+		if ($output instanceof IQuarkModelWithBeforeValidate && $output->BeforeValidate() === false) return false;
+
+		$valid = $check ? QuarkField::Rules($output->Rules()) : $output->Rules();
+		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
+
+		foreach ($output as $key => $value)
+			if ($value instanceof QuarkModel)
+				$valid &= $value->Validate();
+
+		return $valid;
 	}
 
 	/**
@@ -4872,14 +4980,38 @@ class QuarkModel implements IQuarkContainer {
 	 * @return bool
 	 */
 	public function Validate () {
-		return self::_validate($this->_model);
+		$validate = self::_validate($this->_model);
+		$this->_errors = self::$_errorFlux;
+
+		return $validate;
 	}
 
 	/**
-	 * @return array|bool
+	 * @return bool[]
 	 */
 	public function ValidationRules () {
 		return self::_validate($this->_model, false);
+	}
+
+	/**
+	 * @return QuarkKeyValuePair[]
+	 */
+	public function RawValidationErrors () {
+		return $this->_errors;
+	}
+
+	/**
+	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 *
+	 * @return string[]
+	 */
+	public function ValidationErrors ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+		$out = array();
+
+		foreach ($this->_errors as $error)
+			$out[] = $error->Value()->Of($language);
+
+		return $out;
 	}
 
 	/**
@@ -4890,13 +5022,21 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private function _op ($name, $options = []) {
 		$name = ucfirst(strtolower($name));
+
+		$hook = 'Before' . $name;
+		$ok = QuarkObject::is($this->_model, 'Quark\IQuarkModelWith' . $hook)
+			? $this->_model->$hook($options)
+			: true;
+
+		if ($ok !== null && !$ok) return false;
+
 		$model = self::_export(clone $this->_model, $options);
+		$this->_errors = self::$_errorFlux;
 
 		if (!$model) return false;
 
-		$hook = 'Before' . $name;
-		$ok = QuarkObject::is($model, 'Quark\IQuarkModelWith' . $hook)
-			? $model->$hook($options)
+		$ok = $model instanceof IQuarkModelWithAfterExport
+			? $model->AfterExport($name, $options)
 			: true;
 
 		if ($ok !== null && !$ok) return false;
@@ -5240,6 +5380,20 @@ interface IQuarkModelWithAfterRemove {
 	 */
 	public function AfterRemove($options);
 }
+/**
+ * Interface IQuarkModelWithAfterExport
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterExport {
+	/**
+	 * @param $operation
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function AfterExport($operation, $options);
+}
 
 /**
  * Interface IQuarkModelWithBeforeValidate
@@ -5394,6 +5548,11 @@ class QuarkField {
 
 	const TYPE_RESOURCE = 'resource';
 	const TYPE_NULL = 'null';
+
+	/**
+	 * @var QuarkKeyValuePair[] $_errors
+	 */
+	private static $_errors = array();
 
 	/**
 	 * @param      $key
@@ -5719,6 +5878,57 @@ class QuarkField {
 
 		return $ok;
 	}
+
+	/**
+	 * @param bool $rule
+	 * @param QuarkLocalizedString $message
+	 *
+	 * @return bool
+	 */
+	public static function Assert ($rule, QuarkLocalizedString $message = null) {
+		if (!$rule && $message != null)
+			self::$_errors[] = new QuarkKeyValuePair('', $message);
+
+		return $rule;
+	}
+
+	/**
+	 * @param bool $rule
+	 * @param string $field
+	 * @param QuarkLocalizedString $message
+	 *
+	 * @return bool
+	 */
+	public static function AssertField ($rule, $field = '', QuarkLocalizedString $message = null) {
+		if (!$rule && $message != null)
+			self::$_errors[] = new QuarkKeyValuePair($field, $message);
+
+		return $rule;
+	}
+
+	/**
+	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 *
+	 * @return string[]
+	 */
+	public static function ValidationErrors ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+		$out = array();
+
+		foreach (self:: $_errors as $error)
+			$out[] = $error->Value()->Of($language);
+
+		return $out;
+	}
+
+	/**
+	 * @return QuarkKeyValuePair[]
+	 */
+	public static function FlushValidationErrors () {
+		$errors = self::$_errors;
+		self::$_errors = array();
+
+		return $errors;
+	}
 }
 
 /**
@@ -5772,7 +5982,26 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 		if (func_num_args() == 2 && is_scalar($value))
 			$this->values->$language = (string)$value;
 
-		return isset($this->values->$language) ? (string)$this->values->$language : '';
+		$default = $this->default;
+
+		return isset($this->values->$language)
+			? (string)$this->values->$language
+			: (isset($this->values->$default) ? $this->values->$default : '');
+	}
+
+	/**
+	 * @param array|object $dictionary
+	 * @param string $default = self::LANGUAGE_ANY
+	 *
+	 * @return QuarkLocalizedString
+	 */
+	public static function Dictionary ($dictionary = [], $default = self::LANGUAGE_ANY) {
+		if (!is_array($dictionary) && !is_object($dictionary)) return null;
+
+		$str = new self('', self::LANGUAGE_ANY, $default);
+		$str->values = (object)$dictionary;
+
+		return $str;
 	}
 
 	/**
@@ -6021,6 +6250,15 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 *
 	 * @return QuarkDate
 	 */
+	public static function Of ($date) {
+		return new self(null, $date);
+	}
+
+	/**
+	 * @param string $date
+	 *
+	 * @return QuarkDate
+	 */
 	public static function GMTOf ($date) {
 		return new self(null, $date, self::GMT);
 	}
@@ -6074,16 +6312,12 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	/**
 	 * @return mixed
 	 */
-	public function Fields () {
-		// TODO: Implement Fields() method.
-	}
+	public function Fields () { }
 
 	/**
 	 * @return mixed
 	 */
-	public function Rules () {
-		// TODO: Implement Rules() method.
-	}
+	public function Rules () { }
 
 	/**
 	 * @param $raw
@@ -6182,9 +6416,7 @@ class QuarkSessionSource implements IQuarkStackable {
 	/**
 	 * @param string $name
 	 */
-	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
-	}
+	public function Stacked ($name) { }
 
 	/**
 	 * @return string
@@ -8947,8 +9179,70 @@ class QuarkURI {
 		return $this->host == self::HOST_LOCALHOST || $this->host == Quark::HostIP();
 	}
 
-	public function IsHostState ($state = '') {
-		// TODO: GeoIP check
+	/**
+	 * Formats of `$network`:
+	 *  - CIDR  192.168.0.0/24
+	 *  - CIDR  192.168.0.0/255.255.255.0
+	 *  - Range 192.168.1.0-192.168.1.254
+	 *
+	 * https://pgregg.com/blog/2009/04/php-algorithms-determining-if-an-ip-is-within-a-specific-range/
+	 * http://mycrimea.su/partners/web/access/ipsearch.php
+	 *
+	 * @param string $ip
+	 * @param string $network
+	 *
+	 * @return bool
+	 */
+	public static function IsHostFromNetwork ($ip = '', $network = '') {
+		$ip = ip2long($ip);
+
+		if ($ip === false) return false;
+
+		if (strstr($network, '/')) {
+			$net = explode('/', $network);
+
+			if (sizeof($net) < 2) return false;
+
+			$network = ip2long($net[0]);
+			$mask = ip2long(strpos($net[1], '.') !== false
+				? Quark::IP(str_replace('*', '0', $net[1]))
+				: Quark::CIDR($net[1])
+			);
+
+			return (($ip & $mask) == $network);
+		}
+
+		if (strstr($network, '-')) {
+			$net = explode('-', $network);
+
+			if (sizeof($net) < 2) return false;
+
+			$min = ip2long(Quark::IP(str_replace('*', '0', $net[0])));
+			$max = ip2long(Quark::IP(str_replace('*', '0', $net[1])));
+
+			return $ip >= $min && $ip <= $max;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Info provided by http://ipinfo.io Free plan limit 1000 daily requests
+	 *
+	 * @param string $state
+	 * @param bool $allowLocalhost = true
+	 *
+	 * @return bool
+	 */
+	public function IsHostState ($state = '', $allowLocalhost = true) {
+		$ip = Quark::IPInfo($this->host);
+
+		if (!isset($ip->country)) {
+			if ($allowLocalhost && $this->IsHostLocal()) return true;
+			else return false;
+		}
+
+		return $ip->country == $state;
 	}
 
 	/**
@@ -9553,6 +9847,26 @@ class QuarkDTO {
 			if ($language->Is($name)) return $language;
 
 		return null;
+	}
+
+	/**
+	 * @param int $quantity = 0
+	 *
+	 * @return QuarkLanguage
+	 */
+	public function GetLanguageByQuantity ($quantity = 0) {
+		return isset($this->_languages[$quantity]) ? $this->_languages[$quantity] : null;
+	}
+
+	/**
+	 * @param int $quantity = 0
+	 *
+	 * @return string
+	 */
+	public function ExpectedLanguage ($quantity = 0) {
+		$language = $this->GetLanguageByQuantity($quantity);
+
+		return $language == null ? QuarkLocalizedString::LANGUAGE_ANY : $language->Name();
 	}
 
 	/**
