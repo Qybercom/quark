@@ -56,6 +56,11 @@ class Quark {
 	private static $_containers = array();
 
 	/**
+	 * @var null $_null = null
+	 */
+	private static $_null = null;
+
+	/**
 	 * @return bool
 	 */
 	public static function CLI () {
@@ -317,25 +322,20 @@ class Quark {
 	/**
 	 * @param IQuarkContainer $container
 	 */
-	public static function Container (IQuarkContainer $container) {
-		self::$_containers[] = $container;
+	public static function Container (IQuarkContainer &$container) {
+		self::$_containers[spl_object_hash($container->Primitive())] = $container;
 	}
 
 	/**
 	 * @param string $id
-	 * @param IQuarkPrimitive $primitive
 	 *
 	 * @return IQuarkContainer|null
 	 */
-	public static function &ContainerOf ($id, IQuarkPrimitive $primitive) {
-		foreach (self::$_containers as $container) {
-			if ($container->PrimitiveID() != $id) continue;
+	public static function &ContainerOf ($id) {
+		if (!isset(self::$_containers[$id]))
+			return self::$_null;
 
-			$container->Primitive($primitive);
-			return $container;
-		}
-
-		return null;
+		return self::$_containers[$id];
 	}
 
 	/**
@@ -2136,13 +2136,6 @@ interface IQuarkControllerStreamClose extends IQuarkService {
 trait QuarkServiceBehavior {
 	use QuarkContainerBehavior;
 
-	/** @noinspection PhpUnusedPrivateMethodInspection
-	 * @return IQuarkContainer
-	 */
-	private function _envelope () {
-		return new QuarkService($this);
-	}
-
 	/**
 	 * @param IQuarkService $service = null
 	 *
@@ -2565,37 +2558,27 @@ trait QuarkContainerBehavior {
 	protected $_null = null;
 
 	/**
-	 * @return IQuarkContainer
-	 */
-	private function _envelope () {
-		return null;
-	}
-
-	/**
-	 * @var string $_oid = ''
-	 */
-	private $_oid = '';
-
-	/**
 	 * @param $method
 	 * @param $args
 	 *
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		if ($this->_oid == '') {
-			$this->_oid = Quark::GuID();
-			$this->_envelope()->PrimitiveID($this->_oid);
-		}
-
 		/**
 		 * @var IQuarkPrimitive|QuarkModelBehavior $this
 		 */
-		$container = Quark::ContainerOf($this->_oid, $this);
+		$container = Quark::ContainerOf(spl_object_hash($this));
 
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
 			: null;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ObjectID () {
+		return spl_object_hash($this);
 	}
 
 	/**
@@ -3032,13 +3015,6 @@ class QuarkObject {
 trait QuarkViewBehavior {
 	use QuarkContainerBehavior;
 
-	/** @noinspection PhpUnusedPrivateMethodInspection
-	 * @return IQuarkContainer
-	 */
-	private function _envelope () {
-		return new QuarkView($this);
-	}
-
 	/**
 	 * @param IQuarkViewModel $view = null
 	 *
@@ -3175,9 +3151,10 @@ class QuarkView implements IQuarkContainer {
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function __construct (IQuarkViewModel $view, $vars = [], $resources = []) {
-		$this->_view = $view;
+	public function __construct (IQuarkViewModel $view = null, $vars = [], $resources = []) {
+		if ($view == null) return;
 
+		$this->_view = $view;
 		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS) . '/' . $this->_view->View() . '.php', false);
 
 		if (!is_file($this->_file))
@@ -4297,13 +4274,6 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
  */
 trait QuarkModelBehavior {
 	use QuarkContainerBehavior;
-
-	/** @noinspection PhpUnusedPrivateMethodInspection
-	 * @return IQuarkContainer
-	 */
-	private function _envelope () {
-		return new QuarkModel($this);
-	}
 
 	/**
 	 * @return string
