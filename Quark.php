@@ -510,6 +510,11 @@ class QuarkConfig {
 	private $_selfHosted;
 
 	/**
+	 * @var bool $_allowIndexFallback = false
+	 */
+	private $_allowIndexFallback = false;
+
+	/**
 	 * @param string $mode = Quark::MODE_DEV
 	 */
 	public function __construct ($mode = Quark::MODE_DEV) {
@@ -787,6 +792,18 @@ class QuarkConfig {
 			$this->_selfHosted = QuarkURI::FromURI($uri);
 
 		return $this->_selfHosted;
+	}
+
+	/**
+	 * @param bool $allow = false
+	 *
+	 * @return bool
+	 */
+	public function AllowIndexFallback ($allow = false) {
+		if (func_num_args() != 0)
+			$this->_allowIndexFallback = $allow;
+
+		return $this->_allowIndexFallback;
 	}
 }
 
@@ -2340,6 +2357,11 @@ class QuarkService implements IQuarkContainer {
 
 			$length--;
 			$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
+			$path = self::_bundle($service);
+		}
+
+		if (Quark::Config()->AllowIndexFallback() && !file_exists($path)) {
+			$service = 'Index';
 			$path = self::_bundle($service);
 		}
 
