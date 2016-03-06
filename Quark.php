@@ -1097,7 +1097,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 			return $this->_status($exception, $this->_statusServerError);
 
 		if ($exception instanceof QuarkHTTPException)
-			return $this->_status($exception, $exception->Status());
+			return $this->_status($exception, $exception->Status(), $exception->log);
 
 		if ($exception instanceof \Exception)
 			return Quark::Log('Common exception: ' . $exception->getMessage() . "\r\n at " . $exception->getFile() . ':' . $exception->getLine(), Quark::LOG_FATAL);
@@ -1108,15 +1108,16 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	/**
 	 * @param QuarkException $exception
 	 * @param string $status
+	 * @param string $log = ''
 	 *
 	 * @return bool|int
 	 */
-	private function _status ($exception, $status) {
+	private function _status ($exception, $status, $log = '') {
 		ob_start();
 		header($_SERVER['SERVER_PROTOCOL'] . ' ' . $status);
 		ob_end_flush();
 
-		return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . $exception->message , $exception->lvl);
+		return Quark::Log('[' . $_SERVER['REQUEST_URI'] . '] ' . (func_num_args() == 3 ? $log : $exception->message), $exception->lvl);
 	}
 }
 
@@ -2366,7 +2367,7 @@ class QuarkService implements IQuarkContainer {
 		}
 
 		if (!file_exists($path))
-			throw new QuarkHTTPException(404, 'Unknown service file ' . $path);
+			throw QuarkHTTPException::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND, 'Unknown service file ' . $path);
 
 		$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
 		$bundle = new $class();
@@ -10650,13 +10651,6 @@ class QuarkHTTPServer {
 	}
 
 	/**
-	 * @return IQuarkNetworkTransport
-	 */
-	public function Transport () {
-		return new QuarkTCPNetworkTransport();
-	}
-
-	/**
 	 * @return bool
 	 */
 	public function Bind () {
@@ -11493,21 +11487,42 @@ class QuarkHTTPException extends QuarkException {
 	public $status = 500;
 
 	/**
+	 * @var string $_log = ''
+	 */
+	public $log = '';
+
+	/**
 	 * @param int $status = 500
 	 * @param string $message
+	 * @param string $log = ''
 	 */
-	public function __construct ($status = 500, $message = '') {
+	public function __construct ($status = 500, $message = '', $log = '') {
 		$this->lvl = Quark::LOG_FATAL;
 		$this->message = $message;
 
 		$this->status = $status;
+		$this->log = func_num_args() == 3 ? $log : $message;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function Status () {
-		return $this->status . ' ' . $this->message;
+		return trim($this->status . ' ' . $this->message);
+	}
+
+	/**
+	 * @param string $status
+	 * @param string $log = ''
+	 *
+	 * @return QuarkHTTPException
+	 */
+	public static function ForStatus ($status, $log = '') {
+		$exception = new self();
+		$exception->status = $status;
+		$exception->log = $log;
+
+		return $exception;
 	}
 }
 

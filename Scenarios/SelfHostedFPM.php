@@ -103,13 +103,13 @@ class SelfHostedFPM implements IQuarkTask {
 				}
 			}
 			catch (QuarkHTTPException $e) {
-				Quark::Log($e->message);
+				Quark::Log('[' . $request->URI()->Query() . '] ' . $e->log, $e->lvl);
 
-				$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND);
+				$response = QuarkDTO::ForStatus($e->Status());
 				$out = $response->SerializeResponse();
 			}
 			catch (\Exception $e) {
-				Quark::Log($e);
+				Quark::Log($e, Quark::LOG_FATAL);
 
 				$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_500_SERVER_ERROR);
 				$out = $response->SerializeResponse();
