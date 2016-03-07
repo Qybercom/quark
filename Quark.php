@@ -2561,12 +2561,12 @@ class QuarkService implements IQuarkContainer {
  */
 trait QuarkContainerBehavior {
 	/**
-	 * @var $_null null
+	 * @var null $_null = null
 	 */
 	protected $_null = null;
 
 	/**
-	 * @return null
+	 * @return IQuarkContainer
 	 */
 	private function _envelope () {
 		return null;
