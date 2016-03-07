@@ -2154,6 +2154,13 @@ interface IQuarkControllerStreamClose extends IQuarkService {
 trait QuarkServiceBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return QuarkModel
+	 */
+	private function _envelope () {
+		return new QuarkService($this);
+	}
+
 	/**
 	 * @param IQuarkService $service = null
 	 *
@@ -2290,11 +2297,6 @@ class QuarkService implements IQuarkContainer {
 	private $_service;
 
 	/**
-	 * @var string $_serviceId = ''
-	 */
-	private $_serviceId = '';
-
-	/**
 	 * @var QuarkDTO $_input
 	 */
 	private $_input;
@@ -2417,27 +2419,10 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkPrimitive $primitive = null
-	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function Primitive (IQuarkPrimitive $primitive = null) {
-		if (func_num_args() != 0 && $primitive instanceof IQuarkService)
-			$this->_service = $primitive;
-
+	public function &Primitive () {
 		return $this->_service;
-	}
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return string
-	 */
-	public function PrimitiveID ($id = '') {
-		if (func_num_args() != 0)
-			$this->_serviceId = $id;
-
-		return $this->_serviceId;
 	}
 
 	/**
@@ -2581,6 +2566,13 @@ trait QuarkContainerBehavior {
 	protected $_null = null;
 
 	/**
+	 * @return null
+	 */
+	private function _envelope () {
+		return null;
+	}
+
+	/**
 	 * @param $method
 	 * @param $args
 	 *
@@ -2588,9 +2580,12 @@ trait QuarkContainerBehavior {
 	 */
 	public function __call ($method, $args) {
 		/**
-		 * @var IQuarkPrimitive|QuarkModelBehavior $this
+		 * @var IQuarkPrimitive|QuarkContainerBehavior $this
 		 */
-		$container = Quark::ContainerOf(spl_object_hash($this));
+		$container = Quark::ContainerOf($this->ObjectID());
+
+		if ($container == null)
+			$container = $this->_envelope();
 
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
@@ -2656,18 +2651,9 @@ interface IQuarkPrimitive { }
  */
 interface IQuarkContainer {
 	/**
-	 * @param IQuarkPrimitive $primitive = null
-	 *
 	 * @return IQuarkPrimitive|QuarkContainerBehavior
 	 */
-	public function Primitive(IQuarkPrimitive $primitive = null);
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return string
-	 */
-	public function PrimitiveID($id = '');
+	public function &Primitive();
 }
 
 /**
@@ -3038,6 +3024,13 @@ class QuarkObject {
 trait QuarkViewBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return QuarkModel
+	 */
+	private function _envelope () {
+		return new QuarkView($this);
+	}
+
 	/**
 	 * @param IQuarkViewModel $view = null
 	 *
@@ -3151,11 +3144,6 @@ class QuarkView implements IQuarkContainer {
 	 * @var null $_null = null
 	 */
 	private $_null = null;
-
-	/**
-	 * @var string $_viewId = ''
-	 */
-	private $_viewId = '';
 
 	/**
 	 * @var string $_language = QuarkLocalizedString::LANGUAGE_ANY
@@ -3617,27 +3605,10 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkPrimitive|IQuarkViewModel $primitive = null
-	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function Primitive (IQuarkPrimitive $primitive = null) {
-		if (func_num_args() != 0 && $primitive instanceof IQuarkViewModel)
-			$this->_view = $primitive;
-
+	public function &Primitive () {
 		return $this->_view;
-	}
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return string
-	 */
-	public function PrimitiveID ($id = '') {
-		if (func_num_args() != 0)
-			$this->_viewId = $id;
-
-		return $this->_viewId;
 	}
 }
 
@@ -4298,6 +4269,13 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 trait QuarkModelBehavior {
 	use QuarkContainerBehavior;
 
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 * @return QuarkModel
+	 */
+	private function _envelope () {
+		return new QuarkModel($this);
+	}
+
 	/**
 	 * @return string
 	 */
@@ -4496,11 +4474,6 @@ class QuarkModel implements IQuarkContainer {
 	private $_model = null;
 
 	/**
-	 * @var string $_modelId = ''
-	 */
-	private $_modelId = '';
-
-	/**
 	 * @var QuarkKeyValuePair[] $_errors
 	 */
 	private $_errors = array();
@@ -4600,27 +4573,10 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param IQuarkPrimitive $primitive
-	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function Primitive (IQuarkPrimitive $primitive = null) {
-		if (func_num_args() != 0 && $primitive instanceof IQuarkModel)
-			$this->_model = $primitive;
-
+	public function &Primitive () {
 		return $this->_model;
-	}
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return string
-	 */
-	public function PrimitiveID ($id = '') {
-		if (func_num_args() != 0)
-			$this->_modelId = $id;
-
-		return $this->_modelId;
 	}
 
 	/**
