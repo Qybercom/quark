@@ -61,4 +61,15 @@ class RESTSession implements IQuarkAuthorizationProvider {
 	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
 		return new QuarkDTO();
 	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		// TODO: Implement SessionCommit() method.
+	}
 }

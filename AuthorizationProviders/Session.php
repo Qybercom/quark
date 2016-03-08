@@ -1,7 +1,6 @@
 <?php
 namespace Quark\AuthorizationProviders;
 
-use Quark\DataProviders\QuarkDNA;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkModel;
@@ -16,6 +15,8 @@ use Quark\QuarkDTO;
 use Quark\QuarkModel;
 use Quark\QuarkModelSource;
 use Quark\QuarkURI;
+
+use Quark\DataProviders\QuarkDNA;
 
 /**
  * Class Session
@@ -139,6 +140,29 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$output->Cookie(new QuarkCookie(self::COOKIE_NAME, $id->Value(), -3600));
 
 		return $output;
+	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		/**
+		 * @var QuarkModel|Session $session
+		 */
+		$session = QuarkModel::FindOne($this, array(
+			'name' => $name,
+			'sid' => $id->Value()
+		));
+
+		if ($session == null) return false;
+
+		$session->user->PopulateWith($model);
+
+		return $session->Save();
 	}
 
 	/**

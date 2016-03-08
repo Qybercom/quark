@@ -46,4 +46,15 @@ class DigestAuth implements IQuarkAuthorizationProvider {
 	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
 		// TODO: Implement Logout() method.
 	}
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+		// TODO: Implement SessionCommit() method.
+	}
 }

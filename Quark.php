@@ -6485,6 +6485,13 @@ class QuarkSession {
 	}
 
 	/**
+	 * @return IQuarkAuthorizableModel
+	 */
+	private function _session () {
+		return $this->_user instanceof QuarkModel ? $this->_user->Model() : $this->_user;
+	}
+
+	/**
 	 * @param QuarkDTO $input
 	 *
 	 * @return bool
@@ -6537,12 +6544,7 @@ class QuarkSession {
 		$this->_user = $this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime);
 		if ($this->_user == null) return false;
 
-		/**
-		 * @var IQuarkAuthorizableModel $user
-		 */
-		$user = $this->_user->Model();
-
-		$data = $this->_source->Provider()->Login($this->_source->Name(), $user, $criteria, $lifetime);
+		$data = $this->_source->Provider()->Login($this->_source->Name(), $this->_session(), $criteria, $lifetime);
 		if ($data == null) return false;
 
 		$this->_output = $data;
@@ -6559,12 +6561,7 @@ class QuarkSession {
 		$logout = $this->_source->User()->Logout($this->_source->Name(), $this->ID());
 		if ($logout === false) return false;
 
-		/**
-		 * @var IQuarkAuthorizableModel $user
-		 */
-		$user = $this->_user->Model();
-
-		$data = $this->_source->Provider()->Logout($this->_source->Name(), $user, $this->ID());
+		$data = $this->_source->Provider()->Logout($this->_source->Name(), $this->_session(), $this->ID());
 		if ($data == null) return false;
 
 		$this->_output = $data;
@@ -6578,6 +6575,13 @@ class QuarkSession {
 	 */
 	public function Output () {
 		return $this->_output;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Commit () {
+		return $this->_source->Provider()->SessionCommit($this->_source->Name(), $this->_session(), $this->ID());
 	}
 
 	/**
@@ -6676,6 +6680,15 @@ interface IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function Logout($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
+
+	/**
+	 * @param string $name
+	 * @param IQuarkAuthorizableModel $model
+	 * @param QuarkKeyValuePair $id
+	 *
+	 * @return bool
+	 */
+	public function SessionCommit($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
 }
 
 /**
