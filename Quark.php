@@ -6426,7 +6426,10 @@ class QuarkSession {
 	 * @return mixed
 	 */
 	public function &__get ($key) {
-		return isset($this->_user->$key) ? $this->_user->$key : $this->_null;
+		if (!isset($this->_user->$key))
+			return $this->_null;
+
+		return $this->_user->$key;
 	}
 
 	/**
