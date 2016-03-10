@@ -79,6 +79,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$uri->path = $action;
+
+		if ($method == QuarkDTO::METHOD_GET)
+			$uri->AppendQuery($data);
+
 		$uri = $uri->URI(true);
 
 		/**

@@ -72,7 +72,7 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		$request->Signature($input->Signature());
 
-		$query = QuarkURI::AppendQuery($this->_source, array(
+		$query = QuarkURI::BuildQuery($this->_source, array(
 			'user' => $auth->Value(),
 			'session' => sha1($this->_appId . $auth->Value() . $this->_appSecret)
 		), true);

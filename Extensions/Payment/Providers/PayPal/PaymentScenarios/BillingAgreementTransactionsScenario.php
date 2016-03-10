@@ -101,7 +101,7 @@ class BillingAgreementTransactionsScenario implements IQuarkPaymentScenario {
 
 		$this->_response = $provider->API(
 			QuarkDTO::METHOD_GET,
-			QuarkURI::AppendQuery('/v1/payments/billing-agreements/' . $this->_id . '/transactions', $query, true)
+			QuarkURI::BuildQuery('/v1/payments/billing-agreements/' . $this->_id . '/transactions', $query, true)
 		);
 
 		return isset($this->_response->agreement_transaction_list);

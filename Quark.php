@@ -3408,7 +3408,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Link ($uri, $signed = false) {
-		return Quark::WebLocation($uri . ($signed ? QuarkURI::AppendQuery($uri, array(
+		return Quark::WebLocation($uri . ($signed ? QuarkURI::BuildQuery($uri, array(
 				QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
 			)) : ''));
 	}
@@ -6425,11 +6425,13 @@ class QuarkSession {
 	 *
 	 * @return mixed
 	 */
-	public function &__get ($key) {
+	public function __get ($key) {
 		if (!isset($this->_user->$key))
 			return $this->_null;
 
-		return $this->_user->$key;
+		$field = &$this->_user->$key;
+
+		return $field;
 	}
 
 	/**
@@ -9052,6 +9054,17 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param array $query = []
+	 *
+	 * @return QuarkURI
+	 */
+	public function AppendQuery ($query = []) {
+		$this->query .= (strlen($this->query) == 0 ? '' : '&') . http_build_query($query);
+
+		return $this;
+	}
+
+	/**
 	 * @param int $id
 	 *
 	 * @return array|string
@@ -9094,7 +9107,7 @@ class QuarkURI {
 	 *
 	 * @return string
 	 */
-	public static function AppendQuery ($uri = '', $query = [], $weak = false) {
+	public static function BuildQuery ($uri = '', $query = [], $weak = false) {
 		$params = http_build_query($query);
 
 		return $weak && strlen($params) == 0
