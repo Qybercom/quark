@@ -1031,14 +1031,16 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 
 		$headers = array();
 
-		if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW']))
+		$authType = '';
+		$authBasic = 0;
+		$authDigest = 0;
+
+		if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
 			$_SERVER['HTTP_AUTHORIZATION'] = QuarkDTO::HTTPBasicAuthorization($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
+			$authBasic = 1;
+		}
 
 		foreach ($_SERVER as $name => $value) {
-			$authType = '';
-			$authBasic = 0;
-			$authDigest = 0;
-
 			$name = str_replace('CONTENT_', 'HTTP_CONTENT_', $name);
 			$name = str_replace('PHP_AUTH_DIGEST', 'HTTP_AUTHORIZATION', $name, $authDigest);
 
@@ -2492,6 +2494,8 @@ class QuarkService implements IQuarkContainer {
 		if (!($this->_service instanceof IQuarkAuthorizableServiceWithAuthentication) && $this->_session != null) return true;
 
 		$criteria = $this->_service->AuthorizationCriteria($this->_input, $this->_session);
+
+		$this->_output->Merge($this->_session->Output());
 
 		if ($criteria !== true) {
 			$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria));
@@ -6503,13 +6507,14 @@ class QuarkSession {
 	 */
 	public function Input (QuarkDTO $input) {
 		$data = $this->_source->Provider()->Session($this->_source->Name(), $this->_source->User(), $input);
-		if ($data == null) return false;
+		$this->_output = $data;
+
+		if ($data == null || $data->AuthorizationPrompt()) return false;
 
 		$this->_user = $this->_source->User()->Session($this->_source->Name(), $data->Data());
-		if ($this->_user == null) return false;
+		$this->_output->Data(null);
 
-		$data->Data(null);
-		$this->_output = $data;
+		if ($this->_user == null) return false;
 
 		return $this->_user != null;
 	}
@@ -6587,6 +6592,18 @@ class QuarkSession {
 	 */
 	public function Commit () {
 		return $this->_source->Provider()->SessionCommit($this->_source->Name(), $this->_session(), $this->ID());
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return IQuarkAuthorizationProvider
+	 * @throws QuarkArchException
+	 */
+	public static function Provider ($name) {
+		$stack = Quark::Stack($name);
+
+		return $stack instanceof QuarkSessionSource ? $stack->Provider() : null;
 	}
 
 	/**
@@ -9315,6 +9332,10 @@ class QuarkDTO {
 
 	const RANGES_BYTES = 'bytes';
 
+	const AUTHORIZATION_BASIC = 'Basic';
+	const AUTHORIZATION_DIGEST = 'Digest';
+	const AUTHORIZATION_BEARER = 'Bearer';
+
 	const KEY_AUTHORIZATION = '_a';
 	const KEY_SIGNATURE = '_s';
 
@@ -9436,6 +9457,11 @@ class QuarkDTO {
 	private $_fullControl = false;
 
 	/**
+	 * @var bool $_authorizationPrompt = false
+	 */
+	private $_authorizationPrompt = false;
+
+	/**
 	 * @var null $_null = null
 	 */
 	private $_null = null;
@@ -9535,6 +9561,21 @@ class QuarkDTO {
 	public static function ForStatus ($status) {
 		$response = new self();
 		$response->Status($status);
+		return $response;
+	}
+
+	/**
+	 * @param string $authenticate = ''
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForHTTPAuthorizationPrompt ($authenticate = '') {
+		$response = self::ForStatus(self::STATUS_401_UNAUTHORIZED);
+		$response->AuthorizationPrompt(true);
+
+		if (func_num_args() != 0)
+			$response->Header(self::HEADER_WWW_AUTHENTICATE, $authenticate);
+
 		return $response;
 	}
 
@@ -9978,6 +10019,18 @@ class QuarkDTO {
 			$this->_charset = $charset;
 
 		return $this->_charset;
+	}
+
+	/**
+	 * @param bool $prompt = false
+	 *
+	 * @return bool
+	 */
+	public function AuthorizationPrompt ($prompt = false) {
+		if (func_num_args() != 0)
+			$this->_authorizationPrompt = $prompt;
+
+		return $this->_authorizationPrompt;
 	}
 
 	/**

@@ -4,6 +4,7 @@ namespace Quark\AuthorizationProviders;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkKeyValuePair;
 
@@ -14,6 +15,20 @@ use Quark\QuarkKeyValuePair;
  */
 class BasicAuth implements IQuarkAuthorizationProvider {
 	/**
+	 * @return string
+	 */
+	private static function _realm () {
+		return sha1(Quark::Config()->WebHost());
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function _authentication () {
+		return QuarkDTO::AUTHORIZATION_BASIC . ' realm="' . self::_realm() . '"';
+	}
+
+	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkDTO $input
@@ -21,7 +36,20 @@ class BasicAuth implements IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
-		// TODO: Implement Session() method.
+		$authorization = $input->Authorization();
+
+		if ($authorization == null)
+			return QuarkDTO::ForHTTPAuthorizationPrompt(self::_authentication());
+
+		$auth = explode(':', base64_decode($authorization->Value()));
+
+		if (sizeof($auth) != 2)
+			return QuarkDTO::ForHTTPAuthorizationPrompt(self::_authentication());
+
+		$output = new QuarkDTO();
+		$output->Data(new QuarkKeyValuePair($auth[0], $auth[1]));
+
+		return $output;
 	}
 
 	/**
@@ -44,7 +72,7 @@ class BasicAuth implements IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function Logout ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
-		// TODO: Implement Logout() method.
+		return QuarkDTO::ForHTTPAuthorizationPrompt();
 	}
 
 	/**
