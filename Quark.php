@@ -2421,9 +2421,16 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
+
+	/**
+	 * @param IQuarkPrimitive $primitive = null
+	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function &Primitive () {
+	public function &Primitive (IQuarkPrimitive $primitive = null) {
+		if (func_num_args() != 0)
+			$this->_service = $primitive;
+
 		return $this->_service;
 	}
 
@@ -2591,9 +2598,7 @@ trait QuarkContainerBehavior {
 		if ($container == null)
 			$container = $this->_envelope();
 
-		// TODO: check for QuarkView correct behavior while using the Primitive assignment
-		if ($container instanceof QuarkModel)
-			$container->Model($this);
+		$container->Primitive($this);
 
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
@@ -2659,9 +2664,11 @@ interface IQuarkPrimitive { }
  */
 interface IQuarkContainer {
 	/**
-	 * @return IQuarkPrimitive|QuarkContainerBehavior
+	 * @param IQuarkPrimitive $primitive = null
+	 *
+	 * @return IQuarkPrimitive
 	 */
-	public function &Primitive();
+	public function &Primitive(IQuarkPrimitive $primitive = null);
 }
 
 /**
@@ -3594,7 +3601,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return IQuarkViewModel
 	 */
 	public function ViewModel (IQuarkViewModel $view = null) {
-		if (func_num_args() == 1)
+		if (func_num_args() != 0)
 			$this->_view = $view;
 
 		return $this->_view;
@@ -3613,9 +3620,14 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @param IQuarkPrimitive $primitive = null
+	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function &Primitive () {
+	public function &Primitive (IQuarkPrimitive $primitive = null) {
+		if (func_num_args() != 0)
+			$this->_view = $primitive;
+
 		return $this->_view;
 	}
 }
@@ -4586,9 +4598,16 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+
+	/**
+	 * @param IQuarkPrimitive $primitive = null
+	 *
 	 * @return IQuarkPrimitive
 	 */
-	public function &Primitive () {
+	public function &Primitive (IQuarkPrimitive $primitive = null) {
+		if (func_num_args() != 0)
+			$this->_model = $primitive;
+
 		return $this->_model;
 	}
 
