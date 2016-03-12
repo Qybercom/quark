@@ -4085,9 +4085,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		if ($iterator == null)
 			$iterator = function ($item) { return $item; };
 
-		foreach ($source as $i => &$item) {
+		foreach ($source as $item)
 			$this->Add($iterator($item));
-		}
 
 		return $this;
 	}
@@ -4235,8 +4234,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	public function offsetSet ($offset, $value) {
 		if (!$this->_type($value)) return;
 
-		if ($offset === null) $this->_list[] = &$value;
-		else $this->_list[(int)$offset] = &$value;
+		if ($offset === null) $this->_list[] = $value;
+		else $this->_list[(int)$offset] = $value;
 	}
 
 	/**
