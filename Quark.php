@@ -2591,6 +2591,10 @@ trait QuarkContainerBehavior {
 		if ($container == null)
 			$container = $this->_envelope();
 
+		// TODO: check for QuarkView correct behavior while using the Primitive assignment
+		if ($container instanceof QuarkModel)
+			$container->Model($this);
+
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
 			: null;
@@ -4081,8 +4085,9 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		if ($iterator == null)
 			$iterator = function ($item) { return $item; };
 
-		foreach ($source as $item)
+		foreach ($source as $i => &$item) {
 			$this->Add($iterator($item));
+		}
 
 		return $this;
 	}
@@ -4230,8 +4235,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	public function offsetSet ($offset, $value) {
 		if (!$this->_type($value)) return;
 
-		if ($offset === null) $this->_list[] = $value;
-		else $this->_list[(int)$offset] = $value;
+		if ($offset === null) $this->_list[] = &$value;
+		else $this->_list[(int)$offset] = &$value;
 	}
 
 	/**
@@ -4570,9 +4575,14 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @var IQuarkModel|QuarkModelBehavior $model = null
+	 *
 	 * @return IQuarkModel|QuarkModelBehavior
 	 */
-	public function Model () {
+	public function Model ($model = null) {
+		if (func_num_args() != 0)
+			$this->_model = $model;
+
 		return $this->_model;
 	}
 
@@ -4831,9 +4841,12 @@ class QuarkModel implements IQuarkContainer {
 		$valid = $check ? QuarkField::Rules($output->Rules()) : $output->Rules();
 		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
 
-		foreach ($output as $key => $value)
-			if ($value instanceof QuarkModel)
-				$valid &= $value->Validate();
+		foreach ($output as $key => $value) {
+			if (!($value instanceof QuarkModel)) continue;
+
+			if ($check) $valid &= $value->Validate();
+			else $valid[$key] = $value->ValidationRules();
+		}
 
 		return $valid;
 	}
@@ -4999,8 +5012,8 @@ class QuarkModel implements IQuarkContainer {
 		$this->PopulateWith($model);
 
 		$hook = 'After' . $name;
-		$ok = QuarkObject::is($model, 'Quark\IQuarkModelWith' . $hook)
-			? $model->$hook($options)
+		$ok = QuarkObject::is($this->_model, 'Quark\IQuarkModelWith' . $hook)
+			? $this->_model->$hook($options)
 			: true;
 
 		if ($ok !== null && !$ok) return false;
@@ -11295,7 +11308,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return $raw ? new QuarkFile($raw) : null;
+		return new QuarkModel(new QuarkFile($raw));
 	}
 
 	/**
