@@ -2495,7 +2495,7 @@ class QuarkService implements IQuarkContainer {
 
 		$criteria = $this->_service->AuthorizationCriteria($this->_input, $this->_session);
 
-		$this->_output->Merge($this->_session->Output());
+		$this->_output->Merge($this->_session->Output(), false);
 
 		if ($criteria !== true) {
 			$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria));
@@ -6513,8 +6513,6 @@ class QuarkSession {
 
 		$this->_user = $this->_source->User()->Session($this->_source->Name(), $data->Data());
 		$this->_output->Data(null);
-
-		if ($this->_user == null) return false;
 
 		return $this->_user != null;
 	}
