@@ -45,7 +45,7 @@ class DigestAuth implements IQuarkAuthorizationProvider {
 	}
 
 	/**
-	 * @param array $session = []
+	 * @param QuarkKeyValuePair|array $session = []
 	 *
 	 * @return string
 	 */
@@ -54,6 +54,18 @@ class DigestAuth implements IQuarkAuthorizationProvider {
 			$session = self::Digest($session->Value());
 
 		return isset($session['username']) ? $session['username'] : '';
+	}
+
+	/**
+	 * @param QuarkKeyValuePair|array $session = []
+	 *
+	 * @return string
+	 */
+	public static function RealmOf ($session = []) {
+		if ($session instanceof QuarkKeyValuePair)
+			$session = self::Digest($session->Value());
+
+		return isset($session['realm']) ? $session['realm'] : '';
 	}
 
 	/**
@@ -87,14 +99,14 @@ class DigestAuth implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $password
-	 * @param QuarkKeyValuePair $auth
+	 * @param QuarkKeyValuePair $session
 	 *
 	 * @return bool
 	 */
-	public static function Verify ($password, QuarkKeyValuePair $auth) {
-		$data = self::Digest($auth->Value());
+	public static function Verify ($password, QuarkKeyValuePair $session) {
+		$data = self::Digest($session->Value());
 
-		$service = md5($auth->Key() . ':' . $data['uri']);
+		$service = md5($session->Key() . ':' . $data['uri']);
 		$sign = $data['nonce'] . ':' . $data['nc'] . ':' . $data['cnonce'] . ':' . $data['qop'];
 
 		return $data['response'] == md5($password . ':' . $sign . ':' . $service);
