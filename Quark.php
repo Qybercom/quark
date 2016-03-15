@@ -6050,14 +6050,17 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	private $_date;
 
 	/**
+	 * @var string $_timezone = self::CURRENT
+	 */
+	private $_timezone = self::CURRENT;
+
+	/**
 	 * @param IQuarkCulture $culture
 	 * @param string $value = self::NOW
-	 * @param string $timezone = self::CURRENT
 	 */
-	public function __construct (IQuarkCulture $culture = null, $value = self::NOW, $timezone = self::CURRENT) {
+	public function __construct (IQuarkCulture $culture = null, $value = self::NOW) {
 		$this->_culture = $culture ? $culture : Quark::Config()->Culture();
 		$this->Value($value);
-		$this->Timezone($timezone);
 	}
 
 	/**
@@ -6099,18 +6102,10 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param string $timezone
-	 *
 	 * @return string
 	 */
-	public function Timezone ($timezone = self::CURRENT) {
-		if ($this->_date == null)
-			$this->Value('now');
-
-		if (func_num_args() != 0 && $timezone != self::CURRENT)
-			$this->_date->setTimezone(new \DateTimeZone($timezone));
-
-		return $this->_date->getTimezone()->getName();
+	public function Timezone () {
+		return $this->_timezone;
 	}
 
 	/**
@@ -6191,6 +6186,17 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @param string $timezone = self::CURRENT
+	 * @param bool $copy = false
+	 *
+	 * @return QuarkDate
+	 */
+	public function InTimezone ($timezone = self::CURRENT, $copy = false) {
+		$this->_timezone = $timezone;
+		return $this->Offset('+' . self::TimezoneOffset($timezone) . ' seconds', $copy);
+	}
+
+	/**
 	 * @return string
 	 */
 	public static function Microtime () {
@@ -6217,7 +6223,10 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return QuarkDate
 	 */
 	public static function Now ($format = '') {
-		return self::FromFormat($format, self::NowUSec());
+		$date = self::FromFormat($format, self::NowUSec());
+		$date->_timezone = self::CURRENT;
+
+		return $date;
 	}
 
 	/**
@@ -6226,16 +6235,20 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return QuarkDate
 	 */
 	public static function GMTNow ($format = '') {
-		return self::FromFormat($format, self::NowUSec(), self::GMT);
+		$date = self::FromFormat($format, self::NowUSecGMT());
+		$date->_timezone = self::GMT;
+
+		return $date;
 	}
 
 	/**
 	 * @param string $date
+	 * @param string $timezone = self::CURRENT
 	 *
 	 * @return QuarkDate
 	 */
-	public static function Of ($date) {
-		return new self(null, $date);
+	public static function Of ($date, $timezone = self::CURRENT) {
+		return (new self(null, $date, $timezone))->InTimezone($timezone);
 	}
 
 	/**
@@ -6244,18 +6257,17 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return QuarkDate
 	 */
 	public static function GMTOf ($date) {
-		return new self(null, $date, self::GMT);
+		return self::Of($date, self::GMT);
 	}
 
 	/**
 	 * @param string $format
 	 * @param string $value = self::NOW
-	 * @param string $timezone = self::CURRENT
 	 *
 	 * @return QuarkDate
 	 */
-	public static function FromFormat ($format, $value = self::NOW, $timezone = self::CURRENT) {
-		return new self(QuarkCultureCustom::Format($format), $value, $timezone);
+	public static function FromFormat ($format, $value = self::NOW) {
+		return new self(QuarkCultureCustom::Format($format), $value);
 	}
 
 	/**
@@ -6263,7 +6275,16 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 *
 	 * @return int
 	 */
-	public static function TimezoneOffset ($timezone) {
+	public static function TimezoneOffset ($timezone = self::CURRENT) {
+		if ($timezone == self::CURRENT) {
+			$timezone = date_default_timezone_get();
+
+			if (!$timezone) {
+				date_default_timezone_set(self::GMT);
+				$timezone = self::GMT;
+			}
+		}
+
 		return (new \DateTimeZone($timezone))->getOffset(self::GMTNow()->Value());
 	}
 
