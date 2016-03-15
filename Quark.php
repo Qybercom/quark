@@ -399,7 +399,7 @@ class Quark {
 
 	/**
 	 * @param int $unit = self::UNIT_KILOBYTE
-	 * @param int $precision = 3
+	 * @param int $precision = 2
 	 *
 	 * @return string
 	 */
