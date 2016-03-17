@@ -5866,24 +5866,11 @@ class QuarkField {
 	/**
 	 * @param bool $rule
 	 * @param QuarkLocalizedString $message
+	 * @param string $field = ''
 	 *
 	 * @return bool
 	 */
-	public static function Assert ($rule, QuarkLocalizedString $message = null) {
-		if (!$rule && $message != null)
-			self::$_errors[] = new QuarkKeyValuePair('', $message);
-
-		return $rule;
-	}
-
-	/**
-	 * @param bool $rule
-	 * @param string $field
-	 * @param QuarkLocalizedString $message
-	 *
-	 * @return bool
-	 */
-	public static function AssertField ($rule, $field = '', QuarkLocalizedString $message = null) {
+	public static function Assert ($rule, QuarkLocalizedString $message = null, $field = '') {
 		if (!$rule && $message != null)
 			self::$_errors[] = new QuarkKeyValuePair($field, $message);
 
