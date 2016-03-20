@@ -1,11 +1,14 @@
 <?php
 namespace Quark\DataProviders;
 
-use Quark\IQuarkModel;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
+use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkDate;
+use Quark\QuarkException;
+use Quark\QuarkField;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
@@ -51,14 +54,14 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 					throw new QuarkArchException('MySQLi option set error');
 			}
 
-		if (!$this->_connection->real_connect(
+		if (!@$this->_connection->real_connect(
 			$uri->host,
 			$uri->user,
 			$uri->pass,
 			QuarkSQL::DBName($uri->path),
 			(int)$uri->port
 		))
-			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, QuarkException::LastError());
 
 		$this->_sql = new QuarkSQL($this);
 	}
@@ -227,5 +230,40 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function EscapeChar () {
 		return '`';
+	}
+
+	/**
+	 * @param string $table
+	 *
+	 * @return QuarkField[]
+	 */
+	public function Schema ($table) {
+		$schema = $this->Query('SHOW COLUMNS FROM ' . $table, []);
+
+		if (!$schema) return array();
+
+		$output = array();
+
+		foreach ($schema as $field) {
+			if (!array_key_exists('Field', $field)) continue;
+			if (!array_key_exists('Type', $field)) continue;
+			if (!array_key_exists('Default', $field)) continue;
+
+			$t = strtoupper($field['Type']);
+			$value = $field['Default'];
+			$type = QuarkField::TYPE_STRING;
+
+			if (strstr($t, 'INT')) $type = QuarkField::TYPE_INT;
+			if ($t == 'DECIMAL' || $t == 'FLOAT' || $t == 'DOUBLE' || $t == 'REAL') $type = QuarkField::TYPE_FLOAT;
+			if ($t == 'BOOLEAN' || $t == 'TINYINT(1)') $type = QuarkField::TYPE_BOOL;
+			if (strstr($t, 'DATE')) $type = QuarkField::TYPE_DATE;
+
+			if ($type == QuarkField::TYPE_DATE) $value = new QuarkDate();
+			else settype($value, $type);
+
+			$output[] = new QuarkField($field['Field'], $type, $value);
+		}
+
+		return $output;
 	}
 }

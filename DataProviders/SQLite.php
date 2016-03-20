@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
+use Quark\QuarkField;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkURI;
 
@@ -151,5 +152,14 @@ class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function EscapeChar () {
 		// TODO: Implement EscapeChar() method.
+	}
+
+	/**
+	 * @param string $table
+	 *
+	 * @return QuarkField[]
+	 */
+	public function Schema ($table) {
+		// TODO: Implement Schema() method.
 	}
 }

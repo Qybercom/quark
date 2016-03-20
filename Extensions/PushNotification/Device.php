@@ -44,8 +44,8 @@ class Device implements IQuarkModel {
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::Type($this->id, QuarkField::TYPE_STRING),
-			QuarkField::Type($this->type, QuarkField::TYPE_STRING)
+			QuarkField::TypeOf($this->id, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->type, QuarkField::TYPE_STRING)
 		);
 	}
 }

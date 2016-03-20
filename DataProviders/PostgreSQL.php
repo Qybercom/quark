@@ -6,6 +6,9 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkDate;
+use Quark\QuarkException;
+use Quark\QuarkField;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
@@ -36,7 +39,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
-		$this->_connection = \pg_connect(
+		$this->_connection = @\pg_connect(
 			'host=\'' . $uri->host . '\'' .
 			'port=\'' . $uri->port . '\'' .
 			'dbname=\'' . QuarkSQL::DBName($uri->path) . '\'' .
@@ -46,7 +49,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		);
 
 		if (!$this->_connection)
-			throw new QuarkConnectionException($uri, Quark::LOG_FATAL);
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, QuarkException::LastError());
 
 		$this->_sql = new QuarkSQL($this);
 	}
@@ -190,7 +193,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 		if (!$result) return 0;
 
-		$out = pg_fetch_assoc($result);
+		$out = \pg_fetch_assoc($result);
 
 		return isset($out['count']) ? (int)$out['count'] : 0;
 	}
@@ -219,5 +222,41 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function EscapeChar () {
 		return '"';
+	}
+
+	/**
+	 * @param string $table
+	 *
+	 * @return QuarkField[]
+	 */
+	public function Schema ($table) {
+		$result = $this->Query('SELECT * FROM information_schema.columns WHERE table_name = \'' . $table . '\'', []);
+
+		if (!$result) return array();
+
+		$schema = pg_fetch_all($result);
+		$output = array();
+
+		foreach ($schema as $field) {
+			if (!array_key_exists('column_name', $field)) continue;
+			if (!array_key_exists('column_default', $field)) continue;
+			if (!array_key_exists('data_type', $field)) continue;
+
+			$t = strtoupper($field['data_type']);
+			$value = $field['column_default'];
+			$type = QuarkField::TYPE_STRING;
+
+			if (strstr($t, 'INT')) $type = QuarkField::TYPE_INT;
+			if ($t == 'NUMERIC' || $t == 'REAL' || strstr($t, 'DOUBLE')) $type = QuarkField::TYPE_FLOAT;
+			if ($t == 'BOOLEAN') $type = QuarkField::TYPE_BOOL;
+			if (strstr($t, 'DATE') || strstr($t, 'TIMESTAMP')) $type = QuarkField::TYPE_DATE;
+
+			if ($type == QuarkField::TYPE_DATE) $value = new QuarkDate();
+			else settype($value, $type);
+
+			$output[] = new QuarkField($field['column_name'], $type, $value);
+		}
+
+		return $output;
 	}
 }

@@ -2,8 +2,10 @@
 namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
+use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
+use Quark\QuarkField;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkURI;
 
@@ -12,7 +14,7 @@ use Quark\QuarkURI;
  *
  * @package Quark\DataProviders
  */
-class MSSQL implements IQuarkDataProvider {
+class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	/**
 	 * @param QuarkURI $uri
 	 *
@@ -124,5 +126,40 @@ class MSSQL implements IQuarkDataProvider {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.
+	}
+
+	/**
+	 * @param string $query
+	 * @param array $options
+	 *
+	 * @return mixed
+	 */
+	public function Query ($query, $options) {
+		// TODO: Implement Query() method.
+	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return string
+	 */
+	public function Escape ($value) {
+		// TODO: Implement Escape() method.
+	}
+
+	/**
+	 * @return string
+	 */
+	public function EscapeChar () {
+		// TODO: Implement EscapeChar() method.
+	}
+
+	/**
+	 * @param string $table
+	 *
+	 * @return QuarkField[]
+	 */
+	public function Schema ($table) {
+		// TODO: Implement Schema() method.
 	}
 }

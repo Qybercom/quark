@@ -2985,6 +2985,22 @@ class QuarkObject {
 	}
 
 	/**
+	 * @param $value
+	 *
+	 * @return bool|string
+	 */
+	public static function ConstByValue ($value) {
+		$defined = get_defined_constants(true);
+
+		if (!isset($defined['user']) || !is_array($defined['user'])) return false;
+
+		foreach ($defined['user'] as $key => $val)
+			if ($val === $value) return $key;
+
+		return false;
+	}
+
+	/**
 	 * @param object|array $source = null
 	 *
 	 * @return object|array
@@ -5533,10 +5549,95 @@ class QuarkField {
 	const TYPE_RESOURCE = 'resource';
 	const TYPE_NULL = 'null';
 
+	const TYPE_DATE = 'QuarkDate';
+
 	/**
 	 * @var QuarkKeyValuePair[] $_errors
 	 */
 	private static $_errors = array();
+
+	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
+	 * @var string $_type = self::TYPE_STRING
+	 */
+	private $_type = self::TYPE_STRING;
+
+	/**
+	 * @var string $_value = ''
+	 */
+	private $_value = '';
+
+	/**
+	 * QuarkField constructor.
+	 *
+	 * @param string $name = ''
+	 * @param string $type = self::TYPE_STRING
+	 * @param string $value = ''
+	 */
+	public function __construct ($name = '', $type = self::TYPE_STRING, $value = '') {
+		$this->_name = $name;
+		$this->_type = $type;
+		$this->_value = $value;
+	}
+
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return string
+	 */
+	public function Name ($name = '') {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+
+		return $this->_name;
+	}
+
+	/**
+	 * @param string $type = self::TYPE_STRING
+	 *
+	 * @return string
+	 */
+	public function Type ($type = self::TYPE_STRING) {
+		if (func_num_args() != 0)
+			$this->_type = $type;
+
+		return $this->_type;
+	}
+
+	/**
+	 * @param string $value = ''
+	 *
+	 * @return string
+	 */
+	public function Value ($value = '') {
+		if (func_num_args() != 0)
+			$this->_value = $value;
+
+		return $this->_value;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function StringifyValue () {
+		if ($this->_type == self::TYPE_BOOL)
+			return $this->_value ? 'true' : 'false';
+
+		if ($this->_type == self::TYPE_INT)
+			return $this->_value == 0 ? '0' : (int)$this->_value;
+
+		if ($this->_type == self::TYPE_FLOAT)
+			return $this->_value == 0 ? '0.0' : (float)$this->_value;
+
+		if ($this->_type == self::TYPE_DATE)
+			return 'new QuarkDate()';
+
+		return '\'' . $this->_value . '\'';
+	}
 
 	/**
 	 * @param      $key
@@ -5559,7 +5660,7 @@ class QuarkField {
 	 * @param bool $nullable
 	 * @return bool
 	 */
-	public static function Type ($key, $value, $nullable = false) {
+	public static function TypeOf ($key, $value, $nullable = false) {
 		if ($nullable && $key == null) return true;
 
 		$comparator = 'is_' . $value;
@@ -5990,7 +6091,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::Type($this->default, QuarkField::TYPE_STRING)
+			QuarkField::TypeOf($this->default, QuarkField::TYPE_STRING)
 		);
 	}
 
@@ -11304,10 +11405,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::Type($this->name, QuarkField::TYPE_STRING),
-			QuarkField::Type($this->type, QuarkField::TYPE_STRING),
-			QuarkField::Type($this->size, QuarkField::TYPE_INT),
-			QuarkField::Type($this->tmp_name, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->name, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->type, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->size, QuarkField::TYPE_INT),
+			QuarkField::TypeOf($this->tmp_name, QuarkField::TYPE_STRING),
 			QuarkField::MinLength($this->name, 1)
 		);
 	}
@@ -11532,6 +11633,19 @@ abstract class QuarkException extends \Exception {
 
 		return true;
 	}
+
+	/**
+	 * @param bool $array = false
+	 *
+	 * @return string|array|null
+	 */
+	public static function LastError ($array = false) {
+		$error = error_get_last();
+
+		if (!$error || !is_array($error)) return null;
+
+		return $array ? $error : (array_key_exists('message', $error) ? str_replace('&quot;', '"', $error['message']) : '');
+	}
 }
 
 /**
@@ -11615,10 +11729,11 @@ class QuarkConnectionException extends QuarkException {
 	/**
 	 * @param QuarkURI $uri
 	 * @param string $lvl
+	 * @param string $additional = ''
 	 */
-	public function __construct (QuarkURI $uri, $lvl = Quark::LOG_WARN) {
+	public function __construct (QuarkURI $uri, $lvl = Quark::LOG_WARN, $additional = '') {
 		$this->lvl = $lvl;
-		$this->message = 'Unable to connect to ' . $uri->URI();
+		$this->message = 'Unable to connect to ' . $uri->URI() . (strlen($additional) == 0 ? '' : '. ' . $additional);
 
 		$this->uri = $uri;
 	}
@@ -12031,6 +12146,46 @@ class QuarkSQL {
 	}
 
 	/**
+	 * @param string $connection
+	 *
+	 * @return IQuarkSQLDataProvider
+	 */
+	private static function _source ($connection) {
+		$source = Quark::Component($connection);
+
+		if (!($source instanceof QuarkModelSource)) return null;
+
+		$provider = $source->Connect();
+
+		return $provider instanceof IQuarkSQLDataProvider ? $provider : null;
+	}
+
+	/**
+	 * @param string $connection
+	 * @param string $query
+	 * @param array $options = []
+	 *
+	 * @return bool|mixed
+	 */
+	public static function Command ($connection, $query = '', $options = []) {
+		$provider = self::_source($connection);
+
+		return $provider ? $provider->Query($query, $options) : false;
+	}
+
+	/**
+	 * @param string $connection
+	 * @param string $table
+	 *
+	 * @return QuarkField[]|bool
+	 */
+	public static function Schema ($connection, $table) {
+		$provider = self::_source($connection);
+
+		return $provider ? $provider->Schema($table) : false;
+	}
+
+	/**
 	 * @param IQuarkSQLDataProvider $provider
 	 */
 	public function __construct (IQuarkSQLDataProvider $provider) {
@@ -12314,6 +12469,13 @@ interface IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeChar();
+
+	/**
+	 * @param string $table
+	 *
+	 * @return QuarkField[]
+	 */
+	public function Schema($table);
 }
 
 /**
