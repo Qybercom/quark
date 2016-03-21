@@ -80,7 +80,7 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		/**
-		 * @var QuarkDTO|\StdClass $session
+		 * @var QuarkDTO|\stdClass $session
 		 */
 		$session = QuarkHTTPClient::To($this->_source . $query, $request, $response, $this->_certificate);
 

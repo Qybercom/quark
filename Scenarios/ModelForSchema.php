@@ -99,7 +99,7 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		echo 'Generating model for table ', $argv[4], '... ', (self::Generate($argv[3], $argv[4]) ? 'OK' : 'FAIL');
+		echo 'Generating model for table ', $argv[4], '... ', (self::Generate($argv[3], $argv[4]) ? 'OK' : 'FAIL'), "\r\n";
 	}
 
 	/**

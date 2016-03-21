@@ -54,7 +54,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 					throw new QuarkArchException('MySQLi option set error');
 			}
 
-		if (!@$this->_connection->real_connect(
+		if (!$this->_connection->real_connect(
 			$uri->host,
 			$uri->user,
 			$uri->pass,

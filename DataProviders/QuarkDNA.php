@@ -25,7 +25,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	private $_storage;
 
 	/**
-	 * @var \StdClass $_db
+	 * @var \stdClass $_db
 	 */
 	private $_db;
 

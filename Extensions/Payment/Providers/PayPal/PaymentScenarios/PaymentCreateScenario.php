@@ -66,7 +66,7 @@ class PaymentCreateScenario implements IQuarkPaymentScenario {
 		$this->CancelURL($cancel);
 		$this->Description($description);
 
-		$this->_links = new \StdClass();
+		$this->_links = new \stdClass();
 	}
 
 	/**

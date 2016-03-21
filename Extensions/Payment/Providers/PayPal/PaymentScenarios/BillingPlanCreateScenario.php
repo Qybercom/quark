@@ -61,7 +61,7 @@ class BillingPlanCreateScenario implements IQuarkPaymentScenario {
 		$this->Description($description);
 		$this->Duration($duration);
 
-		$this->_links = new \StdClass();
+		$this->_links = new \stdClass();
 	}
 
 	/**

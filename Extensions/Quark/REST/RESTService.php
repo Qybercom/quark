@@ -36,7 +36,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param string $action
 	 * @param mixed $data
 	 *
-	 * @return \StdClass
+	 * @return \stdClass
 	 * @throws QuarkArchException
 	 */
 	public static function DirectCommand ($connection, $method, $action, $data = []) {
@@ -68,7 +68,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param string $action
 	 * @param mixed $data
 	 *
-	 * @return \StdClass
+	 * @return \stdClass
 	 * @throws QuarkArchException
 	 */
 	private static function _ll_api (QuarkURI $uri, $method, $action, $data = []) {
@@ -86,7 +86,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$uri = $uri->URI(true);
 
 		/**
-		 * @var \StdClass $data
+		 * @var \stdClass $data
 		 */
 		$data = QuarkHTTPClient::To($uri, $request, $response);
 

@@ -169,7 +169,7 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
-	 * @param IQuarkModel|\StdClass $model
+	 * @param IQuarkModel|\stdClass $model
 	 * @param $options
 	 *
 	 * @return mixed
@@ -263,7 +263,7 @@ class MongoDB implements IQuarkDataProvider {
 
 		foreach ($raw as $document) {
 			/**
-			 * @var \StdClass $document->_id
+			 * @var \stdClass $document->_id
 			 */
 			$item = $document;
 

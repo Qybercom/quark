@@ -125,7 +125,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 * @param array  $data
 	 * @param string $base = 'https://graph.facebook.com/'
 	 *
-	 * @return QuarkDTO|\StdClass
+	 * @return QuarkDTO|\stdClass
 	 */
 	public function API ($method = '', $url = '', $data = [], $base = 'https://graph.facebook.com/') {
 		$request = new QuarkDTO(new QuarkJSONIOProcessor());

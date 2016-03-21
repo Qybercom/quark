@@ -2576,7 +2576,7 @@ trait QuarkContainerBehavior {
 	 */
 	protected $_null = null;
 
-	/**
+	/** @noinspection PhpUnusedPrivateMethodInspection
 	 * @return IQuarkContainer
 	 */
 	private function _envelope () {
@@ -2763,7 +2763,7 @@ class QuarkObject {
 			if (is_scalar($backbone)) $output = $source;
 			else {
 				if (!is_object($output))
-					$output = new \StdClass();
+					$output = new \stdClass();
 
 				if ($backbone == null) return $source;
 
@@ -3043,7 +3043,7 @@ class QuarkObject {
 	 */
 	public function Build ($builder = null) {
 		$builder();
-		return new \StdClass();
+		return new \stdClass();
 	}
 }
 
@@ -3532,7 +3532,7 @@ class QuarkView implements IQuarkContainer {
 		if (func_num_args() == 1)
 			$this->_vars = $params instanceof QuarkDTO
 				? $params->Data()
-				: QuarkObject::Normalize(new \StdClass(), (object)$params);
+				: QuarkObject::Normalize(new \stdClass(), (object)$params);
 
 		return $this->_vars;
 	}
@@ -4407,7 +4407,7 @@ trait QuarkModelBehavior {
 	 * @param array $fields
 	 * @param bool  $weak
 	 *
-	 * @return \StdClass
+	 * @return \stdClass
 	 */
 	public function Extract ($fields = null, $weak = false) {
 		return $this->__call('Extract', func_get_args());
@@ -4932,7 +4932,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param array $options
 	 * @param callable $after = null
 	 *
-	 * @return QuarkModel|QuarkModelBehavior|\StdClass
+	 * @return QuarkModel|QuarkModelBehavior|\stdClass
 	 */
 	private static function _record (IQuarkModel $model, $data, $options = [], callable $after = null) {
 		if ($data == null) return null;
@@ -4970,10 +4970,10 @@ class QuarkModel implements IQuarkContainer {
 	 * @param array $fields
 	 * @param bool  $weak
 	 *
-	 * @return \StdClass
+	 * @return \stdClass
 	 */
 	public function Extract ($fields = null, $weak = false) {
-		$output = new \StdClass();
+		$output = new \stdClass();
 
 		$model = clone $this->_model;
 
@@ -4998,7 +4998,7 @@ class QuarkModel implements IQuarkContainer {
 
 		if (func_num_args() == 0 || $fields === null) return $output;
 
-		$buffer = new \StdClass();
+		$buffer = new \stdClass();
 		$property = null;
 
 		$backbone = $weak ? $model->Fields() : $fields;
@@ -5165,7 +5165,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param $options
 	 * @param callable(QuarkModel $model) $after = null
 	 *
-	 * @return QuarkModel|\StdClass
+	 * @return QuarkModel|\stdClass
 	 */
 	public static function FindOne (IQuarkModel $model, $criteria = [], $options = [], callable $after = null) {
 		return self::_record($model, self::_provider($model)->FindOne($model, $criteria, $options), $options, $after);
@@ -5177,7 +5177,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param $options
 	 * @param callable(QuarkModel $model) $after = null
 	 *
-	 * @return QuarkModel|\StdClass
+	 * @return QuarkModel|\stdClass
 	 */
 	public static function FindOneById (IQuarkModel $model, $id, $options = [], callable $after= null) {
 		return self::_record($model, self::_provider($model)->FindOneById($model, $id, $options), $options, $after);
@@ -6071,7 +6071,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 * @param string $default = self::LANGUAGE_ANY
 	 */
 	public function __construct ($value = '', $language = self::LANGUAGE_ANY, $default = self::LANGUAGE_ANY) {
-		$this->values = new \StdClass();
+		$this->values = new \stdClass();
 		$this->default = $default;
 
 		if (func_num_args() != 0 && is_scalar($value))
@@ -8907,7 +8907,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			if (!isset($state->peers) || !is_array($state->peers)) return;
 
 			/**
-			 * @var \StdClass $node
+			 * @var \stdClass $node
 			 */
 			$node->state = $state;
 			$node->signature = $signature;
@@ -8953,7 +8953,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		/** @noinspection PhpUnusedParameterInspection */
 		$this->_cmd($data, self::COMMAND_AUTHORIZE, function ($client, $signature) use (&$terminal) {
 			/**
-			 * @var \StdClass|QuarkClient $terminal
+			 * @var \stdClass|QuarkClient $terminal
 			 */
 			$terminal->signature = $signature;
 			$terminal->Send(self::Package(
@@ -8967,7 +8967,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$nodes = $this->_infrastructure();
 
 			/**
-			 * @var \StdClass $endpoint
+			 * @var \stdClass $endpoint
 			 */
 			$endpoint = sizeof($nodes) != 0 ? $nodes[0] : null;
 
@@ -9666,7 +9666,7 @@ class QuarkDTO {
 	 */
 	public function __set ($key, $value) {
 		if (!$this->_data)
-			$this->_data = new \StdClass();
+			$this->_data = new \stdClass();
 
 		$this->_data->$key = $value;
 	}
