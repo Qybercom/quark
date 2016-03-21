@@ -342,7 +342,7 @@ footer {
     text-align: center;
 }
 
-.wysibb-image, .wysibb-video {
+.wysibb-image, .wysibb-video, .showdown-image {
     width: 100%;
     height: 100%;
     max-width: 480px;

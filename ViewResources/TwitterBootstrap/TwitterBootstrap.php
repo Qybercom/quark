@@ -14,7 +14,7 @@ class TwitterBootstrap implements IQuarkViewResource, IQuarkViewResourceWithDepe
 	const CURRENT_VERSION = '3.3.5';
 
 	/**
-	 * @var string $_version
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
 	private $_version = self::CURRENT_VERSION;
 

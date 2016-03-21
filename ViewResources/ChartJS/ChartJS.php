@@ -8,7 +8,6 @@ use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
-
 use Quark\QuarkJSViewResourceType;
 
 use Quark\ViewResources\jQuery\jQueryCore;
@@ -19,12 +18,17 @@ use Quark\ViewResources\jQuery\jQueryCore;
  * @package Quark\ViewResources\ChartJS
  */
 class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
-	private $_version = '';
+	const CURRENT_VERSION = '1.0.2';
 
 	/**
-	 * @param string $version = '1.0.2'
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
-	public function __construct ($version = '1.0.2') {
+	private $_version = self::CURRENT_VERSION;
+
+	/**
+	 * @param string $version = self::CURRENT_VERSION
+	 */
+	public function __construct ($version = self::CURRENT_VERSION) {
 		$this->_version = $version;
 	}
 

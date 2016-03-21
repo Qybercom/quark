@@ -3971,6 +3971,47 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
 }
 
 /**
+ * Trait QuarkLexingViewResource
+ *
+ * @package Quark
+ */
+trait QuarkLexingViewResource {
+	/**
+	 * @param string $content = ''
+	 * @param bool $full = false
+	 *
+	 * @return string
+	 */
+	private static function _htmlTo ($content = '', $full = false) {
+		return $full
+			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$2', $content)
+			: $content;
+	}
+
+	/**
+	 * @param string $content = ''
+	 * @param bool $full = false
+	 * @param string $css = ''
+	 *
+	 * @return string
+	 */
+	private static function _htmlFrom ($content = '', $full = false, $css = '') {
+		return $full
+			? '<!DOCTYPE html><html><head><title></title><style type="text/css">' . $css . '</style></head><body>' . $content . '</body></html>'
+			: $content;
+	}
+
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return string
+	 */
+	public static function Styles ($content = '') {
+		return preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content);
+	}
+}
+
+/**
  * Interface IQuarkViewResourceType
  *
  * @package Quark

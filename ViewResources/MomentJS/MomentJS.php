@@ -15,14 +15,23 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\MomentJS
  */
 class MomentJS implements IQuarkViewResource, IQuarkForeignViewResource {
-	private $_version = '';
+	const CURRENT_VERSION = '2.10.3';
+
+	/**
+	 * @var string $_version = self::CURRENT_VERSION
+	 */
+	private $_version = self::CURRENT_VERSION;
+
+	/**
+	 * @var bool $_locales = true
+	 */
 	private $_locales = true;
 
 	/**
-	 * @param string $version = '2.10.3'
+	 * @param string $version = self::CURRENT_VERSION
 	 * @param bool $locales = true
 	 */
-	public function __construct ($version = '2.10.3', $locales = true) {
+	public function __construct ($version = self::CURRENT_VERSION, $locales = true) {
 		$this->_version = $version;
 		$this->_locales = $locales;
 	}

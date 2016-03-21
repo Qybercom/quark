@@ -16,12 +16,17 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\MomentJS
  */
 class MomentJSTimezone implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
-	private $_version = '';
+	const CURRENT_VERSION = '0.4.0';
 
 	/**
-	 * @param string $version = '0.4.0'
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
-	public function __construct ($version = '0.4.0') {
+	private $_version = self::CURRENT_VERSION;
+
+	/**
+	 * @param string $version = self::CURRENT_VERSION
+	 */
+	public function __construct ($version = self::CURRENT_VERSION) {
 		$this->_version = $version;
 	}
 

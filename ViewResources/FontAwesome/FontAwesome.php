@@ -5,8 +5,8 @@ use Quark\IQuarkViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
-use Quark\QuarkCSSViewResourceType;
 use Quark\QuarkDTO;
+use Quark\QuarkCSSViewResourceType;
 
 /**
  * Class FontAwesome
@@ -14,12 +14,17 @@ use Quark\QuarkDTO;
  * @package Quark\ViewResources\FontAwesome
  */
 class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
-	private $_version = '';
+	const CURRENT_VERSION = '4.5.0';
 
 	/**
-	 * @param string $_version = '4.5.0'
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
-	public function __construct ($_version = '4.5.0') {
+	private $_version = self::CURRENT_VERSION;
+
+	/**
+	 * @param string $_version = self::CURRENT_VERSION
+	 */
+	public function __construct ($_version = self::CURRENT_VERSION) {
 		$this->_version = $_version;
 	}
 

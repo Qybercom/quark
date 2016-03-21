@@ -17,7 +17,7 @@ class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.1.1';
 
 	/**
-	 * @var string $_VERSION = self::CURRENT_VERSION
+	 * @var string $_version = self::CURRENT_VERSION
 	 */
 	private $_version = self::CURRENT_VERSION;
 
