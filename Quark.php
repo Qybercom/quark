@@ -3177,14 +3177,14 @@ class QuarkView implements IQuarkContainer {
 	private $_null = null;
 
 	/**
-	 * @var string $_language = QuarkLocalizedString::LANGUAGE_ANY
+	 * @var string $_language = QuarkLanguage::ANY
 	 */
-	private $_language = QuarkLocalizedString::LANGUAGE_ANY;
+	private $_language = QuarkLanguage::ANY;
 
 	/**
-	 * @var string $_languageExpected = QuarkLocalizedString::LANGUAGE_ANY
+	 * @var string $_languageExpected = QuarkLanguage::ANY
 	 */
-	private static $_languageExpected = QuarkLocalizedString::LANGUAGE_ANY;
+	private static $_languageExpected = QuarkLanguage::ANY;
 
 	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
@@ -3538,11 +3538,11 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 * @param string $language = QuarkLanguage::ANY
 	 *
 	 * @return string
 	 */
-	public function Language ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+	public function Language ($language = QuarkLanguage::ANY) {
 		if (func_num_args() != 0)
 			$this->_language = $language;
 
@@ -3550,11 +3550,11 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $language
+	 * @param string $language = QuarkLanguage::ANY
 	 *
 	 * @return string
 	 */
-	public static function ExpectedLanguage ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+	public static function ExpectedLanguage ($language = QuarkLanguage::ANY) {
 		if (func_num_args() != 0)
 			self::$_languageExpected = $language;
 
@@ -5042,11 +5042,11 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 * @param string $language = QuarkLanguage::ANY
 	 *
 	 * @return string[]
 	 */
-	public function ValidationErrors ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+	public function ValidationErrors ($language = QuarkLanguage::ANY) {
 		$out = array();
 
 		foreach ($this->_errors as $error)
@@ -6020,11 +6020,11 @@ class QuarkField {
 	}
 
 	/**
-	 * @param string $language = QuarkLocalizedString::LANGUAGE_ANY
+	 * @param string $language = QuarkLanguage::ANY
 	 *
 	 * @return string[]
 	 */
-	public static function ValidationErrors ($language = QuarkLocalizedString::LANGUAGE_ANY) {
+	public static function ValidationErrors ($language = QuarkLanguage::ANY) {
 		$out = array();
 
 		foreach (self:: $_errors as $error)
@@ -6050,27 +6050,22 @@ class QuarkField {
  * @package Quark
  */
 class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
-	const LANGUAGE_ANY = '*';
-	const LANGUAGE_EN_US = 'en-US';
-	const LANGUAGE_RU_RU = 'ru-RU';
-	const LANGUAGE_MD = 'md';
-
 	/**
 	 * @var object $values = null
 	 */
 	public $values = null;
 
 	/**
-	 * @var string $default = self::LANGUAGE_ANY
+	 * @var string $default = QuarkLanguage::ANY
 	 */
-	public $default = self::LANGUAGE_ANY;
+	public $default = QuarkLanguage::ANY;
 
 	/**
 	 * @param string $value
-	 * @param string $language = self::LANGUAGE_ANY
-	 * @param string $default = self::LANGUAGE_ANY
+	 * @param string $language = QuarkLanguage::ANY
+	 * @param string $default = QuarkLanguage::ANY
 	 */
-	public function __construct ($value = '', $language = self::LANGUAGE_ANY, $default = self::LANGUAGE_ANY) {
+	public function __construct ($value = '', $language = QuarkLanguage::ANY, $default = QuarkLanguage::ANY) {
 		$this->values = new \stdClass();
 		$this->default = $default;
 
@@ -6104,14 +6099,14 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 
 	/**
 	 * @param array|object $dictionary
-	 * @param string $default = self::LANGUAGE_ANY
+	 * @param string $default = QuarkLanguage::ANY
 	 *
 	 * @return QuarkLocalizedString
 	 */
-	public static function Dictionary ($dictionary = [], $default = self::LANGUAGE_ANY) {
+	public static function Dictionary ($dictionary = [], $default = QuarkLanguage::ANY) {
 		if (!is_array($dictionary) && !is_object($dictionary)) return null;
 
-		$str = new self('', self::LANGUAGE_ANY, $default);
+		$str = new self('', QuarkLanguage::ANY, $default);
 		$str->values = (object)$dictionary;
 
 		return $str;
@@ -10064,7 +10059,7 @@ class QuarkDTO {
 	public function ExpectedLanguage ($quantity = 0) {
 		$language = $this->GetLanguageByQuantity($quantity);
 
-		return $language == null ? QuarkLocalizedString::LANGUAGE_ANY : $language->Name();
+		return $language == null ? QuarkLanguage::ANY : $language->Name();
 	}
 
 	/**
@@ -11068,14 +11063,26 @@ class QuarkCookie {
  * @package Quark
  */
 class QuarkLanguage {
+	const ANY = '*';
 	const EN_EN = 'en-EN';
 	const EN_GB = 'en-GB';
 	const EN_US = 'en-US';
 	const RU_RU = 'ru-RU';
 	const MD_MD = 'md-MD';
 
+	/**
+	 * @var string $_name = ''
+	 */
 	private $_name = '';
+
+	/**
+	 * @var int $_quantity = 1
+	 */
 	private $_quantity = 1;
+
+	/**
+	 * @var string $_location = ''
+	 */
 	private $_location = '';
 
 	/**

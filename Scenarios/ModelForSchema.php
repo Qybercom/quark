@@ -22,9 +22,13 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 	public static function Contents ($name, $fields = [], $connection = '') {
 		$import = '';
 
-		if (sizeof($fields) == 0) $fieldsOut = self::TODO_FIELDS;
+		if (sizeof($fields) == 0) {
+			$fieldsOut = self::TODO_FIELDS;
+			$propertyOut = '';
+		}
 		else {
 			$fieldsOut = "return array(\r\n";
+			$propertyOut = '';
 
 			foreach ($fields as $field) {
 				if (!($field instanceof QuarkField)) continue;
@@ -33,9 +37,11 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 					$import .= "use Quark\\QuarkDate;\r\n";
 
 				$fieldsOut .= "\t\t\t'" . $field->Name() . "' => " . $field->StringifyValue() . ",\r\n";
+				$propertyOut .= ' * @property ' . $field->Type() . ' $' . $field->Name() . ' = ' . $field->StringifyValue() . "\r\n";
 			}
 
 			$fieldsOut .= "\t\t);";
+			$propertyOut .= " * \r\n";
 		}
 
 		$connOut = strlen($connection) != 0
@@ -55,7 +61,8 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 				"\r\n" .
 				"/**\r\n" .
 				" * Class " . $name . "\r\n" .
-				" *\r\n" .
+				" * \r\n" .
+				$propertyOut .
 				" * @package Models\r\n" .
 				" */\r\n" .
 				"class " . $name . " implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithDataProvider {\r\n" .
