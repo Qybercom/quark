@@ -11431,10 +11431,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param string $parent = ''
+	 *
 	 * @return string
 	 */
-	public function WebLocation () {
-		return Quark::WebLocation($this->location);
+	public function WebLocation ($parent = '') {
+		return Quark::WebLocation(func_num_args() != 0
+			? ($parent . $this->name)
+			: $this->location
+		);
 	}
 
 	/**
@@ -11475,7 +11480,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		$this->_followParent($mode);
 
-		return is_file($this->tmp_name) && is_dir(dirname($this->location)) && rename($this->tmp_name, $this->location);
+		if (!is_file($this->tmp_name) || !is_dir(dirname($this->location)) || !rename($this->tmp_name, $this->location)) return false;
+
+		$this->Location($this->location);
+		return true;
 	}
 
 	/**
