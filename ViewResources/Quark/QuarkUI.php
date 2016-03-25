@@ -17,7 +17,14 @@ use Quark\ViewResources\FontAwesome\FontAwesome;
  * @package Quark\ViewResources\Quark
  */
 class QuarkUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+	/**
+	 * @var QuarkLocalCoreJSViewResource $_js
+	 */
 	private $_js = null;
+
+	/**
+	 * @var string[] $_sizes
+	 */
 	private $_sizes = array(
 		GoogleFont::N300,
 		GoogleFont::N600,

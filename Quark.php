@@ -398,6 +398,15 @@ class Quark {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public static function MemoryAvailable () {
+		$alloc = self::$_config->Alloc();
+
+		return $alloc == 0 || memory_get_usage() <= $alloc * 1024 * 1024;
+	}
+
+	/**
 	 * @param int $unit = self::UNIT_KILOBYTE
 	 * @param int $precision = 2
 	 *
@@ -451,9 +460,9 @@ class QuarkConfig {
 	private $_culture;
 
 	/**
-	 * @var int $_alloc = 5 (megabytes)
+	 * @var int $_alloc = 10 (megabytes)
 	 */
-	private $_alloc = 5;
+	private $_alloc = 10;
 
 	/**
 	 * @var int $_tick = 10000 (microseconds)
@@ -553,11 +562,11 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param int $mb = 5 (megabytes)
+	 * @param int $mb = 10 (megabytes)
 	 *
 	 * @return int
 	 */
-	public function &Alloc ($mb = 5) {
+	public function &Alloc ($mb = 10) {
 		if (func_num_args() != 0)
 			$this->_alloc = $mb;
 
@@ -11237,16 +11246,54 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	const MODE_GROUP = 0771;
 	const MODE_USER = 0711;
 
+	/**
+	 * @var string $location = ''
+	 */
 	public $location = '';
+
+	/**
+	 * @var string $name = ''
+	 */
 	public $name = '';
+
+	/**
+	 * @var string $type = ''
+	 */
 	public $type = '';
+
+	/**
+	 * @var string $tmp_name = ''
+	 */
 	public $tmp_name = '';
+
+	/**
+	 * @var int $size = 0
+	 */
 	public $size = 0;
+
+	/**
+	 * @var string $extension = ''
+	 */
 	public $extension = '';
+
+	/**
+	 * @var bool $isDir = false
+	 */
 	public $isDir = false;
+
+	/**
+	 * @var string $parent = ''
+	 */
 	public $parent = '';
 
+	/**
+	 * @var string $_content = ''
+	 */
 	protected $_content = '';
+
+	/**
+	 * @var bool $_loaded = ''
+	 */
 	protected $_loaded = false;
 
 	/**
@@ -11354,7 +11401,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (memory_get_usage() <= Quark::Config()->Alloc() * 1024 * 1024) {
+		if (Quark::MemoryAvailable()) {
 			$this->Content(file_get_contents($this->location));
 			$this->type = self::MimeOf($this->_content);
 			$this->_loaded = true;
