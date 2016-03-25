@@ -16,13 +16,14 @@ trait QuarkPresenceControlComponent {
 
 	/**
 	 * @param string $href = ''
-	 * @param string $title = ''
+	 * @param string $text = ''
 	 * @param string $fa = ''
+	 * @param string $title = ''
 	 *
 	 * @return string
 	 */
-	public static function MenuWidgetItem ($href = '', $title = '', $fa = '') {
-		return '<a class="quark-button fa ' . $fa . '" href="' . $href . '">' . $title . '</a>';
+	public static function MenuWidgetItem ($href = '', $text = '', $fa = '', $title = '') {
+		return '<a class="quark-button fa ' . $fa . '" href="' . $href . '" title="' . $title . '">' . $text . '</a>';
 	}
 
 	/**
