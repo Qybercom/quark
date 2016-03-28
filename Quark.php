@@ -2868,7 +2868,7 @@ class QuarkObject {
 
 		foreach ($source as $item) {
 			if ($scalar && gettype($item) != $typeof) return false;
-			if (!$scalar && !($item instanceof $source)) return false;
+			if (!$scalar && !($item instanceof $type)) return false;
 		}
 
 		return true;
@@ -3206,6 +3206,11 @@ class QuarkView implements IQuarkContainer {
 		if ($view == null) return;
 
 		$this->_view = $view;
+		$vars = $this->Vars($vars);
+
+		foreach ($vars as $key => $value)
+			$this->_view->$key = $value;
+
 		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS) . '/' . $this->_view->View() . '.php', false);
 
 		if (!is_file($this->_file))
@@ -3213,11 +3218,6 @@ class QuarkView implements IQuarkContainer {
 
 		if (!is_file($this->_file))
 			throw new QuarkArchException('Unknown view file ' . $this->_file);
-
-		$vars = $this->Vars($vars);
-
-		foreach ($vars as $key => $value)
-			$this->_view->$key = $value;
 
 		$this->_resources = $resources;
 		$this->_language = self::$_languageExpected;

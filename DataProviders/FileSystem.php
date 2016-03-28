@@ -28,6 +28,7 @@ class FileSystem implements IQuarkDataProvider {
 	const SIZE = 'size';
 	const PARENT = 'parent';
 
+	const OPTIONS_CHROOT = 'opt.chroot';
 	const OPTIONS_RECURSIVE = 'opt.recursive';
 	const OPTIONS_JUMP = 'opt.jump';
 	const OPTIONS_GROUP = 'group';
@@ -187,6 +188,10 @@ class FileSystem implements IQuarkDataProvider {
 	 */
 	private function _find ($criteria = [], $options = []) {
 		$output = array();
+		$root = $this->_root;
+
+		if (isset($options[self::OPTIONS_CHROOT]))
+			$root = $root . '/' . $options[self::OPTIONS_CHROOT];
 
 		if (!isset($options[self::OPTIONS_RECURSIVE]))
 			$options[self::OPTIONS_RECURSIVE] = false;
@@ -195,11 +200,11 @@ class FileSystem implements IQuarkDataProvider {
 			$options[self::OPTIONS_JUMP] = false;
 
 		if ($options[self::OPTIONS_RECURSIVE]) {
-			$dir = new \RecursiveDirectoryIterator($this->_root);
+			$dir = new \RecursiveDirectoryIterator($root);
 			$fs = new \RecursiveIteratorIterator($dir);
 		}
 		else {
-			$dir = new \DirectoryIterator($this->_root);
+			$dir = new \DirectoryIterator($root);
 			$fs = new \IteratorIterator($dir);
 		}
 

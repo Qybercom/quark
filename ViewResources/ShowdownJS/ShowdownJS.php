@@ -60,7 +60,7 @@ class ShowdownJS implements IQuarkViewResource, IQuarkForeignViewResource {
 	 */
 	private static function _code ($content, $delimiter) {
 		return preg_replace_callback(
-			'#' . $delimiter . '{3,}(.*)\s(.*)' . $delimiter . '{3,}#Uis',
+			'#' . $delimiter . '{3,}(.*)\n(.*)' . $delimiter . '{3,}#Uis',
 			function ($matches) {
 				$matches[2] = str_replace('<', '&lt;', $matches[2]);
 				$matches[2] = str_replace('*', '&#42;', $matches[2]);
@@ -94,9 +94,6 @@ class ShowdownJS implements IQuarkViewResource, IQuarkForeignViewResource {
 		$content = self::_code($content, '\`');
 		$content = self::_code($content, '\~');
 
-		$content = preg_replace('#\*\*(.*)\*\*#', '<b>$1</b>', $content);
-		$content = preg_replace('#\*(.*)\*#', '<i>$1</i>', $content);
-
 		$content = preg_replace_callback('#\`(.*)\`#U', function ($matches) {
 			return '<code>' . trim($matches[1]) . '</code>';
 		}, $content);
@@ -123,8 +120,20 @@ class ShowdownJS implements IQuarkViewResource, IQuarkForeignViewResource {
 		$content = str_replace('</li></ul><ul><li>', '</li><li>', $content);
 		$content = str_replace('</li></ol><ol><li>', '</li><li>', $content);
 
-		$content = str_replace("\r\n", '<br />', $content);
+		$content = preg_replace('#\*\*(.*)\*\*#Ui', '<b>$1</b>', $content);
+		$content = preg_replace('#\*(.*)\*#Ui', '<i>$1</i>', $content);
+		$content = preg_replace('#\&i\:(.*)\;#Ui', '<span class="fa $1"></span>', $content);
+
+		$content = trim($content);
+
+		$content = str_replace("\r\n", "\n", $content);
 		$content = str_replace("\n", '<br />', $content);
+
+		$content = str_replace('</ul><br /> <br />', '</ul>', $content);
+		$content = str_replace('</ol><br /> <br />', '</ol>', $content);
+		$content = str_replace('</code> </pre><br /> <br />', '</code></pre>', $content);
+
+		$content = preg_replace('#\<i\>\&lt\;(.*)\&gt\;\<\/i\>#Ui', '<i class="_var">&lt;$1&gt;</i>', $content);
 
 		return self::_htmlFrom(trim($content), $full, $css);
 	}
