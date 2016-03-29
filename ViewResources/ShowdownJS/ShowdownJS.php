@@ -133,7 +133,7 @@ class ShowdownJS implements IQuarkViewResource, IQuarkForeignViewResource {
 		$content = str_replace('</ol><br /> <br />', '</ol>', $content);
 		$content = str_replace('</code> </pre><br /> <br />', '</code></pre>', $content);
 
-		$content = preg_replace('#\<i\>\&lt\;(.*)\&gt\;\<\/i\>#Ui', '<i class="_var">&lt;$1&gt;</i>', $content);
+		$content = preg_replace('#\<i\>\<(.*)\>\<\/i\>#Ui', '<i class="_var">&lt;$1&gt;</i>', $content);
 
 		return self::_htmlFrom(trim($content), $full, $css);
 	}
