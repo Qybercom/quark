@@ -5695,7 +5695,7 @@ class QuarkField {
 		if ($this->_type == self::TYPE_DATE)
 			return 'new QuarkDate()';
 
-		return '\'' . $this->_value . '\'';
+		return $this->_value == 'null' ? 'null' : '\'' . $this->_value . '\'';
 	}
 
 	/**

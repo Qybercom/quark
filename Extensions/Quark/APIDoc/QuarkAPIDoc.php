@@ -51,13 +51,16 @@ class QuarkAPIDoc {
 			$properties = self::Attribute($model[1], 'property', false, false);
 
 			foreach ($properties as $property) {
-				$field = array_pad(explode(' ', $property), 3, '');
-				$value = array_pad(explode('=', $property), 2, '');
+				$prop = explode('$', $property);
 
-				$type = preg_replace('#^QuarkModel\|([a-zA-Z0-9\_]*)#Uis', '$1', $field[0]);
+				if (sizeof($prop) != 2) continue;
+
+				$value = array_pad(explode('=', $prop[1]), 2, '');
+
+				$type = preg_replace('#^QuarkModel\|([a-zA-Z0-9\_]*)#Uis', '$1', trim($prop[0]));
 				$type = preg_replace('#^QuarkCollection\|([a-zA-Z0-9\_]*)#', '$1[]', $type);
 
-				$fields[] = new QuarkField(str_replace('$', '', $field[1]), $type, trim($value[1]));
+				$fields[] = new QuarkField(str_replace('$', '', trim($value[0])), $type, trim($value[1]));
 			}
 
 			$inVars = array();
