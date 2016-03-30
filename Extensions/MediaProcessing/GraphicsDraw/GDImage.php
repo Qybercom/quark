@@ -96,12 +96,12 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
-	 * @param IQuarkGDFilter $filter
+	 * @param IQuarkGDFilter $filter = null
 	 *
 	 * @return GDImage
 	 */
-	public function Filter (IQuarkGDFilter $filter) {
-		if ($this->_image) {
+	public function Filter (IQuarkGDFilter $filter = null) {
+		if ($this->_image && $filter) {
 			$this->_image = $filter->GDFilter($this->_image);
 			$this->_apply();
 		}
@@ -110,12 +110,12 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
-	 * @param IQuarkGDAction $action
+	 * @param IQuarkGDAction $action = null
 	 *
 	 * @return GDImage
 	 */
-	public function Action (IQuarkGDAction $action) {
-		if ($this->_image) {
+	public function Action (IQuarkGDAction $action = null) {
+		if ($this->_image && $action) {
 			$this->_image = $action->GDAction($this->_image, $this->_file);
 			$this->_apply();
 		}
@@ -150,6 +150,13 @@ class GDImage implements IQuarkExtension {
 		$color->a = $rgb >> 24;
 
 		return $color;
+	}
+
+	/**
+	 * @return GDPosition
+	 */
+	public function Center () {
+		return new GDPosition($this->Width() / 2, $this->Height() / 2);
 	}
 
 	/**

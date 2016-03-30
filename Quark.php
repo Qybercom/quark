@@ -4534,6 +4534,15 @@ class QuarkModelSource implements IQuarkStackable {
 	public static function Register ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
 		return Quark::Component($name, new self($name, $provider, $uri));
 	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return QuarkModelSource|IQuarkStackable
+	 */
+	public static function Get ($name) {
+		return Quark::Component($name);
+	}
 }
 
 /**

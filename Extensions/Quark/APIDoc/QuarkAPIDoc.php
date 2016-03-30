@@ -13,9 +13,11 @@ use Quark\ViewResources\ShowdownJS\ShowdownJS;
  * @package Quark\Extensions\Quark\APIDoc
  */
 class QuarkAPIDoc {
-	const EXP_COMPONENT = '#\/\*\*\s\n \* Class (.*)\n(.*)\*\/.*class ([a-zA-Z0-9\_]*)( extends ([a-zA-Z0-9\_]*))? implements (([a-zA-Z0-9\_]*\,?\s?)*)\{(.*)}#is';
-	const EXP_SERVICE_METHOD = '#\/\*\*(.*)\*\/.*function ([a-zA-Z0-9\_]*) ?\(.*\).*\{.*\}#Uis';
+	const EXP_COMPONENT = '#\/\*\*\s\n(.*)\*\/.*class ([a-zA-Z0-9\_]*)( extends ([a-zA-Z0-9\_]*))? implements (([a-zA-Z0-9\_]*\,?\s?)*)\{(.*)}#is';
+	const EXP_SERVICE_ENV = '#IQuark((([a-zA-Z0-9]*)Service)|Stream)#Uis';
+	const EXP_SERVICE_METHOD = '#\/\*\*(.*)\*\/.*public function ([a-zA-Z0-9\_]*) ?\(.*\).*\{.*\}#Uis';
 	const EXP_MODEL_FIELDS = '#function Fields ?\(.*\)(.*)\{.*\}#Uis';
+	const EXP_MODEL_CONSTANTS = '#const ?([a-zA-Z0-9\_]*)\s?=\s?(.*)\;#Uis';
 
 	/**
 	 * @param string $path
@@ -46,19 +48,29 @@ class QuarkAPIDoc {
 
 		foreach ($models as $model) {
 			$fields = array();
-			$properties = self::Attribute($model[1], 'property', false);
+			$properties = self::Attribute($model[1], 'property', false, false);
 
 			foreach ($properties as $property) {
 				$field = array_pad(explode(' ', $property), 3, '');
 				$value = array_pad(explode('=', $property), 2, '');
 
-				$fields[] = new QuarkField(str_replace('$', '', $field[1]), $field[0], trim($value[1]));
+				$type = preg_replace('#^QuarkModel\|([a-zA-Z0-9\_]*)#Uis', '$1', $field[0]);
+				$type = preg_replace('#^QuarkCollection\|([a-zA-Z0-9\_]*)#', '$1[]', $type);
+
+				$fields[] = new QuarkField(str_replace('$', '', $field[1]), $type, trim($value[1]));
 			}
 
+			$inVars = array();
+			$constants = self::_component($model[7], self::EXP_MODEL_CONSTANTS);
+
+			foreach ($constants as $constant)
+				$inVars[] = new QuarkField($constant[1], '', trim($constant[2]));
+
 			$out[] = new QuarkAPIDocModel(
-				$model[3],
+				$model[2],
 				self::Attribute($model[1], 'description'),
-				$fields
+				$fields,
+				$inVars
 			);
 		}
 
@@ -81,10 +93,21 @@ class QuarkAPIDoc {
 		$out = array();
 
 		foreach ($services as $service) {
-			$methods = self::_component($service[8], self::EXP_SERVICE_METHOD);
+			$methods = self::_component($service[7], self::EXP_SERVICE_METHOD);
 			$actions = array();
+			$interfaces = self::_component($service[5], self::EXP_SERVICE_ENV);
+			$env = array();
+
+			foreach ($interfaces as $iFace) {
+				$count = sizeof($iFace);
+
+				if ($count == 2) $env[] = $iFace[1];
+				if ($count == 4) $env[] = $iFace[3];
+			}
 
 			foreach ($methods as $method) {
+				if (!in_array($method[2], $env)) continue;
+
 				$uri = self::Attribute($method[1], 'request-uri');
 				$actions[] = new QuarkAPIDocServiceMethod(
 					trim($method[2]),
@@ -113,9 +136,9 @@ class QuarkAPIDoc {
 			}
 
 			$out[] = new QuarkAPIDocService(
-				$service[3],
+				$service[2],
 				self::Attribute($service[1], 'description'),
-				self::Attribute($service[1], 'package'),
+				self::Attribute($service[1], 'package', true, false),
 				$actions
 			);
 		}
@@ -127,11 +150,12 @@ class QuarkAPIDoc {
 	 * @param string $source
 	 * @param string $name
 	 * @param bool $single = true
+	 * @param bool $multiLine = true
 	 *
 	 * @return array|null
 	 */
-	public static function Attribute ($source, $name, $single = true) {
-		$raw = self::_component($source, '#\@' . $name . ' (.*)' . ($single ? '(\@|\*\/)' : '') . '#' . (!$single ? '' : 'Uis'));
+	public static function Attribute ($source, $name, $single = true, $multiLine = true) {
+		$raw = self::_component($source, '#\@' . $name . ' (.*)' . ($multiLine ? '(\@|\*\/)' : '') . '#' . (!$multiLine ? '' : 'Uis'));
 
 		if (sizeof($raw) == 0)
 			return $single ? null : array();

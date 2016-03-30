@@ -26,11 +26,17 @@ class QuarkAPIDocModel {
 	private $_fields = array();
 
 	/**
+	 * @var QuarkField[] $_constants = []
+	 */
+	private $_constants = array();
+
+	/**
 	 * @param string $name = ''
 	 * @param string $description = ''
 	 * @param QuarkField[] $fields = []
+	 * @param QuarkField[] $constants = []
 	 */
-	public function __construct ($name = '', $description = '', $fields = []) {
+	public function __construct ($name = '', $description = '', $fields = [], $constants = []) {
 		$this->_name = $name;
 		$this->_description = strlen($description) == 0
 			? '<i>No description</i>'
@@ -38,6 +44,9 @@ class QuarkAPIDocModel {
 
 		if (QuarkObject::IsArrayOf($fields, new QuarkField()))
 			$this->_fields = $fields;
+
+		if (QuarkObject::IsArrayOf($constants, new QuarkField()))
+			$this->_constants = $constants;
 	}
 
 	/**
@@ -59,5 +68,12 @@ class QuarkAPIDocModel {
 	 */
 	public function Fields () {
 		return $this->_fields;
+	}
+
+	/**
+	 * @return QuarkField[]
+	 */
+	public function Constants () {
+		return $this->_constants;
 	}
 }

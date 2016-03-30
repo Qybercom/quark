@@ -33,6 +33,9 @@ class FileSystem implements IQuarkDataProvider {
 	const OPTIONS_JUMP = 'opt.jump';
 	const OPTIONS_GROUP = 'group';
 
+	/**
+	 * @var string $_root = ''
+	 */
 	private $_root = '';
 
 	/**

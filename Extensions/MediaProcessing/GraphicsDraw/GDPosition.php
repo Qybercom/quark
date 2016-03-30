@@ -7,8 +7,19 @@ namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw
  */
 class GDPosition {
+	/**
+	 * @var int $x = 0
+	 */
 	public $x = 0;
+
+	/**
+	 * @var int $y = 0
+	 */
 	public $y = 0;
+
+	/**
+	 * @var int $angle = 0
+	 */
 	public $angle = 0;
 
 	/**

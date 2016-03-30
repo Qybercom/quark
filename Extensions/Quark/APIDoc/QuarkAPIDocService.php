@@ -76,6 +76,13 @@ class QuarkAPIDocService {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function CanonicalName () {
+		return str_replace('\\', '/', str_replace('Services', '', $this->Package()) . '\\' . $this->_name);
+	}
+
+	/**
 	 * @param string[] $params = []
 	 *
 	 * @return string
@@ -88,7 +95,22 @@ class QuarkAPIDocService {
 				$route .= '/<' . $param . '>';
 
 		$endpoint = str_replace('//', '/', '/' . str_replace('\\', '/', str_replace('Services', '', $this->Package())) . '/' . str_replace('Service', '', $this->_name));
+		
+		return self::EndpointOf($endpoint) . $route;
+	}
 
-		return (preg_match_all('#[A-Z]#', $endpoint) > 1 ? $endpoint : strtolower($endpoint)) . $route;
+	/**
+	 * @param string $url = ''
+	 *
+	 * @return string
+	 */
+	public static function EndpointOf ($url = '') {
+		$out = array();
+		$path = explode('/', $url);
+
+		foreach ($path as $component)
+			$out[] = preg_match_all('#[A-Z]#', $component) > 1 ? $component : strtolower($component);
+
+		return implode('/', $out);
 	}
 }
