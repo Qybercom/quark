@@ -3579,12 +3579,13 @@ class QuarkView implements IQuarkContainer {
 	 */
 	public function FieldError (QuarkModel $model = null, $field = '', $template = self::FIELD_ERROR_TEMPLATE) {
 		$errors = $model->RawValidationErrors();
+		$out = '';
 
 		foreach ($errors as $error)
 			if ($error->Key() == $field)
-				return str_replace('{error}', $error->Value()->Of($this->_language), $template);
+				$out .= str_replace('{error}', $error->Value()->Of($this->_language), $template);
 
-		return '';
+		return $out;
 	}
 
 	/**
