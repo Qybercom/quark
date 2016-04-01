@@ -41,6 +41,7 @@ class GDImage implements IQuarkExtension {
 	public function __construct ($width = 1, $height = 1) {
 		$this->_file = new QuarkFile();
 		$this->_file->type = 'image/png';
+		$this->_file->extension = 'png';
 		$this->_image = self::Canvas($width, $height);
 	}
 

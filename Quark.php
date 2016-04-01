@@ -11307,6 +11307,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	protected $_loaded = false;
 
 	/**
+	 * @var string $_lastCopy = ''
+	 */
+	protected $_lastCopy = '';
+
+	/**
 	 * @param string $location
 	 * @warning memory leak in native `finfo_file` realization
 	 *
@@ -11414,6 +11419,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (Quark::MemoryAvailable()) {
 			$this->Content(file_get_contents($this->location));
 			$this->type = self::MimeOf($this->_content);
+			$this->extension = self::ExtensionByMime($this->type);
 			$this->_loaded = true;
 		}
 
@@ -11438,6 +11444,33 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		$this->_followParent($mode);
 
 		return file_put_contents($this->location, $this->_content, LOCK_EX) !== false;
+	}
+
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return bool
+	 */
+	public function SaveCopy ($name = '') {
+		$this->_lastCopy = $this->parent . (func_num_args() == 0 ? $this->name : $name) . '.' . $this->extension;
+
+		return file_put_contents($this->_lastCopy, $this->_content, LOCK_EX) !== false;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function LastCopy () {
+		return $this->_lastCopy;
+	}
+
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return string
+	 */
+	public function ChangeName ($name = '') {
+		return $this->Location($this->parent . '/' . $name . '.' . $this->extension);
 	}
 
 	/**
