@@ -11474,6 +11474,18 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function DeleteFromDisk () {
+		if (!@unlink($this->location)) {
+			Quark::Log('[QuarkFile::DeleteFromDisk] ' . QuarkException::LastError() . '. Location: "' . $this->location . '"', Quark::LOG_WARN);
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	 * @param string $parent = ''
 	 *
 	 * @return string
