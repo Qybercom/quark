@@ -49,6 +49,11 @@ body {
     background: rgb(0,225,80);
 }
 
+.quark-button-group .group-name {
+	font-size: 16px;
+	padding: 5px 15px 5px 15px;
+}
+
 
 
 .quark-presence-container {

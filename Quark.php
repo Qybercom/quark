@@ -2686,58 +2686,6 @@ interface IQuarkContainer {
  * @package Quark
  */
 class QuarkObject {
-	private $_source;
-
-	private $_min;
-	private $_max;
-
-	private $_null = null;
-
-	/**
-	 * @param object|array $source = null
-	 * @param object|array $min = null
-	 * @param object|array $max = null
-	 */
-	public function __construct ($source = null, $min = null, $max = null) {
-		$this->Source($source);
-
-		$this->Minimal($min);
-		$this->Maximal($max);
-	}
-
-	/**
-	 * @param $key
-	 *
-	 * @return mixed
-	 */
-	public function __get ($key) {
-		return isset($this->_source->$key) ? $this->_source->$key : $this->_null;
-	}
-
-	/**
-	 * @param $key
-	 * @param $value
-	 */
-	public function __set ($key, $value) {
-		$this->_source->$key = $value;
-	}
-
-	/**
-	 * @param $key
-	 *
-	 * @return bool
-	 */
-	public function __isset ($key) {
-		return isset($this->_source->$key);
-	}
-
-	/**
-	 * @param $name
-	 */
-	public function __unset ($name) {
-		unset($this->_source->$name);
-	}
-
 	/**
 	 * @param mixed $source
 	 * @param mixed $backbone = []
@@ -2822,6 +2770,38 @@ class QuarkObject {
 
 			unset($k, $v);
 		}
+	}
+
+	/**
+	 * @param string[] $paths = []
+	 * @param string $prefix = ''
+	 *
+	 * @return QuarkKeyValuePair[]
+	 */
+	public static function TreeBuilder ($paths = [], $prefix = '') {
+		$out = array();
+		$dirs = array();
+		$files = array();
+
+		foreach ($paths as $link) {
+			$path = explode('/', $link);
+
+			if (sizeof($path) == 1) $files[] = new QuarkKeyValuePair($prefix . '/' . $link, $link);
+			else {
+				if (!isset($dirs[$path[0]]))
+					$dirs[$path[0]] = array();
+
+				$dirs[$path[0]][] = implode('/', array_slice($path, 1));
+			}
+		}
+
+		foreach ($dirs as $key => $link)
+			$out[$key] = self::TreeBuilder($link, $prefix . '/' . $key);
+
+		foreach ($files as $file)
+			$out[] = $file;
+
+		return $out;
 	}
 
 	/**
@@ -3007,52 +2987,6 @@ class QuarkObject {
 			if ($val === $value) return $key;
 
 		return false;
-	}
-
-	/**
-	 * @param object|array $source = null
-	 *
-	 * @return object|array
-	 */
-	public function Source ($source = null) {
-		if (func_num_args() != 0)
-			$this->_source = $source;
-
-		return $this->_source;
-	}
-
-	/**
-	 * @param object|array $min = null
-	 *
-	 * @return object|array
-	 */
-	public function Minimal ($min = null) {
-		if (func_num_args() != 0)
-			$this->_min = $min;
-
-		return $this->_min;
-	}
-
-	/**
-	 * @param object|array $max = null
-	 *
-	 * @return object|array
-	 */
-	public function Maximal ($max = null) {
-		if (func_num_args() != 0)
-			$this->_max = $max;
-
-		return $this->_max;
-	}
-
-	/**
-	 * @param callable $builder = null
-	 *
-	 * @return object
-	 */
-	public function Build ($builder = null) {
-		$builder();
-		return new \stdClass();
 	}
 }
 
@@ -3568,6 +3502,34 @@ class QuarkView implements IQuarkContainer {
 			self::$_languageExpected = $language;
 
 		return self::$_languageExpected;
+	}
+
+	/**
+	 * @param QuarkKeyValuePair[] $menu
+	 * @param callable($href, $text) $button = null
+	 * @param callable($text) $node = null
+	 *
+	 * @return string
+	 */
+	public static function TreeMenu ($menu = [], callable $button = null, callable $node = null) {
+		$out = '';
+		
+		if ($button == null)
+			$button = function ($href, $text) { return '<a href="' . $href . '">' . $text . '</a>'; };
+
+		if ($node == null)
+			$node = function ($text) { return '<div class="group-name">' . $text . '</div>'; };
+
+		foreach ($menu as $key => $element) {
+			if (!is_array($element)) $out .= $button($element->Key(), $element->Value());
+			else {
+				$out .= '<div class="quark-button-group">' . $node($key)
+					. self::TreeMenu($element, $button, $node)
+					. '</div>';
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -4159,6 +4121,9 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return QuarkCollection
 	 */
 	public function PopulateWith ($source, callable $iterator = null) {
+		if ($source instanceof QuarkCollection)
+			$source = $source->_list;
+
 		if (!is_array($source)) return $this;
 
 		if ($iterator == null)
@@ -4645,13 +4610,19 @@ class QuarkModel implements IQuarkContainer {
 		if (method_exists($this->_model, $method))
 			return call_user_func_array(array($this->_model, $method), $args);
 
-		$provider = self::_provider($this->_model);
-		array_unshift($args, $this->_model);
+		$model = $this->_model == null ? 'null' : get_class($this->_model);
 
-		if (method_exists($provider, $method))
-			return call_user_func_array(array($provider, $method), $args);
+		if ($this->_model instanceof IQuarkModelWithDataProvider) {
+			$provider = self::_provider($this->_model);
+			array_unshift($args, $this->_model);
 
-		throw new QuarkArchException('Method ' . $method . ' not found in model or provider');
+			if (method_exists($provider, $method))
+				return call_user_func_array(array($provider, $method), $args);
+
+			$model .= ' or provider ' . ($provider == null ? 'null' : get_class($provider->Provider()));
+		}
+
+		throw new QuarkArchException('Method ' . $method . ' not found in model ' . $model);
 	}
 
 	/**
@@ -10947,13 +10918,44 @@ class QuarkCookie {
 	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s';
 	const EXPIRES_SESSION = 0;
 
+	/**
+	 * @var string $name = ''
+	 */
 	public $name = '';
+
+	/**
+	 * @var string $value = ''
+	 */
 	public $value = '';
+
+	/**
+	 * @var string $expires = ''
+	 */
 	public $expires = '';
+
+	/**
+	 * @var int $MaxAge = 0
+	 */
 	public $MaxAge = 0;
+
+	/**
+	 * @var string $path = '/'
+	 */
 	public $path = '/';
+
+	/**
+	 * @var string $domain = ''
+	 */
 	public $domain = '';
+
+	/**
+	 * @var string $HttpOnly = ''
+	 */
 	public $HttpOnly = '';
+
+	/**
+	 * @var string $secure = ''
+	 */
 	public $secure = '';
 
 	/**
@@ -11710,14 +11712,25 @@ class QuarkCultureRU implements IQuarkCulture {
  * @package Quark
  */
 class QuarkCultureCustom implements IQuarkCulture {
-	private $_dateTime;
-	private $_date;
-	private $_time;
+	/**
+	 * @var string $_dateTime = '';
+	 */
+	private $_dateTime = '';
 
 	/**
-	 * @param string $dateTime
-	 * @param string $date
-	 * @param string $time
+	 * @var string $_date = ''
+	 */
+	private $_date = '';
+
+	/**
+	 * @var string $_time = ''
+	 */
+	private $_time = '';
+
+	/**
+	 * @param string $dateTime = ''
+	 * @param string $date = ''
+	 * @param string $time = ''
 	 */
 	public function __construct ($dateTime = '', $date = '', $time = '') {
 		$this->_dateTime = $dateTime;

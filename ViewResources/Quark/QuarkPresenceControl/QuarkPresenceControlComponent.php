@@ -1,6 +1,8 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkPresenceControl;
 
+use Quark\QuarkObject;
+use Quark\QuarkView;
 use Quark\QuarkViewBehavior;
 
 use Quark\ViewResources\Google\GoogleMap;
@@ -27,6 +29,20 @@ trait QuarkPresenceControlComponent {
 	}
 
 	/**
+	 * @param string $items = ''
+	 * @param string $additional = ''
+	 *
+	 * @return string
+	 */
+	public static function MenuSideWidgetGeneric ($items = '', $additional = '') {
+		return '
+			<div class="quark-presence-column left" id="presence-menu-side-parent">
+				<div class="quark-presence-container left" id="presence-menu-side">' . $items . '</div>' . $additional . '
+			</div>
+		';
+	}
+
+	/**
 	 * @param string[] $links = []
 	 *
 	 * @return string
@@ -43,20 +59,16 @@ trait QuarkPresenceControlComponent {
 	/**
 	 * @param string[] $links = []
 	 * @param string $additional = ''
+	 * @param callable($href, $text) $button = null
+	 * @param callable($text) $node = null
 	 *
 	 * @return string
 	 */
-	public function MenuSideWidget ($links = [], $additional = '') {
-		$items = '';
+	public function MenuSideWidget ($links = [], $additional = '', callable $button = null, callable $node = null) {
+		if ($button == null)
+			$button = function ($href, $text) { return self::MenuWidgetItem($href, $text); };
 
-		foreach ($links as $link)
-			$items .= $link;
-
-		return '
-			<div class="quark-presence-column left" id="presence-menu-side-parent">
-				<div class="quark-presence-container left" id="presence-menu-side">' . $items . '</div>' . $additional . '
-			</div>
-		';
+		return self::MenuSideWidgetGeneric(QuarkView::TreeMenu(QuarkObject::TreeBuilder($links), $button, $node), $additional);
 	}
 
 	/**

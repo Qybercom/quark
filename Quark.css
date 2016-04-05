@@ -96,6 +96,14 @@ textarea.quark-input {
     cursor: pointer;
 }
 
+.quark-button-group {
+	padding: 2px 2px 2px 20px;
+}
+
+.quark-button-group .group-name {
+	margin: 0 0 0 -15px;
+}
+
 
 /**
  * .quark-message represent short notifications from system
