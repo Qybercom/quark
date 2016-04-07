@@ -1,8 +1,10 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers;
 
+use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
+use Quark\QuarkException;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkTCPNetworkTransport;
 
@@ -98,6 +100,10 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 		);
 
 		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60);
+
+		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+		});
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			foreach ($this->_devices as $device)
