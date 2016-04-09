@@ -27,10 +27,10 @@ class CDNConfig implements IQuarkExtensionConfig {
 
 	/**
 	 * @param IQuarkCDNProvider $provider
-	 * @param string $id
-	 * @param string $secret
+	 * @param string $id = ''
+	 * @param string $secret = ''
 	 */
-	public function __construct (IQuarkCDNProvider $provider, $id, $secret) {
+	public function __construct (IQuarkCDNProvider $provider, $id = '', $secret = '') {
 		$this->_provider = $provider;
 		$this->appId = $id;
 		$this->appSecret = $secret;
@@ -51,7 +51,7 @@ class CDNConfig implements IQuarkExtensionConfig {
 	/**
 	 * @return IQuarkCDNProvider
 	 */
-	public function &CDN () {
+	public function &CDNProvider () {
 		return $this->_provider;
 	}
 

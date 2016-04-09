@@ -1,13 +1,14 @@
 <?php
 namespace Quark\Extensions\CDN;
 
-use Quark\IQuarkLinkedModel;
+use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
+use Quark\IQuarkLinkedModel;
 
 use Quark\Quark;
-use Quark\QuarkURI;
 use Quark\QuarkFile;
+use Quark\QuarkHTTPClient;
 
 /**
  * Class CDNResource
@@ -16,90 +17,81 @@ use Quark\QuarkFile;
  *
  * @package Quark\Extensions\CDN
  */
-class CDNResource extends QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	/**
 	 * @var CDNConfig $_config
 	 */
 	private $_config;
 
 	/**
-	 * @var QuarkFile $_fallback
+	 * @var QuarkFile $_default
 	 */
-	private $_fallback;
-
-	/**
-	 * @var QuarkFile $_file
-	 */
-	private $_file;
+	private $_default;
 
 	/**
 	 * @param string $config
 	 * @param string $fallback = ''
 	 */
 	public function __construct ($config, $fallback = '') {
-		parent::__construct();
-
 		$this->_config = Quark::Config()->Extension($config);
-		$this->_fallback = new QuarkFile($fallback);
+		$this->_default = new QuarkFile($fallback);
 	}
 
 	/**
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->WebLocation();
+		return $this->URL();
 	}
 
 	/**
 	 * @return QuarkFile
-	 * @throws \Quark\QuarkArchException
 	 */
-	private function _file () {
-		if ($this->_file == null) {
-			$this->_file = $this->_config->CDN()->ResourceGet();
-		}
-
-		if ($this->_file == null) {
-			$this->_file = clone $this->_fallback;
-			$this->_file->Load();
-		}
-
-		return $this->_file;
+	public function File () {
+		return $this->resource != null
+			? QuarkHTTPClient::Download($this->URL())
+			: $this->_default;
 	}
 
 	/**
-	 * @param QuarkFile $file
-	 *
-	 * @return QuarkFile
-	 */
-	public function File (QuarkFile $file = null) {
-		$this->_file();
-
-		if (func_num_args() != 0)
-			$this->_file = $file;
-
-		return $this->_file;
-	}
-
-	/**
-	 * @param string $content
+	 * @param QuarkFile $fallback = null
 	 *
 	 * @return string
 	 */
-	public function Content ($content = '') {
-		$this->_file();
+	public function URL (QuarkFile $fallback = null) {
+		if ($this->resource == null)
+			return $this->_default->WebLocation();
 
-		if (func_num_args() != 0)
-			$this->_file->Content($content);
+		$url = $this->_config->CDNProvider()->CDNResourceURL($this->resource);
 
-		return $this->_file->Content();
+		return $url ? $url : ($fallback ? $fallback->WebLocation() : '');
 	}
 
 	/**
-	 * @return string
+	 * @param QuarkFile $file = null
+	 *
+	 * @return bool
 	 */
-	public function WebLocation () {
-		return $this->_file()->WebLocation();
+	public function Commit (QuarkFile $file = null) {
+		if ($file == null) return false;
+
+		if ($this->resource != null)
+			return $this->_config->CDNProvider()->CDNResourceUpdate($this->resource, $file);
+
+		$id = $this->_config->CDNProvider()->CDNResourceCreate($file);
+		if (!$id) return false;
+
+		$this->resource = $id;
+		return true;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Erase () {
+		return $this->resource != null
+			? $this->_config->CDNProvider()->CDNResourceDelete($this->resource)
+			: false;
 	}
 
 	/**
@@ -124,17 +116,13 @@ class CDNResource extends QuarkFile implements IQuarkModel, IQuarkStrongModel, I
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		$uri = QuarkURI::FromURI($raw);
-
-		if ($uri == null) return null;
-
-		$this->resource = $uri->Route(1);
+		$this->resource = (string)$raw;
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return '';//$this->_config->ResourceURL($this->resource);
+		return $this->resource;
 	}
 }
