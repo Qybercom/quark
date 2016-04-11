@@ -24,7 +24,6 @@ use Quark\Extensions\CDN\IQuarkCDNProvider;
  * @property string $app = ''
  * @property string $origin = ''
  * @property string[] $hosts = []
- * @property bool $recycle = false
  *
  * @package Quark\Extensions\CDN\Providers
  */
@@ -125,16 +124,17 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 */
 	public function CDNResourceCreate (QuarkFile $file) {
 		$now = QuarkDate::GMTNow(QuarkDate::NOW_FULL);
-
-		$file->location = implode('/', array(
-			$now->Format('Ymd'),
-			$now->Format('His'),
+		$parent = implode('/', array(
+			$now->Format('Y/m/d'),
+			$now->Format('H'),
 			Quark::GuID()
 		));
 
-		if (!$file->Upload()) return false;
+		$file->Location($this->_fsHost . '/' . $parent);
 
-		$id = base64_encode($file->location . '.' . $file->extension);
+		if (!$file->SaveContent(QuarkFile::MODE_DEFAULT, true)) return false;
+
+		$id = base64_encode($parent . '.' . $file->extension);
 		$origin = $this->_host($id);
 
 		/**
@@ -159,10 +159,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	public function CDNResourceUpdate ($id, QuarkFile $file) {
 		$resource = $this->_resource($id);
 
-		if ($resource == null) {
-			Quark::Log('[QuarkSelfCDN] Resource with id "' . $id . '"', Quark::LOG_WARN);
-			return false;
-		}
+		if ($resource == null) return false;
 
 		$origin = $this->_host($id);
 
@@ -181,7 +178,9 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 * @return bool
 	 */
 	public function CDNResourceDelete ($id) {
-		// TODO: Implement CDNResourceDelete() method.
+		$resource = $this->_resource($id);
+
+		return $resource ? $resource->Remove() : false;
 	}
 
 	/**
@@ -204,8 +203,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 			'id' => '',
 			'app' => '',
 			'origin' => '',
-			'hosts' => array(),
-			'recycle' => false
+			'hosts' => array()
 		);
 	}
 
@@ -232,9 +230,14 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 * @return QuarkModel|QuarkSelfCDN
 	 */
 	private function _resource ($id) {
-		return QuarkModel::FindOne($this, array(
+		$resource = QuarkModel::FindOne($this, array(
 			'id' => $id,
 			'app' => $this->_appId
 		));
+
+		if ($resource == null)
+			Quark::Log('[QuarkSelfCDN] Resource with id "' . $id . '" for application "' . $this->_appId . '" not found', Quark::LOG_WARN);
+
+		return $resource;
 	}
 }

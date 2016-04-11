@@ -91,7 +91,17 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$data = QuarkHTTPClient::To($uri, $request, $response);
 
 		if ($data == null || !isset($data->status) || $data->status != 200)
-			throw new QuarkArchException('[' . $uri . '] QuarkRest API is not reachable. Response: ' . print_r($data, true));
+			throw new QuarkArchException(
+				'[' . $uri . '] QuarkRest API is not reachable. ' . "\r\n" .
+				'--- [REQUEST.RAW] ---' .  "\r\n" .
+				$request->SerializeRequest() . "\r\n" .
+				'--- [REQUEST.DATA] ---' .  "\r\n" .
+				print_r($request->Data(), true) .  "\r\n" .
+				'--- [RESPONSE.RAW] ---' . "\r\n" .
+				$response->Raw() . "\r\n" .
+				'--- [RESPONSE.DATA] ---' . "\r\n" .
+				print_r($response->Data(), true) .  "\r\n"
+			);
 
 		return $data;
 	}
@@ -203,7 +213,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			return isset($api->status) && $api->status == 200;
 		}
 		catch (QuarkArchException $e) {
-			Quark::Log($e->message . print_r($model, true), $e->lvl);
+			Quark::Log($e->message, $e->lvl);
 			return false;
 		}
 	}

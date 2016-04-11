@@ -9,6 +9,7 @@ use Quark\IQuarkLinkedModel;
 use Quark\Quark;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
+use Quark\QuarkModel;
 
 /**
  * Class CDNResource
@@ -59,7 +60,7 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 * @return string
 	 */
 	public function URL (QuarkFile $fallback = null) {
-		if ($this->resource == null)
+		if (!isset($this->resource) || $this->resource == null)
 			return $this->_default->WebLocation();
 
 		$url = $this->_config->CDNProvider()->CDNResourceURL($this->resource);
@@ -69,14 +70,19 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 
 	/**
 	 * @param QuarkFile $file = null
+	 * @param bool $force = rue
 	 *
 	 * @return bool
 	 */
-	public function Commit (QuarkFile $file = null) {
+	public function Commit (QuarkFile $file = null, $force = true) {
 		if ($file == null) return false;
 
-		if ($this->resource != null)
-			return $this->_config->CDNProvider()->CDNResourceUpdate($this->resource, $file);
+		if (isset($this->resource) && $this->resource != null) {
+			$update = $this->_config->CDNProvider()->CDNResourceUpdate($this->resource, $file);
+
+			if ($update) return $update;
+			if (!$force) return false;
+		}
 
 		$id = $this->_config->CDNProvider()->CDNResourceCreate($file);
 		if (!$id) return false;
@@ -116,7 +122,9 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		$this->resource = (string)$raw;
+		return new QuarkModel($this, array(
+			'resource' => $raw
+		));
 	}
 
 	/**
