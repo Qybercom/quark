@@ -54,6 +54,12 @@ body {
     margin: -4px 10px 6px 0;
 }
 
+#presence-header-cleaner {
+    display: inline-block;
+    width: 0;
+    height: 24px;
+}
+
 #presence-search {
     display: inline-block;
     margin: 0 0 0 15px;

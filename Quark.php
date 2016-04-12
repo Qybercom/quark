@@ -3562,6 +3562,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function FieldError (QuarkModel $model = null, $field = '', $template = self::FIELD_ERROR_TEMPLATE) {
+		if ($model == null) return '';
+
 		$errors = $model->RawValidationErrors();
 		$out = '';
 
@@ -4802,7 +4804,10 @@ class QuarkModel implements IQuarkContainer {
 	private static function _import (IQuarkModel $model, $source) {
 		if (!is_array($source) && !is_object($source)) return $model;
 
-		$fields = $model->Fields();
+		$fields = (array)$model->Fields();
+
+		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
+			$fields = array_replace($fields, (array)$model->RuntimeFields());
 
 		if ($model instanceof IQuarkModelWithDataProvider) {
 			/**
@@ -4911,7 +4916,10 @@ class QuarkModel implements IQuarkContainer {
 		$output = clone $model;
 
 		if ($model instanceof IQuarkStrongModel) {
-			$fields = $model->Fields();
+			$fields = (array)$model->Fields();
+
+			if ($model instanceof IQuarkStrongModelWithRuntimeFields)
+				$fields = array_replace($fields, (array)$model->RuntimeFields());
 
 			if (is_array($fields) || is_object($fields))
 				foreach ($fields as $key => $field) {
@@ -5301,6 +5309,18 @@ interface IQuarkLinkedModel {
  * @package Quark
  */
 interface IQuarkStrongModel { }
+
+/**
+ * Interface IQuarkStrongModelWithRuntimeFields
+ *
+ * @package Quark
+ */
+interface IQuarkStrongModelWithRuntimeFields extends IQuarkStrongModel {
+	/**
+	 * @return mixed
+	 */
+	public function RuntimeFields();
+}
 
 /**
  * Interface IQuarkNullableModel
@@ -6717,7 +6737,10 @@ class QuarkSession {
 		$user = $user->Model();
 
 		if (!($user instanceof IQuarkAuthorizableModel))
-			throw new QuarkArchException('Model ' . get_class($user) . ' is not an IQuarkAuthorizableModel');
+			throw new QuarkArchException('[QuarkSession::ForUser] Model ' . get_class($user) . ' is not an IQuarkAuthorizableModel');
+
+		if ($this->_source == null)
+			throw new QuarkArchException('[QuarkSession::ForUser] Called session does not have a connected session source. Please check that called service is a IQuarkAuthorizableService or its inheritor.');
 
 		$data = $this->_source->Provider()->Login($this->_source->Name(), $user, $criteria, $lifetime);
 		if ($data == null) return false;
