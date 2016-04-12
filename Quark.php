@@ -2599,15 +2599,7 @@ trait QuarkContainerBehavior {
 	 * @return mixed
 	 */
 	public function __call ($method, $args) {
-		/**
-		 * @var IQuarkPrimitive|QuarkContainerBehavior $this
-		 */
-		$container = Quark::ContainerOf($this->ObjectID());
-
-		if ($container == null)
-			$container = $this->_envelope();
-
-		$container->Primitive($this);
+		$container = $this->Container();
 
 		return method_exists($container, $method)
 			? call_user_func_array(array($container, $method), $args)
@@ -2619,6 +2611,23 @@ trait QuarkContainerBehavior {
 	 */
 	public function ObjectID () {
 		return spl_object_hash($this);
+	}
+
+	/**
+	 * @return IQuarkContainer
+	 */
+	public function Container () {
+		/**
+		 * @var IQuarkPrimitive|QuarkContainerBehavior $this
+		 */
+		$container = Quark::ContainerOf($this->ObjectID());
+
+		if ($container == null)
+			$container = $this->_envelope();
+
+		$container->Primitive($this);
+		
+		return $container;
 	}
 
 	/**
