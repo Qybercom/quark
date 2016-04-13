@@ -17,8 +17,6 @@ class VersionControl implements IQuarkExtension {
 	private $_config;
 
 	/**
-	 * VersionControl constructor.
-	 *
 	 * @param string $config
 	 */
 	public function __construct ($config) {

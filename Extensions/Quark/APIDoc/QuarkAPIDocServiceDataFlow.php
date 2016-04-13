@@ -23,8 +23,6 @@ class QuarkAPIDocServiceDataFlow {
 	private $_info = '';
 
 	/**
-	 * QuarkAPIDocServiceDataFlow constructor.
-	 *
 	 * @param string $payload = ''
 	 * @param string $uri = ''
 	 * @param string $info = ''

@@ -14,6 +14,7 @@ use Quark\QuarkDTO;
 class Payment implements IQuarkExtension {
 	const CURRENCY_MDL = 'MDL';
 	const CURRENCY_RUB = 'RUB';
+	const CURRENCY_RUR = 'RUR';
 	const CURRENCY_USD = 'USD';
 	const CURRENCY_EUR = 'EUR';
 

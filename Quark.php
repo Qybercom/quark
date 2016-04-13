@@ -948,14 +948,29 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	const PROCESSOR_RESPONSE = '_processorResponse';
 	const PROCESSOR_BOTH = '_processorBoth';
 
+	/**
+	 * @var string $_statusNotFound = QuarkDTO::STATUS_404_NOT_FOUND
+	 */
 	private $_statusNotFound = QuarkDTO::STATUS_404_NOT_FOUND;
+
+	/**
+	 * @var string $_statusServerError = QuarkDTO::STATUS_500_SERVER_ERROR
+	 */
 	private $_statusServerError = QuarkDTO::STATUS_500_SERVER_ERROR;
 
 	/**
-	 * @var IQuarkIOProcessor
+	 * @var IQuarkIOProcessor $_processorRequest = null
 	 */
 	private $_processorRequest = null;
+
+	/**
+	 * @var IQuarkIOProcessor $_processorResponse = null
+	 */
 	private $_processorResponse = null;
+
+	/**
+	 * @var IQuarkIOProcessor $_processorBoth = null
+	 */
 	private $_processorBoth = null;
 
 	/**
@@ -1067,6 +1082,9 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		$service->Input()->Headers($headers);
 
 		QuarkView::ExpectedLanguage($service->Input()->ExpectedLanguage());
+
+		$service->Input()->Merge((object)$_GET);
+		$service->InitProcessors();
 
 		$input = array_replace_recursive(
 			$_GET,
@@ -1469,9 +1487,11 @@ interface IQuarkPostService extends IQuarkHTTPService {
  */
 interface IQuarkServiceWithCustomProcessor {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return IQuarkIOProcessor
 	 */
-	public function Processor();
+	public function Processor(QuarkDTO $request);
 }
 
 /**
@@ -1481,9 +1501,11 @@ interface IQuarkServiceWithCustomProcessor {
  */
 interface IQuarkServiceWithCustomRequestProcessor {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return IQuarkIOProcessor
 	 */
-	public function RequestProcessor();
+	public function RequestProcessor(QuarkDTO $request);
 }
 
 /**
@@ -1493,9 +1515,11 @@ interface IQuarkServiceWithCustomRequestProcessor {
  */
 interface IQuarkServiceWithCustomResponseProcessor {
 	/**
+	 * @param QuarkDTO $request
+	 *
 	 * @return IQuarkIOProcessor
 	 */
-	public function ResponseProcessor();
+	public function ResponseProcessor(QuarkDTO $request);
 }
 
 /**
@@ -1808,6 +1832,10 @@ class QuarkThreadSet {
 	 * @var IQuarkThread[] $_threads
 	 */
 	private $_threads;
+
+	/**
+	 * @var array $_args = []
+	 */
 	private $_args = array();
 
 	/**
@@ -2414,19 +2442,28 @@ class QuarkService implements IQuarkContainer {
 		$this->_output = new QuarkDTO();
 		$this->_output->Processor($output ? $output : new QuarkHTMLIOProcessor());
 		$this->_input->URI(QuarkURI::FromURI(Quark::NormalizePath($uri, false), false));
+		
+		Quark::Container($this);
+	}
 
+	/**
+	 * @return QuarkService
+	 */
+	public function InitProcessors () {
 		if ($this->_service instanceof IQuarkServiceWithCustomProcessor) {
-			$this->_input->Processor($this->_service->Processor());
-			$this->_output->Processor($this->_service->Processor());
+			$processor = $this->_service->Processor($this->_input);
+
+			$this->_input->Processor($processor);
+			$this->_output->Processor($processor);
 		}
 
 		if ($this->_service instanceof IQuarkServiceWithCustomRequestProcessor)
-			$this->_input->Processor($this->_service->RequestProcessor());
+			$this->_input->Processor($this->_service->RequestProcessor($this->_input));
 
 		if ($this->_service instanceof IQuarkServiceWithCustomResponseProcessor)
-			$this->_output->Processor($this->_service->ResponseProcessor());
+			$this->_output->Processor($this->_service->ResponseProcessor($this->_input));
 
-		Quark::Container($this);
+		return $this;
 	}
 
 	/**
@@ -2996,6 +3033,21 @@ class QuarkObject {
 			if ($val === $value) return $key;
 
 		return false;
+	}
+
+	/**
+	 * @param $value
+	 *
+	 * @return string
+	 */
+	public static function Stringify ($value) {
+		if (is_bool($value))
+			return $value ? 'true' : 'false';
+
+		if (is_null($value)) return 'null';
+		if (is_array($value)) return 'array';
+
+		return (string)$value;
 	}
 }
 
@@ -5645,8 +5697,6 @@ class QuarkField {
 	private $_value = '';
 
 	/**
-	 * QuarkField constructor.
-	 *
 	 * @param string $name = ''
 	 * @param string $type = self::TYPE_STRING
 	 * @param string $value = ''
@@ -7030,6 +7080,22 @@ class QuarkKeyValuePair {
 		$pair = each($field);
 
 		return new self($pair['key'], $pair['value']);
+	}
+
+	/**
+	 * @param string $delimiter = ''
+	 * @param string $source = ''
+	 * @param bool $strict = false
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function ByDelimiter ($delimiter = '', $source = '', $strict = false) {
+		$pair = explode($delimiter, $source);
+		
+		return new self($pair[0], sizeof($pair) == 1
+			? ($strict ? '' : $pair[0])
+			: $pair[1]
+		);
 	}
 }
 
@@ -9606,6 +9672,11 @@ class QuarkDTO {
 	private $_languages = array();
 
 	/**
+	 * @var QuarkMIMEType[] $_types = []
+	 */
+	private $_types = array();
+
+	/**
 	 * @var string $_agent = ''
 	 */
 	private $_agent = '';
@@ -9813,6 +9884,7 @@ class QuarkDTO {
 			$this->_headers += $data->Headers();
 			$this->_cookies += $data->Cookies();
 			$this->_languages += $data->Languages();
+			$this->_types += $data->Types();
 			$this->_uri = $data->URI() == null ? $this->_uri : $data->URI();
 			$this->_remote = $data->Remote() == null ? $this->_remote : $data->Remote();
 			$this->_charset = $data->Charset();
@@ -9901,7 +9973,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param string $method
+	 * @param string $method = ''
 	 *
 	 * @return string
 	 */
@@ -9913,8 +9985,8 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param int|string 	$code = 0
-	 * @param string 		$text = 'OK'
+	 * @param int|string $code = 0
+	 * @param string $text = 'OK'
 	 *
 	 * @return string
 	 */
@@ -9926,7 +9998,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param array $headers
+	 * @param array $headers = []
 	 *
 	 * @return array
 	 */
@@ -9950,7 +10022,7 @@ class QuarkDTO {
 
 	/**
 	 * @param $key
-	 * @param $value
+	 * @param $value = ''
 	 *
 	 * @return mixed
 	 */
@@ -9997,6 +10069,13 @@ class QuarkDTO {
 					$this->_boundary = $boundary[1];
 
 				$this->_multipart = strpos($type[0], 'multipart/') !== false;
+
+				if (sizeof($this->_types) == 0)
+					$this->_types = QuarkMIMEType::FromHeader($value);
+				break;
+
+			case self::HEADER_ACCEPT:
+				$this->_types = QuarkMIMEType::FromHeader($value);
 				break;
 
 			default: break;
@@ -10006,7 +10085,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param QuarkCookie[] $cookies
+	 * @param QuarkCookie[] $cookies = []
 	 *
 	 * @return QuarkCookie[]
 	 */
@@ -10023,16 +10102,15 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	public function Cookie (QuarkCookie $cookie) {
-		if ($cookie != null)
-			$this->_cookies[] = $cookie;
+		$this->_cookies[] = $cookie;
 
 		return $this;
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = ''
 	 *
-	 * @return QuarkCookie|null
+	 * @return QuarkCookie
 	 */
 	public function GetCookieByName ($name = '') {
 		foreach ($this->_cookies as $cookie)
@@ -10042,7 +10120,7 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param QuarkLanguage[] $languages
+	 * @param QuarkLanguage[] $languages = []
 	 *
 	 * @return QuarkLanguage[]
 	 */
@@ -10059,42 +10137,120 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	public function Language (QuarkLanguage $language) {
-		if ($language != null)
-			$this->_languages[] = $language;
+		$this->_languages[] = $language;
 
 		return $this;
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = QuarkLanguage::ANY
 	 *
-	 * @return QuarkLanguage|null
+	 * @return QuarkLanguage
 	 */
-	public function GetLanguageByName ($name = '') {
+	public function GetLanguageByName ($name = QuarkLanguage::ANY) {
 		foreach ($this->_languages as $language)
-			if ($language->Is($name)) return $language;
+			if ($name == QuarkLanguage::ANY || $language->Is($name)) return $language;
 
 		return null;
 	}
 
 	/**
-	 * @param int $quantity = 0
+	 * @param int $quantity = 1
 	 *
 	 * @return QuarkLanguage
 	 */
-	public function GetLanguageByQuantity ($quantity = 0) {
-		return isset($this->_languages[$quantity]) ? $this->_languages[$quantity] : null;
+	public function GetLanguageByQuantity ($quantity = 1) {
+		foreach ($this->_languages as $language)
+			if ($language->Quantity() == $quantity) return $language;
+		
+		return null;
 	}
 
 	/**
-	 * @param int $quantity = 0
+	 * @param int $quantity = 1
 	 *
 	 * @return string
 	 */
-	public function ExpectedLanguage ($quantity = 0) {
+	public function ExpectedLanguage ($quantity = 1) {
 		$language = $this->GetLanguageByQuantity($quantity);
 
 		return $language == null ? QuarkLanguage::ANY : $language->Name();
+	}
+
+	/**
+	 * @param string $name = QuarkLanguage::ANY
+	 *
+	 * @return bool
+	 */
+	public function AcceptLanguage ($name = QuarkLanguage::ANY) {
+		return $this->GetLanguageByName($name) != null;
+	}
+
+	/**
+	 * @param QuarkMIMEType[] $types = []
+	 *
+	 * @return QuarkMIMEType[]
+	 */
+	public function Types ($types = []) {
+		if (func_num_args() != 0)
+			$this->_types = $types;
+		
+		return $this->_types;
+	}
+
+	/**
+	 * @param QuarkMIMEType $type
+	 *
+	 * @return QuarkDTO
+	 */
+	public function Type (QuarkMIMEType $type) {
+		$this->_types[] = $type;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $name = QuarkMIMEType::ANY
+	 *
+	 * @return QuarkMIMEType
+	 */
+	public function GetTypeByName ($name = QuarkMIMEType::ANY) {
+		foreach ($this->_types as $type)
+			if ($name == QuarkMIMEType::ANY || $type->Is($name)) return $type;
+
+		return null;
+	}
+
+	/**
+	 * @param int $quantity = 1
+	 *
+	 * @return QuarkMIMEType
+	 */
+	public function GetTypeByQuantity ($quantity = 1) {
+		foreach ($this->_types as $type)
+			if ($type->Quantity() == $quantity) return $type;
+
+		return null;
+	}
+
+	/**
+	 * @param int $quantity = 1
+	 *
+	 * @return string
+	 */
+	public function ExpectedType ($quantity = 1) {
+		$type = $this->GetTypeByQuantity($quantity);
+
+		return $type == null ? QuarkMIMEType::ANY : $type->Name();
+	}
+
+	/**
+	 * @param string $type = QuarkMIMEType::ANY
+	 *
+	 * @return bool
+	 */
+	public function AcceptType ($type = QuarkMIMEType::ANY) {
+		return $this->GetTypeByName($type) != null;
 	}
 
 	/**
@@ -10757,6 +10913,9 @@ class QuarkHTTPClient {
 	public function __construct (QuarkDTO $request, QuarkDTO $response = null) {
 		$this->_request = $request;
 		$this->_response = $response;
+
+		if ($this->_response != null)
+			$this->_request->Header(QuarkDTO::HEADER_ACCEPT, $this->_response->Processor()->MimeType());
 	}
 
 	/**
@@ -11046,7 +11205,7 @@ class QuarkCookie {
 	}
 
 	/**
-	 * @param string $header
+	 * @param string $header = ''
 	 *
 	 * @return QuarkCookie[]
 	 */
@@ -11065,7 +11224,7 @@ class QuarkCookie {
 	}
 
 	/**
-	 * @param string $header
+	 * @param string $header = ''
 	 *
 	 * @return QuarkCookie
 	 */
@@ -11091,7 +11250,7 @@ class QuarkCookie {
 	}
 
 	/**
-	 * @param array $cookies
+	 * @param QuarkCookie[] $cookies = []
 	 *
 	 * @return string
 	 */
@@ -11105,7 +11264,7 @@ class QuarkCookie {
 	}
 
 	/**
-	 * @param bool $full
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
@@ -11137,14 +11296,19 @@ class QuarkLanguage {
 	const MD_MD = 'md-MD';
 
 	/**
-	 * @var string $_name = ''
+	 * @var string $_name = self::ANY
 	 */
 	private $_name = '';
 
 	/**
-	 * @var int $_quantity = 1
+	 * @var int|float $_quantity = 1
 	 */
 	private $_quantity = 1;
+
+	/**
+	 * @var string $_family = ''
+	 */
+	private $_family = '';
 
 	/**
 	 * @var string $_location = ''
@@ -11152,25 +11316,29 @@ class QuarkLanguage {
 	private $_location = '';
 
 	/**
-	 * @param string $name
+	 * @param string $name = self::ANY
 	 * @param int $quantity = 1
-	 * @param string $location
+	 * @param string $location = ''
 	 */
-	public function __construct ($name = '', $quantity = 1, $location = '') {
+	public function __construct ($name = self::ANY, $quantity = 1, $location = '') {
 		$this->_name = $name;
 		$this->_quantity = $quantity;
+
+		$name = explode('-', $name);
+		
+		$this->_family = $name[0];
 		$this->_location = strtoupper(func_num_args() == 3
 			? $location
-			: array_reverse(explode('-', $name))[0]
+			: array_reverse($name)[0]
 		);
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = self::ANY
 	 *
 	 * @return string
 	 */
-	public function Name ($name = '') {
+	public function Name ($name = self::ANY) {
 		if (func_num_args() != 0)
 			$this->_name = $name;
 
@@ -11178,9 +11346,9 @@ class QuarkLanguage {
 	}
 
 	/**
-	 * @param int $quantity
+	 * @param int|float $quantity = 1
 	 *
-	 * @return int
+	 * @return int|float
 	 */
 	public function Quantity ($quantity = 1) {
 		if (func_num_args() != 0)
@@ -11190,14 +11358,16 @@ class QuarkLanguage {
 	}
 
 	/**
-	 * @param string $location
-	 *
 	 * @return string
 	 */
-	public function Location ($location = '') {
-		if (func_num_args() != 0)
-			$this->_location = strtoupper($location);
+	public function Family () {
+		return $this->_family;
+	}
 
+	/**
+	 * @return string
+	 */
+	public function Location () {
 		return $this->_location;
 	}
 
@@ -11208,14 +11378,20 @@ class QuarkLanguage {
 	 * @return bool
 	 */
 	public function Is ($language, $strict = false) {
-		return $this->_name == $language
-		|| $strict
-			? false
-			: ($this->_location == strtoupper($language));
+		if ($strict) return $this->_name == $language;
+		if ($language == self::ANY) return true;
+		if ($this->_name == self::ANY) return true;
+		if ($this->_name == $language) return true;
+
+		$item = QuarkKeyValuePair::ByDelimiter('-', $language);
+
+		return $this->_family == $item->Key()
+			? ($this->_location == '' || $item->Value() == '')
+			: false;
 	}
 
 	/**
-	 * @param string $header
+	 * @param string $header = ''
 	 *
 	 * @return QuarkLanguage[]
 	 */
@@ -11235,7 +11411,7 @@ class QuarkLanguage {
 	}
 
 	/**
-	 * @param string $header
+	 * @param string $header = ''
 	 *
 	 * @return QuarkLanguage[]
 	 */
@@ -11250,7 +11426,7 @@ class QuarkLanguage {
 	}
 
 	/**
-	 * @param QuarkLanguage[] $languages
+	 * @param QuarkLanguage[] $languages = []
 	 *
 	 * @return string
 	 */
@@ -11269,7 +11445,7 @@ class QuarkLanguage {
 	}
 
 	/**
-	 * @param QuarkLanguage[] $languages
+	 * @param QuarkLanguage[] $languages = []
 	 *
 	 * @return string
 	 */
@@ -11285,6 +11461,171 @@ class QuarkLanguage {
 			$out[] = $language->Name();
 
 		return implode(',', $out);
+	}
+}
+/**
+ * Class QuarkMIMEType
+ *
+ * @package Quark
+ */
+class QuarkMIMEType {
+	const ANY = '*/*';
+
+	/**
+	 * @var string $_name = self::ANY
+	 */
+	private $_name = self::ANY;
+
+	/**
+	 * @var int|float $_quantity = 1
+	 */
+	private $_quantity = 1;
+
+	/**
+	 * @var string $_range = '*'
+	 */
+	private $_range = '*';
+
+	/**
+	 * @var string $_type = '*'
+	 */
+	private $_type = '*';
+
+	/**
+	 * @var array $_params = []
+	 */
+	private $_params = array();
+
+	/**
+	 * @param string $name = self::ANY
+	 * @param int $quantity = 1
+	 * @param string $type = '*'
+	 */
+	public function __construct ($name = self::ANY, $quantity = 1, $type = '*') {
+		$this->_name = $name;
+		$this->_quantity = $quantity;
+		$this->_params['q'] = $quantity;
+		
+		$type = explode('/', $name);
+
+		$this->_range = $type[0];
+		$this->_type = func_num_args() == 3
+			? $type
+			: array_reverse($type)[0];
+	}
+
+	/**
+	 * @param string $name = self::ANY
+	 *
+	 * @return string
+	 */
+	public function Name ($name = self::ANY) {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+		
+		return $this->_name;
+	}
+
+	/**
+	 * @param int|float $quantity = 1
+	 *
+	 * @return int|float
+	 */
+	public function Quantity ($quantity = 1) {
+		if (func_num_args() != 0)
+			$this->_quantity = $quantity;
+
+		return $this->_quantity;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Range () {
+		return $this->_range;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Type () {
+		return $this->_type;
+	}
+
+	/**
+	 * @param array $params = []
+	 *
+	 * @return array
+	 */
+	public function Params ($params = []) {
+		if (func_num_args() != 0)
+			$this->_params = $params;
+		
+		return $this->_params;
+	}
+
+	/**
+	 * @param string $key
+	 * @param string $value
+	 *
+	 * @return QuarkMIMEType
+	 */
+	public function Param ($key, $value) {
+		$this->_params[$key] = $value;
+
+		if ($key == 'q')
+			$this->_quantity = (float)$value;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $type
+	 * @param bool $strict = false
+	 *
+	 * @return bool
+	 */
+	public function Is ($type, $strict = false) {
+		if ($strict) return $this->_name == $type;
+		if ($type == self::ANY) return true;
+		if ($this->_name == self::ANY) return true;
+		if ($this->_name == $type) return true;
+
+		$item = QuarkKeyValuePair::ByDelimiter('/', $type);
+		
+		return $this->_range == $item->Key()
+			? ($this->_type == '*' || $item->Value() == '*')
+			: false;
+	}
+	
+	/**
+	 * @param string $header = ''
+	 *
+	 * @return QuarkMIMEType[]
+	 */
+	public static function FromHeader ($header = '') {
+		$out = array();
+		$types = explode(',', $header);
+
+		foreach ($types as $raw) {
+			$type = explode(';', trim($raw));
+			$item = new QuarkMIMEType($type[0]);
+			
+			if (sizeof($type) > 1) {
+				$params = array_slice($type, 1);
+				
+				foreach ($params as $param) {
+					$pair = explode('=', trim($param));
+
+					if (sizeof($pair) == 2)
+						$item->Param($pair[0], $pair[1]);
+				}
+			}
+
+			$out[] = $item;
+		}
+
+		return $out;
 	}
 }
 
@@ -12008,10 +12349,12 @@ interface IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkPlainIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'plain/text';
+
 	/**
 	 * @return string
 	 */
-	public function MimeType () { return 'plain/text'; }
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data
@@ -12041,12 +12384,13 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
-	const TYPE_KEY = 'text/html';
+	const MIME = 'text/html';
+	const TYPE_KEY = self::MIME;
 
 	/**
 	 * @return string
 	 */
-	public function MimeType () { return 'text/html'; }
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data
@@ -12085,12 +12429,12 @@ class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkFormIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'application/x-www-form-urlencoded';
+
 	/**
 	 * @return string
 	 */
-	public function MimeType () {
-		return 'application/x-www-form-urlencoded';
-	}
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data
@@ -12128,10 +12472,12 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkJSONIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'application/json';
+
 	/**
 	 * @return string
 	 */
-	public function MimeType () { return 'application/json'; }
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data
@@ -12164,19 +12510,114 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'text/xml';
+	const ROOT = '<root/>';
+	const ITEM = 'item';
+
 	/**
-	 * Constructor for QuarkXMLIOProcessor
+	 * @var string $_root = self::ROOT
 	 */
-	public function __construct () {
+	private $_root = self::ROOT;
+
+	/**
+	 * @var string $_item = self::ITEM
+	 */
+	private $_item = self::ITEM;
+
+	/**
+	 * @param string $root = self::ROOT
+	 * @param string $item = self::ITEM
+	 */
+	public function __construct ($root = self::ROOT, $item = self::ITEM) {
 		\libxml_use_internal_errors(true);
+
+		$this->_root = $root;
+		$this->_item = $item;
+	}
+
+	/**
+	 * @param \SimpleXMLElement $xml
+	 * @param array|object $data
+	 *
+	 * @return \SimpleXMLElement
+	 */
+	private function &_encoder (\SimpleXMLElement &$xml, $data) {
+		if (!$data) return $xml;
+		
+		if (is_scalar($data)) {
+			$xml->addChild(QuarkObject::Stringify($data));
+			return $xml;
+		}
+
+		foreach ($data as $key => $value) {
+			if (QuarkObject::isAssociative($value)) {
+				$parent = $xml->addChild($key);
+				$this->_encoder($parent, $value);
+			}
+
+			if (QuarkObject::isIterative($value)) {
+				$parent = $xml->addChild($key);
+
+				if (sizeof($value) == 0)
+					$parent[0] = '';
+
+				foreach ($value as $item) {
+					/*if (is_scalar($item)) $parent->addChild($item);
+					else {*/
+						$node = $parent->addChild($this->_item);
+						$this->_encoder($node, $item);
+					//}
+				}
+			}
+
+			if (is_scalar($value))
+				$xml->addChild($key, QuarkObject::Stringify($value));
+		}
+
+		return $xml;
+	}
+
+	/**
+	 * @param \SimpleXMLElement $xml
+	 *
+	 * @return object
+	 */
+	private function _decoder (\SimpleXMLElement &$xml) {
+		$out = array();
+
+		foreach ($xml as $key => $value) {
+			/**
+			 * @var \SimpleXMLElement $value
+			 */
+			if ($value->{$this->_item}->count() != 0) {
+				$out[$key] = array();
+
+				foreach ($value->{$this->_item} as $item) {
+					/**
+					 * @var \SimpleXMLElement $item
+					 * @var \SimpleXMLElement $child
+					 */
+					$child = $item->children()[0];
+					$out[$key][] = $item->count() == 1 && empty($child)
+						? $child->getName()
+						: $this->_decoder($item);
+				}
+
+				continue;
+			}
+
+			$out[$key] = $value->count() == 0
+				? (string)$value
+				: $this->_decoder($value);
+		}
+
+		return (object)$out;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function MimeType () {
-		return 'text/xml';
-	}
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data
@@ -12185,11 +12626,13 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Encode ($data) {
 		try {
-			$xml = new \SimpleXMLElement('<root/>');
-			$xml = QuarkObject::Normalize($xml, $data);
+			$xml = new \SimpleXMLElement($this->_root, LIBXML_NOEMPTYTAG);
+			$this->_encoder($xml, $data);
+
 			return $xml->asXML();
 		}
 		catch (\Exception $e) {
+			Quark::Log('[QuarkXMLIOProcessor::Encode] Error ' . $e->getMessage(), Quark::LOG_WARN);
 			return '';
 		}
 	}
@@ -12201,7 +12644,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Decode ($raw) {
 		try {
-			return new \SimpleXMLElement($raw);
+			return $this->_decoder(new \SimpleXMLElement($raw));
 		}
 		catch (\Exception $e) {
 			return null;
@@ -12222,12 +12665,12 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'text/xml';
+
 	/**
 	 * @return string
 	 */
-	public function MimeType () {
-		return 'text/xml';
-	}
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $raw

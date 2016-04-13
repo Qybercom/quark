@@ -4,6 +4,8 @@ namespace Quark\Extensions\Payment;
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
+use Quark\Quark;
+
 /**
  * Class PaymentConfig
  *
@@ -67,5 +69,16 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	 */
 	public function ExtensionInstance () {
 		// TODO: Implement ExtensionInstance() method.
+	}
+
+	/**
+	 * @param string $config
+	 *
+	 * @return PaymentConfig
+	 */
+	public static function Instance ($config) {
+		$provider = Quark::Config()->Extension($config);
+
+		return $provider instanceof PaymentConfig ? $provider : null;
 	}
 }

@@ -40,8 +40,6 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 	private $_certificate;
 
 	/**
-	 * QuarkRelayAuth constructor.
-	 *
 	 * @param string $source = ''
 	 * @param string $appId = ''
 	 * @param string $appSecret = ''

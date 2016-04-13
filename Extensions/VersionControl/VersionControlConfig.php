@@ -28,8 +28,6 @@ class VersionControlConfig implements IQuarkExtensionConfig {
 	private $_user;
 
 	/**
-	 * VersionControlConfig constructor.
-	 *
 	 * @param IQuarkVersionControlProvider $provider
 	 * @param string $repository
 	 * @param string $username = ''
