@@ -29,15 +29,15 @@ trait QuarkPresenceControlComponent {
 	}
 
 	/**
-	 * @param string $items = ''
+	 * @param string|string[] $items = ''
 	 * @param string $additional = ''
 	 *
 	 * @return string
 	 */
-	public static function MenuSideWidgetGeneric ($items = '', $additional = '') {
+	public static function MenuSideWidget ($items = '', $additional = '') {
 		return '
 			<div class="quark-presence-column left" id="presence-menu-side-parent">
-				<div class="quark-presence-container left" id="presence-menu-side">' . $items . '</div>' . $additional . '
+				<div class="quark-presence-container left" id="presence-menu-side">' . (is_array($items) ? implode('', $items) : $items) . '</div>' . $additional . '
 			</div>
 		';
 	}
@@ -57,18 +57,18 @@ trait QuarkPresenceControlComponent {
 	}
 
 	/**
-	 * @param string[] $links = []
+	 * @param string[] $items = []
 	 * @param string $additional = ''
 	 * @param callable($href, $text) $button = null
 	 * @param callable($text) $node = null
 	 *
 	 * @return string
 	 */
-	public function MenuSideWidget ($links = [], $additional = '', callable $button = null, callable $node = null) {
+	public function MenuSideWidgetTree ($items = [], $additional = '', callable $button = null, callable $node = null) {
 		if ($button == null)
 			$button = function ($href, $text) { return self::MenuWidgetItem($href, $text); };
 
-		return self::MenuSideWidgetGeneric(QuarkView::TreeMenu(QuarkObject::TreeBuilder($links), $button, $node), $additional);
+		return self::MenuSideWidget(QuarkView::TreeMenu(QuarkObject::TreeBuilder($items), $button, $node), $additional);
 	}
 
 	/**
