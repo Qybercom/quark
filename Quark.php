@@ -12525,14 +12525,21 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	private $_item = self::ITEM;
 
 	/**
+	 * @var bool $_forceNull = true
+	 */
+	private $_forceNull = true;
+
+	/**
 	 * @param string $root = self::ROOT
 	 * @param string $item = self::ITEM
+	 * @param bool $forceNull = true
 	 */
-	public function __construct ($root = self::ROOT, $item = self::ITEM) {
+	public function __construct ($root = self::ROOT, $item = self::ITEM, $forceNull = true) {
 		\libxml_use_internal_errors(true);
 
 		$this->_root = $root;
 		$this->_item = $item;
+		$this->_forceNull = $forceNull;
 	}
 
 	/**
@@ -12562,15 +12569,17 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 					$parent[0] = '';
 
 				foreach ($value as $item) {
-					/*if (is_scalar($item)) $parent->addChild($item);
-					else {*/
+					if ($item === null) continue;
+
+					if (is_scalar($item)) $parent->addChild(QuarkObject::Stringify($item));
+					else {
 						$node = $parent->addChild($this->_item);
 						$this->_encoder($node, $item);
-					//}
+					}
 				}
 			}
 
-			if (is_scalar($value))
+			if (is_scalar($value) || ($this->_forceNull && $value === null))
 				$xml->addChild($key, QuarkObject::Stringify($value));
 		}
 
@@ -12607,7 +12616,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			}
 
 			$out[$key] = $value->count() == 0
-				? (string)$value
+				? ($this->_forceNull && (string)$value == 'null' ? null : (string)$value)
 				: $this->_decoder($value);
 		}
 
