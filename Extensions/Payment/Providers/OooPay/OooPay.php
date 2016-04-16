@@ -58,6 +58,6 @@ class OooPay implements IQuarkPaymentProvider {
 
 		$response = new QuarkDTO(new QuarkXMLIOProcessor());
 
-		return QuarkHTTPClient::To('http://api.mycab/test', $request, $response);
+		return QuarkHTTPClient::To(self::API_ENDPOINT, $request, $response);
 	}
 }
