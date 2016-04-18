@@ -18,7 +18,7 @@ use Quark\Extensions\MediaProcessing\GraphicsDraw\GDPosition;
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw\Actions
  */
 class GDTextAction implements IQuarkGDAction {
-	const DEFAULT_FONT = 'Arial';
+	const DEFAULT_FONT = '';
 	const DEFAULT_SIZE = 20;
 
 	const ALIGN_LEFT = 'align.left';
@@ -92,23 +92,12 @@ class GDTextAction implements IQuarkGDAction {
 	 */
 	public function __construct ($text = '', $font = self::DEFAULT_FONT, $size = self::DEFAULT_SIZE, GDPosition $position = null, GDColor $color = null, $align = self::ALIGN_LEFT) {
 		$this->_text = $text;
-		$this->_font = $font;
 		$this->_size = $size;
 		$this->_position = $position ? $position : new GDPosition(0, $size);
 		$this->_color = $color ? $color : GDColor::FromHEX(GDColor::BLACK);
 		$this->_align = $align;
 
-		$rect = imagettfbbox($size, $this->_position->angle, $font, $text);
-
-		$minX = min(array($rect[0], $rect[2], $rect[4], $rect[6]));
-		$maxX = max(array($rect[0], $rect[2], $rect[4], $rect[6]));
-		$minY = min(array($rect[1], $rect[3], $rect[5], $rect[7]));
-		$maxY = max(array($rect[1], $rect[3], $rect[5], $rect[7]));
-
-		$this->_boxLeft = abs($minX) - 1;
-		$this->_boxTop = abs($minY) - 1;
-		$this->_boxWidth = $maxX - $minX;
-		$this->_boxHeight = $maxY - $minY;
+		$this->Font($font);
 	}
 
 	/**
@@ -129,8 +118,21 @@ class GDTextAction implements IQuarkGDAction {
 	 * @return string
 	 */
 	public function Font ($font = self::DEFAULT_FONT) {
-		if (func_num_args() != 0)
+		if (func_num_args() != 0 && $font != self::DEFAULT_FONT) {
 			$this->_font = $font;
+
+			$rect = imagettfbbox($this->_size, $this->_position->angle, $font, $this->_text);
+
+			$minX = min(array($rect[0], $rect[2], $rect[4], $rect[6]));
+			$maxX = max(array($rect[0], $rect[2], $rect[4], $rect[6]));
+			$minY = min(array($rect[1], $rect[3], $rect[5], $rect[7]));
+			$maxY = max(array($rect[1], $rect[3], $rect[5], $rect[7]));
+
+			$this->_boxLeft = abs($minX) - 1;
+			$this->_boxTop = abs($minY) - 1;
+			$this->_boxWidth = $maxX - $minX;
+			$this->_boxHeight = $maxY - $minY;
+		}
 
 		return $this->_font;
 	}
@@ -212,6 +214,20 @@ class GDTextAction implements IQuarkGDAction {
 	}
 
 	/**
+	 * @param GDPosition $center
+	 * @param int $angle = 0
+	 *
+	 * @return GDPosition
+	 */
+	public function Centralize (GDPosition $center, $angle = 0) {
+		$this->Position(new GDPosition(
+			$this->_boxLeft + $center->x - $this->_boxWidth / 2,
+			$this->_boxTop + $center->y - $this->_boxHeight / 2,
+			$angle
+		));
+	}
+
+	/**
 	 * @param resource $image
 	 * @param QuarkFile $file
 	 *
@@ -280,14 +296,8 @@ class GDTextAction implements IQuarkGDAction {
 	 * @return GDTextAction
 	 */
 	public static function AtCenterOf (GDImage $image, $text = '', $font = self::DEFAULT_FONT, $size = self::DEFAULT_SIZE, $angle = 0, GDColor $color = null, $align = self::ALIGN_LEFT) {
-		$center = $image->Center();
-
 		$action = new self($text, $font, $size, new GDPosition(0, 0, $angle), $color, $align);
-		$action->Position(new GDPosition(
-			$action->_boxLeft + $center->x - $action->_boxWidth / 2,
-			$action->_boxTop + $center->y - $action->_boxHeight / 2,
-			$angle
-		));
+		$action->Centralize($image->Center(), $angle);
 
 		return $action;
 	}

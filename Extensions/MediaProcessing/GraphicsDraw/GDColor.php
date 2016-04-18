@@ -1,37 +1,28 @@
 <?php
 namespace Quark\Extensions\MediaProcessing\GraphicsDraw;
 
+use Quark\IQuarkLinkedModel;
+use Quark\IQuarkModel;
+use Quark\IQuarkStrongModel;
+
+use Quark\QuarkModel;
+
 /**
  * Class GDColor
  *
+ * @property int $r = 0
+ * @property int $g = 0
+ * @property int $b = 0
+ * @property int|float $a = 1.0
+ *
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw
  */
-class GDColor {
+class GDColor implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	const WHITE = 'FFFFFF';
 	const RED = 'FF0000';
 	const GREEN = '00FF00';
 	const BLUE = '0000FF';
 	const BLACK = '000000';
-
-	/**
-	 * @var int $r = 0
-	 */
-	public $r = 0;
-
-	/**
-	 * @var int $g = 0
-	 */
-	public $g = 0;
-
-	/**
-	 * @var int $b = 0
-	 */
-	public $b = 0;
-
-	/**
-	 * @var int|float $a = 1.0
-	 */
-	public $a = 1;
 
 	/**
 	 * @var int $_resource
@@ -158,5 +149,40 @@ class GDColor {
 	 */
 	public function HEXToCSS ($short = false) {
 		return '#' . $this->ToHEX($short);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Fields () {
+		return array(
+			'r' => 0,
+			'g' => 0,
+			'b' => 0,
+			'a' => 1.0
+		);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Rules () {
+		// TODO: Implement Rules() method.
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkModel(self::FromHEX($raw));
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->ToHEX();
 	}
 }
