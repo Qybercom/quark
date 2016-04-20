@@ -11937,7 +11937,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		$this->_followParent($mode);
 
-		if (!is_file($this->tmp_name) || !is_dir(dirname($this->location)) || !rename($this->tmp_name, $this->location)) return false;
+		if (!is_file($this->tmp_name) || !is_dir(dirname($this->location)))  {
+			Quark::Log('[QuarkFile::Upload] The [tmp_name:' . $this->tmp_name . '] or parent dir of [location:' . $this->location . ']. does not exists ' . QuarkException::LastError(), Quark::LOG_WARN);
+			return false;
+		}
+
+		if (!rename($this->tmp_name, $this->location))  {
+			Quark::Log('[QuarkFile::Upload] Cannot move from [tmp_name:' . $this->tmp_name . '] to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
+			return false;
+		}
 
 		$this->Location($this->location);
 		return true;
