@@ -16,7 +16,6 @@ use Quark\Extensions\CDN\IQuarkCDNProvider;
  */
 class NeutrinoCDN implements IQuarkCDNProvider {
 	const ACTION_GET = '';
-	const ACTION_URL = 'endpoint/';
 	const ACTION_CREATE = 'create/';
 	const ACTION_UPDATE = 'update/';
 	const ACTION_REMOVE = 'remove/';
