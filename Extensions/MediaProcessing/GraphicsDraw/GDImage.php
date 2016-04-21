@@ -235,6 +235,36 @@ class GDImage implements IQuarkExtension {
 	}
 
 	/**
+	 * @param int $width
+	 * @param int $height
+	 * @param bool $cover = true
+	 *
+	 * @return GDImage
+	 */
+	public function Fit ($width, $height, $cover = true) {
+		if ($cover) {
+			if ($this->Width() > $width) {
+				$this->Resize($height / $this->Height());
+				$this->Crop($width, $height, ($this->Width() - $width) / 2, 0);
+			}
+
+			if ($this->Height() > $height) {
+				$this->Resize($width / $this->Width());
+				$this->Crop($width, $height, ($this->Height() - $height) / 2, 0);
+			}
+		}
+		else {
+			if ($this->Width() > $width)
+				$this->Resize($width / $this->Width());
+
+			if ($this->Height() > $height)
+				$this->Resize($height / $this->Height());
+		}
+
+		return $this;
+	}
+
+	/**
 	 * http://php.net/manual/ru/function.imagecopymerge.php#92787
 	 *
 	 * @param GDImage $image
@@ -245,7 +275,7 @@ class GDImage implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Merge (GDImage $image, $x = 0, $y = 0, $alpha = 1.0) {
-		$canvas = imagecreatetruecolor($this->Width(), $this->Height());
+		$canvas = self::Canvas($this->Width(), $this->Height());
 
 		imagecopy($canvas, $this->_image, 0, 0, 0, 0, $this->Width(), $this->Height());
 		imagecopy($canvas, $image->Image(), $x, $y, 0, 0, $image->Width(), $image->Height());
@@ -281,11 +311,9 @@ class GDImage implements IQuarkExtension {
 			$bg = new GDColor(255,255,255,0);
 
 		$canvas = imagecreatetruecolor((int)$width, (int)$height);
-		imagealphablending($canvas, false);
 		imagesavealpha($canvas, true);
 
 		$bg->Allocate($canvas);
-
 		imagefill($canvas, 0, 0, $bg->Resource());
 
 		return $canvas;

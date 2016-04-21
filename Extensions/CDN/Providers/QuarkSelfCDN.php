@@ -130,7 +130,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 			Quark::GuID()
 		));
 
-		$file->Location($this->_fsHost . '/' . $parent);
+		$file->Location($this->_fsHost . '/' . $parent . '.' . $file->extension);
 
 		if (!$file->SaveContent(QuarkFile::MODE_DEFAULT, true)) return false;
 

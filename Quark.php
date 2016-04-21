@@ -5763,7 +5763,7 @@ class QuarkField {
 	}
 
 	/**
-	 * @param      $key
+	 * @param $key
 	 * @param bool $nullable
 	 *
 	 * @return bool
@@ -5792,8 +5792,8 @@ class QuarkField {
 	}
 
 	/**
-	 * @param      $key
-	 * @param      $value
+	 * @param $key
+	 * @param $value
 	 * @param bool $sever
 	 * @param bool $nullable
 	 *
@@ -5806,8 +5806,8 @@ class QuarkField {
 	}
 
 	/**
-	 * @param      $key
-	 * @param      $value
+	 * @param $key
+	 * @param $value
 	 * @param bool $sever
 	 * @param bool $nullable
 	 *
@@ -5940,7 +5940,7 @@ class QuarkField {
 	}
 
 	/**
-	 * @param       $key
+	 * @param $key
 	 * @param array $values
 	 * @param bool  $nullable
 	 *
@@ -6006,7 +6006,7 @@ class QuarkField {
 	}
 
 	/**
-	 * @param      $key
+	 * @param $key
 	 * @param bool $nullable
 	 *
 	 * @return bool
@@ -6019,7 +6019,7 @@ class QuarkField {
 	}
 
 	/**
-	 * @param      $key
+	 * @param $key
 	 * @param bool $nullable
 	 *
 	 * @return bool
@@ -6045,7 +6045,7 @@ class QuarkField {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $field
+	 * @param $field
 	 *
 	 * @return bool
 	 */
@@ -11937,7 +11937,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		$this->_followParent($mode);
 
-		if (!is_file($this->tmp_name) || !is_dir(dirname($this->location)) || !rename($this->tmp_name, $this->location)) return false;
+		if (!is_file($this->tmp_name) || !is_dir(dirname($this->location)))  {
+			Quark::Log('[QuarkFile::Upload] The [tmp_name:' . $this->tmp_name . '] or parent dir of [location:' . $this->location . ']. does not exists ' . QuarkException::LastError(), Quark::LOG_WARN);
+			return false;
+		}
+
+		if (!rename($this->tmp_name, $this->location))  {
+			Quark::Log('[QuarkFile::Upload] Cannot move from [tmp_name:' . $this->tmp_name . '] to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
+			return false;
+		}
 
 		$this->Location($this->location);
 		return true;
@@ -11963,19 +11971,6 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	/**
 	 * @return array
 	 */
-	public function Rules () {
-		return array(
-			QuarkField::TypeOf($this->name, QuarkField::TYPE_STRING),
-			QuarkField::TypeOf($this->type, QuarkField::TYPE_STRING),
-			QuarkField::TypeOf($this->size, QuarkField::TYPE_INT),
-			QuarkField::TypeOf($this->tmp_name, QuarkField::TYPE_STRING),
-			QuarkField::MinLength($this->name, 1)
-		);
-	}
-
-	/**
-	 * @return array
-	 */
 	public function Fields () {
 		return array(
 			'_location' => '',
@@ -11986,6 +11981,19 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			'size' => 0,
 			'isDir' => false,
 			'tmp_name' => ''
+		);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function Rules () {
+		return array(
+			QuarkField::TypeOf($this->name, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->type, QuarkField::TYPE_STRING),
+			QuarkField::TypeOf($this->size, QuarkField::TYPE_INT),
+			QuarkField::TypeOf($this->tmp_name, QuarkField::TYPE_STRING),
+			QuarkField::MinLength($this->name, 1)
 		);
 	}
 
