@@ -11820,7 +11820,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	private function _followParent ($mode = self::MODE_DEFAULT) {
 		if (is_dir($this->parent) || is_file($this->parent)) return true;
 		
-		$ok = @mkdir($this->parent, $mode, true);
+		$ok = @mkdir($this->parent, $mode == self::MODE_DEFAULT ? umask() : $mode, true);
 		
 		if (!$ok)
 			Quark::Log('[QuarkFile::_followParent] Can not create dir "' . $this->parent . '". Error: ' . QuarkException::LastError());
