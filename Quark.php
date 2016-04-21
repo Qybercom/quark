@@ -11821,7 +11821,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (is_dir($this->parent) || is_file($this->parent)) return true;
 
 		$mask = umask(0);
-		$ok = @mkdir($this->parent, $mode == self::MODE_DEFAULT ? $mask : $mode, true);
+		$ok = @mkdir($this->parent, self::MODE_GROUP/*$mode == self::MODE_DEFAULT ? $mask : $mode*/, true);
 		umask($mask);
 		
 		if ($mask != umask())
