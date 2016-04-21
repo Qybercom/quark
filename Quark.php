@@ -11637,10 +11637,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 	const TYPE_APPLICATION_OCTET_STREAM = 'application/octet-stream';
 
-	const MODE_DEFAULT = null;
 	const MODE_ANYONE = 0777;
 	const MODE_GROUP = 0771;
 	const MODE_USER = 0711;
+	const MODE_DEFAULT = self::MODE_ANYONE;
 
 	/**
 	 * @var string $location = ''
@@ -11820,13 +11820,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	private function _followParent ($mode = self::MODE_DEFAULT) {
 		if (is_dir($this->parent) || is_file($this->parent)) return true;
 
-		//$mask = umask(0);
-		$ok = @mkdir($this->parent, self::MODE_GROUP/*$mode == self::MODE_DEFAULT ? $mask : $mode*/, true);
-		//umask($mask);
+		$ok = @mkdir($this->parent, $mode, true);
 		
-		//if ($mask != umask())
-			//Quark::Log('[QuarkFile::_followParent] The [umask:' . $mask . '] did not restored correctly for "' . $this->parent . '". Current: ' . umask());
-
 		if (!$ok)
 			Quark::Log('[QuarkFile::_followParent] Can not create dir "' . $this->parent . '". Error: ' . QuarkException::LastError());
 
