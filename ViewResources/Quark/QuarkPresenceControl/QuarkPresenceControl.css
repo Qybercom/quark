@@ -145,7 +145,7 @@ body {
 .presence-label {
     display: inline-block;
     padding: 3px 5px;
-    margin: -5px 0 0 -5px;
+    margin: -2px 0 0 5px;
     border-radius: 2px;
     font-size: 10px;
     line-height: 10px;
@@ -172,7 +172,7 @@ body {
 }
 
 .quark-button .presence-label {
-    float: right;
+	vertical-align: top;
 }
 
 

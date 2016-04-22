@@ -38,15 +38,22 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	private $_storage = '';
 
 	/**
+	 * @var string $_cookie = self::COOKIE_NAME
+	 */
+	private $_cookie = self::COOKIE_NAME;
+
+	/**
 	 * @var bool $_init = false
 	 */
 	private $_init = false;
 
 	/**
 	 * @param string $storage = self::STORAGE
+	 * @param string $cookie = self::COOKIE_NAME
 	 */
-	public function __construct ($storage = self::STORAGE) {
+	public function __construct ($storage = self::STORAGE, $cookie = self::COOKIE_NAME) {
 		$this->_storage = $storage;
+		$this->_cookie = $cookie;
 		$this->_init = func_num_args() != 0;
 	}
 
@@ -58,7 +65,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	 * @return QuarkDTO
 	 */
 	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
-		$cookie = $input->GetCookieByName(self::COOKIE_NAME);
+		$cookie = $input->GetCookieByName($this->_cookie);
 
 		if ($cookie != null)
 			$input->AuthorizationProvider(new QuarkKeyValuePair($name, $cookie->value));
@@ -113,7 +120,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $session->sid));
 		$output->Signature($session->signature);
-		$output->Cookie(new QuarkCookie(self::COOKIE_NAME, $session->sid, $lifetime));
+		$output->Cookie(new QuarkCookie($this->_cookie, $session->sid, $lifetime));
 
 		return $output;
 	}
@@ -137,7 +144,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		if ($session == null || !$session->Remove()) return null;
 
 		$output = new QuarkDTO();
-		$output->Cookie(new QuarkCookie(self::COOKIE_NAME, $id->Value(), -3600));
+		$output->Cookie(new QuarkCookie($this->_cookie, $id->Value(), -3600));
 
 		return $output;
 	}
