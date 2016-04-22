@@ -10,7 +10,6 @@ use Quark\QuarkArchException;
 use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
-use Quark\QuarkObject;
 use Quark\QuarkURI;
 
 /**
@@ -36,9 +35,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return string
 	 */
 	private function _collection (IQuarkModel $model, $options = []) {
-		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
-			? $options[QuarkModel::OPTION_COLLECTION]
-			: QuarkObject::ClassOf($model);
+		$collection = QuarkModel::CollectionName($model, $options);
 
 		if (sizeof((array)$this->_db) == 0)
 			$this->_db = (object)array($collection => array());

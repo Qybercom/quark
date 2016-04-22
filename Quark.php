@@ -4805,6 +4805,26 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @param IQuarkModel|IQuarkModelWithCustomCollectionName $model
+	 * @param array $options
+	 *
+	 * @return string
+	 */
+	public static function CollectionName (IQuarkModel $model = null, $options = []) {
+		if (isset($options[QuarkModel::OPTION_COLLECTION]))
+			return $options[QuarkModel::OPTION_COLLECTION];
+
+		if ($model instanceof IQuarkModelWithCustomCollectionName) {
+			$name = $model->CollectionName();
+
+			if ($name !== null)
+				return $name;
+		}
+
+		return QuarkObject::ClassOf($model);
+	}
+
+	/**
 	 * @param $model
 	 * @param $field
 	 *
@@ -5021,7 +5041,9 @@ class QuarkModel implements IQuarkContainer {
 			if ($buffer !== null) $output = $buffer;
 		}
 
-		if (is_array($options) && isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
+		if ($output === null) return null;
+
+		if ($output instanceof QuarkModel && is_array($options) && isset($options[self::OPTION_EXTRACT]) && $options[self::OPTION_EXTRACT] !== false)
 			$output = $options[self::OPTION_EXTRACT] === true
 				? $output->Extract()
 				: $output->Extract($options[self::OPTION_EXTRACT]);
@@ -5389,6 +5411,17 @@ interface IQuarkModelWithCustomPrimaryKey {
 	 * @return string
 	 */
 	public function PrimaryKey();
+}
+/**
+ * Interface IQuarkModelWithCustomCollectionName
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithCustomCollectionName {
+	/**
+	 * @return string
+	 */
+	public function CollectionName();
 }
 
 /**
@@ -12888,13 +12921,14 @@ class QuarkSQL {
 	 * @return mixed
 	 */
 	public function Query ($model ,$options, $query) {
-		$collection = isset($options[QuarkModel::OPTION_COLLECTION])
-			? $options[QuarkModel::OPTION_COLLECTION]
-			: QuarkObject::ClassOf($model);
-
 		$i = 1;
 		$escape = $this->_provider->EscapeChar();
-		$query = str_replace(self::Collection($model), $escape . $collection . $escape, $query, $i);
+		$query = str_replace(
+			self::Collection($model),
+			$escape . QuarkModel::CollectionName($model, $options) . $escape,
+			$query,
+			$i
+		);
 
 		return $this->_provider->Query($query, $options);
 	}

@@ -4,6 +4,7 @@ namespace Quark\Extensions\Quark\REST;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
+use Quark\IQuarkModelWithCustomCollectionName;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
@@ -162,11 +163,18 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * http://php.net/manual/ru/function.preg-split.php#104602
 	 *
 	 * @param IQuarkModel $model
+	 * @param $options
 	 * @param string $implode = '/'
 	 *
 	 * @return string
 	 */
-	private static function _class (IQuarkModel $model, $implode = '/') {
+	private static function _class (IQuarkModel $model, $options = [], $implode = '/') {
+		if ($model instanceof IQuarkModelWithCustomCollectionName)
+			return $model->CollectionName();
+
+		if (isset($options[QuarkModel::OPTION_COLLECTION]))
+			return $options[QuarkModel::OPTION_COLLECTION];
+
 		$words = preg_split('/([[:upper:]][[:lower:]]+)/', QuarkObject::ClassOf($model), null, PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
 
 		if (sizeof($words) == 1)
@@ -177,12 +185,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Create (IQuarkModel $model) {
+	public function Create (IQuarkModel $model, $options = []) {
 		try {
-			$class = self::_class($model);
+			$class = self::_class($model, $options);
 			$pk = $this->_pk($model);
 
 			$api = $this->_api('POST', '/' . $class . '/create', $model);
@@ -203,12 +212,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Save (IQuarkModel $model) {
+	public function Save (IQuarkModel $model, $options = []) {
 		try {
-			$api = $this->_api('POST', '/' . self::_class($model) . '/update/' . $this->_identify($model), $model);
+			$api = $this->_api('POST', '/' . self::_class($model, $options) . '/update/' . $this->_identify($model), $model);
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -220,12 +230,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
-	public function Remove (IQuarkModel $model) {
+	public function Remove (IQuarkModel $model, $options = []) {
 		try {
-			$api = $this->_api('GET', '/' . self::_class($model) . '/remove/' . $this->_identify($model));
+			$api = $this->_api('GET', '/' . self::_class($model, $options) . '/remove/' . $this->_identify($model));
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -259,7 +270,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			if (isset($options[QuarkModel::OPTION_LIMIT]))
 				$this->_uri->query .= '&limit=' . $options[QuarkModel::OPTION_LIMIT];
 
-			$api = $this->_api('Get', '/' . self::_class($model) . '/list', $criteria);
+			$api = $this->_api('Get', '/' . self::_class($model, $options) . '/list', $criteria);
 
 			return isset($api->list) ? $api->list : array();
 		}
@@ -277,8 +288,8 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @return IQuarkModel|null
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options) {
-		$path = self::_class($model);
-		$class = self::_class($model, '');
+		$path = self::_class($model, $options);
+		$class = self::_class($model, $options, '');
 
 		try {
 			return $this->_api('Get', '/' . $path, $criteria)->$class;
@@ -301,8 +312,8 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		if (!is_scalar($id))
 			throw new QuarkArchException('Parameter $id must have scalar value, Given: ' . print_r($id, true));
 
-		$path = self::_class($model);
-		$class = self::_class($model, '');
+		$path = self::_class($model, $options);
+		$class = self::_class($model, $options, '');
 
 		try {
 			return $this->_api('Get', '/' . $path . '/' . $id)->$class;
@@ -353,12 +364,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param string $command
 	 * @param QuarkDTO|object|array $data
 	 * @param string $method = 'GET'
+	 * @param $options = []
 	 *
 	 * @return bool
 	 */
-	public function Command (IQuarkModel $model, $command, $data = [], $method = 'GET') {
+	public function Command (IQuarkModel $model, $command, $data = [], $method = 'GET', $options = []) {
 		try {
-			return $this->_api($method, '/' . self::_class($model) . '/' . $command . '/' . $this->_identify($model), $data);
+			return $this->_api($method, '/' . self::_class($model, $options) . '/' . $command . '/' . $this->_identify($model), $data);
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
