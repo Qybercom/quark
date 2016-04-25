@@ -227,3 +227,15 @@ body {
 .presence-cluster-node:hover .node-state {
     display: block;
 }
+
+#presence-header .quark-button .presence-label {
+	margin-left: -3px;
+}
+
+.quark-list-item .quark-button.item-remove {
+	color: rgb(30,30,30);
+}
+
+.quark-list-item .quark-button.item-remove:hover {
+	color: rgb(10, 200, 70);
+}

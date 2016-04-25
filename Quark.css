@@ -285,3 +285,21 @@ textarea.quark-input {
     background: rgba(240,240,240,0.85);
     z-index: 10;
 }
+
+
+/**
+ * .quark-list UX component
+ */
+.quark-list-item:before {
+	content: '\f111';
+	vertical-align: middle;
+}
+
+.quark-list-item .quark-input.item-value {
+	vertical-align: middle;
+	margin: 0 10px;
+}
+
+.quark-list-item .quark-button.item-remove {
+	vertical-align: middle;
+}

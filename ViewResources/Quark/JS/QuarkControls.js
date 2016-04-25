@@ -86,6 +86,9 @@ Quark.Controls.Form = function (selector) {
 Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
 		opt.reset = opt.reset != undefined ? opt.reset : true;
+		opt.successCriteria = opt.successCriteria instanceof Function
+			? opt.successCriteria
+			: function (data) { return data.status != undefined && data.status == 200; };
 
 	var that = this;
 
@@ -135,8 +138,12 @@ Quark.Controls.Dialog = function (selector, opt) {
 			dataType: 'json',
 
 			success: function (data) {
-				if (data.status != undefined && data.status == 200) that.Success(dialog, dialog.data('button'));
+				if (opt.successCriteria(data)) that.Success(dialog, dialog.data('button'));
 				else that.Error(dialog);
+			},
+
+			error: function () {
+				that.Error(dialog);
 			}
 		});
 	});
@@ -242,8 +249,8 @@ Quark.Controls.File = function (selector, opt) {
 };
 
 /**
- * @param url
- * @param name
+ * @param {string} url
+ * @param {string} name
  * @param opt
  * @param uploader
  */
@@ -275,10 +282,15 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 	frame.on('load', function (e) {
 		var response = $(this).contents().text();
 
-		if (opt.json)
-			response = JSON.parse(response);
+		try {
+			if (opt.json)
+				response = JSON.parse(response);
 
-		opt.success(response, uploader);
+			opt.success(response, uploader);
+		}
+		catch (e) {
+			opt.error(response, uploader);
+		}
 	});
 
 	form
@@ -295,6 +307,39 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 				form.submit();
 		})
 		.click();
+};
+
+/**
+ * @param {string} selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.Controls.DynamicList = function (selector, opt) {
+	opt = opt || {};
+		opt.name = opt.name == undefined ? 'list' : opt.name;
+		opt.placeholder = opt.placeholder == undefined ? '' : opt.placeholder;
+		opt.item = opt.item == undefined
+			? (
+				'<div class="quark-list-item">' +
+					'<input class="quark-input item-value" name="' + opt.name + '[]" placeholder="' + opt.placeholder + '" />' +
+					'<a class="quark-button fa fa-times item-remove"></a>' +
+				'</div>'
+			)
+			: opt.item;
+
+	$(document).on('click', selector, function (e) {
+		e.preventDefault();
+
+		var button = $(this);
+		var dialog = $(button.attr('quark-list'));
+
+		dialog.append(opt.item);
+	});
+
+	$(document).on('click', '.quark-list-item .item-remove', function () {
+		$(this).parents('.quark-list-item').remove();
+	});
 };
 
 /**
