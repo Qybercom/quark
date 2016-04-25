@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\FontAwesome;
+namespace Quark\ViewResources\IonIcons;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkForeignViewResource;
@@ -9,12 +9,12 @@ use Quark\QuarkDTO;
 use Quark\QuarkCSSViewResourceType;
 
 /**
- * Class FontAwesome
+ * Class IonIcons
  *
- * @package Quark\ViewResources\FontAwesome
+ * @package Quark\ViewResources\IonIcons
  */
-class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
-	const CURRENT_VERSION = '4.6.1';
+class IonIcons implements IQuarkViewResource, IQuarkForeignViewResource {
+	const CURRENT_VERSION = '2.0.1';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
@@ -39,7 +39,7 @@ class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
 	 * @return string
 	 */
 	public function Location () {
-		return '//maxcdn.bootstrapcdn.com/font-awesome/' . $this->_version . '/css/font-awesome.min.css';
+		return 'http://code.ionicframework.com/ionicons/' . $this->_version . '/css/ionicons.min.css';
 	}
 
 	/**

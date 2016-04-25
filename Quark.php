@@ -3352,7 +3352,7 @@ class QuarkView implements IQuarkContainer {
 		}
 		
 		if ($this->_view instanceof IQuarkViewModelWithResources) {
-			$resources = $this->_view->Resources();
+			$resources = $this->_view->ViewResources();
 
 			if (is_array($resources))
 				foreach ($resources as $resource)
@@ -3743,7 +3743,7 @@ interface IQuarkViewModelWithResources extends IQuarkViewModel {
 	/**
 	 * @return IQuarkViewResource[]
 	 */
-	public function Resources();
+	public function ViewResources();
 }
 
 /**

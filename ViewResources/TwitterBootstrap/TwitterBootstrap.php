@@ -11,7 +11,7 @@ use Quark\IQuarkViewResourceWithDependencies;
  * @package Quark\ViewResources\TwitterBootstrap
  */
 class TwitterBootstrap implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '3.3.5';
+	const CURRENT_VERSION = '3.3.6';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

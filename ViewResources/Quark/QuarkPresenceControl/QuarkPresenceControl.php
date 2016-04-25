@@ -62,7 +62,7 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	/**
 	 * @return IQuarkViewResource[]
 	 */
-	public function Resources () {
+	public function ViewResources () {
 		return array($this);
 	}
 
