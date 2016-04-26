@@ -12592,8 +12592,11 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
+	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\"#UisS';
+	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)((\s([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)(\>(.*)\<\/\1|\s?\/)\>#UisS';
+	
 	const MIME = 'text/xml';
-	const ROOT = '<root/>';
+	const ROOT = 'root';
 	const ITEM = 'item';
 
 	/**
@@ -12602,14 +12605,19 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	private $_root = self::ROOT;
 
 	/**
-	 * @var string[] $_item = [self::ITEM]
+	 * @var string $_item = self::ITEM
 	 */
-	private $_item = array(self::ITEM);
+	private $_item = self::ITEM;
 
 	/**
 	 * @var bool $_forceNull = true
 	 */
 	private $_forceNull = true;
+
+	/**
+	 * @var bool $_init = false
+	 */
+	private $_init = false;
 
 	/**
 	 * @param string $root = self::ROOT
@@ -12620,113 +12628,8 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 		\libxml_use_internal_errors(true);
 
 		$this->_root = $root;
-		$this->_item = is_array($item) ? $item : array($item);
+		$this->_item = $item;
 		$this->_forceNull = $forceNull;
-	}
-
-	/**
-	 * @param \SimpleXMLElement $xml
-	 * @param array|object $data
-	 *
-	 * @return \SimpleXMLElement
-	 */
-	private function &_encoder (\SimpleXMLElement &$xml, $data) {
-		if (!$data) return $xml;
-		
-		if (is_scalar($data)) {
-			$xml->addChild(QuarkObject::Stringify($data));
-			return $xml;
-		}
-
-		foreach ($data as $key => $value) {
-			if (QuarkObject::isAssociative($value)) {
-				$parent = $xml->addChild($key);
-				$this->_encoder($parent, $value);
-			}
-
-			if (QuarkObject::isIterative($value)) {
-				$parent = $xml->addChild($key);
-
-				if (sizeof($value) == 0)
-					$parent[0] = '';
-
-				foreach ($value as $item) {
-					if ($item === null) continue;
-
-					if (is_scalar($item)) $parent->addChild(QuarkObject::Stringify($item));
-					else {
-						$node = $parent->addChild($this->_item);
-						$this->_encoder($node, $item);
-					}
-				}
-			}
-
-			if (is_scalar($value) || ($this->_forceNull && $value === null))
-				$xml->addChild($key, QuarkObject::Stringify($value));
-		}
-
-		return $xml;
-	}
-
-	/**
-	 * @param \SimpleXMLElement $xml
-	 *
-	 * @return object
-	 */
-	private function _decoder (\SimpleXMLElement &$xml) {
-		$out = array();
-
-		foreach ($this->_item as $_item) {
-			if ($xml->$_item->count() == 0) continue;
-
-			foreach ($xml->$_item as $item) {
-				/**
-				 * @var \SimpleXMLElement $item
-				 * @var \SimpleXMLElement $child
-				 */
-				$child = $item->children()[0];
-				$out[] = $item->count() == 1 && empty($child)
-					? $child->getName()
-					: $this->_decoder($item);
-				}
-		}
-		
-		if (sizeof($out) != 0) return $out;
-
-		foreach ($xml as $key => $value) {
-			/**
-			 * @var \SimpleXMLElement $value
-			 */
-			
-			$found = false;
-
-			foreach ($this->_item as $_item) {
-				if ($value->$_item->count() != 0) {
-					$out[$key] = array();
-	
-					foreach ($value->$_item as $item) {
-						/**
-						 * @var \SimpleXMLElement $item
-						 * @var \SimpleXMLElement $child
-						 */
-						$child = $item->children()[0];
-						$out[$key][] = $item->count() == 1 && empty($child)
-							? $child->getName()
-							: $this->_decoder($item);
-					}
-
-					$found = true;
-				}
-			}
-			
-			if ($found) continue;
-
-			$out[$key] = $value->count() == 0
-				? ($this->_forceNull && (string)$value == 'null' ? null : (string)$value)
-				: $this->_decoder($value);
-		}
-		
-		return QuarkXMLNode::FromXMLElement($xml, $out);
 	}
 
 	/**
@@ -12740,16 +12643,25 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return string
 	 */
 	public function Encode ($data) {
-		try {
-			$xml = new \SimpleXMLElement($this->_root, LIBXML_NOEMPTYTAG);
-			$this->_encoder($xml, $data);
+		$out = $this->_init ? '' : '<?xml version="1.0" encoding="utf-8" ?><' . $this->_root . '>';
+		$append = $this->_init ? '' : '</' . $this->_root . '>';
+		$this->_init = true;
 
-			return $xml->asXML();
+		if (QuarkObject::isIterative($data)) {
+			foreach ($data as $item)
+				$out .= '<' . $this->_item . '>' . $this->Encode($item) . '</' . $this->_item . '>';
+
+			return $out . $append;
 		}
-		catch (\Exception $e) {
-			Quark::Log('[QuarkXMLIOProcessor::Encode] Error ' . $e->getMessage(), Quark::LOG_WARN);
-			return '';
+
+		if (QuarkObject::isAssociative($data)) {
+			foreach ($data as $key => $value)
+				$out .= '<' . $key . '>' . $this->Encode($value) . '</' . $key . '>';
+
+			return $out . $append;
 		}
+
+		return $data . $append;
 	}
 
 	/**
@@ -12758,12 +12670,47 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		try {
-			return $this->_decoder(new \SimpleXMLElement($raw));
+		if (!preg_match_all(self::PATTERN_ELEMENT, $raw, $xml, PREG_SET_ORDER)) return null;
+
+		$out = array();
+		$item = '';
+
+		foreach ($xml as $value) {
+			$key = $value[1];
+			$buffer = null;
+
+			if (sizeof($value) == 8) {
+				$buffer = $this->Decode($value[7]);
+				if (!$buffer) $buffer = $value[7];
+			}
+
+			if (preg_match_all(self::PATTERN_ATTRIBUTE, $value[2], $attributes, PREG_SET_ORDER)) {
+				$params = array();
+
+				foreach ($attributes as $attribute)
+					$params[$attribute[1]] = $attribute[2];
+
+				$buffer = new QuarkXMLNode($buffer, $params);
+			}
+
+			if (isset($out[$key])) {
+				$item = $key;
+
+				if (!isset($out[0][$key])) {
+					$tmp = is_object($out[$key]) ? clone $out[$key] : $out[$key];
+					unset($out[$key]);
+					$out[] = $tmp;
+				}
+
+				$out[] = $buffer;
+			}
+			else {
+				if (isset($out[0]) && $item != '' && $item == $key) $out[] = $buffer;
+				else $out[$key] = $buffer;
+			}
 		}
-		catch (\Exception $e) {
-			return null;
-		}
+
+		return $out;
 	}
 
 	/**
@@ -12773,6 +12720,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Batch ($raw) { return $raw; }
 }
+
 /**
  * Class QuarkXMLNode
  *
@@ -12780,7 +12728,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
  */
 class QuarkXMLNode {
 	/**
-	 * @var array $_data = null
+	 * @var $_data = null
 	 */
 	private $_data = null;
 
@@ -12823,18 +12771,18 @@ class QuarkXMLNode {
 	}
 
 	/**
-	 * @param array|object $data = []
+	 * @param $data = []
 	 * @param array|object $attributes = []
 	 */
 	public function __construct ($data = [], $attributes = []) {
-		$this->_data = (object)$data;
+		$this->_data = is_scalar($data) ? $data : (object)$data;
 		$this->_attributes = (object)$attributes;
 	}
 	
 	/**
-	 * @param array|object $data
+	 * @param $data
 	 *
-	 * @return array|object
+	 * @return mixed
 	 */
 	public function Data ($data = []) {
 		if (func_num_args() != 0)

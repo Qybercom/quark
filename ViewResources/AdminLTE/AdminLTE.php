@@ -1,10 +1,10 @@
 <?php
 namespace Quark\ViewResources\AdminLTE;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceWithBackwardDependencies;
+use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
 use Quark\QuarkCSSViewResourceType;
