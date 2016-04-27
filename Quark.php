@@ -12593,7 +12593,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\"#UisS';
-	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)((\s([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)(\>(.*)\<\/\1|\s?\/)\>#UisS';
+	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
 	
 	const MIME = 'text/xml';
 	const ROOT = 'root';
@@ -12618,10 +12618,15 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @var bool $_init = false
 	 */
 	private $_init = false;
+	
+	/**
+	 * @var int $_lists = 0;
+	 */
+	private $_lists = 0;
 
 	/**
 	 * @param string $root = self::ROOT
-	 * @param string|string[] $item = self::ITEM
+	 * @param string $item = self::ITEM
 	 * @param bool $forceNull = true
 	 */
 	public function __construct ($root = self::ROOT, $item = self::ITEM, $forceNull = true) {
@@ -12646,17 +12651,26 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 		$out = $this->_init ? '' : '<?xml version="1.0" encoding="utf-8" ?><' . $this->_root . '>';
 		$append = $this->_init ? '' : '</' . $this->_root . '>';
 		$this->_init = true;
-
+		$i = $this->_lists == 0 ? '' : $this->_lists;
+		
 		if (QuarkObject::isIterative($data)) {
-			foreach ($data as $item)
-				$out .= '<' . $this->_item . '>' . $this->Encode($item) . '</' . $this->_item . '>';
+			$this->_lists++;
 
+			foreach ($data as $item)
+				$out .= $item instanceof QuarkXMLNode
+					? $item->ToXML($this)
+					: ('<' . $this->_item . $i . '>' . $this->Encode($item) . '</' . $this->_item . $i . '>');
+
+			$this->_lists--;
+			
 			return $out . $append;
 		}
 
 		if (QuarkObject::isAssociative($data)) {
 			foreach ($data as $key => $value)
-				$out .= '<' . $key . '>' . $this->Encode($value) . '</' . $key . '>';
+				$out .= $value instanceof QuarkXMLNode
+					? $value->ToXML($this, $key)
+					: '<' . $key . '>' . $this->Encode($value) . '</' . $key . '>';
 
 			return $out . $append;
 		}
@@ -12719,6 +12733,13 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Batch ($raw) { return $raw; }
+
+	/**
+	 * @return string
+	 */
+	public function Item () {
+		return $this->_item;
+	}
 }
 
 /**
@@ -12814,6 +12835,16 @@ class QuarkXMLNode {
 			$this->_attributes->$key = $value;
 		
 		return isset($this->_attributes->$key) ? $this->_attributes->$key : null;
+	}
+
+	public function ToXML (QuarkXMLIOProcessor $processor, $node = '') {
+		$attributes = '';
+		$node = func_num_args() == 2 ? $node : $processor->Item();
+
+		foreach ($this->_attributes as $key => $value)
+			$attributes .= ' ' . $key . '="'. $value . '"';
+
+		return '<' . $node . $attributes . '>' . $processor->Encode($this->_data) . '</' . $node . '>';
 	}
 
 	/**
