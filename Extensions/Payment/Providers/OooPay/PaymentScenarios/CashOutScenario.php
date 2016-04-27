@@ -179,7 +179,7 @@ class CashOutScenario implements IQuarkPaymentScenario {
 			array('order_id', 'amount', 'cur_id', 'to', 'description')
 		);
 
-		return $this->_response->error == 0 && $this->_response->answer->order_id == $this->_order;
+		return isset($this->_response->document) && $this->_response->document->error == 0 && $this->_response->document->answer->order_id == $this->_order;
 	}
 
 	/**
