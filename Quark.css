@@ -73,6 +73,11 @@ textarea.quark-input {
     box-sizing: border-box;
 }
 
+button.quark-button {
+	background: none;
+	border: none;
+}
+
 .quark-button.block {
     white-space: nowrap;
 }
