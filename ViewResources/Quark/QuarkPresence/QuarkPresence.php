@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Quark\CSS;
+namespace Quark\ViewResources\Quark\QuarkPresence;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
@@ -7,16 +7,15 @@ use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
 
-use Quark\ViewResources\Google\GoogleFont;
 use Quark\ViewResources\Quark\QuarkResponsiveUI;
 use Quark\ViewResources\Quark\QuarkUI;
 
 /**
- * Class QuarkThinkscape
+ * Class QuarkPresence
  *
- * @package Quark\ViewResources\Quark\CSS
+ * @package Quark\ViewResources\Quark\QuarkPresence
  */
-class QuarkThinkscape implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkPresence implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return string
 	 */
@@ -28,7 +27,7 @@ class QuarkThinkscape implements IQuarkViewResource, IQuarkLocalViewResource, IQ
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/QuarkThinkscape.css';
+		return __DIR__ . '/QuarkPresence.css';
 	}
 
 	/**
@@ -44,8 +43,7 @@ class QuarkThinkscape implements IQuarkViewResource, IQuarkLocalViewResource, IQ
 	public function Dependencies () {
 		return array(
 			new QuarkUI(),
-			new QuarkResponsiveUI(),
-			new GoogleFont('Anonymous Pro')
+			new QuarkResponsiveUI()
 		);
 	}
 }

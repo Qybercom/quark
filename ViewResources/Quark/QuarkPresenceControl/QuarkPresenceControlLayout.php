@@ -17,7 +17,6 @@
 			<div class="quark-presence-column left" id="presence-menu-header">
 				<div class="quark-presence-container">
 					<?php echo $this->MenuHeaderWidget(); ?>
-					<div id="presence-header-cleaner"></div>
 				</div>
 			</div>
 			<div class="quark-presence-column right" id="presence-user">

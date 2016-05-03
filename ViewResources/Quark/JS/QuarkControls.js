@@ -93,13 +93,18 @@ Quark.Controls.Dialog = function (selector, opt) {
 	var that = this;
 
 	that.Reset = function (dialog) {
-		dialog.find('.quark-message').slideUp();
+		dialog.find('.quark-dialog-state').slideUp();
 		dialog.find('.quark-dialog-confirm').slideDown();
 	};
 
+	that.Wait = function (dialog) {
+		dialog.find('.quark-dialog-state').slideUp();
+		dialog.find('.quark-dialog-state.wait').slideDown();
+	};
+
 	that.Success = function (dialog, trigger) {
-		dialog.find('.quark-message').slideUp();
-		dialog.find('.quark-message.ok').slideDown();
+		dialog.find('.quark-dialog-state').slideUp();
+		dialog.find('.quark-dialog-state.success').slideDown();
 		dialog.find('.quark-dialog-confirm').slideUp();
 
 		if (opt.success instanceof Function)
@@ -107,8 +112,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Error = function (dialog) {
-		dialog.find('.quark-message').slideUp();
-		dialog.find('.quark-message.warn').slideDown();
+		dialog.find('.quark-dialog-state').slideUp();
+		dialog.find('.quark-dialog-state.error').slideDown();
 	};
 
 	$(function () {
@@ -123,7 +128,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 			dialog.hide(0);
 
 			dialog.appendTo('#quark-dialog-box');
-			dialog.find('.quark-message').hide(0);
+			dialog.find('.quark-dialog-state').hide(0);
 		});
 	});
 
@@ -136,6 +141,10 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$.ajax({
 			url: action.attr('href'),
 			dataType: 'json',
+
+			beforeSend: function () {
+				that.Wait(dialog);
+			},
 
 			success: function (data) {
 				if (opt.successCriteria(data)) that.Success(dialog, dialog.data('button'));

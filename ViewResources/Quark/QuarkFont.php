@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Quark\CSS;
+namespace Quark\ViewResources\Quark;
 
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
@@ -10,7 +10,7 @@ use Quark\Quark;
 /**
  * Class QuarkFont
  *
- * @package Quark\ViewResources\Quark\CSS
+ * @package Quark\ViewResources\Quark
  */
 class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 	const FALLBACK_SERIF = 'serif';
@@ -19,9 +19,20 @@ class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 	const FALLBACK_FANTASY = 'fantasy';
 	const FALLBACK_MONOSPACE = 'monospace';
 
+	/**
+	 * @var string $_font = ''
+	 */
 	private $_font = '';
+
+	/**
+	 * @var string $_family = ''
+	 */
 	private $_family = '';
-	private $_fallback = '';
+
+	/**
+	 * @var string $_fallback = self::FALLBACK_SANS_SERIF
+	 */
+	private $_fallback = self::FALLBACK_SANS_SERIF;
 
 	/**
 	 * @param $font

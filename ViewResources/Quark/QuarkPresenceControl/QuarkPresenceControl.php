@@ -12,7 +12,7 @@ use Quark\QuarkCSSViewResourceType;
 
 use Quark\QuarkViewBehavior;
 
-use Quark\ViewResources\Quark\CSS\QuarkPresence;
+use Quark\ViewResources\Quark\QuarkPresence\QuarkPresence;
 
 /**
  * Class QuarkPresenceControl

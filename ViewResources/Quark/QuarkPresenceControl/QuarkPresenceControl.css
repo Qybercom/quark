@@ -3,36 +3,67 @@ body {
     min-width: 310px;
 }
 
+body .quark-button {
+	color: rgb(0,176,80);
+}
+
+body .quark-button:hover {
+	color: rgb(0,225,80);
+}
+
 #presence-header {
     background: rgb(60,60,60);
     color: rgb(255,255,255);
-    line-height: 0;
     font-size: 0;
+    line-height: 0;
     position: relative;
+	padding: 5px 0;
+}
+
+#presence-header .quark-presence-column {
+    vertical-align: middle;
+    font-size: 14px;
+    line-height: 32px;
 }
 
 #presence-logo {
-    margin: 0;
-    font-size: 24px;
-    line-height: 26px;
-    padding: 15px;
+    font-size: 24px !important;
+}
+
+#presence-header .quark-button {
+    margin: 0 10px 0 0;
+	color: rgb(255,255,255);
+}
+
+#presence-header .quark-button:hover {
+	color: rgb(0,225,80);
+}
+
+#presence-search {
+    display: inline-block;
 }
 
 #presence-user {
-    margin: 0;
+	margin: 0;
+	line-height: 0 !important;
 }
 
-#presence-user .quark-presence-container {
-    font-size: 12px;
-    line-height: 12px;
+#presence-user-info {
+    margin: 5px;
+	line-height: 20px !important;
 }
 
-#presence-user .quark-button {
-    margin: 0;
+#presence-user-info .quark-presence-container {
+	text-align: right;
+}
+
+#presence-user-info .quark-button {
+	margin: 0;
 }
 
 #presence-user-photo {
     margin: 5px;
+	line-height: 0 !important;
 }
 
 #presence-user-photo .quark-presence-container {
@@ -42,31 +73,8 @@ body {
     height: 45px;
     margin: 0;
     padding: 0;
-}
-
-#presence-menu-header {
-    margin: 10px 10px 10px 15px;
     vertical-align: middle;
-}
-
-#presence-menu-header .quark-button {
-    vertical-align: middle;
-    margin: -4px 10px 6px 0;
-}
-
-#presence-header-cleaner {
-    display: inline-block;
-    width: 0;
-    height: 24px;
-}
-
-#presence-search {
-    display: inline-block;
-    margin: 0 0 0 15px;
-}
-
-#presence-search .quark-input {
-    margin: 0 15px 0 0;
+	border-radius: 45px;
 }
 
 /* Side menu */

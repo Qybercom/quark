@@ -3092,6 +3092,13 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function Theme () {
+		return $this->__call('Theme', func_get_args());
+	}
+
+	/**
 	 * @param string $uri
 	 * @param bool $signed = false
 	 *
@@ -3135,7 +3142,9 @@ trait QuarkViewBehavior {
 class QuarkView implements IQuarkContainer {
 	const FIELD_ERROR_TEMPLATE = '<div class="quark-message warn fa fa-warning"><p class="content">{error}</p></div>';
 	const SIGNED_ACTION_FORM_STYLE = 'display: inline-block; margin: 0; padding: 0; border: none;';
-
+	const DEFAULT_THEME = 'Default';
+	const GENERIC_LOCALIZATION = '_any';
+	
 	/**
 	 * @var IQuarkViewModel|IQuarkViewModelWithResources $_view = null
 	 */
@@ -3185,6 +3194,11 @@ class QuarkView implements IQuarkContainer {
 	 * @var string $_language = QuarkLanguage::ANY
 	 */
 	private $_language = QuarkLanguage::ANY;
+	
+	/**
+	 * @var string $_theme = ''
+	 */
+	private $_theme = '';
 
 	/**
 	 * @var string $_languageExpected = QuarkLanguage::ANY
@@ -3201,22 +3215,27 @@ class QuarkView implements IQuarkContainer {
 	public function __construct (IQuarkViewModel $view = null, $vars = [], $resources = []) {
 		if ($view == null) return;
 
+		$this->_language = self::$_languageExpected;
 		$this->_view = $view;
 		$vars = $this->Vars($vars);
 
 		foreach ($vars as $key => $value)
 			$this->_view->$key = $value;
 
-		$this->_file = Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS) . '/' . $this->_view->View() . '.php', false);
-
+		$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
+		
 		if (!is_file($this->_file))
+			$_file = $this->_file = $this->_localized_theme(self::GENERIC_LOCALIZATION);
+		
+		if (!is_file($this->_file)) {
 			$this->_file = $this->_view->View();
-
+			$this->_theme = '';
+		}
+		
 		if (!is_file($this->_file))
-			throw new QuarkArchException('Unknown view file ' . $this->_file);
+			throw new QuarkArchException('Unknown view file ' . $this->_file . ' (' . $_file . '). If you specified your view as IQuarkViewModelInTheme or its inheritor, check that theme structure is correct.');
 
 		$this->_resources = $resources;
-		$this->_language = self::$_languageExpected;
 
 		Quark::Container($this);
 	}
@@ -3443,6 +3462,30 @@ class QuarkView implements IQuarkContainer {
 
 		return false;
 	}
+
+	/**
+	 * @param string $language
+	 * 
+	 * @return string
+	 */
+	private function _localized_theme ($language) {
+		$language = str_replace('/', '', str_replace('.', '', $language));
+		$this->_theme = Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS);
+
+		if ($this->_view instanceof IQuarkViewModelInTheme) {
+			$theme = $this->_view->ViewTheme();
+
+			if ($theme === null)
+				$theme = self::DEFAULT_THEME;
+			
+			$this->_theme .= '/_themes/' . $theme;
+
+			if ($this->_view instanceof IQuarkViewModelInLocalizedTheme)
+				$this->_theme .= '/' . $language;
+		}
+
+		return Quark::NormalizePath($this->_theme . '/' . $this->_view->View() . '.php', false);
+	}
 	
 	/**
 	 * @param IQuarkViewResource[] $resources
@@ -3452,6 +3495,13 @@ class QuarkView implements IQuarkContainer {
 	public function AppendResources ($resources = []) {
 		$this->_resources = array_merge($this->_resources, $resources);
 		return $this;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Theme () {
+		return $this->_theme;
 	}
 
 	/**
@@ -3762,6 +3812,25 @@ interface IQuarkViewModelWithComponents extends IQuarkViewModel {
 	 */
 	public function ViewController();
 }
+
+/**
+ * Interface IQuarkViewModelInTheme
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelInTheme {
+	/**
+	 * @return string
+	 */
+	public function ViewTheme();
+}
+
+/**
+ * Interface IQuarkViewModelInLocalizedTheme
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelInLocalizedTheme extends IQuarkViewModelInTheme { }
 
 /**
  * Interface IQuarkViewResource
@@ -5622,7 +5691,7 @@ interface IQuarkModelWithBeforeExtract {
  *
  * @package Quark
  */
-interface IQuarkApplicationSettingsModel extends IQuarkModel, IQuarkModelWithDataProvider {
+interface IQuarkApplicationSettingsModel extends IQuarkModel, IQuarkStrongModel, IQuarkModelWithDataProvider {
 	/**
 	 * @return array
 	 */
@@ -12837,6 +12906,12 @@ class QuarkXMLNode {
 		return isset($this->_attributes->$key) ? $this->_attributes->$key : null;
 	}
 
+	/**
+	 * @param QuarkXMLIOProcessor $processor
+	 * @param string $node
+	 *
+	 * @return string
+	 */
 	public function ToXML (QuarkXMLIOProcessor $processor, $node = '') {
 		$attributes = '';
 		$node = func_num_args() == 2 ? $node : $processor->Item();

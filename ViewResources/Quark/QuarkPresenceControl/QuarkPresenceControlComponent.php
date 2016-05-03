@@ -93,7 +93,7 @@ trait QuarkPresenceControlComponent {
 		return '
 			<form id="presence-search" action="' . $action . '" method="' . $method . '" enctype="multipart/form-data">
 				<input class="quark-input" placeholder="' . $placeholder . '" />
-				<a class="quark-button fa ' . $fa . '"></a>
+				<button class="quark-button fa ' . $fa . '" type="submit"></a>
 			</form>
 		';
 	}
@@ -109,9 +109,11 @@ trait QuarkPresenceControlComponent {
 	 */
 	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutTitle = 'Exit', $logoutAddr = '/user/logout', $logoutSigned = false) {
 		return '
-			<div class="quark-presence-column left-inverse">
-				' . $name . '<br />
-				<a href="' . (func_num_args() == 5 ? $this->Link($logoutAddr, $logoutSigned) : $logoutAddr). '" class="quark-button">' . $logoutTitle . '</a>
+			<div class="quark-presence-column left-inverse" id="presence-user-info">
+				<div class="quark-presence-container">
+					' . $name . '<br />
+					<a href="' . (func_num_args() == 5 ? $this->Link($logoutAddr, $logoutSigned) : $logoutAddr). '" class="quark-button">' . $logoutTitle . '</a>
+				</div>
 			</div>
 			<div class="quark-presence-column right" id="presence-user-photo">
 				<div class="quark-presence-container" style="background-image: url(' . $photo . ');"></div>
