@@ -46,7 +46,7 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	public function Credentials () {
 		return (object)array(
 			'appId' => $this->appId,
-			'secret' => $this->appSecret
+			'appSecret' => $this->appSecret
 		);
 	}
 
@@ -68,7 +68,7 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		// TODO: Implement ExtensionInstance() method.
+		return $this->_provider;
 	}
 
 	/**

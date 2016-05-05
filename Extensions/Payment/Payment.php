@@ -17,6 +17,7 @@ class Payment implements IQuarkExtension {
 	const CURRENCY_RUR = 'RUR';
 	const CURRENCY_USD = 'USD';
 	const CURRENCY_EUR = 'EUR';
+	const CURRENCY_GBP = 'GBP';
 
 	/**
 	 * @var PaymentConfig $_config

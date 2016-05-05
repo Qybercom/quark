@@ -2733,57 +2733,6 @@ interface IQuarkContainer {
  */
 class QuarkObject {
 	/**
-	 * @param mixed $source
-	 * @param mixed $backbone = []
-	 * @param callable $iterator = null
-	 *
-	 * @return mixed
-	 */
-	public static function Normalize ($source, $backbone = [], callable $iterator = null) {
-		if ($iterator == null)
-			$iterator = function ($item) { return $item; };
-
-		$output = $source;
-
-		if (self::isIterative($backbone)) {
-			$i = 0;
-			$size = sizeof($backbone);
-			$output = array();
-
-			if (!is_array($source))
-				$source = array();
-
-			while ($i < $size) {
-				$def = isset($source[$i]) ? $source[$i] : $backbone[$i];
-				$output[] = self::Normalize($iterator(isset($source[$i]) ? $source[$i] : $def, $def, $i), $def, $iterator);
-
-				$i++;
-			}
-
-			unset($i, $size, $def);
-		}
-		else {
-			if (is_scalar($backbone)) $output = $source;
-			else {
-				if (!is_object($output))
-					$output = new \stdClass();
-
-				if ($backbone == null) return $source;
-
-				foreach ($backbone as $key => $value) {
-					$def = isset($source->$key) ? $source->$key : $value;
-
-					@$output->$key = self::Normalize($iterator($value, $def, $key), $def, $iterator);
-				}
-
-				unset($key, $value, $def);
-			}
-		}
-
-		return $output;
-	}
-
-	/**
 	 * @param $source
 	 * @param callable $iterator
 	 * @param string $key = ''
@@ -2857,9 +2806,38 @@ class QuarkObject {
 		$args = func_get_args();
 
 		if (sizeof($args) == 0) return null;
-		if (sizeof($args) == 1) return $args[0];
+		if (sizeof($args) == 1)
+			$args = array(new \stdClass(), $args[0]);
+		
+		$out = $args[0];
+		
+		foreach ($args as $arg) {
+			$iterative = self::isIterative($arg);
 
-		return self::Normalize($args[1], $args[0]);
+			if (is_scalar($arg) || is_null($arg) || $arg instanceof QuarkModel) {
+				$out = $arg;
+				continue;
+			}
+
+			foreach ($arg as $key => $value) {
+				if ($iterative) {
+					if (!is_array($out))
+						$out = array();
+
+					$def = isset($out[$key]) ? $out[$key] : null;
+					$out[] = self::Merge($def, $value);
+				}
+				else {
+					if (!is_object($out))
+						$out = new \stdClass();
+
+					$def = isset($out->$key) ? $out->$key : null;
+					$out->$key = self::Merge($def, $value);
+				}
+			}
+		}
+		
+		return $out;
 	}
 
 	/**
@@ -3217,6 +3195,7 @@ class QuarkView implements IQuarkContainer {
 
 		$this->_language = self::$_languageExpected;
 		$this->_view = $view;
+		
 		$vars = $this->Vars($vars);
 
 		foreach ($vars as $key => $value)
@@ -3625,7 +3604,7 @@ class QuarkView implements IQuarkContainer {
 		if (func_num_args() == 1)
 			$this->_vars = $params instanceof QuarkDTO
 				? $params->Data()
-				: QuarkObject::Normalize(new \stdClass(), (object)$params);
+				: QuarkObject::Merge((object)$params);
 
 		return $this->_vars;
 	}
@@ -5030,7 +5009,10 @@ class QuarkModel implements IQuarkContainer {
 	private static function _link ($property, $value) {
 		return $property instanceof IQuarkLinkedModel
 			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : $value))
-			: ($property instanceof IQuarkModel ? new QuarkModel($property, $value) : $value);
+			: ($property instanceof IQuarkModel
+				? ($property instanceof IQuarkNullableModel && $value == null ? null : new QuarkModel($property, $value))
+				: $value
+			);
 	}
 
 	/**
@@ -10058,6 +10040,7 @@ class QuarkDTO {
 		if ($this->_data instanceof QuarkView || $data === null) return $this->_data;
 
 		if (is_string($data) && is_string($this->_data)) $this->_data .= $data;
+		elseif($data instanceof QuarkView) $this->_data = $data;
 		else $this->_data = QuarkObject::Merge($this->_data, $data);
 
 		return $this->_data;
@@ -10869,7 +10852,7 @@ class QuarkDTO {
 	 */
 	private function _unserializeBody ($raw) {
 		if (!$this->_multipart || strpos($raw, '--' . $this->_boundary) === false) {
-			$this->_data = QuarkObject::Normalize($this->_data, $this->_processor->Decode($raw));
+			$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
 		}
 		else {
 			$parts = explode('--' . $this->_boundary, $raw);
@@ -12155,39 +12138,66 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public function Unlink () {
 		return $this->location;
 	}
-
+	
 	/**
 	 * @param array $files
+	 * 
+	 * https://github.com/zendframework/zend-http/blob/master/src/PhpEnvironment/Request.php
 	 *
 	 * @return array
 	 */
 	public static function FromFiles ($files) {
 		$output = array();
-
-		foreach ($files as $name => $file) {
-			$buffer = array();
+		
+        foreach ($files as $name => $value) {
 			$output[$name] = array();
-			$simple = true;
-
-			foreach ($file as $key => $value) {
-				if (!is_array($value)) $buffer[$key] = $value;
-				else {
-					array_walk_recursive($value, function ($item) use (&$buffer, $key) {
-						$buffer[$key] = $item;
-					});
-
-					$output[$name] = $value;
-					$simple = false;
+			
+			foreach ($value as $param => $data) {
+				if (!is_array($data)) {
+					self::_file_populate($output, $name, $param, $data);
+					continue;
 				}
+				
+				foreach ($data as $k => $v)
+					self::_file_buffer($output[$name], $param, $k, $v);
 			}
-
-			if ($simple) $output[$name] = new QuarkModel(new QuarkFile(), $buffer);
-			else array_walk_recursive($output, function (&$item) use ($buffer) {
-				$item = new QuarkModel(new QuarkFile(), $buffer);
-			});
-		}
+        }
 
 		return $output;
+	}
+
+	/**
+	 * @param array &$item
+	 * @param string|int $name
+	 * @param string|int $index
+	 * @param string|int $value
+	 */
+	private static function _file_buffer (&$item, $name, $index, $value) {
+		if (!is_array($value)) {
+			self::_file_populate($item, $index, $name, $value);
+			return;
+		}
+
+		foreach ($value as $i => $v)
+			self::_file_buffer($item[$index], $name, $i, $v);
+	}
+
+	/**
+	 * @param array &$source
+	 * @param string|int $key
+	 * @param string|int $name
+	 * @param string|int $value
+	 */
+	private static function _file_populate (&$source, $key, $name, $value) {
+		if (!isset($source[$key]))
+			$source[$key] = array();
+
+		if (!($source[$key] instanceof QuarkModel && $source[$key]->Model() instanceof QuarkFile))
+			$source[$key] = new QuarkModel(new QuarkFile());
+
+		$source[$key]->PopulateWith(array(
+			$name => $value
+		));
 	}
 }
 
