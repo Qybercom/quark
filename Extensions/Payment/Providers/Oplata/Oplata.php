@@ -14,7 +14,6 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
  */
 class Oplata implements IQuarkPaymentProvider {
 	const API_ENDPOINT = 'https://api.oplata.com/api/';
-	//const API_ENDPOINT = 'https://api.mycab/test/';
 
 	const STATUS_SUCCESS = '';
 	const STATUS_FAILURE = 'failure';
