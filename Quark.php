@@ -829,13 +829,6 @@ interface IQuarkStackable {
 }
 
 /**
- * Interface IQuarkNonTraversable
- *
- * @package Quark
- */
-interface IQuarkNonTraversable { }
-
-/**
  * Interface IQuarkEnvironment
  *
  * @package Quark
@@ -2821,7 +2814,7 @@ class QuarkObject {
 		foreach ($args as $arg) {
 			$iterative = self::isIterative($arg);
 
-			if (is_scalar($arg) || is_null($arg) || $arg instanceof IQuarkNonTraversable) {
+			if (is_scalar($arg) || is_null($arg) || (is_object($arg) && !($arg instanceof \stdClass))) {
 				$out = $arg;
 				continue;
 			}
@@ -4207,7 +4200,7 @@ interface IQuarkViewFragment {
  *
  * @package Quark
  */
-class QuarkCollection implements \Iterator, \ArrayAccess, \Countable, IQuarkNonTraversable {
+class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	/**
 	 * @var QuarkModel[]|array $_list = []
 	 */
@@ -4684,7 +4677,7 @@ class QuarkModelSource implements IQuarkStackable {
  *
  * @package Quark
  */
-class QuarkModel implements IQuarkContainer, IQuarkNonTraversable {
+class QuarkModel implements IQuarkContainer {
 	const OPTION_SORT = 'sort';
 	const OPTION_SKIP = 'skip';
 	const OPTION_LIMIT = 'limit';
