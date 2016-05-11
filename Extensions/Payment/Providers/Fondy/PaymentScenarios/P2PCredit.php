@@ -127,7 +127,7 @@ class P2PCredit implements IQuarkPaymentScenario {
 			)
 		));
 		
-		return $provider->ResponseOK($this->_response);
+		return $provider->ResponseOK($this->_response, Fondy::ORDER_APPROVED);
 	}
 
 	/**

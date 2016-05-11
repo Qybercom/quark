@@ -15,8 +15,15 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
 class Fondy implements IQuarkPaymentProvider {
 	const API_ENDPOINT = 'https://api.fondy.eu/api/';
 
-	const STATUS_SUCCESS = 'success';
-	const STATUS_FAILURE = 'failure';
+	const RESPONSE_SUCCESS = 'success';
+	const RESPONSE_FAILURE = 'failure';
+
+	const ORDER_CREATED = 'created';
+	const ORDER_PROCESSING = 'processing';
+	const ORDER_DECLINED = 'declined';
+	const ORDER_APPROVED = 'approved';
+	const ORDER_EXPIRED = 'expired';
+	const ORDER_REVERSED = 'reversed';
 
 	const TEST_MERCHANT_ID = '1396424';
 	const TEST_MERCHANT_PASSWORD = 'test';
@@ -94,16 +101,21 @@ class Fondy implements IQuarkPaymentProvider {
 
 	/**
 	 * @param QuarkDTO|bool $response
+	 * @param string $orderStatus = ''
 	 *
 	 * @return bool
 	 */
-	public function ResponseOK ($response) {
+	public function ResponseOK ($response, $orderStatus = '') {
 		return
 			$response &&
 			$response instanceof QuarkDTO &&
 			isset($response->response) &&
 			isset($response->response->response_status) &&
-			$response->response->response_status == self::STATUS_SUCCESS &&
+			$response->response->response_status == self::RESPONSE_SUCCESS &&
+			(func_num_args() == 2
+				? isset($response->response->order_status) && $response->response->order_status == $orderStatus
+				: true
+			) &&
 			isset($response->response->signature) &&
 			$response->response->signature == $this->Signature((array)$response->response);
 	}
