@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Payment\Providers\Oplata;
+namespace Quark\Extensions\Payment\Providers\Fondy;
 
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -8,17 +8,17 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 
 /**
- * Class Oplata
+ * Class Fondy
  *
- * @package Quark\Extensions\Payment\Providers\Oplata
+ * @package Quark\Extensions\Payment\Providers\Fondy
  */
-class Oplata implements IQuarkPaymentProvider {
-	const API_ENDPOINT = 'https://api.oplata.com/api/';
+class Fondy implements IQuarkPaymentProvider {
+	const API_ENDPOINT = 'https://api.fondy.eu/api/';
 
-	const STATUS_SUCCESS = '';
+	const STATUS_SUCCESS = 'success';
 	const STATUS_FAILURE = 'failure';
 
-	const TEST_MERCHANT_ID = '1000';
+	const TEST_MERCHANT_ID = '1396424';
 	const TEST_MERCHANT_PASSWORD = 'test';
 
 	const TEST_CARD_SUCCESS_3DS = '4444555566661111';
@@ -72,6 +72,9 @@ class Oplata implements IQuarkPaymentProvider {
 		if (key_exists('signature', $data))
 			unset($data['signature']);
 
+		if (key_exists('response_signature_string', $data))
+			unset($data['response_signature_string']);
+
 		$i = 0;
 		$sign = $this->appSecret;
 		$keys = array_keys($data);
@@ -80,7 +83,9 @@ class Oplata implements IQuarkPaymentProvider {
 		$size = sizeof($keys);
 
 		while ($i < $size) {
-			$sign .= '|' . $data[$keys[$i]];
+			if ($data[$keys[$i]] != '')
+				$sign .= '|' . $data[$keys[$i]];
+
 			$i++;
 		}
 

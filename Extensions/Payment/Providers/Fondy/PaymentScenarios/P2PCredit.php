@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\Payment\Providers\Oplata\PaymentScenarios;
+namespace Quark\Extensions\Payment\Providers\Fondy\PaymentScenarios;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
@@ -9,12 +9,12 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
 
 use Quark\Extensions\Payment\Payment;
-use Quark\Extensions\Payment\Providers\Oplata\Oplata;
+use Quark\Extensions\Payment\Providers\Fondy\Fondy;
 
 /**
  * Class P2PCredit
  *
- * @package Quark\Extensions\Payment\Providers\Oplata\PaymentScenarios
+ * @package Quark\Extensions\Payment\Providers\Fondy\PaymentScenarios
  */
 class P2PCredit implements IQuarkPaymentScenario {
 	/**
@@ -111,7 +111,7 @@ class P2PCredit implements IQuarkPaymentScenario {
 	}
 
 	/**
-	 * @param IQuarkPaymentProvider|Oplata $provider
+	 * @param IQuarkPaymentProvider|Fondy $provider
 	 * @param IQuarkPaymentInstrument $instrument = null
 	 *
 	 * @return bool
