@@ -2819,6 +2819,11 @@ class QuarkObject {
 				continue;
 			}
 
+			if ($iterative && sizeof($arg) == 0) {
+				$out = (array)$arg;
+				continue;
+			}
+
 			foreach ($arg as $key => $value) {
 				if ($iterative) {
 					if (!is_array($out))
@@ -12788,7 +12793,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 			if (isset($out[$key])) {
 				$item = $key;
-
+				
 				if (!isset($out[0][$key])) {
 					$tmp = is_object($out[$key]) ? clone $out[$key] : $out[$key];
 					unset($out[$key]);
