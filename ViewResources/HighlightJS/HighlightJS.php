@@ -16,7 +16,7 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\HighlightJS
  */
 class HighlightJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithBackwardDependencies {
-	const CURRENT_VERSION = '9.2.0';
+	const CURRENT_VERSION = '9.3.0';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

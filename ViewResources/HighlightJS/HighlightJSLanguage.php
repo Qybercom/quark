@@ -16,7 +16,6 @@ use Quark\QuarkJSViewResourceType;
  */
 class HighlightJSLanguage implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
 	const PHP = 'php';
-	const HTML = 'html';
 	const CSS = 'css';
 	const JAVASCRIPT = 'javascript';
 	const JSON = 'json';

@@ -12,7 +12,7 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\Preprocessors\LESS
  */
 class LESSClientCompiler implements IQuarkViewResource {
-	const CURRENT_VERSION = '2.5.3';
+	const CURRENT_VERSION = '2.7.1';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

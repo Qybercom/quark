@@ -11,7 +11,7 @@ use Quark\IQuarkViewResourceWithDependencies;
  * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
 class OwlCarousel implements IQuarkViewResource, IQuarkViewResourceWithDependencies{
-	const CURRENT_VERSION = '1.3.3';
+	const CURRENT_VERSION = '1.32';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

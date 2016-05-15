@@ -14,14 +14,14 @@
 					<?php echo $this->LogoWidget(); ?>
 				</div>
 			</div>
-			<div class="quark-presence-column left" id="presence-menu-header">
-				<div class="quark-presence-container">
-					<?php echo $this->MenuHeaderWidget(); ?>
-				</div>
-			</div>
 			<div class="quark-presence-column right" id="presence-user">
 				<div class="quark-presence-container">
 					<?php echo $this->UserWidget(); ?>
+				</div>
+			</div>
+			<div class="quark-presence-column left" id="presence-menu-header">
+				<div class="quark-presence-container">
+					<?php echo $this->MenuHeaderWidget(); ?>
 				</div>
 			</div>
 		</div>
