@@ -2467,8 +2467,6 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-
-	/**
 	 * @param IQuarkPrimitive $primitive = null
 	 *
 	 * @return IQuarkPrimitive
@@ -4809,8 +4807,6 @@ class QuarkModel implements IQuarkContainer {
 
 		return $this->_model;
 	}
-
-	/**
 
 	/**
 	 * @param IQuarkPrimitive $primitive = null
