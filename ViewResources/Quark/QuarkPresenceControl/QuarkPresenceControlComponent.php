@@ -17,6 +17,11 @@ trait QuarkPresenceControlComponent {
 	use QuarkViewBehavior;
 
 	/**
+	 * @var bool $_menuHeader = false
+	 */
+	private $_menuHeader = false;
+
+	/**
 	 * @param string $href = ''
 	 * @param string $text = ''
 	 * @param string $fa = ''
@@ -49,12 +54,16 @@ trait QuarkPresenceControlComponent {
 	 * @return string
 	 */
 	public function MenuHeaderWidget ($links = [], $right = false) {
-		$items = '';
-
+		$items = $this->_menuHeader
+			? ('</div></div><div class="quark-presence-column ' . ($right ? 'right' : 'left') . '"><div class="quark-presence-container">')
+			: '';
+		
 		foreach ($links as $link)
 			$items .= $link;
 
-		return ($right ? '</div></div><div class="quark-presence-column right"><div class="quark-presence-container">' : ''). $items;
+		$this->_menuHeader = true;
+
+		return $items;
 	}
 
 	/**
