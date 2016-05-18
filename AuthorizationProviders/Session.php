@@ -118,6 +118,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		if (!$session->Create()) return null;
 
 		$output = new QuarkDTO();
+		$output->Data(null);
 		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $session->sid));
 		$output->Signature($session->signature);
 		$output->Cookie(new QuarkCookie($this->_cookie, $session->sid, $lifetime));

@@ -177,6 +177,10 @@ button.quark-button {
     color: rgb(1, 165, 1);
 }
 
+.quark-message.hidden {
+	display: none;
+}
+
 
 /**
  * .quark-document useful for code snippets or other text output

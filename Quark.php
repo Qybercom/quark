@@ -4939,6 +4939,8 @@ class QuarkModel implements IQuarkContainer {
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
 		foreach ($fields as $key => $field) {
+			if ($key == '') continue;
+
 			if (isset($model->$key)) {
 				if (is_scalar($field) && is_scalar($model->$key))
 					settype($model->$key, gettype($field));
@@ -4982,6 +4984,8 @@ class QuarkModel implements IQuarkContainer {
 		}
 
 		foreach ($source as $key => $value) {
+			if ($key == '') continue;
+
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			$property = QuarkObject::Property($fields, $key, $value);
@@ -5033,6 +5037,8 @@ class QuarkModel implements IQuarkContainer {
 		$output = self::_normalize($model);
 
 		foreach ($model as $key => $value) {
+			if ($key == '') continue;
+
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) {
 				unset($output->$key);
 				continue;
@@ -5084,7 +5090,7 @@ class QuarkModel implements IQuarkContainer {
 
 			if (is_array($fields) || is_object($fields))
 				foreach ($fields as $key => $field) {
-					if (isset($model->$key)) continue;
+					if ($key == '' || isset($model->$key)) continue;
 
 					$output->$key = $field instanceof IQuarkModel
 						? QuarkModel::Build($field, empty($model->$key) ? null : $model->$key)
@@ -5098,7 +5104,7 @@ class QuarkModel implements IQuarkContainer {
 		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
 
 		foreach ($output as $key => $value) {
-			if (!($value instanceof QuarkModel)) continue;
+			if ($key == '' || !($value instanceof QuarkModel)) continue;
 
 			if ($check) $valid &= $value->Validate();
 			else $valid[$key] = $value->ValidationRules();
@@ -5168,6 +5174,8 @@ class QuarkModel implements IQuarkContainer {
 		}
 
 		foreach ($model as $key => $value) {
+			if ($key == '') continue;
+
 			$property = QuarkObject::Property($fields, $key, null);
 
 			$output->$key = $value instanceof QuarkModel
@@ -5886,7 +5894,7 @@ class QuarkField {
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -5902,7 +5910,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function TypeOf ($key, $value, $nullable = false) {
@@ -5916,8 +5925,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $sever
-	 * @param bool $nullable
+	 * @param bool $sever = false
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -5930,8 +5939,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $sever
-	 * @param bool $nullable
+	 * @param bool $sever = false
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -5944,7 +5953,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function Lt ($key, $value, $nullable = false) {
@@ -5956,7 +5966,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function Gt ($key, $value, $nullable = false) {
@@ -5968,7 +5979,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function Lte ($key, $value, $nullable = false) {
@@ -5980,7 +5992,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function Gte ($key, $value, $nullable = false) {
@@ -5992,7 +6005,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function MinLengthInclusive ($key, $value, $nullable = false) {
@@ -6004,7 +6018,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function MinLength ($key, $value, $nullable = false) {
@@ -6016,7 +6031,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function Length ($key, $value, $nullable = false) {
@@ -6028,7 +6044,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function MaxLength ($key, $value, $nullable = false) {
@@ -6040,7 +6057,8 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $value
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 *
 	 * @return bool
 	 */
 	public static function MaxLengthInclusive ($key, $value, $nullable = false) {
@@ -6053,6 +6071,7 @@ class QuarkField {
 	 * @param $key
 	 * @param $value
 	 * @param bool $nullable
+	 *
 	 * @return bool|int
 	 */
 	public static function Match ($key, $value, $nullable = false) {
@@ -6063,8 +6082,8 @@ class QuarkField {
 
 	/**
 	 * @param $key
-	 * @param array $values
-	 * @param bool  $nullable
+	 * @param array $values = []
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -6077,11 +6096,12 @@ class QuarkField {
 	/**
 	 * @param string $type
 	 * @param mixed $key
-	 * @param bool $nullable
-	 * @param null $culture
+	 * @param bool $nullable = false
+	 * @param IQuarkCulture $culture = null
+	 *
 	 * @return bool
 	 */
-	private static function _dateTime ($type, $key, $nullable = false, $culture = null) {
+	private static function _dateTime ($type, $key, $nullable = false, IQuarkCulture $culture = null) {
 		if ($nullable && $key == null) return true;
 
 		if ($culture == null)
@@ -6099,37 +6119,37 @@ class QuarkField {
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
-	 * @param null $culture
+	 * @param bool $nullable = false
+	 * @param IQuarkCulture $culture = null
 	 * @return bool|int
 	 */
-	public static function DateTime ($key, $nullable = false, $culture = null) {
+	public static function DateTime ($key, $nullable = false, IQuarkCulture $culture = null) {
 		return self::_dateTime('DateTime', $key, $nullable, $culture);
 	}
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
-	 * @param null $culture
+	 * @param bool $nullable = false
+	 * @param IQuarkCulture $culture = null
 	 * @return bool
 	 */
-	public static function Date ($key, $nullable = false, $culture = null) {
+	public static function Date ($key, $nullable = false, IQuarkCulture $culture = null) {
 		return self::_dateTime('Date', $key, $nullable, $culture);
 	}
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
-	 * @param null $culture
+	 * @param bool $nullable = false
+	 * @param IQuarkCulture $culture = null
 	 * @return bool
 	 */
-	public static function Time ($key, $nullable = false, $culture = null) {
+	public static function Time ($key, $nullable = false, IQuarkCulture $culture = null) {
 		return self::_dateTime('Time', $key, $nullable, $culture);
 	}
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -6142,7 +6162,7 @@ class QuarkField {
 
 	/**
 	 * @param $key
-	 * @param bool $nullable
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -6154,9 +6174,25 @@ class QuarkField {
 	}
 
 	/**
+	 * https://tools.ietf.org/html/rfc3986#appendix-B
+	 * 
+	 * @param $key
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public static function URI ($key, $nullable = false) {
+		if ($nullable && $key == null) return true;
+		if (!is_string($key)) return false;
+
+		return preg_match('#^([a-zA-Z0-9\-\+\.]+)\:\/\/((.*)(\:(.*))?\@)?(([a-zA-Z0-9\.\-]*)|(\[[\d\:]*\]))(\:[\d]*)?\/([a-zA-Z\\\%\&\=\!\#\$\^\(\)\[\]\{\}\~\`]*)#Uis', $key);
+	}
+
+	/**
 	 * @param $key
 	 * @param $values
-	 * @param bool $nullable
+	 * @param bool $nullable = false
+	 * 
 	 * @return bool
 	 */
 	public static function In ($key, $values, $nullable = false) {
@@ -6178,7 +6214,7 @@ class QuarkField {
 	/**
 	 * @param $key
 	 * @param $model
-	 * @param bool $nullable
+	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
@@ -6195,6 +6231,7 @@ class QuarkField {
 
 	/**
 	 * @param $rules
+	 * 
 	 * @return bool
 	 */
 	public static function Rules ($rules) {
@@ -6211,7 +6248,7 @@ class QuarkField {
 
 	/**
 	 * @param bool $rule
-	 * @param QuarkLocalizedString $message
+	 * @param QuarkLocalizedString $message = null
 	 * @param string $field = ''
 	 *
 	 * @return bool
@@ -6898,14 +6935,17 @@ class QuarkSession {
 	}
 
 	/**
-	 * @param QuarkModel $user
+	 * @param QuarkModel $user = null
 	 * @param $criteria = []
 	 * @param int $lifetime = 0
 	 *
 	 * @return bool
 	 * @throws QuarkArchException
 	 */
-	public function ForUser (QuarkModel $user, $criteria = [], $lifetime = 0) {
+	public function ForUser (QuarkModel $user = null, $criteria = [], $lifetime = 0) {
+		if ($user == null)
+			throw new QuarkArchException('[QuarkSession::ForUser] Given model is null');
+
 		$user = $user->Model();
 
 		if (!($user instanceof IQuarkAuthorizableModel))
@@ -11229,7 +11269,7 @@ class QuarkHTTPServer {
 
 		if ($service->Authorize(true))
 			$service->Invoke($method, $input !== null ? array($service->Input()) : array(), true);
-
+		
 		echo $service->Output()->SerializeResponseBody();
 		$length = ob_get_length();
 

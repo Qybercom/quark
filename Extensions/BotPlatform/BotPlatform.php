@@ -1,0 +1,52 @@
+<?php
+namespace Quark\Extensions\BotPlatform;
+
+use Quark\IQuarkExtension;
+
+use Quark\Quark;
+use Quark\QuarkDTO;
+
+/**
+ * Class BotPlatform
+ *
+ * @package Quark\Extensions\BotPlatform
+ */
+class BotPlatform implements IQuarkExtension {
+	/**
+	 * @var BotPlatformConfig $_config
+	 */
+	private $_config;
+
+	/**
+	 * @param string $config
+	 * @param string $authorization = ''
+	 */
+	public function __construct ($config, $authorization = '') {
+		$this->_config = Quark::Config()->Extension($config);
+
+		$this->_config->BotPlatformProvider()->BotApplication(
+			$this->_config->appId,
+			func_num_args() == 2 ? $authorization : $this->_config->appSecret
+		);
+	}
+
+	/**
+	 * @param string $method
+	 * @param array $data = []
+	 *
+	 * @return QuarkDTO
+	 */
+	public function API ($method, $data = []) {
+		return $this->_config->BotPlatformProvider()->BotAPI($method, $data);
+	}
+
+	/**
+	 * @param string $channel = ''
+	 * @param string $text = ''
+	 *
+	 * @return bool
+	 */
+	public function SendMessage ($channel = '', $text = '') {
+		return $this->_config->BotPlatformProvider()->BotSendMessage($channel, $text);
+	}
+}
