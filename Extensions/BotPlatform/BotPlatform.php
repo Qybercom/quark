@@ -31,6 +31,31 @@ class BotPlatform implements IQuarkExtension {
 	}
 
 	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return BotPlatformMessage
+	 */
+	public function IncomingMessage (QuarkDTO $request) {
+		if (!$this->_config->BotPlatformProvider()->BotIncomingValidation($request)) {
+			Quark::Log('[BotPlatform] Attempt of request forgery of ' . get_class($this->_config->BotPlatformProvider()), Quark::LOG_WARN);
+			Quark::Trace($request);
+			
+			return null;
+		}
+
+		return $this->_config->BotPlatformProvider()->BotIncomingMessage($request);
+	}
+
+	/**
+	 * @param BotPlatformMessage $message
+	 *
+	 * @return bool
+	 */
+	public function OutgoingMessage (BotPlatformMessage $message) {
+		return $this->_config->BotPlatformProvider()->BotOutgoingMessage($message);
+	}
+
+	/**
 	 * @param string $method
 	 * @param array $data = []
 	 *
@@ -41,12 +66,11 @@ class BotPlatform implements IQuarkExtension {
 	}
 
 	/**
-	 * @param string $channel = ''
-	 * @param string $text = ''
+	 * @param string $type
 	 *
-	 * @return bool
+	 * @return string
 	 */
-	public function SendMessage ($channel = '', $text = '') {
-		return $this->_config->BotPlatformProvider()->BotSendMessage($channel, $text);
+	public function MessageType ($type) {
+		return $this->_config->BotPlatformProvider()->BotMessageType($type);
 	}
 }

@@ -18,6 +18,27 @@ interface IQuarkBotPlatformProvider {
 	public function BotApplication($appId, $appSecret);
 
 	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return bool
+	 */
+	public function BotIncomingValidation(QuarkDTO $request);
+
+	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return BotPlatformMessage
+	 */
+	public function BotIncomingMessage(QuarkDTO $request);
+
+	/**
+	 * @param BotPlatformMessage $message
+	 *
+	 * @return bool
+	 */
+	public function BotOutgoingMessage(BotPlatformMessage $message);
+
+	/**
 	 * @param string $method
 	 * @param array $data
 	 *
@@ -26,10 +47,9 @@ interface IQuarkBotPlatformProvider {
 	public function BotAPI($method, $data);
 
 	/**
-	 * @param string $channel = ''
-	 * @param string $text
+	 * @param string $type
 	 *
-	 * @return bool
+	 * @return string
 	 */
-	public function BotSendMessage($channel, $text);
+	public function BotMessageType($type);
 }

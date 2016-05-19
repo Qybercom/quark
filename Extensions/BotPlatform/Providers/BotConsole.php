@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
+use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -12,17 +13,13 @@ use Quark\Extensions\BotPlatform\BotPlatformMessage;
 use Quark\Extensions\BotPlatform\BotPlatformMember;
 
 /**
- * Class FiveMinutes
+ * Class BotConsole
  *
  * @package Quark\Extensions\BotPlatform\Providers
  */
-class FiveMinutes implements IQuarkBotPlatformProvider {
-	const PLATFORM = 'FiveMinutes';
-	//const API_ENDPOINT = 'http://5min.im/';
-	const API_ENDPOINT = 'http://fm.alex025.dev.funwayhq.com/';
-
-	const MESSAGE_TEXT = 'text';
-	const MESSAGE_IMAGE = 'image';
+class BotConsole implements IQuarkBotPlatformProvider {
+	//const API_ENDPOINT = 'http://bot-console.io/';
+	const API_ENDPOINT = 'http://bot-console.alex025.dev.funwayhq.com/';
 
 	/**
 	 * @var string $_appId = ''
@@ -64,12 +61,12 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 
 		return new BotPlatformMessage(
 			$request->payload,
-			$request->msg,
+			$request->messageId,
 			$request->type,
-			new BotPlatformMember($request->from, $request->fromName),
+			new BotPlatformMember($request->fromId, $request->fromName),
 			QuarkDate::GMTOf($request->date),
-			$request->room,
-			self::PLATFORM
+			$request->channel,
+			$request->platform
 		);
 	}
 
@@ -79,9 +76,8 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	 * @return bool
 	 */
 	public function BotOutgoingMessage (BotPlatformMessage $message) {
-		$api = $this->BotAPI('chat/message', array(
-			'bot' => $this->_appSecret,
-			'room' => $message->Channel(),
+		$api = $this->BotAPI('api/' . $message->Platform() . '/out/' . $message->Channel(), array(
+			'app' => $this->_appSecret,
 			'type' => $message->Type(),
 			'payload' => $message->Payload()
 		));
@@ -110,9 +106,6 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	 * @return string
 	 */
 	public function BotMessageType ($type) {
-		if ($type == BotPlatformMessage::TYPE_TEXT)
-			return self::MESSAGE_TEXT;
-
-		return '';
+		return $type;
 	}
 }

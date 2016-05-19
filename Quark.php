@@ -6522,6 +6522,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return QuarkDate
 	 */
 	public function Offset ($offset, $copy = false) {
+		if ($this->_date == null) return null;
+
 		$out = $copy ? clone $this : $this;
 		$out->_date->modify($offset);
 
