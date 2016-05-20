@@ -5,6 +5,7 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkDate;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkArchException;
 use Quark\QuarkModel;
@@ -62,6 +63,51 @@ class MongoDB implements IQuarkDataProvider {
 			return (string)$source->_id->{'$id'};
 
 		return '';
+	}
+
+	/**
+	 * http://stackoverflow.com/a/13594408/2097055
+	 *
+	 * @param QuarkDate $date = null
+	 *
+	 * @return \MongoId
+	 */
+	public static function _idOfDate (QuarkDate $date = null) {
+		return $date == null
+			? null
+			: new \MongoId(base_convert($date->Timestamp(), 10, 16) . '0000000000000000');
+	}
+
+	/**
+	 * https://steveridout.github.io/mongo-object-time/
+	 *
+	 * @param \MongoId $id = null
+	 *
+	 * @return QuarkDate
+	 */
+	public static function DateOfId (\MongoId $id = null) {
+		if ($id == null) return null;
+
+		$date = substr((string)$id, 0, 8);
+		if ($date == false) return null;
+
+		return QuarkDate::FromTimestamp(base_convert($date, 16, 10));
+	}
+
+	/**
+	 * @param string $mod = ''
+	 * @param QuarkDate $date = ''
+	 * @param string $key = '_id'
+	 *
+	 * @return array
+	 *
+	 * @throws QuarkArchException
+	 */
+	public static function QueryByCreationDate ($mod = '$eq', QuarkDate $date = null, $key = '_id') {
+		if (!is_string($mod))
+			throw new QuarkArchException('[MongoDB::QueryByCreationDate] Illegal modifier. Expected one of $lt, $lte, $eq (since MongoDB v3.0), $gte, $gt, got (' . gettype($mod) . ') ' . print_r($mod, true));
+		
+		return array($key => array($mod => self::_idOfDate($date)));
 	}
 
 	/**

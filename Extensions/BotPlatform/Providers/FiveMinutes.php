@@ -18,6 +18,7 @@ use Quark\Extensions\BotPlatform\BotPlatformMember;
  */
 class FiveMinutes implements IQuarkBotPlatformProvider {
 	const PLATFORM = 'FiveMinutes';
+	
 	//const API_ENDPOINT = 'http://5min.im/';
 	const API_ENDPOINT = 'http://fm.alex025.dev.funwayhq.com/';
 

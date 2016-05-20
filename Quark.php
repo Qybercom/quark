@@ -6638,6 +6638,18 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @param int $time = 0
+	 *
+	 * @return QuarkDate
+	 */
+	public static function FromTimestamp ($time = 0) {
+		$date = new self();
+		$date->_date->setTimestamp($time);
+
+		return $date;
+	}
+
+	/**
 	 * @param string $timezone
 	 *
 	 * @return int
