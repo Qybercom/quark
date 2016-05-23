@@ -19,6 +19,13 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 	const TODO_FIELDS = '// TODO: Implement Fields() method.';
 	const TODO_DATA_PROVIDER = '// TODO: Implement DataProvider() method.';
 
+	/**
+	 * @param string $name
+	 * @param array $fields = []
+	 * @param string $connection = ''
+	 *
+	 * @return string
+	 */
 	public static function Contents ($name, $fields = [], $connection = '') {
 		$import = '';
 

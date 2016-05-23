@@ -70,7 +70,7 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 
 	/**
 	 * @param QuarkFile $file = null
-	 * @param bool $force = rue
+	 * @param bool $force = true
 	 *
 	 * @return bool
 	 */
@@ -83,7 +83,7 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 			if ($update) return $update;
 			if (!$force) return false;
 		}
-
+		
 		$id = $this->_config->CDNProvider()->CDNResourceCreate($file);
 		if (!$id) return false;
 

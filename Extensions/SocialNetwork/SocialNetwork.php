@@ -85,8 +85,8 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		$this->accessToken = (string)$this->accessToken;
 
 		return array(
-			QuarkField::TypeOf($this->userId, QuarkField::TYPE_STRING),
-			QuarkField::TypeOf($this->accessToken, QuarkField::TYPE_STRING)
+			QuarkField::is($this->userId, QuarkField::TYPE_STRING),
+			QuarkField::is($this->accessToken, QuarkField::TYPE_STRING)
 		);
 	}
 

@@ -21,6 +21,25 @@ use Quark\QuarkConnectionException;
  * @package Quark\DataProviders
  */
 class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
+	const OPTION_SCHEMA_ENCODING = 'ENCODING';
+	const OPTION_SCHEMA_LC_COLLATE = 'LC_COLLATE';
+	const OPTION_SCHEMA_LC_CTYPE = 'LC_CTYPE';
+	const OPTION_SCHEMA_PRIMARY_KEY = 'PRIMARY KEY';
+	const OPTION_SCHEMA_NOT_NULL = 'NOT NULL';
+	const OPTION_SCHEMA_CHECK_EXISTS = '_sql_exists';
+
+	const DEFAULT_ENCODING = 'UTF8';
+
+	const TYPE_INT = 'INT';
+	const TYPE_NUMERIC = 'NUMERIC';
+	const TYPE_REAL = 'REAL';
+	const TYPE_DOUBLE = 'DOUBLE';
+	const TYPE_BOOLEAN = 'BOOLEAN';
+	const TYPE_DATE = 'DATE';
+	const TYPE_TIMESTAMP = 'TIMESTAMP';
+	const TYPE_TEXT = 'TEXT';
+	const TYPE_BIGSERIAL = 'BIGSERIAL';
+
 	/**
 	 * @var resource $_connection
 	 */
@@ -242,21 +261,90 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			if (!array_key_exists('column_default', $field)) continue;
 			if (!array_key_exists('data_type', $field)) continue;
 
-			$t = strtoupper($field['data_type']);
 			$value = $field['column_default'];
-			$type = QuarkField::TYPE_STRING;
-
-			if (strstr($t, 'INT')) $type = QuarkField::TYPE_INT;
-			if ($t == 'NUMERIC' || $t == 'REAL' || strstr($t, 'DOUBLE')) $type = QuarkField::TYPE_FLOAT;
-			if ($t == 'BOOLEAN') $type = QuarkField::TYPE_BOOL;
-			if (strstr($t, 'DATE') || strstr($t, 'TIMESTAMP')) $type = QuarkField::TYPE_DATE;
+			$type = $this->_sql->FieldTypeFromProvider($field['column_default']);
 
 			if ($type == QuarkField::TYPE_DATE) $value = new QuarkDate();
+			elseif ($type == QuarkField::TYPE_TIMESTAMP) $value = QuarkDate::FromTimestamp();
 			else settype($value, $type);
 
 			$output[] = new QuarkField($field['column_name'], $type, $value);
 		}
 
 		return $output;
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param array $options = []
+	 *
+	 * @return mixed
+	 */
+	public function GenerateSchema (IQuarkModel $model, $options = []) {
+		if (!isset($options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT]))
+			$options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT] = true;
+
+		if (!isset($options[self::OPTION_SCHEMA_CHECK_EXISTS]))
+			$options[self::OPTION_SCHEMA_CHECK_EXISTS] = true;
+
+		if (!isset($options[self::OPTION_SCHEMA_ENCODING]))
+			$options[self::OPTION_SCHEMA_ENCODING] = self::DEFAULT_ENCODING;
+
+		$pk = QuarkSQL::Pk($model);
+		$fields = '';
+		$properties = $model->Fields();
+
+		foreach ($properties as $key => $value) {
+			$type = $this->_sql->FieldTypeFromModel($value);
+			$fields .= '"' . $this->_sql->Field($key) . '"'
+				. ' ' . ($key == $pk ? self::TYPE_BIGSERIAL . ' ' . self::OPTION_SCHEMA_PRIMARY_KEY : $type)
+				. ' ' . self::OPTION_SCHEMA_NOT_NULL . ', ';
+		}
+
+		$fields = trim($fields, " ,");
+
+		return $this->_sql->Query(
+			$model,
+			$options,
+			'CREATE TABLE '
+			. ($options[self::OPTION_SCHEMA_CHECK_EXISTS] ? 'IF NOT EXISTS ' : '')
+			. QuarkSQL::Collection($model)
+			. ' (' . $fields . ');',
+			$options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT]
+		);
+	}
+
+	/**
+	 * @param $type
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromProvider ($type) {
+		$t = strtoupper($type);
+
+		if (strstr($t, self::TYPE_INT)) return QuarkField::TYPE_INT;
+		if ($t == self::TYPE_NUMERIC || $t == self::TYPE_REAL || $t == self::TYPE_DOUBLE) return QuarkField::TYPE_FLOAT;
+		if ($t == self::TYPE_BOOLEAN) return QuarkField::TYPE_BOOL;
+		if (strstr($t, self::TYPE_DATE)) return QuarkField::TYPE_DATE;
+		if (strstr($t, self::TYPE_TIMESTAMP)) return QuarkField::TYPE_TIMESTAMP;
+
+		return QuarkField::TYPE_STRING;
+	}
+
+	/**
+	 * @param $field
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromModel ($field) {
+		$type = QuarkField::TypeOf($field);
+
+		if ($type == QuarkField::TYPE_INT) return self::TYPE_INT;
+		if ($type == QuarkField::TYPE_FLOAT) return self::TYPE_DOUBLE;
+		if ($type == QuarkField::TYPE_BOOL) return self::TYPE_BOOLEAN;
+		if ($type == QuarkField::TYPE_DATE) return self::TYPE_DATE;
+		if ($type == QuarkField::TYPE_TIMESTAMP) return self::TYPE_TIMESTAMP;
+
+		return self::TYPE_TEXT;
 	}
 }

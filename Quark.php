@@ -5805,6 +5805,7 @@ class QuarkField {
 	const TYPE_NULL = 'null';
 
 	const TYPE_DATE = 'QuarkDate';
+	const TYPE_TIMESTAMP = '_timestamp';
 
 	/**
 	 * @var QuarkKeyValuePair[] $_errors
@@ -5893,6 +5894,21 @@ class QuarkField {
 	}
 
 	/**
+	 * @param $property
+	 *
+	 * @return string
+	 */
+	public static function TypeOf ($property) {
+		if (is_int($property)) return self::TYPE_INT;
+		if (is_float($property)) return self::TYPE_FLOAT;
+		if (is_bool($property)) return self::TYPE_BOOL;
+		if (is_null($property)) return self::TYPE_NULL;
+		if ($property instanceof QuarkDate) return self::TYPE_DATE;
+
+		return self::TYPE_STRING;
+	}
+
+	/**
 	 * @param $key
 	 * @param bool $nullable = false
 	 *
@@ -5914,7 +5930,7 @@ class QuarkField {
 	 *
 	 * @return bool
 	 */
-	public static function TypeOf ($key, $value, $nullable = false) {
+	public static function is ($key, $value, $nullable = false) {
 		if ($nullable && $key == null) return true;
 
 		$comparator = 'is_' . $value;
@@ -6368,7 +6384,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::TypeOf($this->default, QuarkField::TYPE_STRING)
+			QuarkField::is($this->default, QuarkField::TYPE_STRING)
 		);
 	}
 
@@ -6418,6 +6434,11 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @var string $_timezone = self::CURRENT
 	 */
 	private $_timezone = self::CURRENT;
+	
+	/**
+	 * @var bool $_fromTimestamp = false
+	 */
+	private $_fromTimestamp = false;
 
 	/**
 	 * @param IQuarkCulture $culture
@@ -6645,6 +6666,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	public static function FromTimestamp ($time = 0) {
 		$date = new self();
 		$date->_date->setTimestamp($time);
+		$date->_fromTimestamp = true;
 
 		return $date;
 	}
@@ -6716,7 +6738,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->DateTime();
+		return $this->_fromTimestamp ? $this->Timestamp() : $this->DateTime();
 	}
 
 	/**
@@ -6725,7 +6747,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return mixed
 	 */
 	public function AfterPopulate ($raw) {
-		$this->Value($raw);
+		if ($this->_fromTimestamp) $this->_date->setTimestamp($raw);
+		else $this->Value($raw);
 	}
 
 	/**
@@ -12170,10 +12193,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Rules () {
 		return array(
-			QuarkField::TypeOf($this->name, QuarkField::TYPE_STRING),
-			QuarkField::TypeOf($this->type, QuarkField::TYPE_STRING),
-			QuarkField::TypeOf($this->size, QuarkField::TYPE_INT),
-			QuarkField::TypeOf($this->tmp_name, QuarkField::TYPE_STRING),
+			QuarkField::is($this->name, QuarkField::TYPE_STRING),
+			QuarkField::is($this->type, QuarkField::TYPE_STRING),
+			QuarkField::is($this->size, QuarkField::TYPE_INT),
+			QuarkField::is($this->tmp_name, QuarkField::TYPE_STRING),
 			QuarkField::MinLength($this->name, 1)
 		);
 	}
@@ -13147,6 +13170,7 @@ class QuarkCertificate extends QuarkFile {
  */
 class QuarkSQL {
 	const OPTION_AS = 'option.as';
+	const OPTION_SCHEMA_GENERATE_PRINT = 'option.schema_print';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
 
@@ -13215,10 +13239,11 @@ class QuarkSQL {
 	 * @param $model
 	 * @param $options
 	 * @param $query
+	 * @param bool $test = false
 	 *
 	 * @return mixed
 	 */
-	public function Query ($model ,$options, $query) {
+	public function Query ($model ,$options, $query, $test = false) {
 		$i = 1;
 		$escape = $this->_provider->EscapeChar();
 		$query = str_replace(
@@ -13228,7 +13253,7 @@ class QuarkSQL {
 			$i
 		);
 
-		return $this->_provider->Query($query, $options);
+		return $test ? $query : $this->_provider->Query($query, $options);
 	}
 
 	/**
@@ -13258,6 +13283,24 @@ class QuarkSQL {
 		if (!is_string($field)) return '';
 
 		return $this->_provider->Escape($field);
+	}
+
+	/**
+	 * @param $type
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromProvider ($type) {
+		return $this->_provider->FieldTypeFromProvider($type);
+	}
+
+	/**
+	 * @param $field
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromModel ($field) {
+		return $this->_provider->FieldTypeFromModel($field);
 	}
 
 	/**
@@ -13426,7 +13469,7 @@ class QuarkSQL {
 		$fields = array();
 
 		foreach ($model as $key => $value)
-			$fields[] = $this->Field($key) . '=' . '\'' . $this->Value($value) . '\'';
+			$fields[] = $this->Field($key) . '=' . $this->Value($value);
 
 		return $this->Query(
 			$model,
@@ -13491,11 +13534,33 @@ interface IQuarkSQLDataProvider {
 	public function EscapeChar();
 
 	/**
+	 * @param $type
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromProvider($type);
+	
+	/**
+	 * @param $field
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromModel($field);
+
+	/**
 	 * @param string $table
 	 *
 	 * @return QuarkField[]
 	 */
 	public function Schema($table);
+	
+	/**
+	 * @param IQuarkModel $model
+	 * @param array $options = []
+	 *
+	 * @return mixed
+	 */
+	public function GenerateSchema(IQuarkModel $model, $options = []);
 }
 
 /**

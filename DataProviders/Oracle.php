@@ -162,4 +162,32 @@ class Oracle implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	public function Schema ($table) {
 		// TODO: Implement Schema() method.
 	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param array $options
+	 *
+	 * @return string
+	 */
+	public function GenerateSchema (IQuarkModel $model, $options) {
+		// TODO: Implement GenerateSchema() method.
+	}
+
+	/**
+	 * @param $type
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromProvider ($type) {
+		// TODO: Implement FieldTypeFromProvider() method.
+	}
+
+	/**
+	 * @param $field
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromModel ($field) {
+		// TODO: Implement FieldTypeFromModel() method.
+	}
 }

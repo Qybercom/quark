@@ -22,6 +22,36 @@ use Quark\QuarkConnectionException;
  * @package Quark\DataProviders
  */
 class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
+	const OPTION_SCHEMA_TYPE = 'TYPE';
+	const OPTION_SCHEMA_CHARSET = 'CHARSET';
+	const OPTION_SCHEMA_COLLATE = 'COLLATE';
+	const OPTION_SCHEMA_AUTOINCREMENT = 'AUTO_INCREMENT';
+	const OPTION_SCHEMA_NOT_NULL = 'NOT NULL';
+	const OPTION_SCHEMA_CHECK_EXISTS = '_sql_exists';
+
+	const SCHEMA_TYPE_BDB = 'BDB';
+	const SCHEMA_TYPE_HEAP = 'HEAP';
+	const SCHEMA_TYPE_ISAM = 'ISAM';
+	const SCHEMA_TYPE_INNODB = 'InnoDB';
+	const SCHEMA_TYPE_MERGE = 'MERGE';
+	const SCHEMA_TYPE_MRG_MYISAM = 'MRG_MYISAM';
+	const SCHEMA_TYPE_MYISAM = 'MYISAM';
+
+	const DEFAULT_CHARSET = 'utf8';
+	const DEFAULT_COLLATE = 'utf8_bin';
+	const DEFAULT_AUTOINCREMENT = 1;
+
+	const TYPE_INT = 'INT';
+	const TYPE_DECIMAL = 'DECIMAL';
+	const TYPE_FLOAT = 'FLOAT';
+	const TYPE_DOUBLE = 'DOUBLE';
+	const TYPE_REAL = 'REAL';
+	const TYPE_BOOLEAN = 'BOOLEAN';
+	const TYPE_TINYINT1 = 'TINYINT(1)';
+	const TYPE_DATE = 'DATE';
+	const TYPE_DATETIME = 'DATETIME';
+	const TYPE_TEXT = 'TEXT';
+
 	/**
 	 * @var \mysqli $_connection
 	 */
@@ -204,7 +234,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param string $query
-	 * @param array  $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
@@ -212,7 +242,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$mode = isset($options['mode'])
 			? $options['mode']
 			: MYSQLI_STORE_RESULT;
-
+		
 		return $this->_connection->query($query, $mode);
 	}
 
@@ -249,14 +279,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			if (!array_key_exists('Type', $field)) continue;
 			if (!array_key_exists('Default', $field)) continue;
 
-			$t = strtoupper($field['Type']);
 			$value = $field['Default'];
-			$type = QuarkField::TYPE_STRING;
-
-			if (strstr($t, 'INT')) $type = QuarkField::TYPE_INT;
-			if ($t == 'DECIMAL' || $t == 'FLOAT' || $t == 'DOUBLE' || $t == 'REAL') $type = QuarkField::TYPE_FLOAT;
-			if ($t == 'BOOLEAN' || $t == 'TINYINT(1)') $type = QuarkField::TYPE_BOOL;
-			if (strstr($t, 'DATE')) $type = QuarkField::TYPE_DATE;
+			$type = $this->_sql->FieldTypeFromProvider($field['Type']);
 
 			if ($type == QuarkField::TYPE_DATE) $value = new QuarkDate();
 			else settype($value, $type);
@@ -265,5 +289,106 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		}
 
 		return $output;
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param array $options = []
+	 *
+	 * @return mixed
+	 */
+	public function GenerateSchema (IQuarkModel $model, $options = []) {
+		if (!isset($options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT]))
+			$options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT] = true;
+
+		if (!isset($options[self::OPTION_SCHEMA_CHECK_EXISTS]))
+			$options[self::OPTION_SCHEMA_CHECK_EXISTS] = true;
+
+		if (!isset($options[self::OPTION_SCHEMA_TYPE]))
+			$options[self::OPTION_SCHEMA_TYPE] = self::SCHEMA_TYPE_INNODB;
+
+		if (!isset($options[self::OPTION_SCHEMA_CHARSET]))
+			$options[self::OPTION_SCHEMA_CHARSET] = self::DEFAULT_CHARSET;
+
+		if (!isset($options[self::OPTION_SCHEMA_COLLATE]))
+			$options[self::OPTION_SCHEMA_COLLATE] = self::DEFAULT_COLLATE;
+
+		if (!isset($options[self::OPTION_SCHEMA_AUTOINCREMENT]))
+			$options[self::OPTION_SCHEMA_AUTOINCREMENT] = self::DEFAULT_AUTOINCREMENT;
+
+		$pk = QuarkSQL::Pk($model);
+		$fields = '';
+		$properties = $model->Fields();
+
+		foreach ($properties as $key => $value) {
+			$type = $this->_sql->FieldTypeFromModel($value);
+			$fields .= '`' . $this->_sql->Field($key) . '` ' . $type;
+
+			if ($key == $pk)
+				$fields .=
+					' ' . self::OPTION_SCHEMA_NOT_NULL .
+					' ' . self::OPTION_SCHEMA_AUTOINCREMENT;
+
+			if ($type == self::TYPE_DATETIME)
+				$fields .=
+					' ' . self::OPTION_SCHEMA_NOT_NULL;
+
+			if ($type == self::TYPE_TEXT)
+				$fields .=
+					' ' . self::OPTION_SCHEMA_COLLATE .
+					' ' . $options[self::OPTION_SCHEMA_COLLATE] .
+					' ' . self::OPTION_SCHEMA_NOT_NULL;
+
+			$fields .= ', ';
+		}
+
+		$fields .= 'PRIMARY KEY (`' . $pk . '`)';
+
+		return $this->_sql->Query(
+			$model,
+			$options,
+			'CREATE TABLE '
+			. ($options[self::OPTION_SCHEMA_CHECK_EXISTS] ? 'IF NOT EXISTS ' : '')
+			. QuarkSQL::Collection($model)
+			. ' (' . $fields . ') '
+			. 'ENGINE=' . $options[self::OPTION_SCHEMA_TYPE]
+			. ' DEFAULT'
+				. ' CHARSET=' . $options[self::OPTION_SCHEMA_CHARSET]
+				. ' COLLATE=' . $options[self::OPTION_SCHEMA_COLLATE]
+				. ' AUTO_INCREMENT=' . $options[self::OPTION_SCHEMA_AUTOINCREMENT] . ' ;',
+			$options[QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT]
+		);
+	}
+
+	/**
+	 * @param $type
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromProvider ($type) {
+		$t = strtoupper($type);
+
+		if (strstr($t, self::TYPE_INT)) return QuarkField::TYPE_INT;
+		if ($t == self::TYPE_DECIMAL || $t == self::TYPE_FLOAT || $t == self::TYPE_DOUBLE || $t == self::TYPE_REAL) return QuarkField::TYPE_FLOAT;
+		if ($t == self::TYPE_BOOLEAN || $t == self::TYPE_TINYINT1) return QuarkField::TYPE_BOOL;
+		if (strstr($t, self::TYPE_DATE)) return QuarkField::TYPE_DATE;
+
+		return QuarkField::TYPE_STRING;
+	}
+
+	/**
+	 * @param $field
+	 *
+	 * @return string
+	 */
+	public function FieldTypeFromModel ($field) {
+		$type = QuarkField::TypeOf($field);
+
+		if ($type == QuarkField::TYPE_INT) return self::TYPE_INT;
+		if ($type == QuarkField::TYPE_FLOAT) return self::TYPE_DOUBLE;
+		if ($type == QuarkField::TYPE_BOOL) return self::TYPE_TINYINT1;
+		if ($type == QuarkField::TYPE_DATE) return self::TYPE_DATETIME;
+
+		return self::TYPE_TEXT;
 	}
 }
