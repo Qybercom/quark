@@ -5,6 +5,7 @@ use Quark\IQuarkAsyncTask;
 use Quark\IQuarkTask;
 
 use Quark\QuarkModel;
+use Quark\QuarkSQL;
 
 /**
  * Class SchemaForModel
@@ -32,6 +33,9 @@ class SchemaForModel implements IQuarkTask, IQuarkAsyncTask {
 		$class = $argv[3];
 		$model = new QuarkModel(new $class);
 
-		echo 'Generating table for ', $class, '... ', ($model->GenerateSchema() ? 'OK' : 'FAIL');
+		echo 'Generating table for ', $class, '... ',
+			($model->GenerateSchema(array(
+				QuarkSQL::OPTION_SCHEMA_GENERATE_PRINT => false
+			)) ? 'OK' : 'FAIL');
 	}
 }
