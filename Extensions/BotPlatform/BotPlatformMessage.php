@@ -10,6 +10,7 @@ use Quark\QuarkDate;
  */
 class BotPlatformMessage {
 	const TYPE_TEXT = 'type.text';
+	const TYPE_IMAGE = 'type.image';
 
 	/**
 	 * @var $_payload = ''

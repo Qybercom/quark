@@ -114,6 +114,9 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		if ($type == BotPlatformMessage::TYPE_TEXT)
 			return self::MESSAGE_TEXT;
 
+		if ($type == BotPlatformMessage::TYPE_IMAGE)
+			return self::MESSAGE_IMAGE;
+
 		return '';
 	}
 }
