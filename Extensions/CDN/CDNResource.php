@@ -101,6 +101,26 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	}
 
 	/**
+	 * @param string $config
+	 * @param string $id
+	 * @param string $fallback = ''
+	 *
+	 * @return QuarkModel|CDNResource
+	 */
+	public static function ById ($config, $id, $fallback = '') {
+		return new QuarkModel(new self($config, $fallback), array(
+			'resource' => $id
+		));
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Exists () {
+		return $this->URL($this->_default) != $this->_default->WebLocation();
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function Fields () {

@@ -245,11 +245,8 @@ Quark.Controls.Select = function (selector, opt) {
  * @constructor
  */
 Quark.Controls.File = function (selector, opt) {
-	var that = this;
-
-	that.Elem = $(selector);
-	that.Elem.on('click', opt, function (e) {
-		Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(e.data, {
+	$(document).on('click', selector, function (e) {
+		Quark.Controls.File.To($(this).attr('quark-url'), $(this).attr('quark-name'), Quark.Extend(opt, {
 			data: {
 				_s: $(this).attr('quark-signature')
 			}
@@ -328,6 +325,8 @@ Quark.Controls.DynamicList = function (selector, opt) {
 	opt = opt || {};
 		opt.name = opt.name == undefined ? 'list' : opt.name;
 		opt.placeholder = opt.placeholder == undefined ? '' : opt.placeholder;
+		opt.prepend = opt.prepend == undefined ? false : opt.prepend;
+		opt.preventDefault = opt.preventDefault == undefined ? false : opt.preventDefault;
 		opt.item = opt.item == undefined
 			? (
 				'<div class="quark-list-item">' +
@@ -341,13 +340,17 @@ Quark.Controls.DynamicList = function (selector, opt) {
 		e.preventDefault();
 
 		var button = $(this);
-		var dialog = $(button.attr('quark-list'));
+		var list = $(button.attr('quark-list'));
 
-		dialog.append(opt.item);
+		if (opt.prepend) list.prepend(opt.item);
+		else list.append(opt.item);
 	});
 
-	$(document).on('click', '.quark-list-item .item-remove', function () {
+	$(document).on('click', '.quark-list-item .item-remove', function (e) {
 		$(this).parents('.quark-list-item').remove();
+
+		if (opt.preventDefault)
+			return false;
 	});
 };
 
