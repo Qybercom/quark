@@ -114,9 +114,9 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	 * @return mixed
 	 */
 	public function Edge ($width = -1) {
-		$dv_lat = $this->Width(0, 						$width < 0 ? $this->width : $width);
-		$dv_lng = $this->Width(0, 						0);
-		$dh_lat = $this->Width(0, 						0);
+		$dv_lat = $this->Width(0, 			$width < 0 ? $this->width : $width);
+		$dv_lng = $this->Width(0, 			0);
+		$dh_lat = $this->Width(0, 			0);
 		$dh_lng = $this->Width($this->lat,	$width < 0 ? $this->width : $width);
 
 		return (object)array(

@@ -6,8 +6,12 @@ use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkViewResourceType;
 
+use Quark\QuarkDTO;
+use Quark\QuarkHTTPClient;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLocalCoreJSViewResource;
+
 use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
@@ -28,16 +32,61 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	const TYPE_TERRAIN = 'GoogleMap.Type.Terrain';
 	const TYPE_HYBRID = 'GoogleMap.Type.Hybrid';
 
+	const GEOCODE_STATUS_OK = 'OK';
+	const GEOCODE_STATUS_ZERO_RESULTS = 'ZERO_RESULTS';
+	const GEOCODE_STATUS_OVER_QUERY_LIMIT = 'OVER_QUERY_LIMIT';
+	const GEOCODE_STATUS_REQUEST_DENIED = 'REQUEST_DENIED';
+	const GEOCODE_STATUS_INVALID_REQUEST = 'INVALID_REQUEST';
+	const GEOCODE_STATUS_UNKNOWN_ERROR = 'UNKNOWN_ERROR';
+
+	/**
+	 * @var string $_center = '0.0-0.0'
+	 */
 	private $_center = '0.0-0.0';
+
+	/**
+	 * @var int $_zoom = 8
+	 */
 	private $_zoom = 8;
+
+	/**
+	 * @var string $_size = '160x90'
+	 */
 	private $_size = '160x90';
+
+	/**
+	 * @var int $_scale = 1
+	 */
 	private $_scale = 1;
+
+	/**
+	 * @var string $_format = self::FORMAT_PNG
+	 */
 	private $_format = self::FORMAT_PNG;
+
+	/**
+	 * @var string $_type = self::TYPE_ROADMAP
+	 */
 	private $_type = self::TYPE_ROADMAP;
+
+	/**
+	 * @var string $_markers = ''
+	 */
 	private $_markers = '';
+
+	/**
+	 * @var string $_paths = ''
+	 */
 	private $_paths = '';
+
+	/**
+	 * @var bool $_sensor = false
+	 */
 	private $_sensor = false;
 
+	/**
+	 * @var string $_key = ''
+	 */
 	private $_key = '';
 
 	/**
@@ -196,5 +245,25 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 			. '&sensor=' . ($this->_sensor ? 'true' : 'false')
 			. (strlen($this->_key) != 0 ? '&key=' . $this->_key : '')
 		);
+	}
+
+	/**
+	 * @param string $address
+	 *
+	 * @return MapPoint
+	 */
+	public function GeocodeAddress ($address) {
+		$map = QuarkHTTPClient::To(
+			'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($address) . '&key=' . $this->_key,
+			QuarkDTO::ForGET(),
+			new QuarkDTO(new QuarkJSONIOProcessor())
+		);
+
+		if (!isset($map->status) || !isset($map->results) || ($map->status != self::GEOCODE_STATUS_OK && $map->status != self::GEOCODE_STATUS_ZERO_RESULTS)) return null;
+		if (sizeof($map->results) == 0 || !isset($map->results[0]->geometry->location)) return null;
+
+		$point = $map->results[0]->geometry->location;
+
+		return isset($point->lat) && isset($point->lng) ? new MapPoint($point->lat, $point->lng) : null;
 	}
 }
