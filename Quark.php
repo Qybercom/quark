@@ -4334,6 +4334,16 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 
 	/**
+	 * @return QuarkCollection
+	 */
+	public function Flush () {
+		$this->_list = array();
+		$this->_index = 0;
+
+		return $this;
+	}
+
+	/**
 	 * (PHP 5 &gt;= 5.0.0)<br/>
 	 * Return the current element
 	 *

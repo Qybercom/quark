@@ -29,6 +29,11 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	public $width = -1;
 
 	/**
+	 * @var string $_address
+	 */
+	private $_address;
+
+	/**
 	 * @param float|int $lat = 0.0
 	 * @param float|int $lng = 0.0
 	 * @param float|int $width = -1
@@ -179,5 +184,24 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 			$point->lat >= $edge->s &&
 			$point->lng <= $edge->e &&
 			$point->lng >= $edge->w;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Compile () {
+		return $this->_address === null ? (((float)$this->lat) . ',' . ((float)$this->lng)) : $this->_address;
+	}
+
+	/**
+	 * @param string $address
+	 *
+	 * @return MapPoint
+	 */
+	public static function FromLocation ($address) {
+		$point = new self();
+		$point->_address = $address;
+
+		return $point;
 	}
 }
