@@ -86,6 +86,7 @@ Quark.Controls.Form = function (selector) {
 Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
 		opt.reset = opt.reset != undefined ? opt.reset : true;
+		opt.type = opt.type != undefined ? opt.type : 'GET';
 		opt.successCriteria = opt.successCriteria instanceof Function
 			? opt.successCriteria
 			: function (data) { return data.status != undefined && data.status == 200; };
@@ -111,7 +112,17 @@ Quark.Controls.Dialog = function (selector, opt) {
 			opt.success(trigger, dialog);
 	};
 
-	that.Error = function (dialog) {
+	that.Error = function (dialog, data) {
+		if (data.errors instanceof Array) {
+			var i = 0;
+
+			while (i < data.errors.length) {
+				dialog.append('<div class="quark-message warn fa fa-warning quark-dialog-state">' + data.errors[i] + '</div>');
+
+				i++;
+			}
+		}
+
 		dialog.find('.quark-dialog-state').slideUp();
 		dialog.find('.quark-dialog-state.error').slideDown();
 	};
@@ -141,6 +152,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$.ajax({
 			url: action.attr('href'),
 			dataType: 'json',
+			type: opt.type,
+			data: dialog.serialize(),
 
 			beforeSend: function () {
 				that.Wait(dialog);
@@ -148,7 +161,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 
 			success: function (data) {
 				if (opt.successCriteria(data)) that.Success(dialog, dialog.data('button'));
-				else that.Error(dialog);
+				else that.Error(dialog, data);
 			},
 
 			error: function () {

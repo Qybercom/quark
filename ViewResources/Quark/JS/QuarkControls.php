@@ -165,7 +165,7 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	 */
 	public function CompileFragment () {
 		return '
-			<div class="quark-dialog" id="' . $this->_id . '">
+			<form class="quark-dialog" id="' . $this->_id . '">
 				<h3>' . $this->_header . '</h3>
 				' . $this->_content . '<br />
 				<br />
@@ -176,7 +176,7 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 				<br />
 				<a class="quark-button block white quark-dialog-close">' . $this->_actionClose . '</a>
 				<a class="quark-button block ok quark-dialog-confirm">' . $this->_actionConfirm . '</a>
-			</div>
+			</form>
 		';
 	}
 }

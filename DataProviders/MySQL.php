@@ -173,7 +173,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		$records = $this->Find($model, $criteria, $options + array(QuarkModel::OPTION_LIMIT => 1));
+		$records = $this->Find($model, $criteria, array_merge($options, array(QuarkModel::OPTION_LIMIT => 1)));
 
 		return sizeof($records) == 0 ? null : $records[0];
 	}
@@ -223,11 +223,11 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
-		$result = $this->_sql->Count($model, $criteria, $options + array(
+		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
 				QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
 				QuarkModel::OPTION_SKIP => $skip,
-				QuarkModel::OPTION_LIMIT => $limit
-			));
+				QuarkModel::OPTION_LIMIT => $limit == 0 ? 1 : $limit
+			)));
 
 		return !$result ? 0 : (int)$result->fetch_row()[0];
 	}
@@ -242,8 +242,13 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$mode = isset($options['mode'])
 			? $options['mode']
 			: MYSQLI_STORE_RESULT;
-		
-		return $this->_connection->query($query, $mode);
+
+		$out = $this->_connection->query($query, $mode);
+
+		if (!$out)
+			Quark::Log('[MySQL] Query error "' . $query . '". Error: ' . $this->_connection->error);
+
+		return $out;
 	}
 
 	/**

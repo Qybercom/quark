@@ -4692,6 +4692,7 @@ class QuarkModel implements IQuarkContainer {
 	const OPTION_VALIDATE = 'validate';
 
 	const OPTION_USER_OPTIONS = '___user___';
+	const OPTION_FORCE_DEFINITION = '___force_definition___';
 
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior $_model = null
@@ -5028,11 +5029,12 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
 		$fields = $model->Fields();
+		$forceDefinition = isset($options[self::OPTION_FORCE_DEFINITION]) && $options[self::OPTION_FORCE_DEFINITION];
 
 		if (!isset($options[self::OPTION_VALIDATE]))
 			$options[self::OPTION_VALIDATE] = true;
 
-		if ($options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
+		if (!$forceDefinition && $options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
 		$output = self::_normalize($model);
 
@@ -5051,6 +5053,11 @@ class QuarkModel implements IQuarkContainer {
 			}
 			else $output->$key = self::_unlink($value);
 		}
+		
+		if ($forceDefinition)
+			foreach ($output as $key => &$value)
+				if (!isset($model->$key))
+					unset($output->$key);
 
 		unset($key, $value);
 
@@ -5395,10 +5402,13 @@ class QuarkModel implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public static function Update (IQuarkModel $model, $criteria = [], $options = []) {
+		if (!isset($options[self::OPTION_FORCE_DEFINITION]))
+			$options[self::OPTION_FORCE_DEFINITION] = true;
+		
 		$model = self::_export($model, $options);
 
 		if (!$model) return false;
-
+		
 		$ok = $model instanceof IQuarkModelWithBeforeSave
 			? $model->BeforeSave($options)
 			: true;
@@ -13281,8 +13291,9 @@ class QuarkSQL {
 	 */
 	public function Field ($field) {
 		if (!is_string($field)) return '';
+		$escape = $this->_provider->EscapeChar();
 
-		return $this->_provider->Escape($field);
+		return $escape . $this->_provider->Escape($field) . $escape;
 	}
 
 	/**
@@ -13310,6 +13321,8 @@ class QuarkSQL {
 	 */
 	public function Value ($value) {
 		if (!is_scalar($value)) return null;
+		if (is_bool($value))
+			$value = $value ? 1 : 0;
 
 		$output = $this->_provider->Escape($value);
 
@@ -13357,7 +13370,7 @@ class QuarkSQL {
 					break;
 
 				default:
-					$output[] = !$value ? '' : (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
+					$output[] = (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
 					break;
 			}
 		}
@@ -13373,12 +13386,6 @@ class QuarkSQL {
 	private function _cursor ($options) {
 		$output = '';
 
-		if (isset($options[QuarkModel::OPTION_LIMIT]))
-			$output .= ' LIMIT ' . $this->_provider->Escape($options[QuarkModel::OPTION_LIMIT]);
-
-		if (isset($options[QuarkModel::OPTION_SKIP]))
-			$output .= ' OFFSET ' . $this->_provider->Escape($options[QuarkModel::OPTION_SKIP]);
-
 		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
 			$output .= ' ORDER BY ';
 
@@ -13392,6 +13399,12 @@ class QuarkSQL {
 				$output .= ' ' . $this->Field($key) . ' ' . $sort;
 			}
 		}
+
+		if (isset($options[QuarkModel::OPTION_LIMIT]))
+			$output .= ' LIMIT ' . $this->_provider->Escape($options[QuarkModel::OPTION_LIMIT]);
+
+		if (isset($options[QuarkModel::OPTION_SKIP]))
+			$output .= ' OFFSET ' . $this->_provider->Escape($options[QuarkModel::OPTION_SKIP]);
 
 		return $output;
 	}
@@ -13501,9 +13514,9 @@ class QuarkSQL {
 	 * @return mixed
 	 */
 	public function Count (IQuarkModel $model, $criteria, $options = []) {
-		return $this->Select($model, $criteria, $options + array(
+		return $this->Select($model, $criteria, array_merge($options, array(
 			'fields' => array(self::FIELD_COUNT_ALL)
-		));
+		)));
 	}
 }
 
