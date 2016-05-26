@@ -154,7 +154,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		$records = $this->Find($model, $criteria, $options + array(QuarkModel::OPTION_LIMIT => 1));
+		$records = $this->Find($model, $criteria, array_merge($options, array(QuarkModel::OPTION_LIMIT => 1)));
 
 		return sizeof($records) == 0 ? null : $records[0];
 	}
@@ -204,11 +204,11 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
-		$result = $this->_sql->Count($model, $criteria, $options + array(
+		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
 			QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
 			QuarkModel::OPTION_SKIP => $skip,
 			QuarkModel::OPTION_LIMIT => $limit == 0 ? 'ALL' : $limit
-		));
+		)));
 
 		if (!$result) return 0;
 
