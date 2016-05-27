@@ -92,6 +92,7 @@ button.quark-button {
 }
 
 .quark-input {
+    display: inline-block;
     width: 150px;
 }
 
@@ -311,4 +312,26 @@ button.quark-button {
 
 .quark-list-item .quark-button.item-remove {
 	vertical-align: middle;
+}
+
+/**
+ * .quark-input.range component
+ */
+.quark-input.range {
+	padding: 0;
+    line-height: 0;
+}
+
+.quark-range-slider {
+	display: inline-block;
+	background: rgb(220,220,220);
+	border: 1px solid rgb(210,210,210);
+	margin: -5px 0 0 0;
+	padding: 5px;
+	cursor: pointer;
+	/*position: absolute;*/
+}
+
+.quark-range-slider:hover {
+	background: rgb(245,245,245);
 }

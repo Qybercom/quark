@@ -111,6 +111,17 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @param string $regex
+	 *
+	 * @return array
+	 */
+	public static function QueryRegex ($regex) {
+		return array(
+			'$regex' => new \MongoRegex($regex)
+		);
+	}
+
+	/**
 	 * @param IQuarkModel $model
 	 * @param bool $_id
 	 *

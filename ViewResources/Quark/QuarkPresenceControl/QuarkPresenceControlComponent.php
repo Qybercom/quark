@@ -94,15 +94,16 @@ trait QuarkPresenceControlComponent {
 	/**
 	 * @param string $action = ''
 	 * @param string $method = 'POST'
+	 * @param string $name = 'search'
 	 * @param string $placeholder = 'Search'
 	 * @param string $fa = 'fa-search'
 	 *
 	 * @return string
 	 */
-	public function SearchWidget ($action = '', $method = 'POST', $placeholder = 'Search', $fa = 'fa-search') {
+	public function SearchWidget ($action = '', $method = 'POST', $name = 'search', $placeholder = 'Search', $fa = 'fa-search') {
 		return '
 			<form id="presence-search" action="' . $action . '" method="' . $method . '" enctype="multipart/form-data">
-				<input class="quark-input" placeholder="' . $placeholder . '" />
+				<input class="quark-input" name="' . $name . '" placeholder="' . $placeholder . '" />
 				<button class="quark-button fa ' . $fa . '" type="submit"></button>
 			</form>
 		';

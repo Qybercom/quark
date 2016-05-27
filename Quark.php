@@ -3688,8 +3688,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Compile () {
-		foreach ($this->_vars as $name => $value)
-			$$name = $value;
+		foreach ($this->_vars as $___name___ => $___value___)
+			$$___name___ = $___value___;
 
 		ob_start();
 		/** @noinspection PhpIncludeInspection */

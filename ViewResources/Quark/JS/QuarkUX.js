@@ -27,16 +27,25 @@ Quark.UX = function (selector) {
 	that.Drag = function (opt) {
 		var drag = opt.drag,
 			setup = Quark.Extend(opt, {
-				preventDefault: true
+				preventDefault: true,
+				defaultCss: true,
+				axis: {
+					x: true,
+					y: true
+				}
 			});
 
 		setup.drag = function (e) {
-			e.target.css({
-				left: e.position.x + 'px',
-				top: e.position.y + 'px'
-			});
+			var allow = true;
+			if (drag instanceof Function) {
+				var a = drag(e);
+				allow = a == undefined ? true : a;
+			}
 
-			if (drag instanceof Function) drag(e);
+			if (!allow) return;
+
+			if (allow && opt.defaultCss && opt.axis.x) e.target.css('left', e.position.x + 'px');
+			if (allow && opt.defaultCss && opt.axis.y) e.target.css('top', e.position.y + 'px');
 		};
 
 		that.Elem.each(function () {
@@ -280,4 +289,90 @@ Quark.UX._commandHistoryListener = function (selector, change, scroll) {
  */
 Quark.UX.CommandHistory = function (selector, change, scroll) {
     Quark.UX._commandHistoryListeners.push(new Quark.UX._commandHistoryListener(selector, change, scroll));
+};
+
+/**
+ * http://stackoverflow.com/a/14645827/2097055
+ */
+(function(old) {
+	$.fn.attr = function() {
+		if (arguments.length !== 0)
+			return old.apply(this, arguments);
+
+		if (this.length === 0) return null;
+
+		var out = [];
+
+		$.each(this[0].attributes, function () {
+			if (!this.specified) return;
+
+			out.push({
+				name: this.name,
+				value: this.value
+			});
+      });
+
+      return out;
+	};
+})($.fn.attr);
+
+Quark.UX.Range = function (selector, opt) {
+	var that = this;
+
+	opt = opt || {};
+		opt.asDefined = opt.asDefined != undefined ? opt.asDefined : true;
+
+	that.Elem = $(selector);
+	that.Elem.attr('type', 'hidden');
+
+	that.Name = that.Elem.attr('name');
+	that.Value = that.Elem.attr('value');
+	that.Min = parseFloat(that.Elem.attr('min'));
+	that.Max = parseFloat(that.Elem.attr('max'));
+
+	that.Sliders = [];
+
+	var sliders = that.Elem.attr()
+		.map(function (elem) {
+			if (elem.name.indexOf('quark-slider-') == -1) return;
+
+			return {
+				name: elem.name.replace('quark-slider-', ''),
+				value: elem.value
+			};
+		})
+		.filter(function (elem) {
+			return elem != undefined;
+		});
+
+	if (sliders.length == 0 && opt.asDefined == true)
+		sliders.push({
+			name: that.Name,
+			value: that.Value
+		});
+
+	that.Elem = that.Elem.wrap('<div class="quark-input range">&nbsp;</div>').parent();
+	that.Elem.html('');
+
+	var i = 0;
+	while (i < sliders.length) {
+		that.Elem.append(
+			'<div class="quark-range-slider" style="margin-left: ' + sliders[i].value + 'px;"></div>' +
+			'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />'
+		);
+
+		i++;
+	}
+
+	var slide = new Quark.UX(that.Elem.find('.quark-range-slider'));
+	slide.Drag({
+		axis: {y:false},
+		drag: function (e) {
+			var width = e.target.width(),
+				step = width / (that.Max - that.Min),
+				val = e.position.x / step;
+
+			console.log(e.target.offset());
+		}
+	});
 };
