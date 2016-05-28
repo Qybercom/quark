@@ -152,7 +152,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		});
 	});
 
-	$(document).off('click').on('click', '.quark-dialog-confirm', function (e) {
+	$(document).on('click', '.quark-dialog-confirm', function (e) {
 		e.preventDefault();
 
 		var action = $(this);
