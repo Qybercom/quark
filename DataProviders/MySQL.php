@@ -93,6 +93,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		))
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, QuarkException::LastError());
 
+		$this->_connection->set_charset(self::DEFAULT_CHARSET);
 		$this->_sql = new QuarkSQL($this);
 	}
 
