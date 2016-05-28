@@ -327,7 +327,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 		foreach ($properties as $key => $value) {
 			$type = $this->_sql->FieldTypeFromModel($value);
-			$fields .= '`' . $this->_sql->Field($key) . '` ' . $type;
+			$fields .= $this->_sql->Field($key) . ' ' . $type;
 
 			if ($key == $pk)
 				$fields .=

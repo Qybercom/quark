@@ -83,6 +83,12 @@ Quark.Controls.Form = function (selector) {
 	});
 };
 
+/**
+ * @param {string} selector
+ * @param opt
+ *
+ * @constructor
+ */
 Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
 		opt.reset = opt.reset != undefined ? opt.reset : true;
@@ -113,14 +119,17 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Error = function (dialog, data) {
-		if (data.errors instanceof Array) {
+		if (data != undefined && data.errors instanceof Array) {
 			var i = 0;
+			var errors = '';
 
 			while (i < data.errors.length) {
-				dialog.append('<div class="quark-message warn fa fa-warning quark-dialog-state">' + data.errors[i] + '</div>');
+				errors += '<li>' + data.errors[i] + '</li>';
 
 				i++;
 			}
+
+			dialog.find('.quark-dialog-state.error').html('<ul>' + errors + '</ul>');
 		}
 
 		dialog.find('.quark-dialog-state').slideUp();
@@ -143,7 +152,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		});
 	});
 
-	$(document).on('click', '.quark-dialog-confirm', function (e) {
+	$(document).off('click').on('click', '.quark-dialog-confirm', function (e) {
 		e.preventDefault();
 
 		var action = $(this);

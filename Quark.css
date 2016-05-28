@@ -286,6 +286,12 @@ button.quark-button {
     margin: 0 0 0 5px !important;
 }
 
+.quark-dialog .quark-dialog-state ul {
+	display: inline-block;
+	margin: 0;
+	padding: 0 0 0 15px;
+}
+
 #quark-dialog-box {
     display: block;
     position: fixed;
