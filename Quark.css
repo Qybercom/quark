@@ -332,10 +332,10 @@ button.quark-button {
 	display: inline-block;
 	background: rgb(220,220,220);
 	border: 1px solid rgb(210,210,210);
-	margin: -5px 0 0 0;
+	margin: -6px 0 0 0;
 	padding: 5px;
 	cursor: pointer;
-	/*position: absolute;*/
+	position: absolute;
 }
 
 .quark-range-slider:hover {

@@ -155,3 +155,24 @@ if (!String.prototype.trim) {
         };
     })();
 }
+
+/**
+ * http://stackoverflow.com/a/324533/2097055
+ *
+ * @param {string} selector
+ *
+ * @return {string}
+ */
+Quark.CSS = function (selector) {
+	var i = 0,
+		selectors = document.styleSheets[0].rules || document.styleSheets[0].cssRules;
+
+	while (i < selectors.length) {
+		if (selectors[x].selectorText == selector)
+			return selectors[x].cssText
+				? selectors[x].cssText
+				: selectors[x].style.cssText;
+
+		i++;
+	}
+};

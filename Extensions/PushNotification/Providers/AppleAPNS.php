@@ -34,17 +34,17 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	private $_certificate;
 
 	/**
-	 * @var string $_host
+	 * @var string $_host = self::OPTION_PRODUCTION
 	 */
 	private $_host = self::OPTION_PRODUCTION;
 
 	/**
-	 * @var Device[] $_devices
+	 * @var Device[] $_devices = []
 	 */
 	private $_devices = array();
 
 	/**
-	 * @var array $_payload
+	 * @var array $_payload = []
 	 */
 	private $_payload = array();
 
@@ -74,6 +74,13 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
+	 * @return Device[]
+	 */
+	public function Devices () {
+		return $this->_devices;
+	}
+
+	/**
 	 * @param object|array $payload
 	 * @param array $options
 	 *
@@ -99,17 +106,17 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 			'data' => $data
 		);
 
-		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60);
+		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60, false);
 
-		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
-			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
-		});
+		$client->Flags(STREAM_CLIENT_ASYNC_CONNECT);
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			foreach ($this->_devices as $device)
 				$client->Send($this->_msg($device));
+		});
 
-			$client->Close();
+		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
 		});
 
 		return $client->Connect();

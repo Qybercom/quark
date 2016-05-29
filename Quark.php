@@ -7464,7 +7464,7 @@ trait QuarkNetwork {
 			$this->_timeout = $timeout;
 
 			if ($this->_socket)
-				stream_set_timeout($this->_socket, $this->_timeout);
+				stream_set_timeout($this->_socket, $this->_timeout, 0);
 		}
 
 		return $this->_timeout;
@@ -7480,6 +7480,18 @@ trait QuarkNetwork {
 			$this->_timeoutSend = $timeout;
 
 		return $this->_timeoutSend;
+	}
+
+	/**
+	 * @param $flags = null
+	 *
+	 * @return mixed
+	 */
+	public function Flags ($flags = null) {
+		if (func_num_args() != 0)
+			$this->_flags = $flags;
+
+		return $this->_flags;
 	}
 
 	/**
@@ -7540,7 +7552,17 @@ class QuarkClient implements IQuarkEventable {
 	use QuarkNetwork;
 
 	/**
-	 * @var bool $_connected
+	 * @var int $_timeoutConnect = 0
+	 */
+	private $_timeoutConnect = 0;
+
+	/**
+	 * @var $_flags = STREAM_CLIENT_CONNECT
+	 */
+	private $_flags = STREAM_CLIENT_CONNECT;
+
+	/**
+	 * @var bool $_connected = false
 	 */
 	private $_connected = false;
 
@@ -7555,12 +7577,12 @@ class QuarkClient implements IQuarkEventable {
 	private $_session;
 
 	/**
-	 * @var int $_rps
+	 * @var int $_rps = 0
 	 */
 	private $_rps = 0;
 
 	/**
-	 * @var int $_rpsCount
+	 * @var int $_rpsCount = 0
 	 */
 	private $_rpsCount = 0;
 
@@ -7582,6 +7604,8 @@ class QuarkClient implements IQuarkEventable {
 		$this->Certificate($certificate);
 		$this->Timeout($timeout);
 		$this->Blocking($block);
+
+		$this->_timeoutConnect = $this->_timeout;
 
 		$this->_rpsTimer = new QuarkTimer(QuarkTimer::ONE_SECOND, function () {
 			$this->_rps = $this->_rpsCount;
@@ -7607,13 +7631,19 @@ class QuarkClient implements IQuarkEventable {
 			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
-
+		
+		$socket = QuarkURI::FromURI($this->_uri->Socket());
+		$secure = $socket->scheme == QuarkURI::WRAPPER_SSL;
+		
+		if ($secure)
+			$socket->scheme = QuarkURI::WRAPPER_TCP;
+		
 		$this->_socket = @stream_socket_client(
-			$this->_uri->Socket(),
+			$socket->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
-			$this->_timeout,
-			STREAM_CLIENT_CONNECT,
+			$this->_timeoutConnect,
+			$this->_flags,
 			$stream
 		);
 
@@ -7623,6 +7653,9 @@ class QuarkClient implements IQuarkEventable {
 
 			return false;
 		}
+
+		if ($secure)
+			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 
 		$this->Blocking($this->_blocking);
 		$this->Timeout($this->_timeout);
@@ -7698,6 +7731,18 @@ class QuarkClient implements IQuarkEventable {
 		$this->_rpsTimer = null;
 
 		return self::SocketClose($this->_socket);
+	}
+
+	/**
+	 * @param int $timeout = 0 (seconds)
+	 *
+	 * @return int
+	 */
+	public function TimeoutConnect ($timeout = 0) {
+		if (func_num_args() != 0)
+			$this->_timeoutConnect = $timeout;
+
+		return $this->_timeoutConnect;
 	}
 
 	/**
@@ -7814,18 +7859,34 @@ class QuarkServer implements IQuarkEventable {
 	use QuarkNetwork;
 
 	/**
-	 * @var bool $_run
+	 * @var bool $_run = false
 	 */
 	private $_run = false;
 
+	/**
+	 * @var array $_read = []
+	 */
 	private $_read = array();
+
+	/**
+	 * @var array $_write = []
+	 */
 	private $_write = array();
+
+	/**
+	 * @var array $_except = []
+	 */
 	private $_except = array();
 
 	/**
-	 * @var QuarkClient[] $_clients
+	 * @var QuarkClient[] $_clients = []
 	 */
 	private $_clients = array();
+
+	/**
+	 * @var $_flags = STREAM_SERVER_BIND|STREAM_SERVER_LISTEN
+	 */
+	private $_flags = STREAM_SERVER_BIND|STREAM_SERVER_LISTEN;
 
 	/**
 	 * @param QuarkURI|string $uri
@@ -7863,7 +7924,7 @@ class QuarkServer implements IQuarkEventable {
 			$this->_uri->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
-			STREAM_SERVER_BIND|STREAM_SERVER_LISTEN,
+			$this->_flags,
 			$stream
 		);
 
@@ -9312,6 +9373,10 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
  * @package Quark
  */
 class QuarkURI {
+	const WRAPPER_TCP = 'tcp';
+	const WRAPPER_UDP = 'udp';
+	const WRAPPER_SSL = 'ssl';
+
 	const SCHEME_HTTP = 'http';
 	const SCHEME_HTTPS = 'https';
 
@@ -9372,16 +9437,17 @@ class QuarkURI {
 	 * @var array $_transports
 	 */
 	private static $_transports = array(
-		'tcp' => 'tcp',
-		'ssl' => 'ssl',
-		'ftp' => 'tcp',
-		'ftps' => 'ssl',
-		'ssh' => 'ssl',
-		'scp' => 'ssl',
-		'http' => 'tcp',
-		'https' => 'ssl',
-		'ws' => 'tcp',
-		'wss' => 'ssl',
+		'tcp' => self::WRAPPER_TCP,
+		'udp' => self::WRAPPER_UDP,
+		'ssl' => self::WRAPPER_SSL,
+		'ftp' => self::WRAPPER_TCP,
+		'ftps' => self::WRAPPER_SSL,
+		'ssh' => self::WRAPPER_SSL,
+		'scp' => self::WRAPPER_SSL,
+		'http' => self::WRAPPER_TCP,
+		'https' => self::WRAPPER_SSL,
+		'ws' => self::WRAPPER_TCP,
+		'wss' => self::WRAPPER_SSL,
 	);
 
 	/**
@@ -11202,6 +11268,10 @@ class QuarkHTTPClient {
 			$http->_response->UnserializeResponse($data);
 
 			return $client->Close();
+		});
+
+		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
 		});
 
 		if (!$client->Connect()) return false;

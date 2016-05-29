@@ -21,6 +21,11 @@ interface IQuarkPushNotificationProvider {
 	public function Device(Device $device);
 
 	/**
+	 * @return Device[]
+	 */
+	public function Devices();
+
+	/**
 	 * @param object|array $payload
 	 * @param array $options
 	 *

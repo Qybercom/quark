@@ -29,6 +29,10 @@ Quark.UX = function (selector) {
 			setup = Quark.Extend(opt, {
 				preventDefault: true,
 				defaultCss: true,
+				change: {
+					x: 'left',
+					y: 'top'
+				},
 				axis: {
 					x: true,
 					y: true
@@ -44,8 +48,8 @@ Quark.UX = function (selector) {
 
 			if (!allow) return;
 
-			if (allow && opt.defaultCss && opt.axis.x) e.target.css('left', e.position.x + 'px');
-			if (allow && opt.defaultCss && opt.axis.y) e.target.css('top', e.position.y + 'px');
+			if (allow && opt.defaultCss && opt.axis.x) e.target.css(opt.change.x, e.position.x + 'px');
+			if (allow && opt.defaultCss && opt.axis.y) e.target.css(opt.change.y, e.position.y + 'px');
 		};
 
 		that.Elem.each(function () {
@@ -316,11 +320,18 @@ Quark.UX.CommandHistory = function (selector, change, scroll) {
 	};
 })($.fn.attr);
 
+/**
+ * @param {string} selector
+ * @param opt
+ *
+ * @constructor
+ */
 Quark.UX.Range = function (selector, opt) {
 	var that = this;
 
 	opt = opt || {};
 		opt.asDefined = opt.asDefined != undefined ? opt.asDefined : true;
+		opt.change = opt.change != undefined ? opt.change : function () {};
 
 	that.Elem = $(selector);
 	that.Elem.attr('type', 'hidden');
@@ -332,47 +343,78 @@ Quark.UX.Range = function (selector, opt) {
 
 	that.Sliders = [];
 
-	var sliders = that.Elem.attr()
-		.map(function (elem) {
-			if (elem.name.indexOf('quark-slider-') == -1) return;
+	var _id = Quark.GuID();
 
-			return {
-				name: elem.name.replace('quark-slider-', ''),
-				value: elem.value
-			};
-		})
-		.filter(function (elem) {
-			return elem != undefined;
-		});
+	$('body').append('<div class="quark-range-slider" id="' + _id + '"></div>');
 
-	if (sliders.length == 0 && opt.asDefined == true)
-		sliders.push({
-			name: that.Name,
-			value: that.Value
-		});
+	var _m = $('#' + _id);
+	var sliderWidth = _m.outerWidth();
+	_m.remove();
 
-	that.Elem = that.Elem.wrap('<div class="quark-input range">&nbsp;</div>').parent();
-	that.Elem.html('');
+	that.Elem.each(function () {
+		var elem = $(this);
 
-	var i = 0;
-	while (i < sliders.length) {
-		that.Elem.append(
-			'<div class="quark-range-slider" style="margin-left: ' + sliders[i].value + 'px;"></div>' +
-			'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />'
-		);
+		var sliders = elem.attr()
+			.map(function (item) {
+				if (item.name.indexOf('quark-slider-') == -1) return;
 
-		i++;
-	}
+				return {
+					name: item.name.replace('quark-slider-', ''),
+					value: item.value
+				};
+			})
+			.filter(function (item) {
+				return item != undefined;
+			});
 
-	var slide = new Quark.UX(that.Elem.find('.quark-range-slider'));
-	slide.Drag({
-		axis: {y:false},
-		drag: function (e) {
-			var width = e.target.width(),
-				step = width / (that.Max - that.Min),
-				val = e.position.x / step;
+		if (sliders.length == 0 && opt.asDefined == true)
+			sliders.push({
+				name: that.Name,
+				value: that.Value
+			});
 
-			console.log(e.target.offset());
+		elem = that.Elem.wrap('<div class="quark-input range"></div>').parent();
+		elem.html('');
+
+		var width = parseFloat(elem.width()) - sliderWidth;
+		var i = 0;
+		while (i < sliders.length) {
+			var margin = (sliders[i].value / 100) * width;
+
+			elem.append(
+				'<div class="quark-range-slider" quark-slider-name="' + sliders[i].name + '" style="margin-left: ' + margin + 'px;">' +
+				'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />' +
+				'</div>'
+			);
+
+			i++;
 		}
+
+		var slide = new Quark.UX(elem.find('.quark-range-slider'));
+		slide.Drag({
+			axis: {y:false},
+			delegateParent: false,
+			defaultCss: false,
+			drag: function (e) {
+				var val = e.target.data('_slide') == undefined
+					? parseInt(e.target.css('margin-left').replace('px'))
+					: (e.current.x - parseInt(e.target.data('_slide')));
+
+				if (val < 0 || val > width) return;
+
+				var frame = {
+					name: e.target.attr('quark-slider-name'),
+					range: elem,
+					slider: e.target,
+					value: (val / width) * 100
+				};
+
+				opt.change(frame);
+
+				e.target.css('margin-left', val + 'px');
+				e.target.data('_slide', e.current.x - val);
+				e.target.find('input[type="hidden"]').val(frame.value);
+			}
+		});
 	});
 };

@@ -16,7 +16,14 @@ use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 class GoogleGCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
 
+	/**
+	 * @var Device $_devices = []
+	 */
 	private $_devices = array();
+
+	/**
+	 * @var string $_key = ''
+	 */
 	private $_key = '';
 
 	/**
@@ -39,6 +46,13 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	 */
 	public function Device (Device $device) {
 		$this->_devices[] = $device->id;
+	}
+
+	/**
+	 * @return Device[]
+	 */
+	public function Devices () {
+		return $this->_devices;
 	}
 
 	/**

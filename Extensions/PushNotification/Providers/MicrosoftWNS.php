@@ -37,10 +37,13 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	const TYPE_TILE = 'wns/tile';
 	const TYPE_BADGE = 'wns/badge';
 
+	/**
+	 * @var array $_config = null
+	 */
 	private $_config = null;
 
 	/**
-	 * @var Device[] $_device
+	 * @var Device[] $_devices = []
 	 */
 	private $_devices = array();
 
@@ -65,6 +68,13 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	 */
 	public function Device (Device $device) {
 		$this->_devices[] = $device;
+	}
+
+	/**
+	 * @return Device[]
+	 */
+	public function Devices () {
+		return $this->_devices;
 	}
 
 	/**

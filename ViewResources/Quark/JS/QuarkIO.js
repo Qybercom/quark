@@ -48,7 +48,8 @@ Quark.IO.Mouse = function (selector) {
 			cancel: 'input, select',
 			handle: false,
 
-			preventDefault: true
+			preventDefault: true,
+			delegateParent: true
 		});
 
 		var e, target, position = {}, frame = {};
@@ -58,7 +59,7 @@ Quark.IO.Mouse = function (selector) {
 
 			if (target.is(opt.cancel)) return true;
 			if (opt.handle != false && !target.is(opt.handle)) return true;
-			if (!target.is(selector))
+			if (opt.delegateParent && !target.is(selector))
 				target = target.parent(selector);
 
 			position = target.position();
@@ -108,6 +109,10 @@ Quark.IO.Mouse = function (selector) {
 	}
 };
 
+/**
+ * @param e
+ * @private
+ */
 Quark.IO.Mouse._drag = function (e) {
 	var position = {
 		x: e.pageX - e.data.frame.point.x + e.data.frame.scroll.x,
