@@ -6566,7 +6566,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		if ($this->_date == null) return null;
 
 		$out = $copy ? clone $this : $this;
-		$out->_date->modify($offset);
+
+		if (!@$out->_date->modify($offset))
+			Quark::Log('[QuarkDate] Invalid value for $offset argument. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
 
 		return $out;
 	}
