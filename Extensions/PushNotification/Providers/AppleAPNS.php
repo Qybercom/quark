@@ -69,6 +69,11 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	 * @param Device $device
 	 */
 	public function Device (Device $device) {
+		if (!preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id)) {
+			Quark::Log('[AppleAPNS] Invalid device id "' . $device->id . '"', Quark::LOG_WARN);
+			return;
+		}
+
 		$this->_devices[] = $device;
 	}
 

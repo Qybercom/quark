@@ -83,7 +83,7 @@ class PushNotification implements IQuarkExtension {
 			$devices = 0;
 
 			foreach ($this->_devices as $device)
-				if ($device && $device->type == $provider->Type()) {
+				if ($device && $device->type == $provider->Type() && $device->id != '') {
 					$provider->Device($device);
 					$devices++;
 				}
