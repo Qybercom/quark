@@ -1,19 +1,23 @@
 <?php
-namespace Quark\ViewResources\Google;
+namespace Quark\ViewResources\Google\MapComponents;
+
+use Quark\ViewResources\Google\IQuarkGoogleMapComponent;
+
+use Quark\ViewResources\Google\GoogleMapPoint;
 
 /**
- * Class MapMarker
+ * Class GoogleMapMarker
  *
- * @package Quark\ViewResources\Google
+ * @package Quark\ViewResources\Google\MapComponents
  */
-class MapMarker implements IMapComponent {
+class GoogleMapMarker implements IQuarkGoogleMapComponent {
 	const SIZE_TINY = 'tiny';
 	const SIZE_MID = 'mid';
 	const SIZE_SMALL = 'small';
 	const SIZE_DEFAULT = '';
 
 	/**
-	 * @var MapPoint $_position
+	 * @var GoogleMapPoint $_position
 	 */
 	private $_position;
 
@@ -43,14 +47,14 @@ class MapMarker implements IMapComponent {
 	private $_shadow = true;
 
 	/**
-	 * @param MapPoint $position
+	 * @param GoogleMapPoint $position
 	 * @param string $size = self::SIZE_DEFAULT
 	 * @param string $color = ''
 	 * @param string $label = ''
 	 * @param string $icon = ''
 	 * @param bool $shadow = true
 	 */
-	public function __construct (MapPoint $position, $size = self::SIZE_DEFAULT, $color = '', $label = '', $icon = '', $shadow = true) {
+	public function __construct (GoogleMapPoint $position, $size = self::SIZE_DEFAULT, $color = '', $label = '', $icon = '', $shadow = true) {
 		$this->Position($position);
 		$this->Size($size);
 		$this->Color($color);
@@ -60,11 +64,11 @@ class MapMarker implements IMapComponent {
 	}
 
 	/**
-	 * @param MapPoint $position = null
+	 * @param GoogleMapPoint $position = null
 	 *
-	 * @return MapPoint
+	 * @return GoogleMapPoint
 	 */
-	public function Position (MapPoint $position = null) {
+	public function Position (GoogleMapPoint $position = null) {
 		if (func_num_args() != 0)
 			$this->_position = $position;
 
@@ -135,9 +139,11 @@ class MapMarker implements IMapComponent {
 	 * @return string
 	 */
 	public function Compile () {
-		return '&markers='
-			. ($this->_size != self::SIZE_DEFAULT ? 'size:tiny|' : '')
-			. ($this->_color != '' ? 'color:green|' : '')
-			. $this->_position->Compile();
+		return $this->_position == null ? '' : ('&markers='
+			. ($this->_size != self::SIZE_DEFAULT ? 'size:' . $this->_size . '|' : '')
+			. ($this->_color != '' ? 'color:' . $this->_color . '|' : '')
+			. ($this->_icon != '' ? 'icon:' . urlencode($this->_icon) . '|' : '')
+			. (!$this->_shadow ? 'shadow:false|' : '')
+			. $this->_position->Compile());
 	}
 }

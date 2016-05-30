@@ -6,11 +6,11 @@ use Quark\IQuarkStrongModel;
 use Quark\IQuarkModelWithBeforeExtract;
 
 /**
- * Class MapPoint
+ * Class GoogleMapPoint
  *
  * @package Quark\ViewResources\Google
  */
-class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeExtract {
+class GoogleMapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeExtract {
 	const EARTH_RADIUS = 6372795;
 
 	/**
@@ -73,12 +73,12 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	}
 
 	/**
-	 * @param MapPoint $with
+	 * @param GoogleMapPoint $with
 	 *
 	 * @link https://www.kobzarev.com/programming/calculation-of-distances-between-cities-on-their-coordinates.html
 	 * @return float metres
 	 */
-	public function Distance (MapPoint $with) {
+	public function Distance (GoogleMapPoint $with) {
 		// перевести координаты в радианы
 		$lat1 = $this->lat * M_PI / 180;
 		$lat2 = $with->lat * M_PI / 180;
@@ -171,12 +171,12 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	}
 
 	/**
-	 * @param MapPoint $point
+	 * @param GoogleMapPoint $point
 	 * @param int $width = -1
 	 *
 	 * @return bool
 	 */
-	public function Match (MapPoint $point, $width = -1) {
+	public function Match (GoogleMapPoint $point, $width = -1) {
 		$edge = $this->EdgeDelta((float)$width);
 
 		return
@@ -196,7 +196,7 @@ class MapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeE
 	/**
 	 * @param string $address
 	 *
-	 * @return MapPoint
+	 * @return GoogleMapPoint
 	 */
 	public static function FromLocation ($address) {
 		$point = new self();

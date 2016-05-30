@@ -46,7 +46,7 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	const GEOCODE_STATUS_UNKNOWN_ERROR = 'UNKNOWN_ERROR';
 
 	/**
-	 * @var MapPoint $_center
+	 * @var GoogleMapPoint $_center
 	 */
 	private $_center;
 
@@ -76,14 +76,9 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	private $_type = self::TYPE_ROADMAP;
 
 	/**
-	 * @var MapMarker[] $_markers = []
+	 * @var IQuarkGoogleMapComponent[] $_components = []
 	 */
-	private $_markers = array();
-
-	/**
-	 * @var MapPath[] $_paths = []
-	 */
-	private $_paths = array();
+	private $_components = array();
 
 	/**
 	 * @var bool $_sensor = false
@@ -91,9 +86,29 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	private $_sensor = false;
 
 	/**
+	 * @var string $_visible = ''
+	 */
+	private $_visible = '';
+
+	/**
+	 * @var string $_language = ''
+	 */
+	private $_language = '';
+
+	/**
+	 * @var string $_region = ''
+	 */
+	private $_region = '';
+
+	/**
 	 * @var string $_key = ''
 	 */
 	private $_key = '';
+
+	/**
+	 * @var string $_signature = ''
+	 */
+	private $_signature = '';
 
 	/**
 	 * @param string $key
@@ -130,16 +145,16 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 		return array(
 			new jQueryCore(),
 			new QuarkLocalCoreJSViewResource(),
-			new MapAPI($this->_key)
+			new GoogleMapAPI($this->_key)
 		);
 	}
 
 	/**
-	 * @param MapPoint $center = null
+	 * @param GoogleMapPoint $center = null
 	 *
-	 * @return MapPoint
+	 * @return GoogleMapPoint
 	 */
-	public function Center (MapPoint $center = null) {
+	public function Center (GoogleMapPoint $center = null) {
 		if (func_num_args() != 0)
 			$this->_center = $center;
 
@@ -220,50 +235,91 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	}
 
 	/**
-	 * @param MapMarker $marker
+	 * @param IQuarkGoogleMapComponent $component = null
 	 *
 	 * @return GoogleMap
 	 */
-	public function Marker (MapMarker $marker) {
-		$this->_markers[] = $marker;
+	public function Component (IQuarkGoogleMapComponent $component = null) {
+		if ($component != null)
+			$this->_components[] = $component;
+
 		return $this;
 	}
 
 	/**
-	 * @return MapMarker[]
+	 * @return IQuarkGoogleMapComponent[]
 	 */
-	public function Markers () {
-		return $this->_markers;
+	public function Components () {
+		return $this->_components;
 	}
 
 	/**
-	 * @param MapPath $path
+	 * @param string $visible = ''
 	 *
-	 * @return GoogleMap
+	 * @return string
 	 */
-	public function Path (MapPath $path) {
-		$this->_paths[] = $path;
-		return $this;
+	public function Visible ($visible = '') {
+		if (func_num_args() != 0)
+			$this->_visible = $visible;
+
+		return $this->_visible;
 	}
 
 	/**
-	 * @return MapPath[]
+	 * @param string $language = ''
+	 *
+	 * @return string
 	 */
-	public function Paths () {
-		return $this->_paths;
+	public function Language ($language = '') {
+		if (func_num_args() != 0)
+			$this->_language = $language;
+
+		return $this->_language;
+	}
+
+	/**
+	 * @param string $region = ''
+	 *
+	 * @return string
+	 */
+	public function Region ($region = '') {
+		if (func_num_args() != 0)
+			$this->_region = $region;
+
+		return $this->_region;
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return string
+	 */
+	public function Key ($key = '') {
+		if (func_num_args() != 0)
+			$this->_key = $key;
+
+		return $this->_key;
+	}
+
+	/**
+	 * @param string $signature = ''
+	 *
+	 * @return string
+	 */
+	public function Signature ($signature = '') {
+		if (func_num_args() != 0)
+			$this->_signature = $signature;
+
+		return $this->_signature;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function Image () {
-		$markers = '';
-		foreach ($this->_markers as $marker)
-			$markers .= $marker->Compile();
-
-		$paths = '';
-		foreach ($this->_paths as $path)
-			$paths .= $path->Compile();
+		$components = '';
+		foreach ($this->_components as $component)
+			$components .= $component->Compile();
 
 		return 'http://maps.googleapis.com/maps/api/staticmap'
 			. '?format=' . $this->_format
@@ -273,15 +329,18 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 			. '&maptype=' . $this->_type
 			. '&sensor=' . ($this->_sensor ? 'true' : 'false')
 			. ($this->_center != null ? '&center=' . $this->_center->Compile() : '')
-			. (sizeof($this->_markers) != 0 ? $markers : '')
-			. (sizeof($this->_paths) != 0 ? $paths : '')
-			. (strlen($this->_key) != 0 ? '&key=' . $this->_key : '');
+			. (sizeof($this->_components) != 0 ? $components : '')
+			. (strlen($this->_visible) != 0 ? '&visible=' . $this->_visible : '')
+			. (strlen($this->_language) != 0 ? '&language=' . $this->_language : '')
+			. (strlen($this->_region) != 0 ? '&region=' . $this->_region : '')
+			. (strlen($this->_key) != 0 ? '&key=' . $this->_key : '')
+			. (strlen($this->_signature) != 0 ? '&signature=' . $this->_signature : '');
 	}
 
 	/**
 	 * @param string $address
 	 *
-	 * @return MapPoint
+	 * @return GoogleMapPoint
 	 */
 	public function GeocodeAddress ($address) {
 		$map = QuarkHTTPClient::To(
@@ -295,6 +354,15 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 
 		$point = $map->results[0]->geometry->location;
 
-		return isset($point->lat) && isset($point->lng) ? new MapPoint($point->lat, $point->lng) : null;
+		return isset($point->lat) && isset($point->lng) ? new GoogleMapPoint($point->lat, $point->lng) : null;
+	}
+
+	/**
+	 * @param string $color = ''
+	 *
+	 * @return string
+	 */
+	public static function Color ($color = '') {
+		return str_replace('#', '0x', $color);
 	}
 }

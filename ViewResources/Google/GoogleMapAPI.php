@@ -9,11 +9,14 @@ use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
 
 /**
- * Class MapAPI
+ * Class GoogleMapAPI
  *
  * @package Quark\ViewResources\Google
  */
-class MapAPI implements IQuarkViewResource, IQuarkForeignViewResource {
+class GoogleMapAPI implements IQuarkViewResource, IQuarkForeignViewResource {
+	/**
+	 * @var string $_key = ''
+	 */
 	private $_key = '';
 
 	/**

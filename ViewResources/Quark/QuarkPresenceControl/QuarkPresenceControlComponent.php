@@ -6,7 +6,7 @@ use Quark\QuarkView;
 use Quark\QuarkViewBehavior;
 
 use Quark\ViewResources\Google\GoogleMap;
-use Quark\ViewResources\Google\MapPoint;
+use Quark\ViewResources\Google\GoogleMapPoint;
 
 /**
  * Class QuarkPresenceControlComponent
@@ -134,14 +134,14 @@ trait QuarkPresenceControlComponent {
 
 	/**
 	 * @param string $selector
-	 * @param MapPoint $center
+	 * @param GoogleMapPoint $center
 	 * @param string $type = GoogleMap::TYPE_ROADMAP
 	 * @param int $zoom = 15
 	 * @param string $var = 'map'
 	 *
 	 * @return string
 	 */
-	public function OverlaidMapWidget ($selector, MapPoint $center, $type = GoogleMap::TYPE_ROADMAP, $zoom = 16, $var = 'map') {
+	public function OverlaidMapWidget ($selector, GoogleMapPoint $center, $type = GoogleMap::TYPE_ROADMAP, $zoom = 16, $var = 'map') {
 		return '
 			<script type="text/javascript">
 			var ' . $var . ' = null;

@@ -2,11 +2,11 @@
 namespace Quark\ViewResources\Google;
 
 /**
- * Interface IMapComponent
+ * Interface IQuarkGoogleMapComponent
  *
  * @package Quark\ViewResources\Google
  */
-interface IMapComponent {
+interface IQuarkGoogleMapComponent {
 	/**
 	 * @return string
 	 */
