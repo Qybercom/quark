@@ -4,7 +4,6 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
-use Quark\QuarkException;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkTCPNetworkTransport;
 
@@ -116,7 +115,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 		});
 
 		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
-			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+			Quark::Log($error, Quark::LOG_WARN);
 		});
 
 		return $client->Connect();

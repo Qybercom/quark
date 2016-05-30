@@ -7649,7 +7649,7 @@ class QuarkClient implements IQuarkEventable {
 
 		if (!$this->_socket || $this->_errorNumber != 0 || $this->ConnectionURI() == $this->ConnectionURI(true)) {
 			$this->Close(false);
-			$this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient cannot connect to ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . ')'));
+			$this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient cannot connect to ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
 
 			return false;
 		}
@@ -7884,9 +7884,9 @@ class QuarkServer implements IQuarkEventable {
 	private $_clients = array();
 
 	/**
-	 * @var $_flags = STREAM_SERVER_BIND|STREAM_SERVER_LISTEN
+	 * @var $_flags = STREAM_SERVER_LISTEN
 	 */
-	private $_flags = STREAM_SERVER_BIND|STREAM_SERVER_LISTEN;
+	private $_flags = STREAM_SERVER_LISTEN;
 
 	/**
 	 * @param QuarkURI|string $uri
@@ -7920,19 +7920,30 @@ class QuarkServer implements IQuarkEventable {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
+		$socket = QuarkURI::FromURI($this->_uri->Socket());
+		$secure = $socket->scheme == QuarkURI::WRAPPER_SSL;
+
+		if ($secure)
+			$socket->scheme = QuarkURI::WRAPPER_TCP;
+
 		$this->_socket = @stream_socket_server(
-			$this->_uri->Socket(),
+			$socket->Socket(),
 			$this->_errorNumber,
 			$this->_errorString,
-			$this->_flags,
+			$socket->scheme == QuarkURI::WRAPPER_UDP && $this->_flags == STREAM_SERVER_LISTEN
+				? STREAM_SERVER_BIND
+				: STREAM_SERVER_BIND|$this->_flags,
 			$stream
 		);
 
 		if (!$this->_socket) {
-			$this->TriggerArgs(self::EVENT_ERROR_LISTEN, array('QuarkServer cannot listen to ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . ')'));
+			$this->TriggerArgs(self::EVENT_ERROR_LISTEN, array('QuarkServer cannot listen to ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
 
 			return false;
 		}
+
+		if ($secure)
+			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER);
 
 		$this->Blocking(0);
 		$this->Timeout(0);
@@ -12238,6 +12249,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		if (!rename($this->tmp_name, $this->location))  {
 			Quark::Log('[QuarkFile::Upload] Cannot move from [tmp_name:' . $this->tmp_name . '] to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
+			return false;
+		}
+
+		if (!chmod($this->location, $mode))  {
+			Quark::Log('[QuarkFile::Upload] Cannot set mode to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
 			return false;
 		}
 
