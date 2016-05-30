@@ -7,8 +7,9 @@ use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkPlainIOProcessor;
 
-use Quark\Extensions\PushNotification\Device;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
+
+use Quark\Extensions\PushNotification\Device;
 
 /**
  * Class MicrosoftWNS

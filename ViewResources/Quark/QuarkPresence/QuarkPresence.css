@@ -178,3 +178,11 @@ body {
     border: 1px solid rgb(0,225,80);
     border-top-width: 10px;
 }
+
+.quark-range-slider {
+    background: rgb(0,176,80);
+}
+
+.quark-range-slider:hover {
+    background: rgb(0,225,80);
+}

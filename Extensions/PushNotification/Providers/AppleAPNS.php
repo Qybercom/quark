@@ -8,6 +8,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkTCPNetworkTransport;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
+
 use Quark\Extensions\PushNotification\Device;
 
 /**
