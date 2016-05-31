@@ -4700,9 +4700,15 @@ class QuarkModel implements IQuarkContainer {
 
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
+	const OPTION_EXPORT_SUB_MODEL = 'export_sub';
 
 	const OPTION_USER_OPTIONS = '___user___';
 	const OPTION_FORCE_DEFINITION = '___force_definition___';
+
+	const OPERATION_CREATE = 'Create';
+	const OPERATION_SAVE = 'Save';
+	const OPERATION_REMOVE = 'Remove';
+	const OPERATION_EXPORT = 'Export';
 
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior $_model = null
@@ -5166,10 +5172,20 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @param bool $subModel = false
+	 * 
 	 * @return IQuarkModel|QuarkModelBehavior|bool
 	 */
-	public function Export () {
-		return self::_export($this->_model);
+	public function Export ($subModel = false) {
+		$model = self::_export($this->_model);
+
+		$ok = $subModel && $model instanceof IQuarkModelWithAfterExport
+			? $model->AfterExport(self::OPERATION_EXPORT, array(
+				self::OPTION_EXPORT_SUB_MODEL => $subModel
+			))
+			: true;
+
+		return $ok || $ok === null ? $model : null;
 	}
 
 	/**
@@ -5310,7 +5326,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public function Create ($options = []) {
-		return $this->_op('Create', $options);
+		return $this->_op(self::OPERATION_CREATE, $options);
 	}
 
 	/**
@@ -5319,7 +5335,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public function Save ($options = []) {
-		return $this->_op('Save', $options);
+		return $this->_op(self::OPERATION_SAVE, $options);
 	}
 
 	/**
@@ -5328,7 +5344,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public function Remove ($options = []) {
-		return $this->_op('Remove', $options);
+		return $this->_op(self::OPERATION_REMOVE, $options);
 	}
 
 	/**
@@ -6790,6 +6806,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
  * @package Quark
  */
 class QuarkGenericModel implements IQuarkModel {
+	use QuarkModelBehavior;
+	
 	/**
 	 * @return mixed
 	 */
@@ -6807,6 +6825,15 @@ class QuarkGenericModel implements IQuarkModel {
 	 */
 	public function To (IQuarkModel $model) {
 		return new QuarkModel($model, $this);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return bool|IQuarkModel|QuarkModelBehavior
+	 */
+	public function ExportGeneric (IQuarkModel $model) {
+		return $this->PopulateWith((new QuarkModel($model))->Export(true))->Export();
 	}
 }
 
@@ -6970,10 +6997,12 @@ class QuarkSession {
 	}
 
 	/**
+	 * @param bool $extract = false
+	 *
 	 * @return IQuarkAuthorizableModel
 	 */
-	private function _session () {
-		return $this->_user instanceof QuarkModel ? $this->_user->Model() : $this->_user;
+	private function _session ($extract = false) {
+		return $this->_user instanceof QuarkModel ? ($extract ? $this->_user->Extract() : $this->_user->Model()) : $this->_user;
 	}
 
 	/**
@@ -7227,6 +7256,13 @@ interface IQuarkAuthorizableModel extends IQuarkModel {
 }
 
 /**
+ * Interface IQuarkAuthorizableModelWithRuntimeFields
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableModelWithRuntimeFields extends IQuarkAuthorizableModel, IQuarkStrongModelWithRuntimeFields { }
+
+/**
  * Class QuarkKeyValuePair
  *
  * @package Quark
@@ -7466,7 +7502,7 @@ trait QuarkNetwork {
 			$this->_timeout = $timeout;
 
 			if ($this->_socket)
-				stream_set_timeout($this->_socket, $this->_timeout, 0);
+				stream_set_timeout($this->_socket, $this->_timeout, QuarkThreadSet::TICK);
 		}
 
 		return $this->_timeout;
@@ -7659,8 +7695,8 @@ class QuarkClient implements IQuarkEventable {
 		if ($secure)
 			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
 
-		$this->Blocking($this->_blocking);
 		$this->Timeout($this->_timeout);
+		$this->Blocking($this->_blocking);
 
 		$this->_connected = true;
 		$this->_remote = QuarkURI::FromURI($this->ConnectionURI(true));
@@ -7947,8 +7983,8 @@ class QuarkServer implements IQuarkEventable {
 		if ($secure)
 			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER);
 
-		$this->Blocking(0);
 		$this->Timeout(0);
+		$this->Blocking(0);
 
 		$this->_read = array($this->_socket);
 		$this->_run = true;
@@ -11251,12 +11287,13 @@ class QuarkHTTPClient {
 	 * @param QuarkDTO $response
 	 * @param QuarkCertificate $certificate
 	 * @param int $timeout = 10
+	 * @param bool $sync = true
 	 *
 	 * @return QuarkDTO|bool
 	 */
-	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true) {
 		$http = new self($request, $response);
-		$client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout);
+		$client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, $sync);
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$http) {
 			if ($http->_request == null) return false;
@@ -11266,7 +11303,7 @@ class QuarkHTTPClient {
 
 			$http->_request->URI($client->URI());
 			$http->_response->URI($client->URI());
-
+			
 			$http->_request->Remote($client->ConnectionURI(true));
 			$http->_response->Remote($client->ConnectionURI(true));
 

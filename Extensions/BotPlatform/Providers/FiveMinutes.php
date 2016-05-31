@@ -24,6 +24,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 
 	const MESSAGE_TEXT = 'text';
 	const MESSAGE_IMAGE = 'image';
+	const MESSAGE_TYPING = 'typing';
 
 	/**
 	 * @var string $_appId = ''
@@ -80,7 +81,9 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	 * @return bool
 	 */
 	public function BotOutgoingMessage (BotPlatformMessage $message) {
-		$api = $this->BotAPI('chat/message', array(
+		$api = $this->BotAPI($message->Type() == self::MESSAGE_TYPING
+			? 'chat/room/typing'
+			: 'chat/message', array(
 			'bot' => $this->_appSecret,
 			'room' => $message->Channel(),
 			'type' => $message->Type(),
@@ -116,6 +119,9 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 
 		if ($type == BotPlatformMessage::TYPE_IMAGE)
 			return self::MESSAGE_IMAGE;
+
+		if ($type == BotPlatformMessage::TYPE_TYPING)
+			return self::MESSAGE_TYPING;
 
 		return '';
 	}

@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
+use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;

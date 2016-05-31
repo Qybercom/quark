@@ -33,7 +33,7 @@ Quark.Network.Socket = {
         open: function () {},
         close: function () {},
         message: function () {},
-        error: function (e) { console.warn(e.message); }
+        error: function (e) { console.warn(e); }
     },
 
     /**

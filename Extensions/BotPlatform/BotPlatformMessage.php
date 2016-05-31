@@ -11,6 +11,7 @@ use Quark\QuarkDate;
 class BotPlatformMessage {
 	const TYPE_TEXT = 'type.text';
 	const TYPE_IMAGE = 'type.image';
+	const TYPE_TYPING = 'type.typing';
 
 	/**
 	 * @var $_payload = ''

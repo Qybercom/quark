@@ -2,6 +2,7 @@
 namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizableModel;
+use Quark\IQuarkAuthorizableModelWithRuntimeFields;
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkModel;
 use Quark\IQuarkModelWithDataProvider;
@@ -24,7 +25,8 @@ use Quark\DataProviders\QuarkDNA;
  * @property string $name
  * @property string $sid
  * @property string $signature
- * @property $user
+ * @property QuarkModel|QuarkGenericModel|IQuarkAuthorizableModel $user
+ * @property object $session
  *
  * @package Quark\AuthorizationProviders
  */
@@ -83,6 +85,9 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		));
 
 		if ($record == null) return null;
+
+		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields)
+			$record->user->PopulateWith($record->session);
 
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider($session);
@@ -169,6 +174,15 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		if ($session == null) return false;
 
 		$session->user->PopulateWith($model);
+		$session->session = (object)$session->session;
+
+		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields) {
+			$fields = $model->RuntimeFields();
+			$out = $session->user->ExportGeneric($model);
+
+			foreach ($fields as $key => $value)
+				$session->session->$key = $out->$key;
+		}
 
 		return $session->Save();
 	}
@@ -194,7 +208,8 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			'sid' => '',
 			'signature' => '',
 			'lifetime' => 0,
-			'user' => new QuarkGenericModel()
+			'user' => new QuarkGenericModel(),
+			'session' => new \stdClass()
 		);
 	}
 

@@ -56,6 +56,22 @@ class BotPlatform implements IQuarkExtension {
 	}
 
 	/**
+	 * @param BotPlatformMessage $reply
+	 * @param int $iterations = 10
+	 */
+	public function Typing (BotPlatformMessage $reply, $iterations = 1) {
+		$reply->Type(BotPlatformMessage::TYPE_TYPING);
+
+		$i = 0;
+		while ($i < $iterations) {
+			$this->OutgoingMessage($reply);
+			usleep(500000);
+
+			$i++;
+		}
+	}
+
+	/**
 	 * @param string $method
 	 * @param array $data = []
 	 *
