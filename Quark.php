@@ -5125,7 +5125,7 @@ class QuarkModel implements IQuarkContainer {
 
 		$valid = $check ? QuarkField::Rules($output->Rules()) : $output->Rules();
 		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
-
+		
 		foreach ($output as $key => $value) {
 			if ($key == '' || !($value instanceof QuarkModel)) continue;
 
@@ -12093,7 +12093,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @param bool $load = false
 	 */
 	public function __construct ($location = '', $load = false) {
-		if (func_num_args() != 0)
+		if (func_num_args() != 0 && $location)
 			$this->Location($location);
 
 		if ($load)
@@ -12352,7 +12352,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkModel(new QuarkFile($raw));
+		return new QuarkModel($raw ? new QuarkFile($raw) : clone $this);
 	}
 
 	/**
