@@ -43,7 +43,7 @@ class BotPlatform implements IQuarkExtension {
 	 */
 	public function In (QuarkDTO $request = null) {
 		if ($request == null) {
-			Quark::Log('[BotPlatform] Given $request in null', Quark::LOG_WARN);
+			Quark::Log('[BotPlatform] Given $request is null', Quark::LOG_WARN);
 
 			return false;
 		}
