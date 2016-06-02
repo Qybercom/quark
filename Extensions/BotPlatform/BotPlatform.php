@@ -5,6 +5,7 @@ use Quark\IQuarkExtension;
 
 use Quark\Quark;
 use Quark\QuarkDTO;
+use Quark\QuarkKeyValuePair;
 
 /**
  * Class BotPlatform
@@ -16,6 +17,11 @@ class BotPlatform implements IQuarkExtension {
 	 * @var BotPlatformConfig $_config
 	 */
 	private $_config;
+
+	/**
+	 * @var QuarkKeyValuePair[] $_events = []
+	 */
+	private $_events = array();
 
 	/**
 	 * @param string $config
@@ -31,44 +37,58 @@ class BotPlatform implements IQuarkExtension {
 	}
 
 	/**
-	 * @param QuarkDTO $request
-	 *
-	 * @return BotPlatformMessage
-	 */
-	public function IncomingMessage (QuarkDTO $request) {
-		if (!$this->_config->BotPlatformProvider()->BotIncomingValidation($request)) {
-			Quark::Log('[BotPlatform] Attempt of request forgery of ' . get_class($this->_config->BotPlatformProvider()), Quark::LOG_WARN);
-			Quark::Trace($request);
-			
-			return null;
-		}
-
-		return $this->_config->BotPlatformProvider()->BotIncomingMessage($request);
-	}
-
-	/**
-	 * @param BotPlatformMessage $message
+	 * @param QuarkDTO $request = null
 	 *
 	 * @return bool
 	 */
-	public function OutgoingMessage (BotPlatformMessage $message) {
-		return $this->_config->BotPlatformProvider()->BotOutgoingMessage($message);
+	public function In (QuarkDTO $request = null) {
+		if ($request == null) {
+			Quark::Log('[BotPlatform] Given $request in null', Quark::LOG_WARN);
+
+			return false;
+		}
+
+		if (!$this->_config->BotPlatformProvider()->BotValidation($request)) {
+			Quark::Log('[BotPlatform] Attempt of request forgery of ' . get_class($this->_config->BotPlatformProvider()), Quark::LOG_WARN);
+			Quark::Trace($request);
+
+			return false;
+		}
+
+		foreach ($this->_events as $event) {
+			$e = $event->Key();
+
+			/**
+			 * @var IQuarkBotPlatformEventHandler $handler
+			 */
+			$handler = $event->Value();
+			$out = $this->_config->BotPlatformProvider()->BotIn($request);
+
+			if ($out instanceof $e) $handler->BotEvent($this, $out);
+		}
+
+		return true;
 	}
 
 	/**
-	 * @param BotPlatformMessage $reply
-	 * @param int $iterations = 10
+	 * @param IQuarkBotPlatformEvent $event = null
+	 *
+	 * @return bool
 	 */
-	public function Typing (BotPlatformMessage $reply, $iterations = 1) {
-		$reply->Type(BotPlatformMessage::TYPE_TYPING);
+	public function Out (IQuarkBotPlatformEvent $event = null) {
+		return $event == null ? false : $this->_config->BotPlatformProvider()->BotOut($event);
+	}
 
-		$i = 0;
-		while ($i < $iterations) {
-			$this->OutgoingMessage($reply);
-			usleep(500000);
+	/**
+	 * @param IQuarkBotPlatformEvent $event
+	 * @param IQuarkBotPlatformEventHandler $handler
+	 *
+	 * @return $this
+	 */
+	public function On (IQuarkBotPlatformEvent $event, IQuarkBotPlatformEventHandler $handler) {
+		$this->_events[] = new QuarkKeyValuePair($event, $handler);
 
-			$i++;
-		}
+		return $this;
 	}
 
 	/**
@@ -79,14 +99,5 @@ class BotPlatform implements IQuarkExtension {
 	 */
 	public function API ($method, $data = []) {
 		return $this->_config->BotPlatformProvider()->BotAPI($method, $data);
-	}
-
-	/**
-	 * @param string $type
-	 *
-	 * @return string
-	 */
-	public function MessageType ($type) {
-		return $this->_config->BotPlatformProvider()->BotMessageType($type);
 	}
 }
