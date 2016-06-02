@@ -154,7 +154,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		if ($type == FiveMinutes::MESSAGE_STICKER)
 			return BotPlatformEventMessage::TYPE_STICKER;
 
-		return '';
+		return $type;
 	}
 
 	/**
@@ -172,6 +172,6 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		if ($type == BotPlatformEventMessage::TYPE_STICKER)
 			return FiveMinutes::MESSAGE_STICKER;
 
-		return '';
+		return $type;
 	}
 }
