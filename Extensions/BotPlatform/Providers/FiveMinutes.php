@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -77,7 +76,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 			return new BotPlatformEventMessage(
 				$request->payload,
 				$request->msg,
-				$request->type,
+				self::TypeIn($request->type),
 				new BotPlatformMember($request->from->_id, $request->from->name),
 				QuarkDate::GMTOf($request->date),
 				$request->room,
@@ -104,7 +103,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 			$api = $this->BotAPI('chat/message', array(
 				'bot' => $this->_appSecret,
 				'room' => $event->Channel(),
-				'type' => $event->Type(),
+				'type' => self::TypeOut($event->Type()),
 				'payload' => $event->Payload()
 			));
 
@@ -138,5 +137,41 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		return QuarkHTTPClient::To(self::API_ENDPOINT . $method, $request, $response, null, 10, $sync);
+	}
+
+	/**
+	 * @param string $type
+	 *
+	 * @return string
+	 */
+	public static function TypeIn ($type) {
+		if ($type == FiveMinutes::MESSAGE_TEXT)
+			return BotPlatformEventMessage::TYPE_TEXT;
+
+		if ($type == FiveMinutes::MESSAGE_IMAGE)
+			return BotPlatformEventMessage::TYPE_IMAGE;
+
+		if ($type == FiveMinutes::MESSAGE_STICKER)
+			return BotPlatformEventMessage::TYPE_STICKER;
+
+		return '';
+	}
+
+	/**
+	 * @param string $type
+	 *
+	 * @return string
+	 */
+	public static function TypeOut ($type) {
+		if ($type == BotPlatformEventMessage::TYPE_TEXT)
+			return FiveMinutes::MESSAGE_TEXT;
+
+		if ($type == BotPlatformEventMessage::TYPE_IMAGE)
+			return FiveMinutes::MESSAGE_IMAGE;
+
+		if ($type == BotPlatformEventMessage::TYPE_STICKER)
+			return FiveMinutes::MESSAGE_STICKER;
+
+		return '';
 	}
 }
