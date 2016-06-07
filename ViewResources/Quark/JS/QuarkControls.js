@@ -91,6 +91,7 @@ Quark.Controls.Form = function (selector) {
  */
 Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
+		opt.box = opt.box == undefined ? '#quark-dialog-box' : opt.box;
 		opt.reset = opt.reset != undefined ? opt.reset : true;
 		opt.type = opt.type != undefined ? opt.type : 'GET';
 		opt.successCriteria = opt.successCriteria instanceof Function
@@ -137,17 +138,17 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	$(function () {
-		if ($('body > .quark-dialog-box').length == 0)
-			$('body').prepend('<div id="quark-dialog-box"></div>');
+		if ($(opt.box).length == 0)
+			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
 
-		$('#quark-dialog-box').hide(0);
+		$(opt.box).hide(0);
 
 		$('.quark-dialog').each(function () {
 			var dialog = $(this);
 
 			dialog.hide(0);
 
-			dialog.appendTo('#quark-dialog-box');
+			dialog.appendTo(opt.box);
 			dialog.find('.quark-dialog-state').hide(0);
 		});
 	});
@@ -186,7 +187,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		var dialog = action.parent('.quark-dialog');
 
 		dialog.fadeOut(500);
-		$('#quark-dialog-box').fadeOut(500);
+		$(opt.box).fadeOut(500);
 	});
 
 	$(document).on('click', selector, function (e) {
@@ -202,7 +203,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		dialog.find('.quark-dialog-confirm').attr('href', button.attr('href'));
 		dialog.fadeIn(500);
 
-		$('#quark-dialog-box').fadeIn(500);
+		$(opt.box).fadeIn(500);
 	});
 };
 
@@ -293,9 +294,10 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 		error: function (response) { }
 	});
 
-	var key = '-upload-' + Quark.GuID();
+	var key = '-upload-' + Quark.GuID(),
+		target = '#target' + key;
 
-	if ($('#target' + key).length == 0)
+	if ($(target).length == 0)
 		$('body').append(
 			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
 			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
@@ -304,7 +306,7 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 			'</form>'
 		);
 
-	var frame = $('#target' + key);
+	var frame = $(target);
 	var form = $('#form' + key);
 
 	frame.on('load', function (e) {
@@ -467,4 +469,53 @@ Quark.Controls.Toggle = function (selector, opt) {
 
 		that._attr(enabled, elem);
 	};
+};
+
+/**
+ * @param {string} selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.Controls.Gallery = function (selector, opt) {
+	opt = opt || {};
+		opt.box = opt.box == undefined ? '#quark-gallery-box' : opt.box;
+
+	var that = this;
+
+	$(function () {
+		if ($(opt.box).length == 0)
+			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
+
+		$(opt.box).hide(0);
+
+		$('.quark-gallery').each(function () {
+			var gallery = $(this);
+
+			gallery.hide(0);
+			gallery.appendTo(opt.box);
+		});
+	});
+
+	$(document).on('click', selector, function (e) {
+		e.preventDefault();
+
+		var image = $(this),
+			gallery = $(image.attr('quark-gallery'));
+
+		gallery.find('.quark-gallery-viewport').css('background-image', 'url(' + image.attr('quark-gallery-item') + ')');
+		gallery.fadeIn(500);
+
+		$(opt.box).fadeIn(500);
+	});
+
+	$(document).on('click', opt.box + ', .quark-gallery-close', function (e) {
+		e.preventDefault();
+
+		var action = $(this),
+			gallery = action.parent('.quark-gallery');
+
+		gallery.fadeOut(500);
+		$(opt.box).fadeOut(500);
+	});
 };
