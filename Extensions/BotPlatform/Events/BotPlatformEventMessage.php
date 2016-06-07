@@ -4,6 +4,7 @@ namespace Quark\Extensions\BotPlatform\Events;
 use Quark\QuarkDate;
 
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
+use Quark\Extensions\BotPlatform\IQuarkBotPlatformEventEntity;
 
 use Quark\Extensions\BotPlatform\BotPlatformMember;
 
@@ -16,6 +17,7 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	const TYPE_TEXT = 'type.text';
 	const TYPE_IMAGE = 'type.image';
 	const TYPE_STICKER = 'type.sticker';
+	const TYPE_CUSTOM = '__custom__';
 
 	/**
 	 * @var $_payload = ''
@@ -53,20 +55,25 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	private $_platform = '';
 
 	/**
+	 * @var IQuarkBotPlatformEventEntity $_entity = null
+	 */
+	private $_entity = null;
+
+	/**
 	 * @param $payload = ''
 	 * @param string $id = ''
 	 * @param string $type = ''
-	 * @param BotPlatformMember $actor = null
 	 * @param QuarkDate $sent = null
+	 * @param BotPlatformMember $actor = null
 	 * @param string $channel = ''
 	 * @param string $platform = ''
 	 */
-	public function __construct ($payload = '', $id = '', $type = '', BotPlatformMember $actor = null, QuarkDate $sent = null, $channel = '', $platform = '') {
+	public function __construct ($payload = '', $id = '', $type = '', QuarkDate $sent = null, BotPlatformMember $actor = null, $channel = '', $platform = '') {
 		$this->_payload = $payload;
 		$this->_id = $id;
 		$this->_type = $type;
-		$this->_actor = $actor;
 		$this->_sent = $sent;
+		$this->_actor = $actor;
 		$this->_channel = $channel;
 		$this->_platform = $platform;
 	}
@@ -118,18 +125,6 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	}
 
 	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function Actor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
 	 * @param QuarkDate $sent = null
 	 *
 	 * @return QuarkDate
@@ -139,6 +134,18 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 			$this->_sent = $sent;
 
 		return $this->_sent;
+	}
+
+	/**
+	 * @param BotPlatformMember $actor = null
+	 *
+	 * @return BotPlatformMember
+	 */
+	public function Actor (BotPlatformMember $actor = null) {
+		if (func_num_args() != 0)
+			$this->_actor = $actor;
+
+		return $this->_actor;
 	}
 
 	/**
@@ -214,6 +221,18 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 			$this->_platform = $platform;
 
 		return $this->_platform;
+	}
+
+	/**
+	 * @param IQuarkBotPlatformEventEntity $entity = null
+	 *
+	 * @return IQuarkBotPlatformEventEntity
+	 */
+	public function BotEventEntity (IQuarkBotPlatformEventEntity $entity = null) {
+		if (func_num_args() != 0)
+			$this->_entity = $entity;
+
+		return $this->_entity;
 	}
 
 	/**

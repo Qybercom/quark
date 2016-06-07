@@ -26,11 +26,12 @@ trait QuarkPresenceControlComponent {
 	 * @param string $text = ''
 	 * @param string $fa = ''
 	 * @param string $title = ''
+	 * @param string $id = ''
 	 *
 	 * @return string
 	 */
-	public function MenuWidgetItem ($href = '', $text = '', $fa = '', $title = '') {
-		return '<a class="quark-button fa ' . $fa . '" href="' . $href . '" title="' . $title . '">' . $text . '</a>';
+	public function MenuWidgetItem ($href = '', $text = '', $fa = '', $title = '', $id = '') {
+		return '<a class="quark-button fa ' . $fa . '" href="' . $href . '" title="' . $title . '"' . ($id != '' ? ' id="' . $id . '"' : '') . '>' . $text . '</a>';
 	}
 
 	/**

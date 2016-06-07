@@ -2,10 +2,10 @@
 namespace Quark\Extensions\BotPlatform\Events;
 
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
+use Quark\Extensions\BotPlatform\IQuarkBotPlatformEventEntity;
 
 use Quark\Extensions\BotPlatform\BotPlatform;
 use Quark\Extensions\BotPlatform\BotPlatformMember;
-use Quark\Quark;
 
 /**
  * Class BotPlatformEventTyping
@@ -39,42 +39,23 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 	private $_platform = '';
 
 	/**
-	 * @param BotPlatformMember $actor = null
-	 * @param string $channel = ''
+	 * @var IQuarkBotPlatformEventEntity $_entity = null
+	 */
+	private $_entity = null;
+
+	/**
 	 * @param int $duration = 3
 	 * @param bool $sync = true
+	 * @param BotPlatformMember $actor = null
+	 * @param string $channel = ''
 	 * @param string $platform = ''
 	 */
-	public function __construct (BotPlatformMember $actor = null, $channel = '', $duration = 3, $sync = true, $platform = '') {
-		$this->_actor = $actor;
-		$this->_channel = $channel;
+	public function __construct ($duration = 3, $sync = true, BotPlatformMember $actor = null, $channel = '', $platform = '') {
 		$this->_duration = $duration;
 		$this->_sync = $sync;
+		$this->_actor = $actor;
+		$this->_channel = $channel;
 		$this->_platform = $platform;
-	}
-
-	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function Actor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
-	 * @param string $channel = ''
-	 *
-	 * @return string
-	 */
-	public function Channel ($channel = '') {
-		if (func_num_args() != 0)
-			$this->_channel = $channel;
-
-		return $this->_channel;
 	}
 
 	/**
@@ -99,6 +80,30 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 			$this->_sync = $sync;
 
 		return $this->_sync;
+	}
+
+	/**
+	 * @param BotPlatformMember $actor = null
+	 *
+	 * @return BotPlatformMember
+	 */
+	public function Actor (BotPlatformMember $actor = null) {
+		if (func_num_args() != 0)
+			$this->_actor = $actor;
+
+		return $this->_actor;
+	}
+
+	/**
+	 * @param string $channel = ''
+	 *
+	 * @return string
+	 */
+	public function Channel ($channel = '') {
+		if (func_num_args() != 0)
+			$this->_channel = $channel;
+
+		return $this->_channel;
 	}
 
 	/**
@@ -174,6 +179,18 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 			$this->_platform = $platform;
 
 		return $this->_platform;
+	}
+
+	/**
+	 * @param IQuarkBotPlatformEventEntity $entity = null
+	 *
+	 * @return IQuarkBotPlatformEventEntity
+	 */
+	public function BotEventEntity (IQuarkBotPlatformEventEntity $entity = null) {
+		if (func_num_args() != 0)
+			$this->_entity = $entity;
+
+		return $this->_entity;
 	}
 
 	/**

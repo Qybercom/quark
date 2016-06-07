@@ -54,10 +54,10 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 		$this->_buffer .= $data;
 
 		if ($this->_connected) {
-			$input = $this->_input();
+			$input = self::FrameIn($this->_buffer);
+			$this->_buffer = '';
 
-			if ($input !== false)
-				$client->TriggerData($input);
+			$client->TriggerData($input);
 		}
 		else {
 			if (!preg_match(QuarkDTO::HTTP_PROTOCOL_REQUEST, $this->_buffer)) return;
@@ -87,89 +87,6 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	}
 
 	/**
-	 * @param $source
-	 * @param $format = '%08b'
-	 *
-	 * @return string
-	 */
-	private static function _byte ($source, $format = '%08b') {
-		return sprintf($format, ord($source));
-	}
-
-	/**
-	 * @return bool|string
-	 */
-	private function _input () {
-		$data = $this->_buffer;
-
-		if (strlen($data) < 2) return false;
-
-		$second = self::_byte($data[1]);
-		$masked = $second[0] == '1';
-		$length = ord($data[1]) & 127;
-
-		if ($length === 126) {
-			$mask = substr($data, 4, 4);
-			$payloadOffset = 8;
-
-			$dataLength = bindec(self::_byte($data[2]) . self::_byte($data[3])) + $payloadOffset;
-		}
-		elseif ($length === 127) {
-			$mask = substr($data, 10, 4);
-			$payloadOffset = 14;
-
-			$tmp = '';
-			$i = 0;
-
-			while ($i < 8) {
-				if (isset($data[$i + 2]))
-					$tmp .= self::_byte($data[$i + 2]);
-
-				$i++;
-			}
-
-			$dataLength = bindec($tmp) + $payloadOffset;
-			unset($tmp, $i);
-		}
-		else {
-			$mask = substr($data, 2, 4);
-			$payloadOffset = 6;
-
-			$dataLength = $length + $payloadOffset;
-		}
-
-		/**
-		 * We have to check for large frames here. socket_recv cuts at 1024 bytes
-		 * so if WebSocket-frame is > 1024 bytes we have to wait until whole
-		 * data is transferred.
-		 */
-		if (strlen($data) < $dataLength) return false;
-
-		$payload = '';
-
-		if ($masked) {
-			$i = $payloadOffset;
-
-			while ($i < $dataLength) {
-				$j = $i - $payloadOffset;
-
-				if (isset($data[$i]))
-					$payload .= $data[$i] ^ $mask[$j % 4];
-
-				$i++;
-			}
-		}
-		else {
-			$payloadOffset = $payloadOffset - 4;
-			$payload = substr($data, $payloadOffset);
-		}
-
-		$this->_buffer = substr($this->_buffer, $dataLength);
-
-		return $payload;
-	}
-
-	/**
 	 * @param QuarkClient &$client
 	 *
 	 * @return mixed
@@ -184,8 +101,48 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	 * @return mixed
 	 */
 	public function Send ($data) {
-		if (!$this->_connected) return $data;
+		return $this->_connected ? self::FrameOut($data) : $data;
+	}
 
+	/**
+	 * @param string $data
+	 *
+	 * @return string
+	 */
+	public static function FrameIn ($data) {
+		$length = ord($data[1]) & 127;
+
+		if ($length == 126) {
+			$masks = substr($data, 4, 4);
+			$data = substr($data, 8);
+		}
+		elseif ($length == 127) {
+			$masks = substr($data, 10, 4);
+			$data = substr($data, 14);
+		}
+		else {
+			$masks = substr($data, 2, 4);
+			$data = substr($data, 6);
+		}
+
+		$out = '';
+		$i = 0;
+		$len = strlen($data);
+
+		while ($i < $len) {
+			$out .= $data[$i] ^ $masks[$i % 4];
+			$i++;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param string $data
+	 *
+	 * @return string
+	 */
+	public static function FrameOut ($data) {
 		$b1 = 0x80 | (0x1 & 0x0f);
 
 		$length = strlen($data);

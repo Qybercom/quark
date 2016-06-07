@@ -71,14 +71,16 @@ class BotConsole implements IQuarkBotPlatformProvider {
 				$request->payload,
 				$request->messageId,
 				$request->type,
-				new BotPlatformMember($request->from->id, $request->from->name),
 				QuarkDate::GMTOf($request->date),
+				new BotPlatformMember($request->from->id, $request->from->name),
 				$request->channel,
 				$request->platform
 			);
 
 		if ($request->event == self::EVENT_TYPING)
 			return new BotPlatformEventTyping(
+				0,
+				true,
 				new BotPlatformMember($request->from->id, $request->from->name),
 				$request->channel,
 				$request->platform

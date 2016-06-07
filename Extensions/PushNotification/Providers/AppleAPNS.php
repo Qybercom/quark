@@ -113,8 +113,6 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 
 		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60, false);
 
-		$client->Flags(STREAM_CLIENT_ASYNC_CONNECT);
-
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			foreach ($this->_devices as $device)
 				$client->Send($this->_msg($device));

@@ -7385,11 +7385,6 @@ trait QuarkNetwork {
 	private $_timeout = 0;
 
 	/**
-	 * @var int $_timeoutSend = 1 (microseconds)
-	 */
-	private $_timeoutSend = 1;
-
-	/**
 	 * @var bool $_blocking = true
 	 */
 	private $_blocking = true;
@@ -7469,7 +7464,6 @@ trait QuarkNetwork {
 		if (!$this->_socket) return null;
 
 		$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
-
 		if ($uri == null) return null;
 
 		$uri->scheme = $this->_uri->scheme;
@@ -7506,18 +7500,6 @@ trait QuarkNetwork {
 		}
 
 		return $this->_timeout;
-	}
-
-	/**
-	 * @param int $timeout = 0 (microseconds)
-	 *
-	 * @return int
-	 */
-	public function TimeoutSend ($timeout = 0) {
-		if (func_num_args() != 0)
-			$this->_timeoutSend = $timeout;
-
-		return $this->_timeoutSend;
 	}
 
 	/**
@@ -7692,8 +7674,8 @@ class QuarkClient implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure)
-			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+		if ($secure && !@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT))
+			$this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
 
 		$this->Timeout($this->_timeout);
 		$this->Blocking($this->_blocking);
@@ -7716,8 +7698,6 @@ class QuarkClient implements IQuarkEventable {
 		$out = $this->_socket && $this->_transport instanceof IQuarkNetworkTransport
 			? @fwrite($this->_socket, $this->_transport->Send($data))
 			: false;
-
-		usleep($this->_timeoutSend);
 
 		return $out;
 	}
@@ -7980,11 +7960,14 @@ class QuarkServer implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure)
-			@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER);
+		if ($secure && !@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER))
+			$this->TriggerArgs(self::EVENT_ERROR_LISTEN, array('QuarkServer cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
 
 		$this->Timeout(0);
 		$this->Blocking(0);
+
+		$sock = socket_import_stream($this->_socket);
+        socket_set_option($sock, SOL_TCP, TCP_NODELAY, true);
 
 		$this->_read = array($this->_socket);
 		$this->_run = true;
@@ -8008,7 +7991,6 @@ class QuarkServer implements IQuarkEventable {
 
 			$client = QuarkClient::ForServer($this->_transport, $socket, $address, $this->URI()->scheme);
 			$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
-			$client->TimeoutSend($this->_timeoutSend);
 
 			$client->Delegate(QuarkClient::EVENT_CONNECT, $this);
 			$client->Delegate(QuarkClient::EVENT_DATA, $this);

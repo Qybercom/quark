@@ -77,17 +77,19 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 				$request->payload,
 				$request->msg,
 				self::TypeIn($request->type),
-				new BotPlatformMember($request->from->_id, $request->from->name),
 				QuarkDate::GMTOf($request->date),
+				new BotPlatformMember($request->from->_id, $request->from->name),
 				$request->room,
 				self::PLATFORM
 			);
 
 		if ($request->event == self::EVENT_TYPING)
 			return new BotPlatformEventTyping(
+				0,
+				true,
 				new BotPlatformMember($request->from->_id, $request->from->name),
 				$request->channel,
-				$request->platform
+				self::PLATFORM
 			);
 
 		return null;

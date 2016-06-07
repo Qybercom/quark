@@ -34,6 +34,13 @@ interface IQuarkBotPlatformEvent {
 	public function BotEventPlatform($platform = '');
 
 	/**
+	 * @param IQuarkBotPlatformEventEntity $entity = null
+	 *
+	 * @return IQuarkBotPlatformEventEntity
+	 */
+	public function BotEventEntity(IQuarkBotPlatformEventEntity $entity = null);
+
+	/**
 	 * @param IQuarkBotPlatformEvent $event
 	 *
 	 * @return mixed
