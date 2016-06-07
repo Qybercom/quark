@@ -14,7 +14,7 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\jQuery
  */
 class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
-	const CURRENT_VERSION = '2.1.1';
+	const CURRENT_VERSION = '2.2.4';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

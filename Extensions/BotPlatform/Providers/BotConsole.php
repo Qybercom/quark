@@ -1,16 +1,17 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformProvider;
+use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
 
-use Quark\Extensions\BotPlatform\BotPlatformMessage;
 use Quark\Extensions\BotPlatform\BotPlatformMember;
+use Quark\Extensions\BotPlatform\Events\BotPlatformEventMessage;
+use Quark\Extensions\BotPlatform\Events\BotPlatformEventTyping;
 
 /**
  * Class BotConsole
@@ -20,6 +21,14 @@ use Quark\Extensions\BotPlatform\BotPlatformMember;
 class BotConsole implements IQuarkBotPlatformProvider {
 	//const API_ENDPOINT = 'http://bot-console.io/';
 	const API_ENDPOINT = 'http://bot-console.alex025.dev.funwayhq.com/';
+
+	const EVENT_MESSAGE = 'event.message';
+	const EVENT_TYPING = 'event.typing';
+	const EVENT_ONLINE = 'event.online';
+	const EVENT_OFFLINE = 'event.offline';
+	const EVENT_CHANNEL_JOIN = 'event.channel.join'; // when bot was added to channel
+	const EVENT_CHANNEL_INVITE = 'event.channel.invite'; //when someone was invited
+	const EVENT_CHANNEL_SELECT = 'event.channel.select';
 
 	/**
 	 * @var string $_appId = ''
@@ -47,65 +56,81 @@ class BotConsole implements IQuarkBotPlatformProvider {
 	 *
 	 * @return bool
 	 */
-	public function BotIncomingValidation (QuarkDTO $request) {
+	public function BotValidation (QuarkDTO $request) {
 		return $request->signature == sha1($this->_appSecret);
 	}
 
 	/**
 	 * @param QuarkDTO $request
 	 *
-	 * @return BotPlatformMessage
+	 * @return mixed
 	 */
-	public function BotIncomingMessage (QuarkDTO $request) {
-		if (!isset($request->payload)) return null;
+	public function BotIn (QuarkDTO $request) {
+		if ($request->event == self::EVENT_MESSAGE)
+			return new BotPlatformEventMessage(
+				$request->payload,
+				$request->messageId,
+				$request->type,
+				new BotPlatformMember($request->from->id, $request->from->name),
+				QuarkDate::GMTOf($request->date),
+				$request->channel,
+				$request->platform
+			);
 
-		return new BotPlatformMessage(
-			$request->payload,
-			$request->messageId,
-			$request->type,
-			new BotPlatformMember($request->fromId, $request->fromName),
-			QuarkDate::GMTOf($request->date),
-			$request->channel,
-			$request->platform
-		);
+		if ($request->event == self::EVENT_TYPING)
+			return new BotPlatformEventTyping(
+				new BotPlatformMember($request->from->id, $request->from->name),
+				$request->channel,
+				$request->platform
+			);
+
+		return null;
 	}
 
 	/**
-	 * @param BotPlatformMessage $message
+	 * @param IQuarkBotPlatformEvent $event
 	 *
 	 * @return bool
 	 */
-	public function BotOutgoingMessage (BotPlatformMessage $message) {
-		$api = $this->BotAPI('api/' . $message->Platform() . '/out/' . $message->Channel(), array(
-			'app' => $this->_appSecret,
-			'type' => $message->Type(),
-			'payload' => $message->Payload()
-		));
+	public function BotOut (IQuarkBotPlatformEvent $event) {
+		if ($event instanceof BotPlatformEventMessage) {
+			$api = $this->BotAPI('api/' . $event->Platform() . '/out/' . $event->Channel(), array(
+				'event' => self::EVENT_MESSAGE,
+				'app' => $this->_appSecret,
+				'type' => $event->Type(),
+				'payload' => $event->Payload()
+			));
 
-		return isset($api->status) && $api->status == 200;
+			return isset($api->status) && $api->status == 200;
+		}
+
+		if ($event instanceof BotPlatformEventTyping) {
+			$api = $this->BotAPI('api/' . $event->Platform() . '/out/' . $event->Channel(), array(
+				'event' => self::EVENT_TYPING,
+				'app' => $this->_appSecret,
+				'duration' => $event->Duration(),
+				'sync' => $event->Sync()
+			), $event->Sync());
+
+			return isset($api->status) && $api->status == 200;
+		}
+
+		return false;
 	}
 
 	/**
 	 * @param string $method
 	 * @param array $data
+	 * @param bool $sync = true
 	 *
 	 * @return QuarkDTO
 	 */
-	public function BotAPI ($method, $data) {
+	public function BotAPI ($method, $data, $sync = true) {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 		$request->Data($data);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		return QuarkHTTPClient::To(self::API_ENDPOINT . $method, $request, $response);
-	}
-
-	/**
-	 * @param string $type
-	 *
-	 * @return string
-	 */
-	public function BotMessageType ($type) {
-		return $type;
 	}
 }

@@ -1,17 +1,21 @@
 <?php
-namespace Quark\Extensions\BotPlatform;
+namespace Quark\Extensions\BotPlatform\Events;
 
 use Quark\QuarkDate;
 
+use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
+
+use Quark\Extensions\BotPlatform\BotPlatformMember;
+
 /**
- * Class BotPlatformMessage
+ * Class BotPlatformEventMessage
  *
- * @package Quark\Extensions\BotPlatform
+ * @package Quark\Extensions\BotPlatform\Events
  */
-class BotPlatformMessage {
+class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	const TYPE_TEXT = 'type.text';
 	const TYPE_IMAGE = 'type.image';
-	const TYPE_TYPING = 'type.typing';
+	const TYPE_STICKER = 'type.sticker';
 
 	/**
 	 * @var $_payload = ''
@@ -29,9 +33,9 @@ class BotPlatformMessage {
 	private $_type = '';
 
 	/**
-	 * @var BotPlatformMember $_author = null
+	 * @var BotPlatformMember $_actor = null
 	 */
-	private $_author = null;
+	private $_actor = null;
 
 	/**
 	 * @var QuarkDate $_sent = null
@@ -41,7 +45,7 @@ class BotPlatformMessage {
 	/**
 	 * @var string $_channel = ''
 	 */
-	private $_channel = '';
+	private $_channel = null;
 
 	/**
 	 * @var string $_platform = ''
@@ -52,16 +56,16 @@ class BotPlatformMessage {
 	 * @param $payload = ''
 	 * @param string $id = ''
 	 * @param string $type = ''
-	 * @param BotPlatformMember $author = null
+	 * @param BotPlatformMember $actor = null
 	 * @param QuarkDate $sent = null
 	 * @param string $channel = ''
 	 * @param string $platform = ''
 	 */
-	public function __construct ($payload = '', $id = '', $type = '', BotPlatformMember $author = null, QuarkDate $sent = null, $channel = '', $platform = '') {
+	public function __construct ($payload = '', $id = '', $type = '', BotPlatformMember $actor = null, QuarkDate $sent = null, $channel = '', $platform = '') {
 		$this->_payload = $payload;
 		$this->_id = $id;
 		$this->_type = $type;
-		$this->_author = $author;
+		$this->_actor = $actor;
 		$this->_sent = $sent;
 		$this->_channel = $channel;
 		$this->_platform = $platform;
@@ -114,15 +118,15 @@ class BotPlatformMessage {
 	}
 
 	/**
-	 * @param BotPlatformMember $author = null
+	 * @param BotPlatformMember $actor = null
 	 *
 	 * @return BotPlatformMember
 	 */
-	public function Author (BotPlatformMember $author = null) {
+	public function Actor (BotPlatformMember $actor = null) {
 		if (func_num_args() != 0)
-			$this->_author = $author;
+			$this->_actor = $actor;
 
-		return $this->_author;
+		return $this->_actor;
 	}
 
 	/**
@@ -162,17 +166,66 @@ class BotPlatformMessage {
 	}
 
 	/**
-	 * @param string $type = ''
 	 * @param string $payload = ''
+	 * @param string $type = ''
 	 *
-	 * @return BotPlatformMessage
+	 * @return IQuarkBotPlatformEvent
 	 */
-	public function Reply ($type = '', $payload = '') {
+	public function BotEventReply ($payload = '', $type = self::TYPE_TEXT) {
 		$out = clone $this;
 
-		$out->Type($type);
 		$out->Payload($payload);
+		$out->Type($type);
 
 		return $out;
+	}
+
+	/**
+	 * @param BotPlatformMember $actor = null
+	 *
+	 * @return BotPlatformMember
+	 */
+	public function BotEventActor (BotPlatformMember $actor = null) {
+		if (func_num_args() != 0)
+			$this->_actor = $actor;
+
+		return $this->_actor;
+	}
+
+	/**
+	 * @param string $channel = ''
+	 *
+	 * @return string
+	 */
+	public function BotEventChannel ($channel = '') {
+		if (func_num_args() != 0)
+			$this->_channel = $channel;
+
+		return $this->_channel;
+	}
+
+	/**
+	 * @param string $platform = ''
+	 *
+	 * @return string
+	 */
+	public function BotEventPlatform ($platform = '') {
+		if (func_num_args() != 0)
+			$this->_platform = $platform;
+
+		return $this->_platform;
+	}
+
+	/**
+	 * @param IQuarkBotPlatformEvent $event
+	 *
+	 * @return mixed
+	 */
+	public function BotEventTo (IQuarkBotPlatformEvent $event) {
+		$event->BotEventActor($this->BotEventActor());
+		$event->BotEventChannel($this->BotEventChannel());
+		$event->BotEventPlatform($this->BotEventPlatform());
+		
+		return $event;
 	}
 }
