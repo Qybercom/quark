@@ -4,9 +4,8 @@ namespace Quark\Extensions\BotPlatform\Events;
 use Quark\QuarkDate;
 
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
-use Quark\Extensions\BotPlatform\IQuarkBotPlatformEventEntity;
 
-use Quark\Extensions\BotPlatform\BotPlatformMember;
+use Quark\Extensions\BotPlatform\BotEventBehavior;
 
 /**
  * Class BotPlatformEventMessage
@@ -18,6 +17,8 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	const TYPE_IMAGE = 'type.image';
 	const TYPE_STICKER = 'type.sticker';
 	const TYPE_CUSTOM = '__custom__';
+
+	use BotEventBehavior;
 
 	/**
 	 * @var $_payload = ''
@@ -35,47 +36,17 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	private $_type = '';
 
 	/**
-	 * @var BotPlatformMember $_actor = null
-	 */
-	private $_actor = null;
-
-	/**
 	 * @var QuarkDate $_sent = null
 	 */
 	private $_sent = null;
 
 	/**
-	 * @var string $_channel = ''
+	 * @param string $payload = ''
+	 * @param string $type = self::TYPE_TEXT
 	 */
-	private $_channel = null;
-
-	/**
-	 * @var string $_platform = ''
-	 */
-	private $_platform = '';
-
-	/**
-	 * @var IQuarkBotPlatformEventEntity $_entity = null
-	 */
-	private $_entity = null;
-
-	/**
-	 * @param $payload = ''
-	 * @param string $id = ''
-	 * @param string $type = ''
-	 * @param QuarkDate $sent = null
-	 * @param BotPlatformMember $actor = null
-	 * @param string $channel = ''
-	 * @param string $platform = ''
-	 */
-	public function __construct ($payload = '', $id = '', $type = '', QuarkDate $sent = null, BotPlatformMember $actor = null, $channel = '', $platform = '') {
-		$this->_payload = $payload;
-		$this->_id = $id;
-		$this->_type = $type;
-		$this->_sent = $sent;
-		$this->_actor = $actor;
-		$this->_channel = $channel;
-		$this->_platform = $platform;
+	public function __construct ($payload = '', $type = self::TYPE_TEXT) {
+		$this->Payload($payload);
+		$this->Type($type);
 	}
 
 	/**
@@ -137,114 +108,17 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	}
 
 	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function Actor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
-	 * @param string $channel = ''
-	 *
-	 * @return string
-	 */
-	public function Channel ($channel = '') {
-		if (func_num_args() != 0)
-			$this->_channel = $channel;
-
-		return $this->_channel;
-	}
-
-	/**
-	 * @param string $platform = ''
-	 *
-	 * @return string
-	 */
-	public function Platform ($platform = '') {
-		if (func_num_args() != 0)
-			$this->_platform = $platform;
-
-		return $this->_platform;
-	}
-
-	/**
 	 * @param string $payload = ''
 	 * @param string $type = ''
 	 *
 	 * @return IQuarkBotPlatformEvent
 	 */
-	public function BotEventReply ($payload = '', $type = self::TYPE_TEXT) {
+	public function BotEventReply1 ($payload = '', $type = self::TYPE_TEXT) {
 		$out = clone $this;
 
 		$out->Payload($payload);
 		$out->Type($type);
 
 		return $out;
-	}
-
-	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function BotEventActor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
-	 * @param string $channel = ''
-	 *
-	 * @return string
-	 */
-	public function BotEventChannel ($channel = '') {
-		if (func_num_args() != 0)
-			$this->_channel = $channel;
-
-		return $this->_channel;
-	}
-
-	/**
-	 * @param string $platform = ''
-	 *
-	 * @return string
-	 */
-	public function BotEventPlatform ($platform = '') {
-		if (func_num_args() != 0)
-			$this->_platform = $platform;
-
-		return $this->_platform;
-	}
-
-	/**
-	 * @param IQuarkBotPlatformEventEntity $entity = null
-	 *
-	 * @return IQuarkBotPlatformEventEntity
-	 */
-	public function BotEventEntity (IQuarkBotPlatformEventEntity $entity = null) {
-		if (func_num_args() != 0)
-			$this->_entity = $entity;
-
-		return $this->_entity;
-	}
-
-	/**
-	 * @param IQuarkBotPlatformEvent $event
-	 *
-	 * @return mixed
-	 */
-	public function BotEventTo (IQuarkBotPlatformEvent $event) {
-		$event->BotEventActor($this->BotEventActor());
-		$event->BotEventChannel($this->BotEventChannel());
-		$event->BotEventPlatform($this->BotEventPlatform());
-		
-		return $event;
 	}
 }

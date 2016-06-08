@@ -2,10 +2,9 @@
 namespace Quark\Extensions\BotPlatform\Events;
 
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
-use Quark\Extensions\BotPlatform\IQuarkBotPlatformEventEntity;
 
 use Quark\Extensions\BotPlatform\BotPlatform;
-use Quark\Extensions\BotPlatform\BotPlatformMember;
+use Quark\Extensions\BotPlatform\BotEventBehavior;
 
 /**
  * Class BotPlatformEventTyping
@@ -13,15 +12,7 @@ use Quark\Extensions\BotPlatform\BotPlatformMember;
  * @package Quark\Extensions\BotPlatform\Events
  */
 class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
-	/**
-	 * @var BotPlatformMember $_actor = null
-	 */
-	private $_actor = null;
-
-	/**
-	 * @var string $_channel = ''
-	 */
-	private $_channel = '';
+	use BotEventBehavior;
 
 	/**
 	 * @var int $_duration = 3
@@ -34,28 +25,12 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 	private $_sync = true;
 
 	/**
-	 * @var string $_platform = ''
-	 */
-	private $_platform = '';
-
-	/**
-	 * @var IQuarkBotPlatformEventEntity $_entity = null
-	 */
-	private $_entity = null;
-
-	/**
 	 * @param int $duration = 3
 	 * @param bool $sync = true
-	 * @param BotPlatformMember $actor = null
-	 * @param string $channel = ''
-	 * @param string $platform = ''
 	 */
-	public function __construct ($duration = 3, $sync = true, BotPlatformMember $actor = null, $channel = '', $platform = '') {
-		$this->_duration = $duration;
-		$this->_sync = $sync;
-		$this->_actor = $actor;
-		$this->_channel = $channel;
-		$this->_platform = $platform;
+	public function __construct ($duration = 3, $sync = true) {
+		$this->Duration($duration);
+		$this->Sync($sync);
 	}
 
 	/**
@@ -83,51 +58,15 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 	}
 
 	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function Actor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
-	 * @param string $channel = ''
-	 *
-	 * @return string
-	 */
-	public function Channel ($channel = '') {
-		if (func_num_args() != 0)
-			$this->_channel = $channel;
-
-		return $this->_channel;
-	}
-
-	/**
-	 * @param string $platform = ''
-	 *
-	 * @return string
-	 */
-	public function Platform ($platform = '') {
-		if (func_num_args() != 0)
-			$this->_platform = $platform;
-
-		return $this->_platform;
-	}
-
-	/**
 	 * @param BotPlatform $bot
+	 * @param IQuarkBotPlatformEvent $event
 	 * @param int $duration = 3
 	 * @param callable $action = null
 	 */
-	public function TimeHolder (BotPlatform $bot, $duration = 3, callable $action = null) {
+	public static function TimeHolder (BotPlatform $bot, IQuarkBotPlatformEvent $event, $duration = 3, callable $action = null) {
 		if ($action == null) return;
 
-		$this->Sync(false);
-		$bot->Out($this->BotEventReply($duration));
+		$bot->Out($event->BotEventReply(new self($duration, false)));
 
 		$action();
 		sleep($duration);
@@ -138,71 +77,10 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 	 *
 	 * @return IQuarkBotPlatformEvent
 	 */
-	public function BotEventReply ($duration = 3) {
+	public function BotEventReply1 ($duration = 3) {
 		$out = clone $this;
 		$out->_duration = $duration;
 
 		return $out;
-	}
-
-	/**
-	 * @param BotPlatformMember $actor = null
-	 *
-	 * @return BotPlatformMember
-	 */
-	public function BotEventActor (BotPlatformMember $actor = null) {
-		if (func_num_args() != 0)
-			$this->_actor = $actor;
-
-		return $this->_actor;
-	}
-
-	/**
-	 * @param string $channel = ''
-	 *
-	 * @return string
-	 */
-	public function BotEventChannel ($channel = '') {
-		if (func_num_args() != 0)
-			$this->_channel = $channel;
-
-		return $this->_channel;
-	}
-
-	/**
-	 * @param string $platform = ''
-	 *
-	 * @return string
-	 */
-	public function BotEventPlatform ($platform = '') {
-		if (func_num_args() != 0)
-			$this->_platform = $platform;
-
-		return $this->_platform;
-	}
-
-	/**
-	 * @param IQuarkBotPlatformEventEntity $entity = null
-	 *
-	 * @return IQuarkBotPlatformEventEntity
-	 */
-	public function BotEventEntity (IQuarkBotPlatformEventEntity $entity = null) {
-		if (func_num_args() != 0)
-			$this->_entity = $entity;
-
-		return $this->_entity;
-	}
-
-	/**
-	 * @param IQuarkBotPlatformEvent $event
-	 *
-	 * @return mixed
-	 */
-	public function BotEventTo (IQuarkBotPlatformEvent $event) {
-		$event->BotEventActor($this->BotEventActor());
-		$event->BotEventChannel($this->BotEventChannel());
-		$event->BotEventPlatform($this->BotEventPlatform());
-
-		return $event;
 	}
 }

@@ -6,11 +6,11 @@ use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
 /**
- * Class BotPlatformMember
+ * Class BotPlatformActor
  *
  * @package Quark\Extensions\BotPlatform
  */
-class BotPlatformMember implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+class BotPlatformActor implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	/**
 	 * @var string $_id = ''
 	 */

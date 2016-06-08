@@ -94,7 +94,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	public function Send ($payload, $options = []) {
 		if ($this->_certificate == null) return false;
 
-		$alert = isset($options[self::OPTION_ALERT]) ? $options[self::OPTION_ALERT] : '';
+		$alert = '';
 		$data = $payload;
 
 		if (is_scalar($payload)) {
@@ -104,7 +104,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 
 		$this->_payload = array(
 			'aps' => array(
-				'alert' => $alert,
+				'alert' => isset($options[self::OPTION_ALERT]) ? $options[self::OPTION_ALERT] : $alert,
 				'badge' => isset($options[self::OPTION_BADGE]) ? $options[self::OPTION_BADGE] : 1,
 				'sound' => isset($options[self::OPTION_SOUND]) ? $options[self::OPTION_SOUND] : 'default'
 			),

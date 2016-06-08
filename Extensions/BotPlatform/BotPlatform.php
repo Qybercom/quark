@@ -80,6 +80,18 @@ class BotPlatform implements IQuarkExtension {
 	}
 
 	/**
+	 * @param IQuarkBotPlatformEvent $event = null
+	 * @param IQuarkBotPlatformEvent $reply = null
+	 *
+	 * @return bool
+	 */
+	public function OutReply (IQuarkBotPlatformEvent $event = null, IQuarkBotPlatformEvent $reply = null) {
+		return $event == null || $reply == null
+			? false
+			: $this->_config->BotPlatformProvider()->BotOut($event->BotEventReply($reply));
+	}
+
+	/**
 	 * @param IQuarkBotPlatformEvent $event
 	 * @param IQuarkBotPlatformEventHandler $handler
 	 *

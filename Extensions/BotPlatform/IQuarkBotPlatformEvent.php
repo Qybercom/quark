@@ -8,16 +8,11 @@ namespace Quark\Extensions\BotPlatform;
  */
 interface IQuarkBotPlatformEvent {
 	/**
-	 * @return IQuarkBotPlatformEvent
-	 */
-	public function BotEventReply();
-
-	/**
-	 * @param BotPlatformMember $actor = null
+	 * @param BotPlatformActor $actor = null
 	 *
-	 * @return BotPlatformMember
+	 * @return BotPlatformActor
 	 */
-	public function BotEventActor(BotPlatformMember $actor = null);
+	public function BotEventActor(BotPlatformActor $actor = null);
 
 	/**
 	 * @param string $channel = ''
@@ -34,16 +29,28 @@ interface IQuarkBotPlatformEvent {
 	public function BotEventPlatform($platform = '');
 
 	/**
-	 * @param IQuarkBotPlatformEventEntity $entity = null
-	 *
-	 * @return IQuarkBotPlatformEventEntity
+	 * @param IQuarkBotPlatformEventEntity $entity
 	 */
-	public function BotEventEntity(IQuarkBotPlatformEventEntity $entity = null);
+	public function BotEventEntity(IQuarkBotPlatformEventEntity $entity);
+
+	/**
+	 * @return IQuarkBotPlatformEventEntity[]
+	 */
+	public function BotEventEntities();
 
 	/**
 	 * @param IQuarkBotPlatformEvent $event
 	 *
-	 * @return mixed
+	 * @return IQuarkBotPlatformEvent
 	 */
-	public function BotEventTo(IQuarkBotPlatformEvent $event);
+	public function BotEventReply(IQuarkBotPlatformEvent $event);
+
+	/**
+	 * @param BotPlatformActor $actor
+	 * @param string $channel
+	 * @param string $platform
+	 *
+	 * @return IQuarkBotPlatformEvent
+	 */
+	public static function BotEventIn(BotPlatformActor $actor, $channel, $platform);
 }

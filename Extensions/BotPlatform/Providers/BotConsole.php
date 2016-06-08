@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
-use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
@@ -9,7 +8,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformProvider;
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
 
-use Quark\Extensions\BotPlatform\BotPlatformMember;
+use Quark\Extensions\BotPlatform\BotPlatformActor;
 use Quark\Extensions\BotPlatform\Events\BotPlatformEventMessage;
 use Quark\Extensions\BotPlatform\Events\BotPlatformEventTyping;
 
@@ -66,25 +65,32 @@ class BotConsole implements IQuarkBotPlatformProvider {
 	 * @return mixed
 	 */
 	public function BotIn (QuarkDTO $request) {
-		if ($request->event == self::EVENT_MESSAGE)
-			return new BotPlatformEventMessage(
-				$request->payload,
-				$request->messageId,
-				$request->type,
-				QuarkDate::GMTOf($request->date),
-				new BotPlatformMember($request->from->id, $request->from->name),
+		if ($request->event == self::EVENT_MESSAGE) {
+			$event = BotPlatformEventMessage::BotEventIn(
+				new BotPlatformActor($request->from->id, $request->from->name),
 				$request->channel,
 				$request->platform
 			);
 
-		if ($request->event == self::EVENT_TYPING)
-			return new BotPlatformEventTyping(
-				0,
-				true,
-				new BotPlatformMember($request->from->id, $request->from->name),
+			$event->Payload($request->payload);
+			$event->ID($request->messageId);
+			$event->Type($request->type);
+
+			return $event;
+		}
+
+		if ($request->event == self::EVENT_TYPING) {
+			$event = BotPlatformEventTyping::BotEventIn(
+				new BotPlatformActor($request->from->id, $request->from->name),
 				$request->channel,
 				$request->platform
 			);
+
+			$event->Duration(0);
+			$event->Sync(true);
+
+			return $event;
+		}
 
 		return null;
 	}
@@ -96,7 +102,7 @@ class BotConsole implements IQuarkBotPlatformProvider {
 	 */
 	public function BotOut (IQuarkBotPlatformEvent $event) {
 		if ($event instanceof BotPlatformEventMessage) {
-			$api = $this->BotAPI('api/' . $event->Platform() . '/out/' . $event->Channel(), array(
+			$api = $this->BotAPI('api/' . $event->BotEventPlatform() . '/out/' . $event->BotEventChannel(), array(
 				'event' => self::EVENT_MESSAGE,
 				'app' => $this->_appSecret,
 				'type' => $event->Type(),
@@ -107,7 +113,7 @@ class BotConsole implements IQuarkBotPlatformProvider {
 		}
 
 		if ($event instanceof BotPlatformEventTyping) {
-			$api = $this->BotAPI('api/' . $event->Platform() . '/out/' . $event->Channel(), array(
+			$api = $this->BotAPI('api/' . $event->BotEventPlatform() . '/out/' . $event->BotEventChannel(), array(
 				'event' => self::EVENT_TYPING,
 				'app' => $this->_appSecret,
 				'duration' => $event->Duration(),

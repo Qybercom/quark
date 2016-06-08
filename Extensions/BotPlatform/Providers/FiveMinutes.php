@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\BotPlatform\Providers;
 
-use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
@@ -9,7 +8,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformProvider;
 use Quark\Extensions\BotPlatform\IQuarkBotPlatformEvent;
 
-use Quark\Extensions\BotPlatform\BotPlatformMember;
+use Quark\Extensions\BotPlatform\BotPlatformActor;
 use Quark\Extensions\BotPlatform\Events\BotPlatformEventMessage;
 use Quark\Extensions\BotPlatform\Events\BotPlatformEventTyping;
 
@@ -72,25 +71,32 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	 * @return IQuarkBotPlatformEvent
 	 */
 	public function BotIn (QuarkDTO $request) {
-		if ($request->event == self::EVENT_MESSAGE)
-			return new BotPlatformEventMessage(
-				$request->payload,
-				$request->msg,
-				self::TypeIn($request->type),
-				QuarkDate::GMTOf($request->date),
-				new BotPlatformMember($request->from->_id, $request->from->name),
+		if ($request->event == self::EVENT_MESSAGE) {
+			$event = BotPlatformEventMessage::BotEventIn(
+				new BotPlatformActor($request->from->_id, $request->from->name),
 				$request->room,
 				self::PLATFORM
 			);
 
-		if ($request->event == self::EVENT_TYPING)
-			return new BotPlatformEventTyping(
-				0,
-				true,
-				new BotPlatformMember($request->from->_id, $request->from->name),
-				$request->channel,
+			$event->Payload($request->payload);
+			$event->ID($request->msg);
+			$event->Type(self::TypeIn($request->type));
+
+			return $event;
+		}
+
+		if ($request->event == self::EVENT_TYPING) {
+			$event = BotPlatformEventTyping::BotEventIn(
+				new BotPlatformActor($request->from->_id, $request->from->name),
+				$request->room,
 				self::PLATFORM
 			);
+
+			$event->Duration(0);
+			$event->Sync(true);
+
+			return $event;
+		}
 
 		return null;
 	}
@@ -104,7 +110,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		if ($event instanceof BotPlatformEventMessage) {
 			$api = $this->BotAPI('chat/message', array(
 				'bot' => $this->_appSecret,
-				'room' => $event->Channel(),
+				'room' => $event->BotEventChannel(),
 				'type' => self::TypeOut($event->Type()),
 				'payload' => $event->Payload()
 			));
@@ -115,7 +121,7 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 		if ($event instanceof BotPlatformEventTyping) {
 			$api = $this->BotAPI('chat/room/typing', array(
 				'bot' => $this->_appSecret,
-				'room' => $event->Channel(),
+				'room' => $event->BotEventChannel(),
 				'duration' => $event->Duration()
 			), $event->Sync());
 
