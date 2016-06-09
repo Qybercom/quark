@@ -2526,12 +2526,13 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param bool $checkSignature = false
+	 * @param string $connection = ''
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Authorize ($checkSignature = false) {
+	public function Authorize ($checkSignature = false, $connection = '') {
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
 
 		$service = get_class($this->_service);
@@ -2540,7 +2541,7 @@ class QuarkService implements IQuarkContainer {
 		if ($provider == null)
 			throw new QuarkArchException('Service ' . $service . ' does not specified AuthorizationProvider');
 
-		$this->_session = QuarkSession::Init($provider, $this->_input);
+		$this->_session = QuarkSession::Init($provider, $this->_input, $connection);
 
 		if (!($this->_service instanceof IQuarkAuthorizableServiceWithAuthentication) && $this->_session != null) return true;
 
@@ -4292,6 +4293,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 		if ($iterator == null)
 			$iterator = function ($item) { return $item; };
+
+		$this->_list = array();
 
 		foreach ($source as $item)
 			$this->Add($iterator($item));
@@ -6923,6 +6926,11 @@ class QuarkSession {
 	private $_output;
 
 	/**
+	 * @var string $_connection = ''
+	 */
+	private $_connection = '';
+
+	/**
 	 * @var null $_null
 	 */
 	private $_null = null;
@@ -7097,6 +7105,13 @@ class QuarkSession {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function ConnectionID () {
+		return $this->_connection;
+	}
+
+	/**
 	 * @return bool
 	 */
 	public function Commit () {
@@ -7118,12 +7133,13 @@ class QuarkSession {
 	/**
 	 * @param string $provider
 	 * @param QuarkDTO $input
+	 * @param string $connection = ''
 	 *
 	 * @return QuarkSession
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Init ($provider, QuarkDTO $input) {
+	public static function Init ($provider, QuarkDTO $input, $connection = '') {
 		/**
 		 * @var QuarkSessionSource $source
 		 */
@@ -7133,6 +7149,7 @@ class QuarkSession {
 
 		$session = new self($source);
 		$session->Input($input);
+		$session->_connection = $connection;
 
 		return $session;
 	}
@@ -7612,6 +7629,11 @@ class QuarkClient implements IQuarkEventable {
 	private $_rpsTimer;
 
 	/**
+	 * @var string $_id = ''
+	 */
+	private $_id = '';
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkNetworkTransport $transport
 	 * @param QuarkCertificate $certificate
@@ -7631,6 +7653,8 @@ class QuarkClient implements IQuarkEventable {
 			$this->_rps = $this->_rpsCount;
 			$this->_rpsCount = 0;
 		});
+
+		$this->_id = Quark::GuID();
 	}
 
 	/**
@@ -7860,6 +7884,13 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function RPS () {
 		return $this->_rps;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ID () {
+		return $this->_id;
 	}
 }
 
@@ -8881,7 +8912,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			if ($connected)
 				$service->Input()->Remote($client->URI());
 
-			if (!$connected || $service->Authorize())
+			if (!$connected || $service->Authorize(false, $client->ID()))
 				$service->Invoke($method, $input !== null ? array($service->Input()) : array(), $connected);
 
 			$session = $service->Session();

@@ -71,16 +71,4 @@ class BotPlatformEventTyping implements IQuarkBotPlatformEvent {
 		$action();
 		sleep($duration);
 	}
-
-	/**
-	 * @param int $duration = 3 (seconds)
-	 *
-	 * @return IQuarkBotPlatformEvent
-	 */
-	public function BotEventReply1 ($duration = 3) {
-		$out = clone $this;
-		$out->_duration = $duration;
-
-		return $out;
-	}
 }

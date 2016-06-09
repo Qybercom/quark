@@ -86,16 +86,6 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	}
 
 	/**
-	 * @param string $pattern = ''
-	 * @param array &$matches = []
-	 *
-	 * @return int
-	 */
-	public function Match ($pattern = '', &$matches = []) {
-		return preg_match_all($pattern, $this->_payload, $matches, PREG_SET_ORDER);
-	}
-
-	/**
 	 * @param QuarkDate $sent = null
 	 *
 	 * @return QuarkDate
@@ -108,17 +98,12 @@ class BotPlatformEventMessage implements IQuarkBotPlatformEvent {
 	}
 
 	/**
-	 * @param string $payload = ''
-	 * @param string $type = ''
+	 * @param string $pattern = ''
+	 * @param array &$matches = []
 	 *
-	 * @return IQuarkBotPlatformEvent
+	 * @return int
 	 */
-	public function BotEventReply1 ($payload = '', $type = self::TYPE_TEXT) {
-		$out = clone $this;
-
-		$out->Payload($payload);
-		$out->Type($type);
-
-		return $out;
+	public function Match ($pattern = '', &$matches = []) {
+		return preg_match_all($pattern, $this->_payload, $matches, PREG_SET_ORDER);
 	}
 }
