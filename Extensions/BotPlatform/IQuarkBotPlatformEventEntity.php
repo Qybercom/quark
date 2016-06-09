@@ -10,5 +10,10 @@ interface IQuarkBotPlatformEventEntity {
 	/**
 	 * @return string
 	 */
+	public function BotEntityType();
+
+	/**
+	 * @return string
+	 */
 	public function BotEntityFallbackContent();
 }
