@@ -5421,7 +5421,7 @@ class QuarkModel implements IQuarkContainer {
 		$count = self::Count($model, $criteria);
 
 		return self::Find($model, $criteria, array(
-			self::OPTION_SKIP => rand(0, $count),
+			self::OPTION_SKIP => mt_rand(0, $count),
 			self::OPTION_LIMIT => $limit
 		));
 	}
