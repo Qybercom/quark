@@ -5284,7 +5284,7 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param string $name
-	 * @param array $options
+	 * @param array $options = []
 	 *
 	 * @return bool
 	 */
@@ -5324,7 +5324,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param array $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
@@ -5333,7 +5333,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param array $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
@@ -5342,7 +5342,7 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param array $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
@@ -5367,8 +5367,8 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
-	 * @param $criteria
-	 * @param $options
+	 * @param $criteria = []
+	 * @param array $options = []
 	 * @param callable(QuarkModel $model) $after = null
 	 *
 	 * @return QuarkCollection|array
@@ -5388,8 +5388,8 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
-	 * @param $criteria
-	 * @param $options
+	 * @param $criteria = []
+	 * @param array $options = []
 	 * @param callable(QuarkModel $model) $after = null
 	 *
 	 * @return QuarkModel|\stdClass
@@ -5401,7 +5401,7 @@ class QuarkModel implements IQuarkContainer {
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $id
-	 * @param $options
+	 * @param array $options = []
 	 * @param callable(QuarkModel $model) $after = null
 	 *
 	 * @return QuarkModel|\stdClass
@@ -5412,10 +5412,26 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
-	 * @param $criteria
-	 * @param $limit
-	 * @param $skip
-	 * @param $options
+	 * @param $criteria = []
+	 * @param int $limit = 1
+	 *
+	 * @return QuarkCollection|array
+	 */
+	public static function FindRandom (IQuarkModel $model, $criteria = [], $limit = 1) {
+		$count = self::Count($model, $criteria);
+
+		return self::Find($model, $criteria, array(
+			self::OPTION_SKIP => rand(0, $count),
+			self::OPTION_LIMIT => $limit
+		));
+	}
+
+	/**
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param $criteria = []
+	 * @param int $limit = 0
+	 * @param int $skip = 0
+	 * @param array $options = []
 	 *
 	 * @return int
 	 */
@@ -5425,8 +5441,8 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
-	 * @param $criteria
-	 * @param $options
+	 * @param $criteria = []
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
@@ -5447,8 +5463,8 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
-	 * @param $criteria
-	 * @param $options
+	 * @param $criteria = []
+	 * @param $options = []
 	 *
 	 * @return mixed
 	 */
