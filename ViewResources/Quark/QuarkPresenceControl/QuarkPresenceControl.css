@@ -179,6 +179,14 @@ body .quark-button:hover {
     color: rgb(255,255,255);
 }
 
+.presence-label.visible {
+	display: inline-block;
+}
+
+.presence-label.hidden {
+	display: none;
+}
+
 .quark-button .presence-label {
 	vertical-align: top;
 }

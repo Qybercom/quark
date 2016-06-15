@@ -186,6 +186,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 		var action = $(this);
 		var dialog = action.parent('.quark-dialog');
 
+		if (opt.close instanceof Function && opt.close(dialog, action) === false) return;
+
 		dialog.fadeOut(500);
 		$(opt.box).fadeOut(500);
 	});
@@ -199,10 +201,11 @@ Quark.Controls.Dialog = function (selector, opt) {
 		that.Reset(dialog);
 
 		dialog.data('button', button);
-
 		dialog.find('.quark-dialog-confirm').attr('href', button.attr('href'));
-		dialog.fadeIn(500);
 
+		if (opt.open instanceof Function && opt.open(dialog, button) === false) return;
+
+		dialog.fadeIn(500);
 		$(opt.box).fadeIn(500);
 	});
 };

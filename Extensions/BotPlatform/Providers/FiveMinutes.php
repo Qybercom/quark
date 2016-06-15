@@ -27,9 +27,11 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	const EVENT_TYPING = 'e.typing';
 	const EVENT_ONLINE = 'e.online';
 	const EVENT_OFFLINE = 'e.offline';
-	const EVENT_CHANNEL_JOIN = 'e.room.join'; // when bot was added to channel
-	const EVENT_CHANNEL_INVITE = 'e.room.invite'; //when someone was invited
-	const EVENT_CHANNEL_SELECT = 'e.room.select';
+	const EVENT_ROOM_READY = 'e.room.ready';
+	const EVENT_ROOM_START = 'e.room.start';
+	const EVENT_ROOM_PAUSE = 'e.room.pause';
+	const EVENT_ROOM_INVITE = 'e.room.invite';
+	const EVENT_ROOM_SELECT = 'e.room.select';
 
 	const MESSAGE_TEXT = 'text';
 	const MESSAGE_IMAGE = 'image';
@@ -73,21 +75,21 @@ class FiveMinutes implements IQuarkBotPlatformProvider {
 	public function BotIn (QuarkDTO $request) {
 		if ($request->event == self::EVENT_MESSAGE) {
 			$event = BotPlatformEventMessage::BotEventIn(
-				new BotPlatformActor($request->from->_id, $request->from->name),
+				new BotPlatformActor($request->actor->_id, $request->actor->name),
 				$request->room,
 				self::PLATFORM
 			);
 
-			$event->Payload($request->payload);
-			$event->ID($request->msg);
-			$event->Type(self::TypeIn($request->type));
+			$event->Payload($request->data->payload);
+			$event->ID($request->data->_id);
+			$event->Type(self::TypeIn($request->data->type));
 
 			return $event;
 		}
 
 		if ($request->event == self::EVENT_TYPING) {
 			$event = BotPlatformEventTyping::BotEventIn(
-				new BotPlatformActor($request->from->_id, $request->from->name),
+				new BotPlatformActor($request->actor->_id, $request->actor->name),
 				$request->room,
 				self::PLATFORM
 			);

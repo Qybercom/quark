@@ -85,11 +85,12 @@ trait QuarkPresenceControlComponent {
 	/**
 	 * @param string $text = ''
 	 * @param string $color = green
+	 * @param bool $visible = true
 	 *
 	 * @return string
 	 */
-	public function LabelWidget ($text = '', $color = 'green') {
-		return '<p class="presence-label ' . $color . '">' . $text . '</p>';
+	public function LabelWidget ($text = '', $color = 'green', $visible = true) {
+		return '<p class="presence-label ' . $color . ' ' . ($visible ? 'visible' : 'hidden') . '">' . $text . '</p>';
 	}
 
 	/**
