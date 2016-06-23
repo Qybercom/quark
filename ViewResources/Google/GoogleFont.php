@@ -1,9 +1,10 @@
 <?php
 namespace Quark\ViewResources\Google;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
+use Quark\IQuarkMultipleViewResource;
 
 use Quark\QuarkDTO;
 use Quark\QuarkObject;
@@ -15,7 +16,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\Google
  */
-class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource {
+class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
 	const OPTION_SIZES = 'sizes';
 	const OPTION_SUBSETS = 'subsets';
 
@@ -35,8 +36,19 @@ class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource {
 	const SUBSET_CYRILLIC = 'cyrillic';
 	const SUBSET_CYRILLIC_EXT = 'cyrillic-ext';
 
+	/**
+	 * @var string $_family = ''
+	 */
 	private $_family = '';
+
+	/**
+	 * @var string[] $_sizes = []
+	 */
 	private $_sizes = array();
+
+	/**
+	 * @var string[] $_subsets = [self::SUBSET_LATIN, self::SUBSET_CYRILLIC]
+	 */
 	private $_subsets = array(self::SUBSET_LATIN, self::SUBSET_CYRILLIC);
 
 	/**

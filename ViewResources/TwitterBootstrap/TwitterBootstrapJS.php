@@ -4,7 +4,9 @@ namespace Quark\ViewResources\TwitterBootstrap;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
+use Quark\IQuarkForeignViewResource;
 
+use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
 
 use Quark\ViewResources\jQuery\jQueryCore;
@@ -14,7 +16,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\TwitterBootstrap
  */
-class TwitterBootstrapJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
+class TwitterBootstrapJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
 	 */
@@ -48,5 +50,12 @@ class TwitterBootstrapJS implements IQuarkViewResource, IQuarkViewResourceWithDe
 		return array(
 			new jQueryCore()
 		);
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }

@@ -3,15 +3,17 @@ namespace Quark\ViewResources\jQuery\Plugins\OwlCarousel;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\QuarkCSSViewResourceType;
+use Quark\QuarkDTO;
 
 /**
  * Class OwlCarouselTransitions
  *
  * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
-class OwlCarouselTransitions implements IQuarkViewResource {
+class OwlCarouselTransitions implements IQuarkViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = OwlCarousel::CURRENT_VERSION
 	 */
@@ -36,5 +38,12 @@ class OwlCarouselTransitions implements IQuarkViewResource {
 	 */
 	public function Location () {
 		return 'https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/' . $this->_version . '/owl.transitions.min.css';
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }

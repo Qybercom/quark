@@ -3,15 +3,17 @@ namespace Quark\ViewResources\TwitterBootstrap;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\QuarkCSSViewResourceType;
+use Quark\QuarkDTO;
 
 /**
  * Class TwitterBootstrapCSS
  *
  * @package Quark\ViewResources\TwitterBootstrap
  */
-class TwitterBootstrapCSS implements IQuarkViewResource {
+class TwitterBootstrapCSS implements IQuarkViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
 	 */
@@ -36,5 +38,12 @@ class TwitterBootstrapCSS implements IQuarkViewResource {
 	 */
 	public function Location () {
 		return 'https://maxcdn.bootstrapcdn.com/bootstrap/' . $this->_version . '/css/bootstrap.min.css';
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }

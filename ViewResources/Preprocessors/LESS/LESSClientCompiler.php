@@ -3,7 +3,9 @@ namespace Quark\ViewResources\Preprocessors\LESS;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 
+use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
 
 /**
@@ -11,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\Preprocessors\LESS
  */
-class LESSClientCompiler implements IQuarkViewResource {
+class LESSClientCompiler implements IQuarkViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.7.1';
 
 	/**
@@ -38,5 +40,12 @@ class LESSClientCompiler implements IQuarkViewResource {
 	 */
 	public function Location () {
 		return 'https://cdnjs.cloudflare.com/ajax/libs/less.js/' . $this->_version . '/less.min.js';
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }

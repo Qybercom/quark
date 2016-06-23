@@ -4,7 +4,9 @@ namespace Quark\ViewResources\jQuery\Plugins\ImagePicker;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
+use Quark\IQuarkForeignViewResource;
 
+use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
 
 use Quark\ViewResources\jQuery\jQueryCore;
@@ -14,7 +16,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\jQuery\Plugins\ImagePicker
  */
-class ImagePickerJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
+class ImagePickerJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = ImagePicker::CURRENT_VERSION
 	 */
@@ -48,5 +50,12 @@ class ImagePickerJS implements IQuarkViewResource, IQuarkViewResourceWithDepende
 		return array(
 			new jQueryCore()
 		);
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }

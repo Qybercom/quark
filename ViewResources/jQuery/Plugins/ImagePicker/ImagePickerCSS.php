@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\jQuery\Plugins\ImagePicker;
 
+use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -11,7 +12,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\jQuery\Plugins\ImagePicker
  */
-class ImagePickerCSS implements IQuarkViewResource {
+class ImagePickerCSS implements IQuarkViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = ImagePicker::CURRENT_VERSION
 	 */

@@ -2,9 +2,8 @@
 namespace Quark\ViewResources\MomentJS;
 
 use Quark\IQuarkViewResource;
-use Quark\IQuarkForeignViewResource;
-
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;

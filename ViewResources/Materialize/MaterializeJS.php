@@ -1,31 +1,31 @@
 <?php
-namespace Quark\ViewResources\jQuery\Plugins\OwlCarousel;
+namespace Quark\ViewResources\Materialize;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkForeignViewResource;
 
-use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
+use Quark\QuarkDTO;
 
 use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
- * Class OwlCarouselJS
+ * Class MaterializeJS
  *
- * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
+ * @package Quark\ViewResources\Materialize
  */
-class OwlCarouselJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
+class MaterializeJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
-	 * @var string $_version = OwlCarousel::CURRENT_VERSION
+	 * @var string $_version = Materialize::CURRENT_VERSION
 	 */
-	private $_version = OwlCarousel::CURRENT_VERSION;
+	private $_version = Materialize::CURRENT_VERSION;
 
 	/**
-	 * @param string $version = OwlCarousel::CURRENT_VERSION
+	 * @param string $version = Materialize::CURRENT_VERSION
 	 */
-	public function __construct ($version = OwlCarousel::CURRENT_VERSION) {
+	public function __construct ($version = Materialize::CURRENT_VERSION) {
 		$this->_version = $version;
 	}
 
@@ -40,7 +40,7 @@ class OwlCarouselJS implements IQuarkViewResource, IQuarkViewResourceWithDepende
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/' . $this->_version . '/owl.carousel.min.js';
+		return 'https://cdnjs.cloudflare.com/ajax/libs/materialize/' . $this->_version . '/js/materialize.min.js';
 	}
 
 	/**
