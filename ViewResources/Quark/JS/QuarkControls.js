@@ -476,7 +476,7 @@ Quark.Controls.Toggle = function (selector, opt) {
 
 /**
  * @param {string} selector
- * @param opt
+ * @param {object} opt
  *
  * @constructor
  */
