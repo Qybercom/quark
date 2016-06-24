@@ -6,6 +6,7 @@ use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkCSSViewResourceType;
+use Quark\QuarkDTO;
 
 /**
  * Class ImagePickerCSS
@@ -37,5 +38,12 @@ class ImagePickerCSS implements IQuarkViewResource, IQuarkForeignViewResource {
 	 */
 	public function Location () {
 		return 'https://cdnjs.cloudflare.com/ajax/libs/image-picker/' . $this->_version . '/image-picker.min.css';
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
 	}
 }
