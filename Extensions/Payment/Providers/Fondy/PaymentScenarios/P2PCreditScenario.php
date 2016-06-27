@@ -12,11 +12,11 @@ use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\Fondy\Fondy;
 
 /**
- * Class P2PCredit
+ * Class P2PCreditScenario
  *
  * @package Quark\Extensions\Payment\Providers\Fondy\PaymentScenarios
  */
-class P2PCredit implements IQuarkPaymentScenario {
+class P2PCreditScenario implements IQuarkPaymentScenario {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -38,9 +38,9 @@ class P2PCredit implements IQuarkPaymentScenario {
 	private $_value = 0.0;
 
 	/**
-	 * @var string $_currency = Payment::CURRENCY_RUR
+	 * @var string $_currency = Payment::CURRENCY_RUB
 	 */
-	private $_currency = Payment::CURRENCY_RUR;
+	private $_currency = Payment::CURRENCY_RUB;
 
 	/**
 	 * @var string $_description = ''
@@ -86,12 +86,12 @@ class P2PCredit implements IQuarkPaymentScenario {
 	}
 
 	/**
-	 * @param string $currency = Payment::CURRENCY_RUR
+	 * @param string $currency = Payment::CURRENCY_RUB
 	 * @param float $value = 0.0
 	 *
-	 * @return P2PCredit
+	 * @return P2PCreditScenario
 	 */
-	public function Money ($currency = Payment::CURRENCY_RUR, $value = 0.0) {
+	public function Money ($currency = Payment::CURRENCY_RUB, $value = 0.0) {
 		$this->_currency = $currency;
 		$this->_value = $value;
 

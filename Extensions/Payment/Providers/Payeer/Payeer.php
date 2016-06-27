@@ -1,6 +1,10 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\Payeer;
 
+use Quark\QuarkDTO;
+use Quark\QuarkHTTPClient;
+use Quark\QuarkJSONIOProcessor;
+
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 
 /**
@@ -9,7 +13,29 @@ use Quark\Extensions\Payment\IQuarkPaymentProvider;
  * @package Quark\Extensions\Payment\Providers\Payeer
  */
 class Payeer implements IQuarkPaymentProvider {
-	const API_ENDPOINT = '';
+	const API_ENDPOINT = 'https://payeer.com/ajax/api/api.php';
+
+	/**
+	 * @var string $account = ''
+	 */
+	public $account = '';
+
+	/**
+	 * @var string $appId = ''
+	 */
+	public $appId = '';
+
+	/**
+	 * @var string $appSecret = ''
+	 */
+	public $appSecret = '';
+
+	/**
+	 * @param string $account = ''
+	 */
+	public function __construct ($account = '') {
+		$this->account = $account;
+	}
 
 	/**
 	 * @param string $appId
@@ -18,6 +44,34 @@ class Payeer implements IQuarkPaymentProvider {
 	 * @return mixed
 	 */
 	public function PaymentProviderApplication ($appId, $appSecret) {
-		// TODO: Implement PaymentProviderApplication() method.
+		$this->appId = $appId;
+		$this->appSecret = $appSecret;
+	}
+
+	/**
+	 * @param $method
+	 * @param $data = []
+	 *
+	 * @return bool|QuarkDTO
+	 */
+	public function API ($method, $data = []) {
+		$data['account'] = $this->account;
+		$data['apiId'] = $this->appId;
+		$data['appPass'] = $this->appSecret;
+		$data['action'] = $method;
+
+		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Data($data);
+
+		return QuarkHTTPClient::To(self::API_ENDPOINT, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+	}
+
+	/**
+	 * @param QuarkDTO|bool $response
+	 *
+	 * @return bool
+	 */
+	public function ResponseOK ($response) {
+		return $response != false && $response->auth_error == '0' && !$response->errors;
 	}
 }
