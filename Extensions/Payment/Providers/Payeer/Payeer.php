@@ -2,6 +2,7 @@
 namespace Quark\Extensions\Payment\Providers\Payeer;
 
 use Quark\QuarkDTO;
+use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 
@@ -57,10 +58,10 @@ class Payeer implements IQuarkPaymentProvider {
 	public function API ($method, $data = []) {
 		$data['account'] = $this->account;
 		$data['apiId'] = $this->appId;
-		$data['appPass'] = $this->appSecret;
+		$data['apiPass'] = $this->appSecret;
 		$data['action'] = $method;
 
-		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data($data);
 
 		return QuarkHTTPClient::To(self::API_ENDPOINT, $request, new QuarkDTO(new QuarkJSONIOProcessor()));

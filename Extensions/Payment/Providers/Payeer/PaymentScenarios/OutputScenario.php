@@ -54,6 +54,10 @@ class OutputScenario implements IQuarkPaymentScenario {
 	 * @param string $currencyOut = Payment::CURRENCY_RUB
 	 */
 	public function __construct ($system, $to, $currency = Payment::CURRENCY_RUB, $value = 0.0, $currencyOut = Payment::CURRENCY_RUB) {
+		$this->PaymentSystem($system);
+		$this->To($to);
+		$this->Money($currency, $value);
+		$this->CurrencyOut($currencyOut);
 	}
 
 	/**
@@ -112,8 +116,6 @@ class OutputScenario implements IQuarkPaymentScenario {
 	 * @return bool
 	 */
 	public function Proceed (IQuarkPaymentProvider $provider, IQuarkPaymentInstrument $instrument = null) {
-		// ps=1136053&sumIn=1&curIn=USD&curOut=RUB&param_ACCOUNT_NUMBER=P1000001
-		
 		$this->_response = $provider->API('output', array(
 			'ps' => $this->_system,
 			'sumIn' => $this->_value,
