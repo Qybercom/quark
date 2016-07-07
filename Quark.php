@@ -10243,6 +10243,29 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param string $method = self::METHOD_GET
+	 * @param IQuarkIOProcessor $processor = null
+	 * @param mixed $data = []
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForRequest ($method = self::METHOD_GET, IQuarkIOProcessor $processor = null, $data = []) {
+		$dto = new self($processor, null, $method);
+		$dto->Data($data);
+
+		return $dto;
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor = null
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForResponse (IQuarkIOProcessor $processor = null) {
+		return new self($processor);
+	}
+
+	/**
 	 * @param $url
 	 *
 	 * @return QuarkDTO
@@ -12162,7 +12185,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param $mime
+	 * @param string $mime
 	 *
 	 * @return string
 	 */
@@ -12176,7 +12199,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param string $location
+	 * @param string $location = ''
 	 * @param bool $load = false
 	 */
 	public function __construct ($location = '', $load = false) {
@@ -12195,8 +12218,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param string $location
-	 * @param string $name
+	 * @param string $location = ''
+	 * @param string $name = ''
 	 *
 	 * @return string
 	 */
@@ -12220,7 +12243,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param string $location
+	 * @param string $location = ''
 	 *
 	 * @return QuarkFile
 	 * @throws QuarkArchException
@@ -12330,7 +12353,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param string $content
+	 * @param string $content = ''
 	 *
 	 * @return string
 	 */
@@ -12379,12 +12402,25 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		}
 
 		if (!chmod($this->location, $mode))  {
-			Quark::Log('[QuarkFile::Upload] Cannot set mode to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
+			Quark::Log('[QuarkFile::Upload] Cannot set mode [mode:' . sprintf('%o', $mode) . '] to [location:' . $this->location . ']. ' . QuarkException::LastError(), Quark::LOG_WARN);
 			return false;
 		}
 
 		$this->Location($this->location);
 		return true;
+	}
+
+	/**
+	 * @param string $location = ''
+	 * @param bool $mime = true
+	 * @param int $mode = self::MODE_DEFAULT
+	 *
+	 * @return bool
+	 */
+	public function UploadTo ($location = '', $mime = true, $mode = self::MODE_DEFAULT) {
+		$this->Location($location);
+		
+		return $this->Upload($mime, $mode);
 	}
 
 	/**
