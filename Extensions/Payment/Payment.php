@@ -116,4 +116,13 @@ class Payment implements IQuarkExtension {
 	public function Response () {
 		return $this->_scenario->Response();
 	}
+
+	/**
+	 * @return PaymentFinancialTransaction
+	 */
+	public function FinancialTransaction () {
+		return $this->_scenario instanceof IQuarkPaymentScenarioWithFinancialTransaction
+			? $this->_scenario->FinancialTransaction()
+			: null;
+	}
 }

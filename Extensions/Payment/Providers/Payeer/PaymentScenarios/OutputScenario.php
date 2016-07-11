@@ -1,11 +1,13 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\Payeer\PaymentScenarios;
 
+use Quark\Extensions\Payment\PaymentFinancialTransaction;
 use Quark\QuarkDTO;
 
 use Quark\Extensions\Payment\IQuarkPaymentInstrument;
 use Quark\Extensions\Payment\IQuarkPaymentProvider;
 use Quark\Extensions\Payment\IQuarkPaymentScenario;
+use Quark\Extensions\Payment\IQuarkPaymentScenarioWithFinancialTransaction;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\Payeer\Payeer;
@@ -15,7 +17,7 @@ use Quark\Extensions\Payment\Providers\Payeer\Payeer;
  *
  * @package Quark\Extensions\Payment\Providers\Payeer\PaymentScenarios
  */
-class OutputScenario implements IQuarkPaymentScenario {
+class OutputScenario implements IQuarkPaymentScenario, IQuarkPaymentScenarioWithFinancialTransaction {
 	/**
 	 * @var QuarkDTO $_response
 	 */
@@ -132,5 +134,12 @@ class OutputScenario implements IQuarkPaymentScenario {
 	 */
 	public function Response () {
 		return $this->_response;
+	}
+
+	/**
+	 * @return PaymentFinancialTransaction
+	 */
+	public function FinancialTransaction () {
+		return new PaymentFinancialTransaction($this->_value, $this->_currency, $this->_to, $this->_system);
 	}
 }
