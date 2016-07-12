@@ -4861,7 +4861,7 @@ class QuarkModel implements IQuarkContainer {
 			if (method_exists($provider, $method))
 				return call_user_func_array(array($provider, $method), $args);
 
-			$model .= ' or provider ' . ($provider == null ? 'null' : get_class($provider->Provider()));
+			$model .= ' or provider ' . ($provider == null ? 'null' : get_class($provider));
 		}
 
 		throw new QuarkArchException('Method ' . $method . ' not found in model ' . $model);
