@@ -2194,7 +2194,7 @@ trait QuarkServiceBehavior {
 	use QuarkContainerBehavior;
 
 	/** @noinspection PhpUnusedPrivateMethodInspection
-	 * @return QuarkModel
+	 * @return QuarkService
 	 */
 	private function _envelope () {
 		return new QuarkService($this);
@@ -3042,7 +3042,7 @@ trait QuarkViewBehavior {
 	use QuarkContainerBehavior;
 
 	/** @noinspection PhpUnusedPrivateMethodInspection
-	 * @return QuarkModel
+	 * @return QuarkView
 	 */
 	private function _envelope () {
 		return new QuarkView($this);
@@ -8918,7 +8918,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
-	 * @return array
+	 * @return bool
 	 */
 	private function _monitor () {
 		return $this->_cluster->Terminal()->Broadcast(self::Package(
