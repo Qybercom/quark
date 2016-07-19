@@ -4771,6 +4771,9 @@ class QuarkModel implements IQuarkContainer {
 	const OPERATION_REMOVE = 'Remove';
 	const OPERATION_EXPORT = 'Export';
 
+	const SORT_ASC = 1;
+	const SORT_DESC = -1;
+
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior $_model = null
 	 */
