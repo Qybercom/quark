@@ -531,9 +531,9 @@ class QuarkConfig {
 		$this->_culture = new QuarkCultureISO();
 		$this->_webHost = new QuarkURI();
 
-		$this->_clusterControllerListen = QuarkURI::FromURI(QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL);
-		$this->_clusterControllerConnect = $this->_clusterControllerListen->ConnectionString();
-		$this->_clusterMonitor = QuarkURI::FromURI(QuarkStreamEnvironment::URI_CONTROLLER_EXTERNAL);
+		$this->ClusterControllerListen(QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL);
+		$this->ClusterControllerConnect($this->_clusterControllerListen->ConnectionString());
+		$this->ClusterMonitor(QuarkStreamEnvironment::URI_CONTROLLER_EXTERNAL);
 		$this->_selfHosted = QuarkURI::FromURI(QuarkFPMEnvironment::SELF_HOSTED);
 
 		if (isset($_SERVER['SERVER_PROTOCOL']))
@@ -9331,7 +9331,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @throws QuarkArchException
 	 */
 	public function NetworkServerData (QuarkClient $node = null, $data) {
-		$this->_pipeData('StreamNetwork', $data, true);
+		$this->_pipeData('StreamNetwork', $data, $node !== null);
 	}
 
 	/**

@@ -26,8 +26,11 @@ class RESTSession implements IQuarkAuthorizationProvider {
 			? $model->SessionKey()
 			: 'access';
 
+		$session = $input->AuthorizationProvider();
+
 		$output = new QuarkDTO();
-		$output->$key = $input->$key;
+		$output->AuthorizationProvider($session);
+		$output->$key = $session == null ? $input->$key : $session->Value();
 
 		return $output;
 	}
@@ -46,6 +49,7 @@ class RESTSession implements IQuarkAuthorizationProvider {
 			: 'access';
 
 		$output = new QuarkDTO();
+		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $model->$key));
 		$output->$key = $model->$key;
 
 		return $output;
