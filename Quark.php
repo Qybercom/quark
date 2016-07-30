@@ -2020,7 +2020,7 @@ class QuarkTimer {
 	public function Invoke () {
 		$now = QuarkDate::Now();
 
-		if (!$this->_last->Expired($now, $this->_time)) return;
+		if (!$this->_last->Later($now, $this->_time)) return;
 
 		$this->_last = $now;
 
@@ -6670,16 +6670,29 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param QuarkDate $from
-	 * @param int $offset = 0
+	 * @param QuarkDate|null $then
+	 * @param int $offset
 	 *
 	 * @return bool
 	 */
-	public function Expired (QuarkDate $from = null, $offset = 0) {
-		if ($from == null)
-			$from = self::Now();
+	public function Earlier (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
 
-		return $this->Interval($from) > $offset;
+		return $this->Interval($then) > $offset;
+	}
+
+	/**
+	 * @param QuarkDate|null $then
+	 * @param int $offset
+	 *
+	 * @return bool
+	 */
+	public function Later (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
+
+		return $this->Interval($then) < $offset;
 	}
 
 	/**
@@ -6764,6 +6777,16 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public static function GMTOf ($date) {
 		return self::Of($date, self::GMT);
+	}
+
+	/**
+	 * @param QuarkDate|string $date
+	 * @param string $timezone = self::GMT
+	 *
+	 * @return QuarkDate
+	 */
+	public static function From ($date, $timezone = self::GMT) {
+		return $date instanceof QuarkDate ? $date : self::Of($date, $timezone);
 	}
 
 	/**

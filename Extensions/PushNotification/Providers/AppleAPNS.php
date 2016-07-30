@@ -4,6 +4,7 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
+use Quark\QuarkDate;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkTCPNetworkTransport;
 
@@ -27,6 +28,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	const OPTION_ALERT = 'alert';
 	const OPTION_BADGE = 'badge';
 	const OPTION_SOUND = 'sound';
+	const OPTION_DEVICE_AGE = '___device_age___';
 
 	/**
 	 * @var QuarkCertificate $_certificate
@@ -111,11 +113,37 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 			'data' => $data
 		);
 
+		$devices = array();
+		$back = array();
+
+		foreach ($this->_devices as $device) {
+			if ($device->date == null) {
+				$back[] = $device;
+				continue;
+			}
+
+			$devices[] = $device;
+		}
+
+		usort($devices, function ($a, $b) {
+			return $a->date->Earlier($b->date)
+				? 1
+				: ($a->date->Later($b->date)
+					? -1
+					: 0
+				);
+		});
+
+		$devices = array_merge($devices, $back);
+
 		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60, false);
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
-			foreach ($this->_devices as $device)
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use ($devices, $options) {
+			foreach ($devices as $device) {
+				if (isset($options[self::OPTION_DEVICE_AGE]) && $device->date->Earlier(QuarkDate::From($options[self::OPTION_DEVICE_AGE]))) continue;
+
 				$client->Send($this->_msg($device));
+			}
 		});
 
 		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {

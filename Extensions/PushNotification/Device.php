@@ -3,6 +3,9 @@ namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkModel;
 
+use Quark\IQuarkModelWithAfterFind;
+use Quark\IQuarkModelWithAfterPopulate;
+use Quark\QuarkDate;
 use Quark\QuarkField;
 
 /**
@@ -10,7 +13,7 @@ use Quark\QuarkField;
  *
  * @package Quark\Extensions\PushNotification
  */
-class Device implements IQuarkModel {
+class Device implements IQuarkModel, IQuarkModelWithAfterPopulate {
 	/**
 	 * @var string $type = ''
 	 */
@@ -21,12 +24,19 @@ class Device implements IQuarkModel {
 	public $id = '';
 
 	/**
-	 * @param string $type
-	 * @param string $id
+	 * @var QuarkDate|string $date = ''
 	 */
-	public function __construct ($type = '', $id = '') {
+	public $date = '';
+
+	/**
+	 * @param string $type = ''
+	 * @param string $id = ''
+	 * @param QuarkDate|string $date = ''
+	 */
+	public function __construct ($type = '', $id = '', $date = '') {
 		$this->type = (string)$type;
 		$this->id = (string)$id;
+		$this->date = QuarkDate::From($date);
 	}
 
 	/**
@@ -35,7 +45,8 @@ class Device implements IQuarkModel {
 	public function Fields () {
 		return array(
 			'id' => '',
-			'type' => ''
+			'type' => '',
+			'date' => QuarkDate::GMTNow()
 		);
 	}
 
@@ -47,5 +58,17 @@ class Device implements IQuarkModel {
 			QuarkField::is($this->id, QuarkField::TYPE_STRING),
 			QuarkField::is($this->type, QuarkField::TYPE_STRING)
 		);
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function AfterPopulate ($raw) {
+		$raw = (object)$raw;
+
+		if (!isset($raw->date) || $raw->date == null)
+			$this->date = null;
 	}
 }
