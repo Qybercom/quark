@@ -2,9 +2,8 @@
 namespace Quark\Extensions\PushNotification;
 
 use Quark\IQuarkModel;
-
-use Quark\IQuarkModelWithAfterFind;
 use Quark\IQuarkModelWithAfterPopulate;
+
 use Quark\QuarkDate;
 use Quark\QuarkField;
 
@@ -18,6 +17,7 @@ class Device implements IQuarkModel, IQuarkModelWithAfterPopulate {
 	 * @var string $type = ''
 	 */
 	public $type = '';
+
 	/**
 	 * @var string $id = ''
 	 */

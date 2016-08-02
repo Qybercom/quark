@@ -4,7 +4,6 @@ namespace Quark\Extensions\PushNotification\Providers;
 use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
-use Quark\QuarkDate;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkTCPNetworkTransport;
 

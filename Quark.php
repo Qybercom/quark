@@ -4825,7 +4825,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param $value
 	 */
 	public function __set ($key, $value) {
-		$this->_model->$key = $value;
+		$this->_model->$key = $this->Field($key) instanceof IQuarkModel && !($value instanceof QuarkModel) ? new QuarkModel($value) : $value;
 	}
 
 	/**
@@ -5341,6 +5341,17 @@ class QuarkModel implements IQuarkContainer {
 			$out[] = $error->Value()->Of($language);
 
 		return $out;
+	}
+
+	/**
+	 * @param string $name
+	 *
+	 * @return mixed
+	 */
+	public function Field ($name) {
+		$fields = (object)$this->_model->Fields();
+
+		return isset($fields->$name) ? $fields->$name : null;
 	}
 
 	/**
