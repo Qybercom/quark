@@ -4,6 +4,7 @@ namespace Quark\Extensions\PushNotification;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
+use Quark\QuarkDate;
 
 /**
  * Class PushNotification
@@ -68,9 +69,11 @@ class PushNotification implements IQuarkExtension {
 	}
 
 	/**
+	 * @param QuarkDate|string $ageEdge = ''
+	 *
 	 * @return bool
 	 */
-	public function Send () {
+	public function Send ($ageEdge = '') {
 		if (!$this->_config) {
 			Quark::Log('PushNotification does not have a valid config', Quark::LOG_WARN);
 			return false;
@@ -82,11 +85,14 @@ class PushNotification implements IQuarkExtension {
 		foreach ($providers as $provider) {
 			$devices = 0;
 
-			foreach ($this->_devices as $device)
+			foreach ($this->_devices as $device) {
+				if (func_num_args() != 0 && ($device->date == null || $device->date->Earlier(QuarkDate::From($ageEdge)))) continue;
+
 				if ($device && $device->type == $provider->Type() && $device->id != '') {
 					$provider->Device($device);
 					$devices++;
 				}
+			}
 
 			if ($devices == 0) continue;
 

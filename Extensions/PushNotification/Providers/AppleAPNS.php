@@ -28,7 +28,6 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	const OPTION_ALERT = 'alert';
 	const OPTION_BADGE = 'badge';
 	const OPTION_SOUND = 'sound';
-	const OPTION_DEVICE_AGE = '___device_age___';
 
 	/**
 	 * @var QuarkCertificate $_certificate
@@ -139,11 +138,8 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60, false);
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use ($devices, $options) {
-			foreach ($devices as $device) {
-				if (isset($options[self::OPTION_DEVICE_AGE]) && $device->date->Earlier(QuarkDate::From($options[self::OPTION_DEVICE_AGE]))) continue;
-
+			foreach ($devices as $device)
 				$client->Send($this->_msg($device));
-			}
 		});
 
 		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
