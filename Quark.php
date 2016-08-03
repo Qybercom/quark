@@ -4825,7 +4825,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @param $value
 	 */
 	public function __set ($key, $value) {
-		$this->_model->$key = $this->Field($key) instanceof IQuarkModel && !($value instanceof QuarkModel) ? new QuarkModel($value) : $value;
+		$this->_model->$key = $this->Field($key) instanceof IQuarkModel && $value instanceof IQuarkModel ? new QuarkModel($value) : $value;
 	}
 
 	/**
