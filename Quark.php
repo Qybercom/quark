@@ -2808,7 +2808,7 @@ class QuarkObject {
 		if (sizeof($args) == 1)
 			$args = array(new \stdClass(), $args[0]);
 		
-		$out = $args[0];
+		$out = null;
 		
 		foreach ($args as $arg) {
 			$iterative = self::isIterative($arg);
@@ -7137,7 +7137,7 @@ class QuarkSession {
 
 		$this->_user = $this->_source->User()->Session($this->_source->Name(), $data->Data());
 
-		//if (!($this->_source->Provider() instanceof IQuarkAuthorizationProviderWithFullOutputControl))
+		if (!($this->_source->Provider() instanceof IQuarkAuthorizationProviderWithFullOutputControl))
 			$this->_output->Data(null);
 
 		return $this->_user != null;
