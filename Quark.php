@@ -7136,7 +7136,9 @@ class QuarkSession {
 		if ($data == null || $data->AuthorizationPrompt()) return false;
 
 		$this->_user = $this->_source->User()->Session($this->_source->Name(), $data->Data());
-		$this->_output->Data(null);
+
+		if (!($this->_source->Provider() instanceof IQuarkAuthorizationProviderWithFullOutputControl))
+			$this->_output->Data(null);
 
 		return $this->_user != null;
 	}
@@ -7349,6 +7351,13 @@ interface IQuarkAuthorizationProvider {
 	 */
 	public function SessionCommit($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
 }
+
+/**
+ * Interface IQuarkAuthorizationProviderWithFullOutputControl
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizationProviderWithFullOutputControl extends IQuarkAuthorizationProvider { }
 
 /**
  * Interface IQuarkAuthorizableModel

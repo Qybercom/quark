@@ -4,6 +4,7 @@ namespace Quark\Extensions\Quark\REST;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizableModelWithSessionKey;
 use Quark\IQuarkAuthorizationProvider;
+use Quark\IQuarkAuthorizationProviderWithFullOutputControl;
 
 use Quark\QuarkDTO;
 use Quark\QuarkKeyValuePair;
@@ -13,7 +14,7 @@ use Quark\QuarkKeyValuePair;
  *
  * @package Quark\Extensions\Quark\REST
  */
-class RESTSession implements IQuarkAuthorizationProvider {
+class RESTSession implements IQuarkAuthorizationProvider, IQuarkAuthorizationProviderWithFullOutputControl {
 	/**
 	 * @param string $name
 	 * @param IQuarkAuthorizableModel $model
