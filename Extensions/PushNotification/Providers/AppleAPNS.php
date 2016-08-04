@@ -5,6 +5,7 @@ use Quark\Quark;
 use Quark\QuarkCertificate;
 use Quark\QuarkClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkModel;
 use Quark\QuarkTCPNetworkTransport;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
@@ -124,9 +125,11 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 		}
 
 		usort($devices, function ($a, $b) {
-			return $a->date->Earlier($b->date)
+			$date = $b->date instanceof QuarkModel ? $b->date->Model() : $b->date;
+
+			return $a->date->Earlier($date)
 				? 1
-				: ($a->date->Later($b->date)
+				: ($a->date->Later($date)
 					? -1
 					: 0
 				);
