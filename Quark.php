@@ -2811,6 +2811,8 @@ class QuarkObject {
 		$out = null;
 		
 		foreach ($args as $arg) {
+			if ($arg === null) continue;
+
 			$iterative = self::isIterative($arg);
 
 			if (is_scalar($arg) || is_null($arg) || (is_object($arg) && !($arg instanceof \stdClass))) {
@@ -3617,10 +3619,13 @@ class QuarkView implements IQuarkContainer {
 	 * @return array
 	 */
 	public function Vars ($params = []) {
-		if (func_num_args() == 1)
-			$this->_vars = $params instanceof QuarkDTO
+		if (func_num_args() == 1) {
+			$vars = $params instanceof QuarkDTO
 				? $params->Data()
 				: QuarkObject::Merge((object)$params);
+			
+			$this->_vars = $vars == null ? (object)array() : $vars;
+		}
 
 		return $this->_vars;
 	}
