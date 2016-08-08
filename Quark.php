@@ -1255,6 +1255,13 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			if (!($service instanceof IQuarkTask))
 				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
 
+			if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior')) {
+				/**
+				 * @var QuarkCLIBehavior $service
+				 */
+				$service->ShellInput($argv);
+			}
+
 			$service->Task($argc, $argv);
 		}
 		else {
@@ -2280,7 +2287,12 @@ trait QuarkStreamBehavior {
  */
 trait QuarkCLIBehavior {
 	/**
-	 * @var array $-shellOutput = []
+	 * @var array $_shellInput = []
+	 */
+	private $_shellInput = array();
+
+	/**
+	 * @var array $_shellOutput = []
 	 */
 	private $_shellOutput = array();
 
@@ -2301,10 +2313,51 @@ trait QuarkCLIBehavior {
 	}
 
 	/**
+	 * @param array $argv = []
+	 *
+	 * @return array
+	 */
+	public function ShellInput ($argv = []) {
+		if (func_num_args() != 0)
+			$this->_shellInput = $argv;
+
+		return $this->_shellInput;
+	}
+
+	/**
 	 * @return array
 	 */
 	public function ShellOutput () {
 		return $this->_shellOutput;
+	}
+
+	/**
+	 * @param int $id = 0
+	 *
+	 * @return mixed
+	 */
+	public function Arg ($id = 0) {
+		return isset($this->_shellInput[$id]) ? $this->_shellInput[$id] : null;
+	}
+
+	/**
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return bool
+	 */
+	public function HasFlag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		$args = $alias != '';
+
+		$flag = $prefixFlag . $flag;
+		$alias = $prefixAlias . $alias;
+		
+		foreach ($this->_shellInput as $arg)
+			if ($arg == $flag || ($args && $arg == $alias)) return true;
+		
+		return false;
 	}
 
 	/**
@@ -2927,6 +2980,29 @@ class QuarkObject {
 			if (self::is($class, $interface) && ($filter != null ? $filter($class) : true)) $output[] = $class;
 
 		return $output;
+	}
+
+	/**
+	 * http://stackoverflow.com/a/25900210/2097055
+	 * 
+	 * @param string $class = ''
+	 * @param string $trait = ''
+	 * @param bool $parents = true
+	 *
+	 * @return bool
+	 */
+	public static function Uses ($class = '', $trait = '', $parents = true) {
+		$tree = $parents ? class_parents($class) : array();
+		$tree[] = $class;
+
+		foreach ($tree as $node) {
+			$uses = class_uses($node);
+
+			foreach ($uses as $use)
+				if ($use == $trait) return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -3623,7 +3699,7 @@ class QuarkView implements IQuarkContainer {
 			$vars = $params instanceof QuarkDTO
 				? $params->Data()
 				: QuarkObject::Merge((object)$params);
-			
+
 			$this->_vars = $vars == null ? (object)array() : $vars;
 		}
 
@@ -5546,10 +5622,6 @@ class QuarkModel implements IQuarkContainer {
 	 * @return mixed
 	 */
 	public static function Delete (IQuarkModel $model, $criteria = [], $options = []) {
-		$model = self::_export($model, $options);
-
-		if (!$model) return false;
-
 		$ok = $model instanceof IQuarkModelWithBeforeRemove
 			? $model->BeforeRemove($options)
 			: true;
