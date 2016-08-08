@@ -5131,7 +5131,7 @@ class QuarkModel implements IQuarkContainer {
 		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
 			$fields = array_replace($fields, (array)$model->RuntimeFields());
 
-		if ($model instanceof IQuarkModelWithDataProvider) {
+		if ($model instanceof IQuarkModelWithDataProvider && ($model instanceof IQuarkModelWithManageableDataProvider ? $model->DataProviderForSubModel($source) : true)) {
 			/**
 			 * @var IQuarkModel $model
 			 */
@@ -5340,6 +5340,12 @@ class QuarkModel implements IQuarkContainer {
 	 * @return \stdClass
 	 */
 	public function Extract ($fields = null, $weak = false) {
+		if ($this->_model instanceof IQuarkPolymorphicModel) {
+			$morph = $this->_model->PolymorphicExtract();
+
+			if ($morph !== null) return $morph;
+		}
+
 		$output = new \stdClass();
 
 		$model = clone $this->_model;
@@ -5660,6 +5666,20 @@ interface IQuarkModelWithDataProvider {
 }
 
 /**
+ * Interface IQuarkModelWithManageableDataProvider
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithManageableDataProvider extends IQuarkModelWithDataProvider {
+	/**
+	 * @param $source
+	 *
+	 * @return bool
+	 */
+	public function DataProviderForSubModel($source);
+}
+
+/**
  * Interface IQuarkLinkedModel
  *
  * @package Quark
@@ -5703,6 +5723,18 @@ interface IQuarkStrongModelWithRuntimeFields extends IQuarkStrongModel {
  * @package Quark
  */
 interface IQuarkNullableModel { }
+
+/**
+ * Interface IQuarkPolymorphicModel
+ *
+ * @package Quark
+ */
+interface IQuarkPolymorphicModel {
+	/**
+	 * @return mixed
+	 */
+	public function PolymorphicExtract();
+}
 
 /**
  * Interface IQuarkModelWithCustomPrimaryKey
@@ -6996,18 +7028,90 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
  *
  * @package Quark
  */
-class QuarkGenericModel implements IQuarkModel {
+class QuarkGenericModel implements IQuarkModel, IQuarkModelWithManageableDataProvider, IQuarkModelWithCustomCollectionName, IQuarkPolymorphicModel {
 	use QuarkModelBehavior;
+
+	/**
+	 * @var array $_fields = []
+	 */
+	private $_fields = array();
+
+	/**
+	 * @var array $_rules = []
+	 */
+	private $_rules = array();
+
+	/**
+	 * @var callable $_polyMorph = null
+	 */
+	private $_polyMorph = null;
+
+	/**
+	 * @var string $_provider = null
+	 */
+	private $_provider = null;
+
+	/**
+	 * @var string $_collection = ''
+	 */
+	private $_collection = '';
+
+	/**
+	 * @param array $fields = []
+	 * @param array $rules = []
+	 * @param callable $polyMorph = null
+	 */
+	public function __construct ($fields = [], $rules = [], callable $polyMorph = null) {
+		$this->_fields = $fields;
+		$this->_rules = $rules;
+		$this->_polyMorph = $polyMorph;
+	}
 	
 	/**
 	 * @return mixed
 	 */
-	public function Fields () { }
+	public function Fields () {
+		return $this->_fields;
+	}
 
 	/**
 	 * @return mixed
 	 */
-	public function Rules () { }
+	public function Rules () {
+		return $this->_rules;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function DataProvider () {
+		return $this->_provider;
+	}
+
+	/**
+	 * @param $source
+	 *
+	 * @return bool
+	 */
+	public function DataProviderForSubModel ($source) {
+		return $this->_provider !== null;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function PolymorphicExtract () {
+		$morph = $this->_polyMorph;
+		
+		return $morph ? $morph($this) : null;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function CollectionName () {
+		return $this->_collection;
+	}
 
 	/**
 	 * @param IQuarkModel $model
@@ -7025,6 +7129,26 @@ class QuarkGenericModel implements IQuarkModel {
 	 */
 	public function ExportGeneric (IQuarkModel $model) {
 		return $this->PopulateWith((new QuarkModel($model))->Export(true))->Export();
+	}
+
+	/**
+	 * @param IQuarkModelWithDataProvider $model = null
+	 * @param array $fields = []
+	 * @param array $rules = []
+	 * @param callable $polyMorph = null
+	 *
+	 * @return QuarkGenericModel
+	 */
+	public static function WithDataProvider (IQuarkModelWithDataProvider $model = null, $fields = [], $rules = [], callable $polyMorph = null) {
+		if ($model == null) return null;
+		
+		$out = new self($fields, $rules, $polyMorph);
+		$out->_provider = $model->DataProvider();
+		$out->_collection = $model instanceof IQuarkModelWithCustomCollectionName
+			? $model->CollectionName()
+			: QuarkObject::ClassOf($model);
+		
+		return $out;
 	}
 }
 
