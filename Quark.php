@@ -14097,6 +14097,11 @@ interface IQuarkIOFilter {
 	public function FilterOutput(QuarkDTO $output, QuarkSession $session);
 }
 
+/**
+ * Class QuarkXSSFilter
+ *
+ * @package Quark
+ */
 class QuarkXSSFilter implements IQuarkIOFilter {
 	/**
 	 * @param QuarkDTO $input
