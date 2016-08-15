@@ -101,6 +101,9 @@ body .quark-button:hover {
 }
 
 #presence-menu-side .quark-button.fa:before {
+    display: inline-block;
+	width: 16px;
+	text-align: center;
     margin: 0 10px 0 0;
 }
 
