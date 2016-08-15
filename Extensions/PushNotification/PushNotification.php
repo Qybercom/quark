@@ -65,7 +65,7 @@ class PushNotification implements IQuarkExtension {
 	 * @param array                          $options
 	 */
 	public function Options (IQuarkPushNotificationProvider $provider, $options = []) {
-		$this->_options[$provider->Type()] = $options;
+		$this->_options[$provider->PNPType()] = $options;
 	}
 
 	/**
@@ -88,19 +88,19 @@ class PushNotification implements IQuarkExtension {
 			foreach ($this->_devices as $device) {
 				if (func_num_args() != 0 && ($device->date == null || $device->date->Earlier(QuarkDate::From($ageEdge)))) continue;
 
-				if ($device && $device->type == $provider->Type() && $device->id != '') {
-					$provider->Device($device);
+				if ($device && $device->type == $provider->PNPType() && $device->id != '') {
+					$provider->PNPDevice($device);
 					$devices++;
 				}
 			}
 
 			if ($devices == 0) continue;
 
-			$ok &= (bool)$provider->Send($this->_payload, isset($this->_options[$provider->Type()])
-				? $this->_options[$provider->Type()]
+			$ok &= (bool)$provider->PNPSend($this->_payload, isset($this->_options[$provider->PNPType()])
+				? $this->_options[$provider->PNPType()]
 				: array());
 
-			$provider->Reset();
+			$provider->PNPReset();
 		}
 
 		return $ok;

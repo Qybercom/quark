@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\PayPal;
 
+use Quark\Extensions\Payment\IQuarkPaymentScenario;
 use Quark\IQuarkLinkedModel;
 use Quark\IQuarkModel;
 
@@ -68,7 +69,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	 * @param string $description = ''
 	 * @param QuarkDate $start = null
 	 *
-	 * @return BillingAgreementCreateScenario
+	 * @return BillingAgreementCreateScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementCreate ($plan = '', $name = '', $description = '', QuarkDate $start = null) {
 		return $this->_payment->Scenario(new BillingAgreementCreateScenario($plan, $name, $description, $start));
@@ -77,7 +78,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $token = ''
 	 *
-	 * @return BillingAgreementExecuteScenario
+	 * @return BillingAgreementExecuteScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementExecute ($token) {
 		return $this->_payment->Scenario(new BillingAgreementExecuteScenario($token));
@@ -86,14 +87,14 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param QuarkDTO $request
 	 *
-	 * @return BillingAgreementExecuteScenario
+	 * @return BillingAgreementExecuteScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementExecuteFromRedirect (QuarkDTO $request) {
 		return $this->_payment->Scenario(BillingAgreementExecuteScenario::FromRedirect($request));
 	}
 
 	/**
-	 * @return BillingAgreementUpdateScenario
+	 * @return BillingAgreementUpdateScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementUpdate () {
 		return $this->_payment->Scenario(new BillingAgreementUpdateScenario());
@@ -102,7 +103,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $id = ''
 	 *
-	 * @return BillingAgreementGetScenario
+	 * @return BillingAgreementGetScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementGet ($id = '') {
 		if (func_num_args() != 0)
@@ -114,7 +115,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $id = ''
 	 *
-	 * @return BillingAgreementSuspendScenario
+	 * @return BillingAgreementSuspendScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementSuspend ($id = '') {
 		if (func_num_args() != 0)
@@ -126,7 +127,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $id = ''
 	 *
-	 * @return BillingAgreementReactivateScenario
+	 * @return BillingAgreementReactivateScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementReactivate ($id = '') {
 		if (func_num_args() != 0)
@@ -138,7 +139,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $id = ''
 	 *
-	 * @return BillingAgreementCancelScenario
+	 * @return BillingAgreementCancelScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementCancel ($id = '') {
 		if (func_num_args() != 0)
@@ -150,7 +151,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	/**
 	 * @param string $id = ''
 	 *
-	 * @return BillingAgreementTransactionsScenario
+	 * @return BillingAgreementTransactionsScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementTransactions ($id = '') {
 		if (func_num_args() != 0)
@@ -164,7 +165,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	 * @param $currency = Payment::CURRENCY_USD
 	 * @param int|float $value = 0.0
 	 *
-	 * @return BillingAgreementSetBalanceScenario
+	 * @return BillingAgreementSetBalanceScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementSetBalance ($id = '', $currency = Payment::CURRENCY_USD, $value = 0.0) {
 		if (func_num_args() != 0)
@@ -179,7 +180,7 @@ class PayPalBillingAgreement implements IQuarkModel, IQuarkLinkedModel {
 	 * @param int|float $value = 0.0
 	 * @param string $note = ''
 	 *
-	 * @return BillingAgreementBillBalanceScenario
+	 * @return BillingAgreementBillBalanceScenario|IQuarkPaymentScenario
 	 */
 	public function AgreementBillBalance ($id = '', $currency = Payment::CURRENCY_USD, $value = 0.0, $note = '') {
 		if (func_num_args() != 0)

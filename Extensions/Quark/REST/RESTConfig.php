@@ -29,6 +29,11 @@ class RESTConfig implements IQuarkExtensionConfig {
 	private $_source = '';
 
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
 	 * @param IQuarkRESTServiceDescriptor $descriptor
 	 * @param string $endpoint
 	 * @param string $source
@@ -85,7 +90,23 @@ class RESTConfig implements IQuarkExtensionConfig {
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
+		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		// TODO: Implement ExtensionOptions() method.
 	}
 
 	/**

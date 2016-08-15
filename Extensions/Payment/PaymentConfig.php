@@ -28,6 +28,11 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	public $appSecret = '';
 
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
 	 * @param IQuarkPaymentProvider $provider
 	 * @param string $id
 	 * @param string $secret
@@ -41,7 +46,7 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
-	 * @return array
+	 * @return object
 	 */
 	public function Credentials () {
 		return (object)array(
@@ -61,14 +66,30 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
+		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		// TODO: Implement ExtensionOptions() method.
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		return $this->_provider;
+		return new Payment($this->_name);
 	}
 
 	/**

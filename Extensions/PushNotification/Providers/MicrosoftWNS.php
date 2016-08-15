@@ -49,32 +49,42 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	private $_devices = array();
 
 	/**
+	 * @return string
+	 */
+	public function PNPType () {
+		return self::TYPE;
+	}
+
+	/**
 	 * @param $config
 	 */
-	public function Config ($config) {
+	public function PNPConfig ($config) {
 		if (!is_array($config)) return;
 
 		$this->_config = $config;
 	}
 
 	/**
-	 * @return string
+	 * @param string $key
+	 * @param $value
+	 *
+	 * @return mixed
 	 */
-	public function Type () {
-		return self::TYPE;
+	public function PNPOption ($key, $value) {
+		// TODO: Implement PNPOption() method.
 	}
 
 	/**
 	 * @param Device $device
 	 */
-	public function Device (Device $device) {
+	public function PNPDevice (Device $device) {
 		$this->_devices[] = $device;
 	}
 
 	/**
 	 * @return Device[]
 	 */
-	public function Devices () {
+	public function PNPDevices () {
 		return $this->_devices;
 	}
 
@@ -100,7 +110,7 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Send($payload, $options = []) {
+	public function PNPSend($payload, $options = []) {
 		$type = isset($options[self::OPTION_TYPE]) ? $options[self::OPTION_TYPE] : self::TYPE_TOAST;
 		$badge = isset($options[self::OPTION_VALUE]) ? $options[self::OPTION_VALUE] : null;
 
@@ -138,7 +148,7 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	/**
 	 * @return mixed
 	 */
-	public function Reset () {
+	public function PNPReset () {
 		$this->_devices = array();
 	}
 }

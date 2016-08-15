@@ -16,6 +16,11 @@ class CDNConfig implements IQuarkExtensionConfig {
 	private $_provider;
 
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
 	 * @var string $appId
 	 */
 	public $appId = '';
@@ -39,7 +44,7 @@ class CDNConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
-	 * @return array
+	 * @return object
 	 */
 	public function Credentials () {
 		return (object)array(
@@ -59,7 +64,23 @@ class CDNConfig implements IQuarkExtensionConfig {
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
+		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		// TODO: Implement ExtensionOptions() method.
 	}
 
 	/**

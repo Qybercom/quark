@@ -10,7 +10,7 @@ RewriteRule .* index.php
 
 Options All -Indexes
 
-<FilesMatch ".*\.(php|log|qd)$">
+<FilesMatch ".*\.(php|log|qd|ini)$">
 Order Deny,Allow
 Deny from All
 </FilesMatch>

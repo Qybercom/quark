@@ -26,16 +26,16 @@ class SMSCenterConfig implements IQuarkExtensionConfig {
 	public $sender = '';
 
 	/**
-	 * @var string $_name
+	 * @var string $_name = ''
 	 */
 	private $_name = '';
 
 	/**
-	 * @param string $username
-	 * @param string $password
+	 * @param string $username = ''
+	 * @param string $password = ''
 	 * @param string $sender = ''
 	 */
-	public function __construct ($username, $password, $sender = '') {
+	public function __construct ($username = '', $password = '', $sender = '') {
 		$this->username = $username;
 		$this->password = $password;
 		$this->sender = $sender;
@@ -46,6 +46,29 @@ class SMSCenterConfig implements IQuarkExtensionConfig {
 	 */
 	public function Stacked ($name) {
 		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		if (isset($ini->Username))
+			$this->username = $ini->Username;
+
+		if (isset($ini->Password))
+			$this->password = $ini->Password;
+
+		if (isset($ini->Sender))
+			$this->sender = $ini->Sender;
 	}
 
 	/**

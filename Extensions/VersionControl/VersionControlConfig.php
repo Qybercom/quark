@@ -28,6 +28,11 @@ class VersionControlConfig implements IQuarkExtensionConfig {
 	private $_user;
 
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
 	 * @param IQuarkVersionControlProvider $provider
 	 * @param string $repository
 	 * @param string $username = ''
@@ -64,13 +69,29 @@ class VersionControlConfig implements IQuarkExtensionConfig {
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
+		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		// TODO: Implement ExtensionOptions() method.
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		// TODO: Implement ExtensionInstance() method.
+		return new VersionControl($this->_name);
 	}
 }

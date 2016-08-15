@@ -8,22 +8,30 @@ interface IQuarkPushNotificationProvider {
 	/**
 	 * @return string
 	 */
-	public function Type();
+	public function PNPType();
 
 	/**
 	 * @param $config
 	 */
-	public function Config($config);
+	public function PNPConfig($config);
+
+	/**
+	 * @param string $key
+	 * @param $value
+	 *
+	 * @return mixed
+	 */
+	public function PNPOption($key, $value);
 
 	/**
 	 * @param Device $device
 	 */
-	public function Device(Device $device);
+	public function PNPDevice(Device $device);
 
 	/**
 	 * @return Device[]
 	 */
-	public function Devices();
+	public function PNPDevices();
 
 	/**
 	 * @param object|array $payload
@@ -31,10 +39,10 @@ interface IQuarkPushNotificationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Send($payload, $options = []);
+	public function PNPSend($payload, $options = []);
 
 	/**
 	 * @return mixed
 	 */
-	public function Reset();
+	public function PNPReset();
 }

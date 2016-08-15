@@ -31,6 +31,11 @@ class MailConfig implements IQuarkExtensionConfig {
 	private $_fullname = '';
 
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+
+	/**
 	 * @param IQuarkMailProvider $provider
 	 * @param $username
 	 * @param $password
@@ -68,13 +73,29 @@ class MailConfig implements IQuarkExtensionConfig {
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
-		// TODO: Implement Stacked() method.
+		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		// TODO: Implement ExtensionOptions() method.
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		// TODO: Implement ExtensionInstance() method.
+		return new Mail($this->_name);
 	}
 }

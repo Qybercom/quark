@@ -26,8 +26,10 @@ class PushNotificationConfig implements IQuarkExtensionConfig {
 	 *
 	 * @return $this
 	 */
-	public function Provider (IQuarkPushNotificationProvider $provider, $config) {
-		$provider->Config($config);
+	public function Provider (IQuarkPushNotificationProvider $provider, $config = null) {
+		if (func_num_args() == 2)
+			$provider->PNPConfig($config);
+
 		$this->_providers[] = $provider;
 
 		return $this;
@@ -45,6 +47,28 @@ class PushNotificationConfig implements IQuarkExtensionConfig {
 	 */
 	public function Stacked ($name) {
 		$this->_name = $name;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExtensionName () {
+		return $this->_name;
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function ExtensionOptions ($ini) {
+		foreach ($ini as $key => $value) {
+			$type = explode('.', $key)[0];
+
+			foreach ($this->_providers as $provider)
+				if ($provider->PNPType() == $type)
+					$provider->PNPOption($key, $value);
+		}
 	}
 
 	/**

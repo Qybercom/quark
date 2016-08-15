@@ -18,7 +18,7 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
 
 	/**
-	 * @var Device $_devices = []
+	 * @var Device[] $_devices = []
 	 */
 	private $_devices = array();
 
@@ -28,31 +28,42 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	private $_key = '';
 
 	/**
+	 * @return string
+	 */
+	public function PNPType () {
+		return self::TYPE;
+	}
+
+	/**
 	 * @param $config
 	 */
-	public function Config ($config) {
+	public function PNPConfig ($config) {
 		if (is_string($config))
 			$this->_key = $config;
 	}
 
 	/**
-	 * @return string
+	 * @param string $key
+	 * @param $value
+	 *
+	 * @return mixed
 	 */
-	public function Type () {
-		return self::TYPE;
+	public function PNPOption ($key, $value) {
+		if (is_string($value))
+			$this->_key = $value;
 	}
 
 	/**
 	 * @param Device $device
 	 */
-	public function Device (Device $device) {
+	public function PNPDevice (Device $device) {
 		$this->_devices[] = $device->id;
 	}
 
 	/**
 	 * @return Device[]
 	 */
-	public function Devices () {
+	public function PNPDevices () {
 		return $this->_devices;
 	}
 
@@ -62,7 +73,7 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	 *
 	 * @return mixed
 	 */
-	public function Send($payload, $options = []) {
+	public function PNPSend($payload, $options = []) {
 		if (sizeof($this->_devices) == 0) return true;
 
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
@@ -80,7 +91,7 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	/**
 	 * @return mixed
 	 */
-	public function Reset () {
+	public function PNPReset () {
 		$this->_devices = array();
 	}
 }

@@ -29,6 +29,10 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	const OPTION_BADGE = 'badge';
 	const OPTION_SOUND = 'sound';
 
+	const INI_CERTIFICATE_LOCATION = 'ios.Certificate.Location';
+	const INI_CERTIFICATE_PASSPHRASE = 'ios.Certificate.Passphrase';
+	const INI_SANDBOX = 'ios.Sandbox';
+
 	/**
 	 * @var QuarkCertificate $_certificate
 	 */
@@ -52,14 +56,14 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	/**
 	 * @return string
 	 */
-	public function Type () {
+	public function PNPType () {
 		return self::TYPE;
 	}
 
 	/**
 	 * @param $config
 	 */
-	public function Config ($config) {
+	public function PNPConfig ($config) {
 		if (isset($config[self::OPTION_CERTIFICATE]) && $config[self::OPTION_CERTIFICATE] instanceof QuarkCertificate)
 			$this->_certificate = $config[self::OPTION_CERTIFICATE];
 
@@ -68,9 +72,34 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
+	 * @param string $key
+	 * @param $value
+	 *
+	 * @return mixed
+	 */
+	public function PNPOption ($key, $value) {
+		switch ($key) {
+			case self::INI_CERTIFICATE_LOCATION:
+				$this->_certificate = new QuarkCertificate($value);
+				break;
+
+			case self::INI_CERTIFICATE_PASSPHRASE:
+				$this->_certificate->Passphrase($value);
+				break;
+
+			case self::INI_SANDBOX:
+				if ($value == '1')
+					$this->_host = self::OPTION_SANDBOX;
+				break;
+
+			default: break;
+		}
+	}
+
+	/**
 	 * @param Device $device
 	 */
-	public function Device (Device $device) {
+	public function PNPDevice (Device $device) {
 		if (!preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id)) {
 			Quark::Log('[AppleAPNS] Invalid device id "' . $device->id . '"', Quark::LOG_WARN);
 			return;
@@ -82,7 +111,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	/**
 	 * @return Device[]
 	 */
-	public function Devices () {
+	public function PNPDevices () {
 		return $this->_devices;
 	}
 
@@ -92,8 +121,11 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	 *
 	 * @return mixed
 	 */
-	public function Send ($payload, $options = []) {
-		if ($this->_certificate == null) return false;
+	public function PNPSend ($payload, $options = []) {
+		if ($this->_certificate == null) {
+			Quark::Log('[AppleAPNS] Certificate was not specified or given path for ios.Certificate.Location in "ini" was not resolved', Quark::LOG_WARN);
+			return false;
+		}
 
 		$alert = '';
 		$data = $payload;
@@ -154,7 +186,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	/**
 	 * @return mixed
 	 */
-	public function Reset () {
+	public function PNPReset () {
 		$this->_devices = array();
 	}
 

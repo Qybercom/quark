@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\Payment\Providers\Payeer\PaymentScenarios;
 
-use Quark\Extensions\Payment\PaymentFinancialTransaction;
 use Quark\QuarkDTO;
 
 use Quark\Extensions\Payment\IQuarkPaymentInstrument;
@@ -11,6 +10,7 @@ use Quark\Extensions\Payment\IQuarkPaymentScenarioWithFinancialTransaction;
 
 use Quark\Extensions\Payment\Payment;
 use Quark\Extensions\Payment\Providers\Payeer\Payeer;
+use Quark\Extensions\Payment\PaymentFinancialTransaction;
 
 /**
  * Class OutputScenario
