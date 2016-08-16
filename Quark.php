@@ -561,7 +561,7 @@ class QuarkConfig {
 		$this->_webHost = new QuarkURI();
 
 		$this->ClusterControllerListen(QuarkStreamEnvironment::URI_CONTROLLER_INTERNAL);
-		$this->ClusterControllerConnect($this->_clusterControllerListen->ConnectionString());
+		$this->ClusterControllerConnect($this->_clusterControllerListen->ConnectionURI()->URI());
 		$this->ClusterMonitor(QuarkStreamEnvironment::URI_CONTROLLER_EXTERNAL);
 		$this->_selfHosted = QuarkURI::FromURI(QuarkFPMEnvironment::SELF_HOSTED);
 
@@ -785,7 +785,7 @@ class QuarkConfig {
 		$this->ClusterControllerConnect($connect);
 		
 		if (func_num_args() == 1)
-			$this->ClusterControllerConnect($this->_clusterControllerListen->ConnectionString());
+			$this->ClusterControllerConnect($this->_clusterControllerListen->ConnectionURI()->URI());
 		
 		return $this;
 	}
@@ -924,6 +924,10 @@ class QuarkConfig {
 			if ($options !== null)
 				$extension->ExtensionOptions($options);
 		}
+
+		unset($environment, $environments);
+		unset($extension, $extensions);
+		unset($options, $callback, $ini);
 	}
 
 	/**
@@ -5085,6 +5089,13 @@ trait QuarkModelBehavior {
 	public function Source () {
 		return $this->__call('Source', func_get_args());
 	}
+
+	/**
+	 * @return QuarkModel
+	 */
+	public function User () {
+		return QuarkSession::Current() ? QuarkSession::Current()->User() : null;
+	}
 }
 
 /**
@@ -5756,7 +5767,7 @@ class QuarkModel implements IQuarkContainer {
 		$buffer = new \stdClass();
 		$property = null;
 
-		$backbone = $weak ? $model->Fields() : $fields;
+		$backbone = (array)($weak ? $model->Fields() : $fields);
 
 		foreach ($backbone as $field => $rule) {
 			if (property_exists($output, $field))
@@ -9523,6 +9534,21 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param string $name = ''
+	 *
+	 * @return QuarkURI
+	 */
+	public static function ConnectionURI ($name = '') {
+		$environment = Quark::Environment();
+		
+		foreach ($environment as $env)
+			if ($env instanceof QuarkStreamEnvironment && $env->EnvironmentName() == $name)
+				return $env->ServerURI()->ConnectionURI();
+
+		return null;
+	}
+
+	/**
 	 * @return array
 	 */
 	private function _node () {
@@ -10676,15 +10702,15 @@ class QuarkURI {
 	}
 
 	/**
-	 * @return string
+	 * @return QuarkURI
 	 */
-	public function ConnectionString () {
+	public function ConnectionURI () {
 		$uri = clone $this;
 
 		if ($uri->host == self::HOST_ALL_INTERFACES)
 			$uri->host = Quark::HostIP();
 
-		return $uri->URI();
+		return $uri;
 	}
 }
 

@@ -29,6 +29,7 @@ Quark.Network.Socket = {
     host: '',
     port: 0,
     socket: null,
+    connected: false,
     on: {
         open: function () {},
         close: function () {},
@@ -53,12 +54,22 @@ Quark.Network.Socket = {
      * API methods
      */
     Connect: function () {
+    	var that = this;
+
         this.socket = new WebSocket('ws://' + this.host + ':' + this.port);
 
         this.socket.onmessage = this.on.message;
-        this.socket.onopen = this.on.open;
-        this.socket.onclose = this.on.close;
         this.socket.onerror = this.on.error;
+
+        this.socket.onopen = function (e) {
+            that.connected = true;
+            that.on.open(e);
+        };
+
+        this.socket.onclose = function (e) {
+            that.connected = false;
+            that.on.close(e);
+        };
     },
 
     /**
