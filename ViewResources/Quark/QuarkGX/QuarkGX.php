@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Quark\JS;
+namespace Quark\ViewResources\Quark\QuarkGX;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
@@ -8,13 +8,15 @@ use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkJSViewResourceType;
 
-use Quark\ViewResources\jQuery\jQueryCore;
 use Quark\QuarkLocalCoreJSViewResource;
+use Quark\ViewResources\jQuery\jQueryCore;
+use Quark\ViewResources\Quark\QuarkIO\QuarkIO;
+use Quark\ViewResources\Quark\QuarkUX\QuarkUX;
 
 /**
  * Class QuarkGX
  *
- * @package Quark\ViewResources\Quark\JS
+ * @package Quark\ViewResources\Quark\QuarkGX
  */
 class QuarkGX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies{
 	/**

@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Quark\JS;
+namespace Quark\ViewResources\Quark\QuarkIO;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -12,11 +12,11 @@ use Quark\QuarkLocalCoreJSViewResource;
 use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
- * Class QuarkUX
+ * Class QuarkIO
  *
- * @package Quark\ViewResources\Quark\JS
+ * @package Quark\ViewResources\Quark\QuarkIO
  */
-class QuarkUX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkIO implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -28,7 +28,7 @@ class QuarkUX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/QuarkUX.js';
+		return __DIR__ . '/QuarkIO.js';
 	}
 
 	/**
@@ -44,8 +44,7 @@ class QuarkUX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	public function Dependencies () {
 		return array(
 			new jQueryCore(),
-			new QuarkLocalCoreJSViewResource(),
-			new QuarkIO()
+			new QuarkLocalCoreJSViewResource()
 		);
 	}
 }

@@ -82,7 +82,13 @@ class PaymentConfig implements IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
-		// TODO: Implement ExtensionOptions() method.
+		if (isset($ini->AppID))
+			$this->appId = $ini->AppID;
+
+		if (isset($ini->AppSecret))
+			$this->appSecret = $ini->AppSecret;
+
+		$this->_provider->PaymentProviderApplication($this->appId, $this->appSecret);
 	}
 
 	/**

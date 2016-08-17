@@ -85,7 +85,14 @@ class VersionControlConfig implements IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
-		// TODO: Implement ExtensionOptions() method.
+		if (isset($ini->Username))
+			$this->_user = new QuarkKeyValuePair($ini->Username, $this->_user->Value());
+
+		if (isset($ini->Password))
+			$this->_user = new QuarkKeyValuePair($this->_user->Key(), $ini->Password);
+
+		if (isset($ini->Repository))
+			$this->_repository = $ini->Repository;
 	}
 
 	/**

@@ -1,22 +1,23 @@
 <?php
-namespace Quark\ViewResources\Quark\JS;
+namespace Quark\ViewResources\Quark\QuarkControls;
 
 use Quark\IQuarkViewResource;
+use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkLocalViewResource;
-use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLocalCoreJSViewResource;
 
 use Quark\ViewResources\jQuery\jQueryCore;
+use Quark\ViewResources\Quark\QuarkUX\QuarkUX;
 
 /**
- * Class QuarkMVC
+ * Class QuarkControlsJS
  *
- * @package Quark\ViewResources\Quark\JS
+ * @package Quark\ViewResources\Quark\QuarkControls
  */
-class QuarkMVC implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkControlsJS implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -28,7 +29,7 @@ class QuarkMVC implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVie
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/QuarkMVC.js';
+		return __DIR__ . '/QuarkControls.js';
 	}
 
 	/**
@@ -44,7 +45,8 @@ class QuarkMVC implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVie
 	public function Dependencies () {
 		return array(
 			new jQueryCore(),
-			new QuarkLocalCoreJSViewResource()
+			new QuarkLocalCoreJSViewResource(),
+			new QuarkUX()
 		);
 	}
 }

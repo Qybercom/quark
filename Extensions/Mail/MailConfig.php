@@ -89,7 +89,14 @@ class MailConfig implements IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
-		// TODO: Implement ExtensionOptions() method.
+		if (isset($ini->Username))
+			$this->_username = $ini->Username;
+
+		if (isset($ini->Password))
+			$this->_password = $ini->Password;
+
+		if (isset($ini->FullName))
+			$this->_fullname = $ini->FullName;
 	}
 
 	/**

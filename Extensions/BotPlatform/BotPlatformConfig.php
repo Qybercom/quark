@@ -68,13 +68,19 @@ class BotPlatformConfig implements IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
-		// TODO: Implement ExtensionOptions() method.
+		if (isset($ini->AppID))
+			$this->appId = $ini->AppID;
+
+		if (isset($ini->AppSecret))
+			$this->appSecret = $ini->AppSecret;
+
+		$this->_provider->BotApplication($this->appId, $this->appSecret);
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		// TODO: Implement ExtensionInstance() method.
+		return new BotPlatform($this->_name);
 	}
 }

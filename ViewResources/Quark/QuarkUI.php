@@ -1,7 +1,6 @@
 <?php
 namespace Quark\ViewResources\Quark;
 
-use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
@@ -16,7 +15,7 @@ use Quark\ViewResources\FontAwesome\FontAwesome;
  *
  * @package Quark\ViewResources\Quark
  */
-class QuarkUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @var QuarkLocalCoreJSViewResource $_js
 	 */
@@ -70,12 +69,5 @@ class QuarkUI implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkView
 	 */
 	public function Type () {
 		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		// TODO: Implement CacheControl() method.
 	}
 }

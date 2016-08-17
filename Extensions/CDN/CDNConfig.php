@@ -80,13 +80,17 @@ class CDNConfig implements IQuarkExtensionConfig {
 	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
-		// TODO: Implement ExtensionOptions() method.
+		if (isset($ini->AppID))
+			$this->appId = $ini->AppID;
+
+		if (isset($ini->AppSecret))
+			$this->appSecret = $ini->AppSecret;
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		// TODO: Implement ExtensionInstance() method.
+		return new CDNResource($this->_name);
 	}
 }

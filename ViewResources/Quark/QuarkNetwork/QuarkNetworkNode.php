@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Quark\JS;
+namespace Quark\ViewResources\Quark\QuarkNetwork;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
@@ -14,7 +14,7 @@ use Quark\QuarkURI;
 /**
  * Class QuarkNetworkNode
  *
- * @package Quark\ViewResources\Quark\JS
+ * @package Quark\ViewResources\Quark\QuarkNetwork
  */
 class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
 	/**

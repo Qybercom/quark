@@ -128,7 +128,7 @@ class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkVi
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/JS/GoogleMap.js';
+		return __DIR__ . '/GoogleMap.js';
 	}
 
 	/**

@@ -29,11 +29,21 @@ class BotPlatform implements IQuarkExtension {
 	 */
 	public function __construct ($config, $authorization = '') {
 		$this->_config = Quark::Config()->Extension($config);
+		$this->Authorization(func_num_args() == 2 ? $authorization : $this->_config->appSecret);
+	}
 
+	/**
+	 * @param string $authorization = ''
+	 *
+	 * @return BotPlatform
+	 */
+	public function Authorization ($authorization = '') {
 		$this->_config->BotPlatformProvider()->BotApplication(
 			$this->_config->appId,
-			func_num_args() == 2 ? $authorization : $this->_config->appSecret
+			$authorization
 		);
+
+		return $this;
 	}
 
 	/**
