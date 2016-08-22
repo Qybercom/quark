@@ -25,6 +25,7 @@ use Quark\QuarkJSONIOProcessor;
  */
 class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	const OPTION_PAGE = 'page';
+	const OPTION_RESPONSE = '___rest_response___';
 
 	/**
 	 * @var QuarkURI
@@ -67,12 +68,13 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param QuarkURI $uri
 	 * @param string $method
 	 * @param string $action
-	 * @param mixed $data
+	 * @param mixed $data = []
+	 * @param mixed $options = []
 	 *
 	 * @return \stdClass
 	 * @throws QuarkArchException
 	 */
-	private static function _ll_api (QuarkURI $uri, $method, $action, $data = []) {
+	private static function _ll_api (QuarkURI $uri, $method, $action, $data = [], $options = []) {
 		$request = new QuarkDTO(new QuarkJSONIOProcessor());
 		$request->Method($method);
 		$request->Merge($data);
@@ -104,22 +106,30 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 				print_r($response->Data(), true) .  "\r\n"
 			);
 
+		if (isset($options[self::OPTION_RESPONSE])) {
+			$after_response = $options[self::OPTION_RESPONSE];
+
+			if (is_callable($after_response))
+				$after_response($data);
+		}
+
 		return $data;
 	}
 
 	/**
 	 * @param string $method
 	 * @param string $action
-	 * @param mixed $data
+	 * @param mixed $data = []
+	 * @param mixed $options = []
 	 *
 	 * @return mixed
 	 * @throws QuarkArchException
 	 */
-	private function _api ($method, $action, $data = []) {
+	private function _api ($method, $action, $data = [], $options = []) {
 		if (!$this->_uri)
 			throw new QuarkArchException('QuarkRest API is not reachable. URI is not provided');
 
-		return self::_ll_api($this->_uri, $method, $action, $data);
+		return self::_ll_api($this->_uri, $method, $action, $data, $options);
 	}
 
 	/**
@@ -194,13 +204,16 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			$class = self::_class($model, $options);
 			$pk = $this->_pk($model);
 
-			$api = $this->_api('POST', '/' . $class . '/create', $model);
+			$api = $this->_api('POST', '/' . $class . '/create', $model, $options);
 
 			if (!isset($api->status) || $api->status != 200) return false;
 
-			$model->$pk = $model->$pk instanceof \MongoId
-				? new \MongoId($api->$class->$pk)
-				: $api->$class->$pk;
+			$class = QuarkObject::ClassOf($model);
+
+			if (isset($api->$class->$pk))
+				$model->$pk = $model->$pk instanceof \MongoId
+					? new \MongoId($api->$class->$pk)
+					: $api->$class->$pk;
 
 			return true;
 		}
@@ -218,7 +231,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
 		try {
-			$api = $this->_api('POST', '/' . self::_class($model, $options) . '/update/' . $this->_identify($model), $model);
+			$api = $this->_api('POST', '/' . self::_class($model, $options) . '/update/' . $this->_identify($model), $model, $options);
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -236,7 +249,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Remove (IQuarkModel $model, $options = []) {
 		try {
-			$api = $this->_api('GET', '/' . self::_class($model, $options) . '/remove/' . $this->_identify($model));
+			$api = $this->_api('GET', '/' . self::_class($model, $options) . '/remove/' . $this->_identify($model), array(), $options);
 
 			return isset($api->status) && $api->status == 200;
 		}
@@ -270,7 +283,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 			if (isset($options[QuarkModel::OPTION_LIMIT]))
 				$this->_uri->query .= '&limit=' . $options[QuarkModel::OPTION_LIMIT];
 
-			$api = $this->_api('Get', '/' . self::_class($model, $options) . '/list', $criteria);
+			$api = $this->_api('Get', '/' . self::_class($model, $options) . '/list', $criteria, $options);
 
 			return isset($api->list) ? $api->list : array();
 		}
@@ -292,7 +305,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$class = self::_class($model, $options, '');
 
 		try {
-			return $this->_api('Get', '/' . $path, $criteria)->$class;
+			return $this->_api('Get', '/' . $path, $criteria, $options)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
@@ -316,7 +329,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 		$class = self::_class($model, $options, '');
 
 		try {
-			return $this->_api('Get', '/' . $path . '/' . $id)->$class;
+			return $this->_api('Get', '/' . $path . '/' . $id, array(), $options)->$class;
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);
@@ -370,7 +383,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 */
 	public function Command (IQuarkModel $model, $command, $data = [], $method = 'GET', $options = []) {
 		try {
-			return $this->_api($method, '/' . self::_class($model, $options) . '/' . $command . '/' . $this->_identify($model), $data);
+			return $this->_api($method, '/' . self::_class($model, $options) . '/' . $command . '/' . $this->_identify($model), $data, $options);
 		}
 		catch (QuarkArchException $e) {
 			Quark::Log($e->message, $e->lvl);

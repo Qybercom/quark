@@ -3181,7 +3181,7 @@ class QuarkObject {
 				$iterator($key, $model, $parent);
 			}
 			else {
-				foreach ($source as $k => &$v) {
+				foreach ($source as $k => $v) {
 					self::Walk($v, $iterator, $key . ($key == '' ? $k : '[' . $k . ']'), $source);
 				}
 			}
