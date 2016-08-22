@@ -21,16 +21,23 @@ class QuarkAPIDocServiceDataFlow {
 	 * @var string $_info = ''
 	 */
 	private $_info = '';
+	
+	/**
+	 * @var string $_sample = ''
+	 */
+	private $_sample = '';
 
 	/**
 	 * @param string $payload = ''
 	 * @param string $uri = ''
 	 * @param string $info = ''
+	 * @param string $sample = ''
 	 */
-	public function __construct ($payload = '', $uri = '', $info = '') {
+	public function __construct ($payload = '', $uri = '', $info = '', $sample = '') {
 		$this->_payload = $payload;
 		$this->_uri = $uri;
 		$this->_info = $info;
+		$this->_sample = $sample;
 	}
 
 	/**
@@ -52,5 +59,12 @@ class QuarkAPIDocServiceDataFlow {
 	 */
 	public function Info () {
 		return $this->_info;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function Sample () {
+		return $this->_sample;
 	}
 }

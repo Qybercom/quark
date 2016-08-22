@@ -36,6 +36,11 @@ class QuarkAPIDocServiceMethod {
 	 * @var QuarkAPIDocServiceDataFlow $_event
 	 */
 	private $_event;
+	
+	/**
+	 * @var string $_sample = ''
+	 */
+	private $_sample = '';
 
 	/**
 	 * @param string $name = ''
@@ -44,14 +49,16 @@ class QuarkAPIDocServiceMethod {
 	 * @param QuarkAPIDocServiceDataFlow $request
 	 * @param QuarkAPIDocServiceDataFlow $response
 	 * @param QuarkAPIDocServiceDataFlow $event
+	 * @param string $sample = ''
 	 */
-	public function __construct ($name = '', $description = '', QuarkAPIDocServiceAuth $auth = null, QuarkAPIDocServiceDataFlow $request = null, QuarkAPIDocServiceDataFlow $response = null, QuarkAPIDocServiceDataFlow $event = null) {
+	public function __construct ($name = '', $description = '', QuarkAPIDocServiceAuth $auth = null, QuarkAPIDocServiceDataFlow $request = null, QuarkAPIDocServiceDataFlow $response = null, QuarkAPIDocServiceDataFlow $event = null, $sample = '') {
 		$this->_name = $name;
 		$this->_description = $description;
 		$this->_auth = $auth;
 		$this->_request = $request;
 		$this->_response = $response;
 		$this->_event = $event;
+		$this->_sample = $sample;
 	}
 
 	/**
@@ -94,5 +101,12 @@ class QuarkAPIDocServiceMethod {
 	 */
 	public function Event () {
 		return $this->_event;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function Sample () {
+		return $this->_sample;
 	}
 }

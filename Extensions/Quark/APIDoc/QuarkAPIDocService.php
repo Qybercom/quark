@@ -88,15 +88,7 @@ class QuarkAPIDocService {
 	 * @return string
 	 */
 	public function Endpoint ($params = []) {
-		$route = '';
-
-		if (is_array($params))
-			foreach ($params as $param)
-				$route .= '/<' . $param . '>';
-
-		$endpoint = str_replace('//', '/', '/' . str_replace('\\', '/', str_replace('Services', '', $this->Package())) . '/' . str_replace('Service', '', $this->_name));
-		
-		return self::EndpointOf($endpoint) . $route;
+		return self::EndpointOfPackage($this->Package(), $this->_name, $params);
 	}
 
 	/**
@@ -112,5 +104,24 @@ class QuarkAPIDocService {
 			$out[] = preg_match_all('#[A-Z]#', $component) > 1 ? $component : strtolower($component);
 
 		return implode('/', $out);
+	}
+	
+	/**
+	 * @param string $package
+	 * @param string $name
+	 * @param string[] $params = []
+	 *
+	 * @return string
+	 */
+	public static function EndpointOfPackage ($package, $name, $params = []) {
+		$route = '';
+
+		if (is_array($params))
+			foreach ($params as $param)
+				$route .= '/<' . $param . '>';
+
+		$endpoint = str_replace('//', '/', '/' . str_replace('\\', '/', str_replace('Services', '', $package)) . '/' . str_replace('Service', '', $name));
+		
+		return self::EndpointOf($endpoint) . $route;
 	}
 }

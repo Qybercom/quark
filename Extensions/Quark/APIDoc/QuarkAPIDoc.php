@@ -5,6 +5,7 @@ use Quark\QuarkField;
 use Quark\QuarkFile;
 use Quark\QuarkArchException;
 
+use Quark\QuarkObject;
 use Quark\ViewResources\ShowdownJS\ShowdownJS;
 
 /**
@@ -107,13 +108,16 @@ class QuarkAPIDoc {
 				if ($count == 2) $env[] = $iFace[1];
 				if ($count == 4) $env[] = $iFace[3];
 			}
+			
+			$package = self::Attribute($service[1], 'package', true, false);
 
 			foreach ($methods as $method) {
 				if (!in_array($method[2], $env)) continue;
-
+				
+				$name = trim($method[2]);
 				$uri = self::Attribute($method[1], 'request-uri');
 				$actions[] = new QuarkAPIDocServiceMethod(
-					trim($method[2]),
+					$name,
 					self::Attribute($method[1], 'description'),
 					new QuarkAPIDocServiceAuth(
 						self::Attribute($method[1], 'auth-provider'),
@@ -134,14 +138,23 @@ class QuarkAPIDoc {
 						str_replace('<br />', '', self::Attribute($method[1], 'event')),
 						$uri,
 						self::Attribute($method[1], 'event-info')
-					)
+					),
+					$name == 'Stream'
+						? json_encode(array(
+							'url' => QuarkAPIDocService::EndpointOfPackage($package, $service[2]),
+							'data' => self::Attribute($method[1], 'request'),
+							'session' => array(
+								QuarkObject::ConstValue(self::Attribute($method[1], 'auth-provider')) => ''
+							)
+						))
+						: ''
 				);
 			}
 
 			$out[] = new QuarkAPIDocService(
 				$service[2],
 				self::Attribute($service[1], 'description'),
-				self::Attribute($service[1], 'package', true, false),
+				$package,
 				$actions
 			);
 		}

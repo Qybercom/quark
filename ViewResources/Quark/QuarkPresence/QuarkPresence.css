@@ -173,21 +173,3 @@ body {
 .toggle.disabled:before {
     color: rgb(200,200,200);
 }
-
-.quark-dialog {
-    border: 1px solid rgb(0,225,80);
-    border-top-width: 10px;
-}
-
-.quark-gallery {
-    border: 1px solid rgb(0,225,80);
-    border-bottom-width: 10px;
-}
-
-.quark-range-slider {
-    background: rgb(0,176,80);
-}
-
-.quark-range-slider:hover {
-    background: rgb(0,225,80);
-}

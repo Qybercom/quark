@@ -885,13 +885,14 @@ class QuarkConfig {
 		
 		if (!$this->_ini) return;
 
-		$ini = parse_ini_file($this->_ini, true);
+		$ini = QuarkFile::FromLocation($this->_ini, true)->Decode(new QuarkINIIOProcessor());
 		$callback = $this->_ready;
 
 		if ($callback != null)
 			$callback($this, $ini);
 
 		if (!$ini) return;
+		$ini = (array)$ini;
 
 		if (isset($ini[self::INI_QUARK]))
 			foreach ($ini[self::INI_QUARK] as $key => $value)
@@ -3661,6 +3662,8 @@ class QuarkView implements IQuarkContainer {
 
 		foreach ($vars as $key => $value)
 			$this->_view->$key = $value;
+		
+		$this->Vars($this->_view);
 
 		$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
 		
@@ -7757,8 +7760,11 @@ class QuarkSession {
 
 		$data = $this->_source->Provider()->Login($this->_source->Name(), $user, $criteria, $lifetime);
 		if ($data == null) return false;
-
-		$this->_user = $this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime);
+		
+		$this->_user = $criteria !== null
+			? $this->_source->User()->Login($this->_source->Name(), $criteria, $lifetime)
+			: $user;
+		
 		if ($this->_user == null) return false;
 
 		$this->_output = $data;
@@ -8293,6 +8299,7 @@ trait QuarkNetwork {
  */
 class QuarkClient implements IQuarkEventable {
 	const EVENT_ERROR_CONNECT = 'ErrorConnect';
+	const EVENT_ERROR_CRYPTOGRAM = 'ErrorCryptogram';
 
 	const EVENT_CONNECT = 'OnConnect';
 	const EVENT_DATA = 'OnData';
@@ -8410,8 +8417,8 @@ class QuarkClient implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure && !@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT))
-			$this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
+		if ($secure)
+			$this->EnableCryptogram();
 
 		$this->Timeout($this->_timeout);
 		$this->Blocking($this->_blocking);
@@ -8423,6 +8430,20 @@ class QuarkClient implements IQuarkEventable {
 			$this->_transport->EventConnect($this);
 
 		return true;
+	}
+	
+	/**
+	 * @return bool|int
+	 */
+	public function EnableCryptogram () {
+		if (!$this->_socket) return false;
+		
+		$cryptogram = @stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+			
+		if (!$cryptogram)
+			$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkClient cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
+		
+		return $cryptogram;
 	}
 
 	/**
@@ -8616,6 +8637,7 @@ class QuarkServer implements IQuarkEventable {
 	const TCP_ALL_INTERFACES_RANDOM_PORT = 'tcp://0.0.0.0:0';
 
 	const EVENT_ERROR_LISTEN = 'ErrorListen';
+	const EVENT_ERROR_CRYPTOGRAM = 'ErrorCryptogram';
 
 	use QuarkNetwork;
 
@@ -8703,9 +8725,9 @@ class QuarkServer implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure && !@stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER))
-			$this->TriggerArgs(self::EVENT_ERROR_LISTEN, array('QuarkServer cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
-
+		if ($secure)
+			$this->EnableCryptogram();
+		
 		$this->Timeout(0);
 		$this->Blocking(0);
 
@@ -8716,6 +8738,20 @@ class QuarkServer implements IQuarkEventable {
 		$this->_run = true;
 
 		return true;
+	}
+	
+	/**
+	 * @return bool|int
+	 */
+	public function EnableCryptogram () {
+		if (!$this->_socket) return false;
+		
+		$cryptogram = @stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER);
+			
+		if (!$cryptogram)
+			$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkServer cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
+		
+		return $cryptogram;
 	}
 
 	/**
@@ -13032,6 +13068,13 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		return $this;
 	}
+	
+	/**
+	 * @return bool
+	 */
+	public function Loaded () {
+		return $this->_loaded;
+	}
 
 	/**
 	 * @param int $mode = self::MODE_DEFAULT
@@ -13204,6 +13247,27 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		return $response;
 	}
+	
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param $data = []
+	 *
+	 * @return QuarkFile
+	 */
+	public function Encode (IQuarkIOProcessor $processor, $data = []) {
+		$this->Content($processor->Encode($data));
+		
+		return $this;
+	}
+	
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 *
+	 * @return mixed
+	 */
+	public function Decode (IQuarkIOProcessor $processor) {
+		return $this->_loaded ? $processor->Decode($this->_content) : null;
+	}
 
 	/**
 	 * @return array
@@ -13248,6 +13312,16 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Unlink () {
 		return $this->location;
+	}
+	
+	/**
+	 * @param string $location = ''
+	 * @param bool $load = false
+	 *
+	 * @return QuarkFile
+	 */
+	public static function FromLocation ($location = '', $load = false) {
+		return new self($location, $load);
 	}
 	
 	/**
@@ -13822,9 +13896,45 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	public function __construct ($root = self::ROOT, $item = self::ITEM, $forceNull = true) {
 		\libxml_use_internal_errors(true);
 
-		$this->_root = $root;
-		$this->_item = $item;
-		$this->_forceNull = $forceNull;
+		$this->Root($root);
+		$this->Item($item);
+		$this->ForceNull($forceNull);
+	}
+	
+	/**
+	 * @param string $root = self::ROOT
+	 *
+	 * @return string
+	 */
+	public function Root ($root = self::ROOT) {
+		if (func_num_args() != 0)
+			$this->_root = $root;
+		
+		return $this->_root;
+	}
+	
+	/**
+	 * @param string $item = self::ITEM
+	 *
+	 * @return string
+	 */
+	public function Item ($item = self::ITEM) {
+		if (func_num_args() != 0)
+			$this->_item = $item;
+		
+		return $this->_item;
+	}
+	
+	/**
+	 * @param bool $forceNull = true
+	 *
+	 * @return bool
+	 */
+	public function ForceNull ($forceNull = true) {
+		if (func_num_args() != 0)
+			$this->_forceNull = $forceNull;
+		
+		return $this->_forceNull;
 	}
 
 	/**
@@ -13923,13 +14033,6 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Batch ($raw) { return $raw; }
-
-	/**
-	 * @return string
-	 */
-	public function Item () {
-		return $this->_item;
-	}
 }
 
 /**
@@ -14090,6 +14193,87 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Encode ($data) {
 		return \wddx_serialize_value($data);
+	}
+
+	/**
+	 * @param string $raw
+	 *
+	 * @return mixed
+	 */
+	public function Batch ($raw) { return $raw; }
+}
+
+/**
+ * Class QuarkINIIOProcessor
+ *
+ * @package Quark
+ */
+class QuarkINIIOProcessor implements IQuarkIOProcessor {
+	const MIME = 'plain/text';
+	
+	/**
+	 * @var int $_scanner = INI_SCANNER_NORMAL
+	 */
+	private $_scanner = INI_SCANNER_NORMAL;
+	
+	/**
+	 * @param int $scanner = INI_SCANNER_NORMAL
+	 */
+	public function __construct ($scanner = INI_SCANNER_NORMAL) {
+		$this->Scanner($scanner);
+	}
+	
+	/**
+	 * @param int $scanner = =INI_SCANNER_NORMAL
+	 *
+	 * @return int
+	 */
+	public function Scanner ($scanner = INI_SCANNER_NORMAL) {
+		if (func_num_args() != 0)
+			$this->_scanner = $scanner;
+		
+		return $this->_scanner;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function MimeType () { return self::MIME; }
+	
+	/**
+	 * @param $data
+	 *
+	 * @return string
+	 */
+	public function Encode ($data) {
+		$out = '';
+		
+		foreach ($data as $name => $section) {
+			if (!is_array($section) && !is_object($section)) {
+				$out .= $name . ' = ' . QuarkObject::Stringify($section) . "\r\n";
+				continue;
+			}
+			
+			$out .= '[' . $name . ']' . "\r\n";
+			
+			foreach ($section as $key => $value)
+				$out .= $key . ' = ' . QuarkObject::Stringify($value) . "\r\n";
+			
+			$out .= "\r\n";
+		}
+		
+		return $out;
+	}
+	
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Decode ($raw) {
+		$out = \parse_ini_string($raw, true, $this->_scanner);
+		
+		return $out == false ? null : (object)$out;
 	}
 
 	/**

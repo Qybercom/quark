@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\WysiBB\JS;
+namespace Quark\ViewResources\WysiBB\Languages;
 
 use Quark\QuarkJSViewResourceType;
 use Quark\ViewResources\WysiBB\IWysiBBLanguage;
@@ -7,7 +7,7 @@ use Quark\ViewResources\WysiBB\IWysiBBLanguage;
 /**
  * Class LanguageRU
  *
- * @package Quark\ViewResources\WysiBB\JS
+ * @package Quark\ViewResources\WysiBB\Languages
  */
 class LanguageRU implements IWysiBBLanguage {
 	/**

@@ -10,7 +10,7 @@ use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLexingViewResource;
 
 use Quark\ViewResources\jQuery\jQueryCore;
-use Quark\ViewResources\WysiBB\CSS\DefaultTheme;
+use Quark\ViewResources\WysiBB\Themes\DefaultTheme;
 
 /**
  * Class WysiBB

@@ -3,6 +3,7 @@ namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+use Quark\QuarkCertificate;
 
 /**
  * Class MailConfig
@@ -36,12 +37,17 @@ class MailConfig implements IQuarkExtensionConfig {
 	private $_name = '';
 
 	/**
+	 * @var QuarkCertificate $_certificate
+	 */
+	private $_certificate;
+
+	/**
 	 * @param IQuarkMailProvider $provider
-	 * @param $username
-	 * @param $password
+	 * @param $username = ''
+	 * @param $password = ''
 	 * @param string $fullname = ''
 	 */
-	public function __construct (IQuarkMailProvider $provider, $username, $password, $fullname = '') {
+	public function __construct (IQuarkMailProvider $provider, $username = '', $password = '', $fullname = '') {
 		$this->_provider = $provider;
 		$this->_username = $username;
 		$this->_password = $password;
@@ -67,6 +73,13 @@ class MailConfig implements IQuarkExtensionConfig {
 	 */
 	public function MailSMTPEndpoint () {
 		return $this->_provider->MailSMTP($this->_username, $this->_password);
+	}
+	
+	/**
+	 * @return QuarkCertificate
+	 */
+	public function &MailCertificate () {
+		return $this->_certificate;
 	}
 
 	/**
@@ -97,6 +110,12 @@ class MailConfig implements IQuarkExtensionConfig {
 
 		if (isset($ini->FullName))
 			$this->_fullname = $ini->FullName;
+		
+		if (isset($ini->CertificateLocation))
+			$this->_certificate = new QuarkCertificate($ini->CertificateLocation);
+		
+		if (isset($ini->CertificatePassphrase))
+			$this->_certificate->Passphrase($ini->CertificatePassphrase);
 	}
 
 	/**

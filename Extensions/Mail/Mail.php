@@ -118,7 +118,7 @@ class Mail implements IQuarkExtension {
 	 * @param string $email
 	 * @param string $name
 	 *
-	 * @return Mail|string[]
+	 * @return Mail|string
 	 */
 	public function From ($email = '', $name = '') {
 		if (func_num_args() == 0)
@@ -173,9 +173,13 @@ class Mail implements IQuarkExtension {
 					'files' => $this->_files
 				));
 
-		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), null, 5, false);
-
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
+		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), $this->_config->MailCertificate(), 5, false);
+		
+		$client->On(QuarkClient::EVENT_ERROR_CRYPTOGRAM, function ($error) {
+			$this->_log .= '[Mail] Cryptogram enabling error. ' . $error . '<br>';
+		});
+		
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) {
 			$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
 			$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
 
@@ -209,15 +213,19 @@ class Mail implements IQuarkExtension {
 
 	/**
 	 * @param QuarkClient $client
-	 * @param string $cmd
+	 * @param string $cmd = ''
+	 * @param callable $callback = null
 	 */
-	private function _cmd (QuarkClient $client, $cmd = '') {
-		if (func_num_args() == 2)
+	private function _cmd (QuarkClient &$client, $cmd = '', callable $callback = null) {
+		if (func_num_args() != 1)
 			$client->Send($cmd . "\r\n");
+			
+		if ($callback != null)
+			$callback($client);
 
 		usleep($this->_timeout);
 
-		$response = $client->Receive(515);
+		$response = $client->Receive(15151515);
 
 		$this->_log .= $cmd . ': ' . $response . '<br>';
 	}

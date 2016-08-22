@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\WysiBB\CSS;
+namespace Quark\ViewResources\WysiBB\Themes;
 
 use Quark\QuarkCSSViewResourceType;
 use Quark\ViewResources\WysiBB\IWysiBBTheme;
@@ -7,7 +7,7 @@ use Quark\ViewResources\WysiBB\IWysiBBTheme;
 /**
  * Class DefaultTheme
  *
- * @package Quark\ViewResources\WysiBB\CSS
+ * @package Quark\ViewResources\WysiBB\Themes
  */
 class DefaultTheme implements IWysiBBTheme {
 	/**
