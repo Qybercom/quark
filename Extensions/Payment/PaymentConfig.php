@@ -42,7 +42,7 @@ class PaymentConfig implements IQuarkExtensionConfig {
 		$this->appId = $id;
 		$this->appSecret = $secret;
 
-		$this->_provider->PaymentProviderApplication($this->appId, $this->appSecret);
+		$this->_provider->PaymentProviderApplication($this->appId, $this->appSecret, null);
 	}
 
 	/**

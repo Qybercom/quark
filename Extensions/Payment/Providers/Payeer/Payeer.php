@@ -50,7 +50,7 @@ class Payeer implements IQuarkPaymentProvider {
 		$this->appSecret = $appSecret;
 
 		if (isset($ini->Account))
-			$this->account = $ini->account;
+			$this->account = $ini->Account;
 	}
 
 	/**
