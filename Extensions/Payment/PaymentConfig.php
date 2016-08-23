@@ -34,10 +34,10 @@ class PaymentConfig implements IQuarkExtensionConfig {
 
 	/**
 	 * @param IQuarkPaymentProvider $provider
-	 * @param string $id
-	 * @param string $secret
+	 * @param string $id = ''
+	 * @param string $secret = ''
 	 */
-	public function __construct (IQuarkPaymentProvider $provider, $id, $secret) {
+	public function __construct (IQuarkPaymentProvider $provider, $id = '', $secret = '') {
 		$this->_provider = $provider;
 		$this->appId = $id;
 		$this->appSecret = $secret;
@@ -88,7 +88,7 @@ class PaymentConfig implements IQuarkExtensionConfig {
 		if (isset($ini->AppSecret))
 			$this->appSecret = $ini->AppSecret;
 
-		$this->_provider->PaymentProviderApplication($this->appId, $this->appSecret);
+		$this->_provider->PaymentProviderApplication($this->appId, $this->appSecret, $ini);
 	}
 
 	/**
