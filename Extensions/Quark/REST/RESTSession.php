@@ -72,9 +72,18 @@ class RESTSession implements IQuarkAuthorizationProvider, IQuarkAuthorizationPro
 	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkKeyValuePair $id
 	 *
-	 * @return bool
+	 * @return void
 	 */
 	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
 		// TODO: Implement SessionCommit() method.
+	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return void
+	 */
+	public function SessionOptions ($ini) {
+		// TODO: Implement SessionOptions() method.
 	}
 }

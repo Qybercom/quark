@@ -128,4 +128,13 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
 		// TODO: Implement SessionCommit() method.
 	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function SessionOptions ($ini) {
+		// TODO: Implement SessionOptions() method.
+	}
 }

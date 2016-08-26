@@ -188,6 +188,16 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	}
 
 	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function SessionOptions ($ini) {
+		if (isset($ini->DataProvider))
+			$this->_storage = $ini->DataProvider;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function DataProvider () {

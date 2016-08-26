@@ -467,6 +467,7 @@ Quark::Import(Quark::Host());
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
 	const INI_DATA_PROVIDERS = 'DataProviders';
+	const INI_AUTHORIZATION_PROVIDER = 'AuthorizationProvider';
 	const INI_ENVIRONMENT = 'Environment:';
 	const INI_EXTENSION = 'Extension:';
 
@@ -633,7 +634,7 @@ class QuarkConfig {
 	 * @param IQuarkStackable $object = null
 	 * @param string $message = ''
 	 *
-	 * @return IQuarkStackable
+	 * @return IQuarkStackable|QuarkSessionSource|QuarkModelSource|IQuarkExtensionConfig
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -651,7 +652,7 @@ class QuarkConfig {
 	 * @param IQuarkAuthorizationProvider $provider = null
 	 * @param IQuarkAuthorizableModel $user = null
 	 *
-	 * @return QuarkSession
+	 * @return QuarkSessionSource
 	 */
 	public function AuthorizationProvider ($name, IQuarkAuthorizationProvider $provider = null, IQuarkAuthorizableModel $user = null) {
 		return $this->_component(
@@ -915,15 +916,22 @@ class QuarkConfig {
 				$environment->EnvironmentOptions($options);
 		}
 
-		$extensions = Quark::Components();
+		$components = Quark::Components();
 
-		foreach ($extensions as $i => &$extension) {
-			if (!($extension instanceof IQuarkExtensionConfig)) continue;
+		foreach ($components as $i => &$component) {
+			if ($component instanceof QuarkSessionSource) {
+				$options = self::_ini($ini, self::INI_AUTHORIZATION_PROVIDER, $component->Name());
 
-			$options = self::_ini($ini, self::INI_EXTENSION, $extension->ExtensionName());
+				if ($options !== null)
+					$component->Options($options);
+			}
 
-			if ($options !== null)
-				$extension->ExtensionOptions($options);
+			if ($component instanceof IQuarkExtensionConfig) {
+				$options = self::_ini($ini, self::INI_EXTENSION, $component->ExtensionName());
+
+				if ($options !== null)
+					$component->ExtensionOptions($options);
+			}
 		}
 
 		unset($environment, $environments);
@@ -1139,7 +1147,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EnvironmentOptions ($ini) {
 		// TODO: Implement EnvironmentOptions() method.
@@ -1420,7 +1428,7 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EnvironmentOptions ($ini) {
 		if (isset($ini->ApplicationStart))
@@ -1450,7 +1458,7 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	 * @param int $argc
 	 * @param array $argv
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
@@ -3816,12 +3824,12 @@ class QuarkView implements IQuarkContainer {
 		if ($this->_view instanceof IQuarkViewModelWithResources)
 			$this->_resources($this->_view->ViewResources());
 
+		$this->_resources($buffer);
+
 		if ($this->_view instanceof IQuarkViewModelWithComponents) {
 			$this->_resource(QuarkProjectViewResource::CSS($this->_view->ViewStylesheet()));
 			$this->_resource(QuarkProjectViewResource::JS($this->_view->ViewController()));
 		}
-		
-		$this->AppendResources($buffer);
 
 		return $this->_resources;
 	}
@@ -4033,10 +4041,8 @@ class QuarkView implements IQuarkContainer {
 				$this->_layout->_resource(QuarkProjectViewResource::JS($this->_view->ViewLayoutController()));
 			}
 
-			$this->_layout->ResourceList();
-
-			$this->_layout->_resources($resources);
 			$this->_layout->_resources($this->ResourceList());
+			$this->_layout->_resources($resources);
 
 			$this->_layout->View($this->Compile());
 			$this->_layout->Child($this->_view);
@@ -4466,7 +4472,7 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	/**
 	 * @param IQuarkViewResource|string $location
 	 *
-	 * @return QuarkProjectViewResource
+	 * @return QuarkProjectViewResource|IQuarkViewResource
 	 */
 	public static function CSS ($location) {
 		return $location instanceof IQuarkViewResource
@@ -4480,7 +4486,7 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	/**
 	 * @param IQuarkViewResource|string $location
 	 *
-	 * @return QuarkProjectViewResource
+	 * @return QuarkProjectViewResource|IQuarkViewResource
 	 */
 	public static function JS ($location) {
 		return $location instanceof IQuarkViewResource
@@ -4567,12 +4573,12 @@ trait QuarkInlineViewResource {
 	}
 
 	/**
-	 * @return string
+	 * @return void
 	 */
 	public function Location () { }
 
 	/**
-	 * @return string
+	 * @return void
 	 */
 	public function Type () { }
 
@@ -7111,8 +7117,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return \DateTime
 	 */
 	public function Value ($value = '') {
-		if (func_num_args() != 0 && is_string($value))
-			$this->_date = new \DateTime($value);
+		if (func_num_args() != 0 && is_string($value)) {
+			if (!is_numeric($value)) $this->_date = new \DateTime($value);
+			else {
+				$this->_date = new \DateTime();
+				$this->_date->setTimestamp((int)$value);
+				$this->_fromTimestamp = true;
+			}
+		}
 
 		return $this->_date;
 	}
@@ -7371,12 +7383,12 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	public function Fields () { }
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	public function Rules () { }
 
@@ -7399,11 +7411,10 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	/**
 	 * @param $raw
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function AfterPopulate ($raw) {
-		if ($this->_fromTimestamp) $this->_date->setTimestamp($raw);
-		else $this->Value($raw);
+		$this->Value($raw);
 	}
 
 	/**
@@ -7603,6 +7614,15 @@ class QuarkSessionSource implements IQuarkStackable {
 	public function &User () {
 		return $this->_user;
 	}
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return void
+	 */
+	public function Options ($ini) {
+		$this->_provider->SessionOptions($ini);
+	}
 }
 
 /**
@@ -7713,10 +7733,12 @@ class QuarkSession {
 	/**
 	 * @param bool $extract = false
 	 *
-	 * @return IQuarkAuthorizableModel
+	 * @return IQuarkAuthorizableModel|QuarkModelBehavior|\stdClass
 	 */
 	private function _session ($extract = false) {
-		return $this->_user instanceof QuarkModel ? ($extract ? $this->_user->Extract() : $this->_user->Model()) : $this->_user;
+		return $this->_user instanceof QuarkModel
+			? ($extract ? $this->_user->Extract() : $this->_user->Model())
+			: $this->_user;
 	}
 
 	/**
@@ -7948,6 +7970,13 @@ interface IQuarkAuthorizationProvider {
 	 * @return bool
 	 */
 	public function SessionCommit($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
+
+	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function SessionOptions($ini);
 }
 
 /**
@@ -9927,7 +9956,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EnvironmentOptions ($ini) {
 		if (isset($ini->External))
@@ -10015,7 +10044,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkPeer $network
 	 * @param QuarkClient $controller
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NodeStart (QuarkServer $server, QuarkPeer $network, QuarkClient $controller) {
 		$this->ControllerURI(Quark::Config()->ClusterControllerConnect());
@@ -10031,7 +10060,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ClientConnect (QuarkClient $client) {
 		echo '[cluster.node.client.connect] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
@@ -10044,7 +10073,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $client
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -10055,7 +10084,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ClientClose (QuarkClient $client) {
 		echo '[cluster.node.client.close] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
@@ -10074,7 +10103,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NetworkClientConnect (QuarkClient $node) {
 		echo '[cluster.node.node.client.connect] ', $this->_cluster->Network()->Server(), ' <- ', $node, "\r\n";
@@ -10084,7 +10113,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $node
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NetworkClientData (QuarkClient $node, $data) {
 		// TODO: Implement NetworkClientData() method.
@@ -10093,7 +10122,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NetworkClientClose (QuarkClient $node) {
 		echo '[cluster.node.node.client.close] ', $this->_cluster->Network()->Server(), ' <- ', $node, "\r\n";
@@ -10102,7 +10131,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NetworkServerConnect (QuarkClient $node) {
 		echo '[cluster.node.node.server.connect] ', $node, ' -> ', $this->_cluster->Network()->Server(), "\r\n";
@@ -10114,7 +10143,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $node
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -10125,7 +10154,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function NetworkServerClose (QuarkClient $node) {
 		echo '[cluster.node.node.server.close] ', $node, ' -> ', $this->_cluster->Network()->Server(), "\r\n";
@@ -10137,7 +10166,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkServer $controller
 	 * @param QuarkServer $terminal
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerStart (QuarkServer $controller, QuarkServer $terminal) {
 		// TODO: Implement ControllerStart() method.
@@ -10153,7 +10182,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $controller
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerClientConnect (QuarkClient $controller) {
 		echo '[cluster.node.controller.connect] ', $this->_cluster->Controller(), ' <- ', $controller, "\r\n";
@@ -10165,7 +10194,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $controller
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerClientData (QuarkClient $controller, $data) {
 		$this->_cmd($data, self::COMMAND_ANNOUNCE, function ($node) {
@@ -10184,7 +10213,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $controller
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerClientClose (QuarkClient $controller) {
 		echo '[cluster.node.controller.close] ', $this->_cluster->Controller(), ' <- ', $controller, "\r\n";
@@ -10193,7 +10222,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerServerConnect (QuarkClient $node) {
 		echo '[cluster.controller.node.connect] ', $node, ' -> ', $this->_cluster->Controller(), "\r\n";
@@ -10205,7 +10234,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $node
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerServerData (QuarkClient $node, $data) {
 		$this->_cmd($data, self::COMMAND_BROADCAST, function ($payload) {
@@ -10232,7 +10261,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $node
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ControllerServerClose (QuarkClient $node) {
 		echo '[cluster.controller.node.close] ', $node, ' -> ', $this->_cluster->Controller(), "\r\n";
@@ -10250,7 +10279,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $terminal
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function TerminalConnect (QuarkClient $terminal) {
 		echo '[cluster.controller.terminal.connect] ', $terminal, ' -> ', $this->_cluster->Terminal(), "\r\n";
@@ -10260,7 +10289,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $terminal
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function TerminalData (QuarkClient $terminal, $data) {
 		/** @noinspection PhpUnusedParameterInspection */
@@ -10297,7 +10326,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param QuarkClient $terminal
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function TerminalClose (QuarkClient $terminal) {
 		echo '[cluster.controller.terminal.close] ', $terminal, ' -> ', $this->_cluster->Terminal(), "\r\n";
@@ -12083,7 +12112,7 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
 	/**
 	 * @param QuarkClient &$client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventConnect (QuarkClient &$client) {
 		$client->TriggerConnect();
@@ -12093,7 +12122,7 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
 	 * @param QuarkClient &$client
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventData (QuarkClient &$client, $data) {
 		if ($this->_divider == null) {
@@ -12124,7 +12153,7 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
 	/**
 	 * @param QuarkClient &$client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventClose (QuarkClient &$client) {
 		$client->TriggerClose();
@@ -14339,7 +14368,7 @@ class QuarkXSSFilter implements IQuarkIOFilter {
 	 * @return QuarkDTO
 	 */
 	public function FilterOutput (QuarkDTO $output, QuarkSession $session) {
-		// TODO: Implement FilterOutput() method.
+		return $output;
 	}
 }
 

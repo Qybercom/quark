@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkPresenceControl;
 
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 use Quark\QuarkView;
 use Quark\QuarkViewBehavior;
@@ -20,6 +21,15 @@ trait QuarkPresenceControlComponent {
 	 * @var bool $_menuHeader = false
 	 */
 	private $_menuHeader = false;
+
+	/**
+	 * @param bool $right = false
+	 *
+	 * @return string
+	 */
+	private function _headerWidget ($right = false) {
+		return '</div></div><div class="quark-presence-column ' . ($right ? 'right' : 'left') . '"><div class="quark-presence-container">';
+	}
 
 	/**
 	 * @param string $href = ''
@@ -55,14 +65,10 @@ trait QuarkPresenceControlComponent {
 	 * @return string
 	 */
 	public function MenuHeaderWidget ($links = [], $right = false) {
-		$items = $this->_menuHeader
-			? ('</div></div><div class="quark-presence-column ' . ($right ? 'right' : 'left') . '"><div class="quark-presence-container">')
-			: '';
+		$items = $this->_headerWidget($right);
 		
 		foreach ($links as $link)
 			$items .= $link;
-
-		$this->_menuHeader = true;
 
 		return $items;
 	}
@@ -77,9 +83,31 @@ trait QuarkPresenceControlComponent {
 	 */
 	public function MenuSideWidgetTree ($items = [], $additional = '', callable $button = null, callable $node = null) {
 		if ($button == null)
-			$button = function ($href, $text) { return self::MenuWidgetItem($href, $text); };
+			$button = function ($href, $text) { return $this->MenuWidgetItem($href, $text); };
 
-		return self::MenuSideWidget(QuarkView::TreeMenu(QuarkObject::TreeBuilder($items), $button, $node), $additional);
+		return $this->MenuSideWidget(QuarkView::TreeMenu(QuarkObject::TreeBuilder($items), $button, $node), $additional);
+	}
+
+	/**
+	 * @param IQuarkPresenceControlViewModel $view = null
+	 * @param string $delimiter = '&gt;'
+	 * @param bool $right = false
+	 * @param bool $header = true
+	 *
+	 * @return string
+	 */
+	public function BreadcrumbWidget (IQuarkPresenceControlViewModel $view = null, $delimiter = '&gt;', $right = false, $header = true) {
+		if (!($view instanceof IQuarkPresenceControlViewModelWithBreadcrumbs)) return '';
+
+		$breadcrumbs = $view->PresenceBreadcrumbs();
+		if (!QuarkObject::IsArrayOf($breadcrumbs, new QuarkKeyValuePair())) return '';
+
+		$out = array();
+
+		foreach ($breadcrumbs as $breadcrumb)
+			$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
+
+		return ($header ? $this->_headerWidget($right) : '') . implode($delimiter, $out);
 	}
 
 	/**

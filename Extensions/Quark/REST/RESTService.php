@@ -58,7 +58,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	/**
 	 * @param QuarkURI $uri
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function Connect (QuarkURI $uri) {
 		$this->_uri = $uri;
@@ -342,7 +342,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param             $criteria
 	 * @param             $options
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement Update() method.
@@ -353,7 +353,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param             $criteria
 	 * @param             $options
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function Delete (IQuarkModel $model, $criteria, $options) {
 		// TODO: Implement Delete() method.
@@ -366,7 +366,7 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @param             $skip
 	 * @param             $options
 	 *
-	 * @return int
+	 * @return void
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		// TODO: Implement Count() method.

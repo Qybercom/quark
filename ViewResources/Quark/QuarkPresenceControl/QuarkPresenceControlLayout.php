@@ -20,7 +20,7 @@
 				</div>
 			</div>
 			<div class="quark-presence-column left" id="presence-menu-header">
-				<div class="quark-presence-container">
+				<div class="quark-presence-container">&nbsp;
 					<?php echo $this->MenuHeaderWidget(); ?>
 				</div>
 			</div>
