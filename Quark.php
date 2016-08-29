@@ -4170,6 +4170,9 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function Compile () {
+		if ($this->_view instanceof IQuarkViewModelWithVariableProcessing)
+			$this->_view->ViewVariableProcessing($this->_vars);
+
 		foreach ($this->_vars as $___name___ => $___value___)
 			$$___name___ = $___value___;
 
@@ -4331,6 +4334,20 @@ interface IQuarkViewModelInTheme {
  * @package Quark
  */
 interface IQuarkViewModelInLocalizedTheme extends IQuarkViewModelInTheme { }
+
+/**
+ * Interface IQuarkViewModelWithVariableProcessing
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelWithVariableProcessing extends IQuarkViewModel {
+	/**
+	 * @param $vars
+	 *
+	 * @return mixed
+	 */
+	public function ViewVariableProcessing($vars);
+}
 
 /**
  * Interface IQuarkViewResource
