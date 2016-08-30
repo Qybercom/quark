@@ -120,7 +120,12 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			'user' => $model
 		));
 
-		if (!$session->Create()) return null;
+		if (!$session->Create()) {
+			Quark::Log('[Session] Unable to create session: instance of ' . get_class($model) . ' has validation errors');
+			Quark::Trace($session->RawValidationErrors());
+
+			return null;
+		}
 
 		$output = new QuarkDTO();
 		$output->Data(null);
@@ -190,7 +195,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function SessionOptions ($ini) {
 		if (isset($ini->DataProvider))

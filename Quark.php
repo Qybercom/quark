@@ -467,7 +467,7 @@ Quark::Import(Quark::Host());
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
 	const INI_DATA_PROVIDERS = 'DataProviders';
-	const INI_AUTHORIZATION_PROVIDER = 'AuthorizationProvider';
+	const INI_AUTHORIZATION_PROVIDER = 'AuthorizationProvider:';
 	const INI_ENVIRONMENT = 'Environment:';
 	const INI_EXTENSION = 'Extension:';
 
