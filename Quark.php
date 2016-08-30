@@ -506,6 +506,11 @@ class QuarkConfig {
 	private $_ini = '';
 
 	/**
+	 * @var QuarkFile $_localization = null
+	 */
+	private $_localization = null;
+
+	/**
 	 * @var callable $_ready = null
 	 */
 	private $_ready = null;
@@ -876,6 +881,32 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $file = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public function Localization ($file = '') {
+		if (func_num_args() != 0)
+			$this->_localization = new QuarkFile($file);
+
+		return $this->_localization;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY) {
+		if ($this->_localization == null) return '';
+
+		$locale = $this->_localization->Decode(new QuarkINIIOProcessor(), true);
+
+		return isset($locale->$key->$language) ? $locale->$key->$language : '';
+	}
+
+	/**
 	 * @param callable $callback = null
 	 */
 	public function ConfigReady (callable $callback = null) {
@@ -952,7 +983,7 @@ class QuarkConfig {
 
 		$name = QuarkObject::ConstByValue($name);
 		
-		return isset($ini[$prefix . $name]) ? (object)$ini[$prefix . $name] : null;
+		return $name && isset($ini[$prefix . $name]) ? (object)$ini[$prefix . $name] : null;
 	}
 }
 
@@ -3131,6 +3162,16 @@ trait QuarkContainerBehavior {
 	public function EnvironmentIsCLI () {
 		return $this->CurrentEnvironment() instanceof QuarkCLIEnvironment;
 	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY) {
+		return Quark::Config()->LocalizationOf($key, $language);
+	}
 }
 
 /**
@@ -3461,17 +3502,17 @@ class QuarkObject {
 	/**
 	 * @param $value
 	 *
-	 * @return bool|string
+	 * @return mixed
 	 */
 	public static function ConstByValue ($value) {
 		$defined = get_defined_constants(true);
 
-		if (!isset($defined['user']) || !is_array($defined['user'])) return false;
+		if (!isset($defined['user']) || !is_array($defined['user'])) return null;
 
 		foreach ($defined['user'] as $key => $val)
 			if ($val === $value) return $key;
 
-		return false;
+		return null;
 	}
 
 	/**
@@ -3481,6 +3522,22 @@ class QuarkObject {
 	 */
 	public static function ConstValue ($const) {
 		return defined($const) ? constant($const) : $const;
+	}
+
+	/**
+	 * @param string $class
+	 * @param $value
+	 *
+	 * @return mixed
+	 */
+	public static function ClassConstByValue ($class, $value) {
+		$reflection = new \ReflectionClass($class);
+		$defined = $reflection->getConstants();
+
+		foreach ($defined as $key => $const)
+			if ($const == $value) return $key;
+
+		return null;
 	}
 
 	/**
@@ -13308,10 +13365,14 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	
 	/**
 	 * @param IQuarkIOProcessor $processor
+	 * @param bool $load = false
 	 *
 	 * @return mixed
 	 */
-	public function Decode (IQuarkIOProcessor $processor) {
+	public function Decode (IQuarkIOProcessor $processor, $load = false) {
+		if ($load && !$this->_loaded)
+			$this->Load();
+		
 		return $this->_loaded ? $processor->Decode($this->_content) : null;
 	}
 
@@ -14319,7 +14380,7 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	public function Decode ($raw) {
 		$out = \parse_ini_string($raw, true, $this->_scanner);
 		
-		return $out == false ? null : (object)$out;
+		return $out == false ? null : QuarkObject::Merge($out);
 	}
 
 	/**

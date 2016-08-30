@@ -12,7 +12,7 @@ use Quark\QuarkFile;
  */
 class GDImage implements IQuarkExtension {
 	/**
-	 * @var array
+	 * @var array $_processors
 	 */
 	private static $_processors = array(
 		'image/jpeg' => 'imagejpeg',

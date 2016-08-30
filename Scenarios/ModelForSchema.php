@@ -128,6 +128,8 @@ class ModelForSchema implements IQuarkTask, IQuarkAsyncTask {
 		if (!$schema) return false;
 
 		$conn = QuarkObject::ConstByValue($connection);
+		if (!$conn) return false;
+
 		$contents = self::Contents($table, $schema, $conn ? $conn : '\'' . $connection . '\'');
 
 		if ($file == false) return $contents;
