@@ -298,7 +298,7 @@ Quark.UX.CommandHistory = function (selector, change, scroll) {
 /**
  * http://stackoverflow.com/a/14645827/2097055
  */
-(function(old) {
+(function (old) {
 	$.fn.attr = function() {
 		if (arguments.length !== 0)
 			return old.apply(this, arguments);
@@ -319,3 +319,20 @@ Quark.UX.CommandHistory = function (selector, change, scroll) {
       return out;
 	};
 })($.fn.attr);
+
+$.fn.selectOption = function (value) {
+	if (this.length === 0) return false;
+
+	var regex = new RegExp('<option(.*?)value="' + value + '"(.*?)>', 'gi');
+
+	this.each(function () {
+		var html = $(this).html();
+
+		$(this).html(html
+			.replace(/<option(.*?)(selected|selected="selected")>/gi, '<option$1>')
+			.replace(regex, '<option$1value="' + value + '"$2 selected="selected">')
+		);
+	});
+
+	return true;
+};

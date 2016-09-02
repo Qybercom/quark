@@ -4176,6 +4176,15 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @param string $key = ''
+	 *
+	 * @return string
+	 */
+	public function CurrentLocalizationOf ($key = '') {
+		return Quark::Config()->LocalizationOf($key, $this->Language());
+	}
+
+	/**
 	 * @param QuarkKeyValuePair[] $menu
 	 * @param callable($href, $text) $button = null
 	 * @param callable($text) $node = null

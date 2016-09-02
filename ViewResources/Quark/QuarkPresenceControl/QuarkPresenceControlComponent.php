@@ -107,7 +107,7 @@ trait QuarkPresenceControlComponent {
 		foreach ($breadcrumbs as $breadcrumb)
 			$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
 
-		return ($header ? $this->_headerWidget($right) : '') . implode($delimiter, $out);
+		return ($header ? $this->_headerWidget($right) : '') . implode('<span class="presence-breadcrumb-delimiter">' . $delimiter . '</span>', $out);
 	}
 
 	/**

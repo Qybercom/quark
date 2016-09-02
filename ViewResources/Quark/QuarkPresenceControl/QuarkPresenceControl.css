@@ -263,4 +263,9 @@ body .quark-button:hover {
 
 .presence-breadcrumb {
 	margin: 0 5px 0 5px !important;
+	font-size: 12px;
+}
+
+.presence-breadcrumb-delimiter {
+	font-size: 12px;
 }

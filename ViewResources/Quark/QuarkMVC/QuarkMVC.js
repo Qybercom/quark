@@ -36,6 +36,9 @@ Quark.MVC.Model = function (data) {
 	that.Form = function (selector, handlers) {
         if (Quark.MVC.Model._selectors.indexOf(selector) + 1) return;
 
+		if (!$(selector).is('form'))
+			console.warn('[Quark.MVC.Model]' + ' ' + 'Specifying form handlers for a non-form selector "' + selector + '" does not have sense');
+
         handlers = Quark.Extend(handlers, {
             beforeValidate: false,
             beforeSubmit: false,
@@ -47,6 +50,8 @@ Quark.MVC.Model = function (data) {
         Quark.MVC.Model._selectors.push(selector);
 
         $(document).on('submit', selector, function (e) {
+            e.preventDefault();
+
             if (handlers.beforeValidate instanceof Function)
 				handlers.beforeValidate($(this));
 
@@ -63,11 +68,12 @@ Quark.MVC.Model = function (data) {
             if (handlers.afterSubmit instanceof Function)
                 handlers.afterSubmit(form, data);
 
-            e.preventDefault();
 			return false;
 		});
 
         $(document).on('click', selector + ' .quark-mvc-action', function (e) {
+            e.preventDefault();
+
             var button = $(this);
             var method = 'GET';
 
@@ -79,7 +85,6 @@ Quark.MVC.Model = function (data) {
             if (handlers.afterAction instanceof Function)
                 handlers.afterAction(that, button);
 
-            e.preventDefault();
             return false;
         });
 	};
