@@ -476,9 +476,9 @@ class QuarkConfig {
 	const RUNTIME = 'runtime';
 
 	/**
-	 * @var IQuarkCulture $_culture
+	 * @var IQuarkCulture $_culture = null
 	 */
-	private $_culture;
+	private $_culture = null;
 
 	/**
 	 * @var int $_alloc = 10 (megabytes)
@@ -496,9 +496,9 @@ class QuarkConfig {
 	private $_mode = Quark::MODE_DEV;
 
 	/**
-	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settings
+	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settings = null
 	 */
-	private $_settings;
+	private $_settings = null;
 
 	/**
 	 * @var string $_ini = ''
@@ -3172,6 +3172,15 @@ trait QuarkContainerBehavior {
 	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY) {
 		return Quark::Config()->LocalizationOf($key, $language);
 	}
+
+	/**
+	 * @param string $value
+	 *
+	 * @return mixed
+	 */
+	public function SelfConstByValue ($value) {
+		return QuarkObject::ClassConstByValue(get_class($this), $value);
+	}
 }
 
 /**
@@ -3629,6 +3638,24 @@ trait QuarkViewBehavior {
 	 */
 	public function Extension ($name = '') {
 		return $this->__call('Extension', func_get_args());
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function Language ($language = QuarkLanguage::ANY) {
+		return $this->__call('Language', func_get_args());
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return string
+	 */
+	public function CurrentLocalizationOf ($key = '') {
+		return $this->__call('CurrentLocalizationOf', func_get_args());
 	}
 
 	/**
@@ -7322,6 +7349,17 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	public function InTimezone ($timezone = self::CURRENT, $copy = false) {
 		$this->_timezone = $timezone;
 		return $this->Offset('+' . self::TimezoneOffset($timezone) . ' seconds', $copy);
+	}
+
+	/**
+	 * @param bool $store = false
+	 *
+	 * @return QuarkDate
+	 */
+	public function AsTimestamp ($store = true) {
+		$this->_fromTimestamp = $store;
+		
+		return $this;
 	}
 
 	/**

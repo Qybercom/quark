@@ -324,6 +324,7 @@ GoogleMap.Marker = function (opt) {
 		});
 
 		that.position = opt.position;
+		that.data = opt.data || {};
 		that._object = new google.maps.Marker(obj);
 	};
 
@@ -333,6 +334,11 @@ GoogleMap.Marker = function (opt) {
 
 	this.Hide = function () {
 		that.Set({visible:false});
+	};
+
+	this.Position = function (position) {
+		that._object.setPosition(GoogleMap.Point(position));
+		that.position = position;
 	};
 };
 GoogleMap.Marker.prototype = GoogleMap.Object;
