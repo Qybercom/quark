@@ -3226,7 +3226,7 @@ trait QuarkContainerBehavior {
 	 *
 	 * @return mixed
 	 */
-	public function SelfConstByValue ($value) {
+	public function ConstByValue ($value) {
 		return QuarkObject::ClassConstByValue(get_class($this), $value);
 	}
 }

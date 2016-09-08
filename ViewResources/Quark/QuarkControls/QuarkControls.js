@@ -389,14 +389,15 @@ Quark.Controls.DynamicList = function (selector, opt) {
  */
 Quark.Controls.Toggle = function (selector, opt) {
 	opt = opt || {};
+		opt.autoState = opt.autoState == undefined ? true : opt.autoState;
 		opt.enabled = opt.enabled || {};
 			opt.enabled.title = opt.enabled.title || '';
 			opt.enabled.html = opt.enabled.html || '';
-			opt.enabled.action = opt.enabled.action || false;
+			opt.enabled.action = opt.enabled.action || function () {};
 		opt.disabled = opt.disabled || {};
 			opt.disabled.title = opt.disabled.title || '';
 			opt.disabled.html = opt.disabled.html || '';
-			opt.disabled.action = opt.disabled.action || false;
+			opt.disabled.action = opt.disabled.action || function () {};
 
 	var that = this;
 
