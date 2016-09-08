@@ -509,6 +509,11 @@ class QuarkConfig {
 	 * @var QuarkFile $_localization = null
 	 */
 	private $_localization = null;
+	
+	/**
+	 * @var object $_localizationDictionary = null
+	 */
+	private $_localizationDictionary = null;
 
 	/**
 	 * @var callable $_ready = null
@@ -891,19 +896,62 @@ class QuarkConfig {
 
 		return $this->_localization;
 	}
+	
+	/**
+	 * @return object
+	 */
+	private function _localization () {
+		if ($this->_localization == null)
+			return $this->_localizationDictionary;
+		
+		if ($this->_localizationDictionary == null)
+			$this->_localizationDictionary = $this->_localization->Decode(new QuarkINIIOProcessor(), true);
+		
+		return $this->_localizationDictionary;
+	}
 
 	/**
 	 * @param string $key = ''
 	 * @param string $language = QuarkLanguage::ANY
+	 * @param string $value = ''
 	 *
 	 * @return string
 	 */
-	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY) {
-		if ($this->_localization == null) return '';
-
-		$locale = $this->_localization->Decode(new QuarkINIIOProcessor(), true);
+	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY, $value = '') {
+		$locale = $this->_localization();
+		
+		if (func_num_args() == 3) {
+			if ($this->_localizationDictionary == null)
+				$this->_localizationDictionary = new \stdClass();
+			
+			if (!isset($this->_localizationDictionary->$key))
+				$this->_localizationDictionary->$key = new \stdClass();
+			
+			$this->_localizationDictionary->$key->$language = $value;
+			$locale = $this->_localizationDictionary;
+		}
 
 		return isset($locale->$key->$language) ? $locale->$key->$language : '';
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param array|object $dictionary = []
+	 *
+	 * @return object
+	 */
+	public function LocalizationDictionaryOf ($key = '', $dictionary = []) {
+		$locale = $this->_localization();
+		
+		if (func_num_args() == 2) {
+			if ($this->_localizationDictionary == null)
+				$this->_localizationDictionary = new \stdClass();
+			
+			$this->_localizationDictionary->$key = (object)$dictionary;
+			$locale = $this->_localizationDictionary;
+		}
+
+		return isset($locale->$key) ? $locale->$key : new \stdClass();
 	}
 
 	/**
@@ -5215,6 +5263,28 @@ trait QuarkModelBehavior {
 	public function User () {
 		return QuarkSession::Current() ? QuarkSession::Current()->User() : null;
 	}
+	
+	/**
+	 * @param bool $rule
+	 * @param QuarkLocalizedString $message = null
+	 * @param string $field = ''
+	 *
+	 * @return bool
+	 */
+	public function Assert ($rule, QuarkLocalizedString $message = null, $field = '') {
+		return QuarkField::Assert($rule, $message, $field);
+	}
+	
+	/**
+	 * @param bool $rule
+	 * @param string|array $message = ''
+	 * @param string $field = ''
+	 *
+	 * @return bool
+	 */
+	public function LocalizedAssert ($rule, $message = '', $field = '') {
+		return QuarkField::LocalizedAssert($rule, $message, $field);
+	}
 }
 
 /**
@@ -7021,6 +7091,23 @@ class QuarkField {
 
 		return $rule;
 	}
+	
+	/**
+	 * @param bool $rule
+	 * @param string|array $message = ''
+	 * @param string $field = ''
+	 *
+	 * @return bool
+	 */
+	public static function LocalizedAssert ($rule, $message = '', $field = '') {
+		return self::Assert(
+			$rule,
+			is_array($message)
+				? QuarkLocalizedString::Dictionary($message)
+				: QuarkLocalizedString::DictionaryFromKey($message),
+			$field
+		);
+	}
 
 	/**
 	 * @param string $language = QuarkLanguage::ANY
@@ -7101,7 +7188,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param array|object $dictionary
+	 * @param array|object $dictionary = []
 	 * @param string $default = QuarkLanguage::ANY
 	 *
 	 * @return QuarkLocalizedString
@@ -7111,6 +7198,22 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 
 		$str = new self('', QuarkLanguage::ANY, $default);
 		$str->values = (object)$dictionary;
+
+		return $str;
+	}
+	
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return QuarkLocalizedString
+	 */
+	public static function DictionaryFromKey ($key = '') {
+		$locale = Quark::Config()->LocalizationDictionaryOf($key);
+		
+		if ($locale == null) return null;
+		
+		$str = new self('', QuarkLanguage::ANY, QuarkLanguage::ANY);
+		$str->values = $locale;
 
 		return $str;
 	}
