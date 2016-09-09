@@ -56,6 +56,11 @@ class Quark {
 	private static $_containers = array();
 
 	/**
+	 * @var string $_currentLanguage = ''
+	 */
+	private static $_currentLanguage = '';
+
+	/**
 	 * @var null $_null = null
 	 */
 	private static $_null = null;
@@ -358,6 +363,18 @@ class Quark {
 	 */
 	public static function &Containers () {
 		return self::$_containers;
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public static function CurrentLanguage ($language = QuarkLanguage::ANY) {
+		if (func_num_args() != 0)
+			self::$_currentLanguage = $language;
+
+		return self::$_currentLanguage;
 	}
 
 	/**
@@ -913,6 +930,18 @@ class QuarkConfig {
 	/**
 	 * @param string $key = ''
 	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return bool
+	 */
+	public function LocalizationExists ($key = '', $language = QuarkLanguage::ANY) {
+		$locale = $this->_localization();
+
+		return isset($locale->$key->$language);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $language = QuarkLanguage::ANY
 	 * @param string $value = ''
 	 *
 	 * @return string
@@ -952,6 +981,26 @@ class QuarkConfig {
 		}
 
 		return isset($locale->$key) ? $locale->$key : new \stdClass();
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param bool $strict = false
+	 *
+	 * @return string
+	 */
+	public function CurrentLocalizationOf ($key = '', $strict = false) {
+		$locale = $this->_localization();
+
+		$lang_current = Quark::CurrentLanguage();
+		$lang_any = QuarkLanguage::ANY;
+
+		return isset($locale->$key->$lang_current)
+			? $locale->$key->$lang_current
+			: (!$strict && isset($locale->$key->$lang_any)
+				? $locale->$key->$lang_any
+				: ''
+			);
 	}
 
 	/**
@@ -1366,7 +1415,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		$service->Input()->Method(ucfirst(strtolower($_SERVER['REQUEST_METHOD'])));
 		$service->Input()->Headers($headers);
 
-		QuarkView::ExpectedLanguage($service->Input()->ExpectedLanguage());
+		Quark::CurrentLanguage($service->Input()->ExpectedLanguage());
 
 		$service->Input()->Merge((object)$_GET);
 		$service->InitProcessors();
@@ -3222,6 +3271,16 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @param string $key = ''
+	 * @param bool $strict = false
+	 *
+	 * @return string
+	 */
+	public function CurrentLocalizationOf ($key = '', $strict = false) {
+		return Quark::Config()->CurrentLocalizationOf($key, $strict);
+	}
+
+	/**
 	 * @param string $value
 	 *
 	 * @return mixed
@@ -3695,15 +3754,6 @@ trait QuarkViewBehavior {
 	 */
 	public function Language ($language = QuarkLanguage::ANY) {
 		return $this->__call('Language', func_get_args());
-	}
-
-	/**
-	 * @param string $key = ''
-	 *
-	 * @return string
-	 */
-	public function CurrentLocalizationOf ($key = '') {
-		return $this->__call('CurrentLocalizationOf', func_get_args());
 	}
 
 	/**
@@ -4236,27 +4286,6 @@ class QuarkView implements IQuarkContainer {
 			$this->_language = $language;
 
 		return $this->_language;
-	}
-
-	/**
-	 * @param string $language = QuarkLanguage::ANY
-	 *
-	 * @return string
-	 */
-	public static function ExpectedLanguage ($language = QuarkLanguage::ANY) {
-		if (func_num_args() != 0)
-			self::$_languageExpected = $language;
-
-		return self::$_languageExpected;
-	}
-
-	/**
-	 * @param string $key = ''
-	 *
-	 * @return string
-	 */
-	public function CurrentLocalizationOf ($key = '') {
-		return Quark::Config()->LocalizationOf($key, $this->Language());
 	}
 
 	/**
@@ -10002,8 +10031,12 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private function _pipeData ($method, $data, $signature = false, QuarkClient &$client = null) {
 		$json = self::$_json->Decode($data);
 
-		if ($json && isset($json->url) && ($signature ? (isset($json->signature) && $json->signature == Quark::Config()->ClusterKey()) : true))
+		if ($json && isset($json->url) && ($signature ? (isset($json->signature) && $json->signature == Quark::Config()->ClusterKey()) : true)) {
+			if (isset($json->language))
+				Quark::CurrentLanguage($json->language);
+
 			$this->_pipe($json->url, $method, $client, isset($json->data) ? $json->data : new \stdClass(), isset($json->session) ? $json->session : null);
+		}
 
 		unset($json, $client, $data, $method);
 	}
