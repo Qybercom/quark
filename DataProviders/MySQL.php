@@ -65,7 +65,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	/**
 	 * @param QuarkURI $uri
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkConnectionException

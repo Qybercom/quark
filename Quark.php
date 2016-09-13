@@ -2668,15 +2668,16 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param callable(QuarkSession $client) $sender = null
+	 * @param bool $auth = false
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Event (callable $sender = null) {
+	public function Event (callable $sender = null, $auth = false) {
 		$env = Quark::CurrentEnvironment();
 
-		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender);
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
 		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
 	}
 
@@ -10266,16 +10267,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param string $url
 	 * @param callable(QuarkSession $client) $sender
+	 * @param bool $auth = false
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($url, callable &$sender = null) {
+	public function BroadcastLocal ($url, callable &$sender = null, $auth = false) {
 		$ok = true;
 		$clients = $this->_cluster->Server()->Clients();
 
 		foreach ($clients as $i => &$client) {
 			$session = QuarkSession::Get($client->Session());
-
+			if ($auth && ($session == null || $session->User() == null)) continue;
+			
 			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
 
 			if ($data)
@@ -14742,8 +14745,11 @@ class QuarkCertificate extends QuarkFile {
 class QuarkSQL {
 	const OPTION_AS = 'option.as';
 	const OPTION_SCHEMA_GENERATE_PRINT = 'option.schema_print';
+	const OPTION_DEBUG_QUERY = 'option.debug.query';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
+
+	const NULL = 'NULL';
 
 	/**
 	 * @var IQuarkSQLDataProvider $_provider
@@ -14814,7 +14820,7 @@ class QuarkSQL {
 	 *
 	 * @return mixed
 	 */
-	public function Query ($model ,$options, $query, $test = false) {
+	public function Query ($model, $options, $query, $test = false) {
 		$i = 1;
 		$escape = $this->_provider->EscapeChar();
 		$query = str_replace(
@@ -14823,6 +14829,9 @@ class QuarkSQL {
 			$query,
 			$i
 		);
+
+		if (isset($options[self::OPTION_DEBUG_QUERY]) && $options[self::OPTION_DEBUG_QUERY])
+			Quark::Log('[QuarkSQL] Query: "' . $query . '"');
 
 		return $test ? $query : $this->_provider->Query($query, $options);
 	}
@@ -14881,6 +14890,7 @@ class QuarkSQL {
 	 * @return bool|float|int|string
 	 */
 	public function Value ($value) {
+		if ($value === null) return self::NULL;
 		if (!is_scalar($value)) return null;
 		if (is_bool($value))
 			$value = $value ? 1 : 0;
@@ -14913,7 +14923,7 @@ class QuarkSQL {
 				case '`$lt`': $output[] = '<' . $value; break;
 				case '`$gt`': $output[] = '>' . $value; break;
 				case '`$gte`': $output[] = '>=' . $value; break;
-				case '`$ne`': $output[] = '<>' . $value; break;
+				case '`$ne`': $output[] = ($value == self::NULL ? ' IS NOT ' : '<>') . $value; break;
 
 				case '`$and`':
 					$value = $this->Condition($rule, ' AND ');
@@ -14931,7 +14941,7 @@ class QuarkSQL {
 					break;
 
 				default:
-					$output[] = (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : '') . $value;
+					$output[] = (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
 					break;
 			}
 		}
