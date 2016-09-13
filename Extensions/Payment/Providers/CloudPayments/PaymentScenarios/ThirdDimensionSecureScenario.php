@@ -60,4 +60,11 @@ class ThirdDimensionSecureScenario implements IQuarkPaymentScenario {
 	public function Response () {
 		return $this->_response;
 	}
+
+	/**
+	 * @return string
+	 */
+	public function Message () {
+		return $this->_response->Message;
+	}
 }
