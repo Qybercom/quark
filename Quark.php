@@ -14561,9 +14561,14 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		$out = \parse_ini_string($raw, true, $this->_scanner);
+		$out = @\parse_ini_string($raw, true, $this->_scanner);
 		
-		return $out == false ? null : QuarkObject::Merge($out);
+		if ($out == false) {
+			Quark::Log('[QuarkINIIOProcessor] Decoding error: ' . QuarkException::LastError());
+			return null;
+		}
+		
+		return QuarkObject::Merge($out);
 	}
 
 	/**

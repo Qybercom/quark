@@ -122,7 +122,12 @@ class CardChargeScenario implements IQuarkPaymentScenario {
 	 * @return object
 	 */
 	public function Model () {
-		return isset($this->_model->AcsUrl) ? $this->_model : (object)array('CardHolderMessage' => $this->_response->Message);
+		$out = $this->_model;
+
+		if (isset($this->_model->AcsUrl) && !isset($out->CardHolderMessage))
+			$out->CardHolderMessage = $this->_response->Message;
+
+		return $out;
 	}
 
 	/**
