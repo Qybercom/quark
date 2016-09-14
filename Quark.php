@@ -2668,13 +2668,13 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param callable(QuarkSession $client) $sender = null
-	 * @param bool $auth = false
+	 * @param bool $auth = true
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Event (callable $sender = null, $auth = false) {
+	public function Event (callable $sender = null, $auth = true) {
 		$env = Quark::CurrentEnvironment();
 
 		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
@@ -10267,11 +10267,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param string $url
 	 * @param callable(QuarkSession $client) $sender
-	 * @param bool $auth = false
+	 * @param bool $auth = true
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($url, callable &$sender = null, $auth = false) {
+	public function BroadcastLocal ($url, callable &$sender = null, $auth = true) {
 		$ok = true;
 		$clients = $this->_cluster->Server()->Clients();
 
