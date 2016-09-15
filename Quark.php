@@ -11704,13 +11704,18 @@ class QuarkDTO {
 
 	/**
 	 * @param int $quantity = 1
+	 * @param bool $strict = false
 	 *
 	 * @return string
 	 */
-	public function ExpectedLanguage ($quantity = 1) {
+	public function ExpectedLanguage ($quantity = 1, $strict = false) {
 		$language = $this->GetLanguageByQuantity($quantity);
+		$out = $language == null ? QuarkLanguage::ANY : $language->Name();
 
-		return $language == null ? QuarkLanguage::ANY : $language->Name();
+		if (!$strict && $out != QuarkLanguage::ANY && !strpos($out, '-'))
+			$out .= '-' . strtoupper($out);
+
+		return $out;
 	}
 
 	/**
