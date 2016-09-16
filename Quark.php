@@ -483,6 +483,7 @@ Quark::Import(Quark::Host());
  */
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
+	const INI_LOCAL_SETTINGS = 'LocalSettings';
 	const INI_DATA_PROVIDERS = 'DataProviders';
 	const INI_AUTHORIZATION_PROVIDER = 'AuthorizationProvider:';
 	const INI_ENVIRONMENT = 'Environment:';
@@ -513,9 +514,14 @@ class QuarkConfig {
 	private $_mode = Quark::MODE_DEV;
 
 	/**
-	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settings = null
+	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settingsApp = null
 	 */
-	private $_settings = null;
+	private $_settingsApp = null;
+
+	/**
+	 * @var object $_settingsLocal = null
+	 */
+	private $_settingsLocal = null;
 
 	/**
 	 * @var string $_ini = ''
@@ -734,21 +740,21 @@ class QuarkConfig {
 	 */
 	public function &ApplicationSettings (IQuarkApplicationSettingsModel $model = null) {
 		if (func_num_args() != 0 && $model != null)
-			$this->_settings = new QuarkModel($model);
+			$this->_settingsApp = new QuarkModel($model);
 		else $this->_loadSettings();
 
-		return $this->_settings;
+		return $this->_settingsApp;
 	}
 
 	/**
 	 * @return bool
 	 */
 	private function _loadSettings () {
-		$settings = QuarkModel::FindOne($this->_settings->Model(), $this->_settings->LoadCriteria());
+		$settings = QuarkModel::FindOne($this->_settingsApp->Model(), $this->_settingsApp->LoadCriteria());
 
 		if ($settings == null || !($settings->Model() instanceof IQuarkApplicationSettingsModel)) return false;
 
-		$this->_settings = $settings;
+		$this->_settingsApp = $settings;
 		return true;
 	}
 
@@ -758,14 +764,30 @@ class QuarkConfig {
 	 * @return bool
 	 */
 	public function UpdateApplicationSettings ($data = null) {
-		if ($this->_settings == null) return false;
+		if ($this->_settingsApp == null) return false;
 
 		$ok = $this->_loadSettings();
 
 		if (func_num_args() != 0)
-			$this->_settings->PopulateWith($data);
+			$this->_settingsApp->PopulateWith($data);
 
-		return $ok ? $this->_settings->Save() : $this->_settings->Create();
+		return $ok ? $this->_settingsApp->Save() : $this->_settingsApp->Create();
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $value = ''
+	 *
+	 * @return mixed
+	 */
+	public function LocalSettings ($key = '', $value = '') {
+		if ($this->_settingsLocal == null)
+			$this->_settingsLocal = new \stdClass();
+
+		if (func_num_args() == 2)
+			$this->_settingsLocal->$key = $value;
+
+		return isset($this->_settingsLocal->$key) ? $this->_settingsLocal->$key : null;
 	}
 
 	/**
@@ -1034,6 +1056,9 @@ class QuarkConfig {
 				if ($component instanceof QuarkModelSource)
 					$component->URI(QuarkURI::FromURI($connection));
 			}
+
+		if (isset($ini[self::INI_LOCAL_SETTINGS]))
+			$this->_settingsLocal = (object)$ini[self::INI_LOCAL_SETTINGS];
 
 		$environments = Quark::Environment();
 
@@ -3279,6 +3304,22 @@ trait QuarkContainerBehavior {
 	 */
 	public function CurrentLocalizationOf ($key = '', $strict = false) {
 		return Quark::Config()->CurrentLocalizationOf($key, $strict);
+	}
+
+	/**
+	 * @return QuarkModel|IQuarkApplicationSettingsModel
+	 */
+	public function ApplicationSettings () {
+		return Quark::Config()->ApplicationSettings();
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return mixed
+	 */
+	public function LocalSettings ($key = '') {
+		return Quark::Config()->LocalSettings($key);
 	}
 
 	/**
