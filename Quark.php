@@ -4044,6 +4044,16 @@ class QuarkView implements IQuarkContainer {
 			$buffer = $this->_resources;
 			$this->_resources = array();
 		}
+
+		if ($this->_view instanceof IQuarkViewModelWithProxySession) {
+			$var = $this->_view->ViewProxySessionVariable();
+
+			$this->_resource(QuarkProxyJSViewResource::ForSession(
+				$this->User(),
+				$this->_view->ViewProxySessionExtractFields(),
+				$var === null ? QuarkProxyJSViewResource::PROXY_SESSION_VAR : $var
+			));
+		}
 		
 		if ($this->_view instanceof IQuarkViewModelWithResources)
 			$this->_resources($this->_view->ViewResources());
@@ -4562,6 +4572,23 @@ interface IQuarkViewModelWithVariableProcessing extends IQuarkViewModel {
 }
 
 /**
+ * Interface IQuarkViewModelWithProxySession
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelWithProxySession extends IQuarkViewModel {
+	/**
+	 * @return string
+	 */
+	public function ViewProxySessionVariable();
+
+	/**
+	 * @return array
+	 */
+	public function ViewProxySessionExtractFields();
+}
+
+/**
  * Interface IQuarkViewResource
  *
  * @package Quark
@@ -4853,6 +4880,44 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
 }
 
 /**
+ * Class QuarkProxyJSViewResource
+ *
+ * @package Quark
+ */
+class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+	const PROXY_SESSION_VAR = 'session_user';
+
+	use QuarkInlineViewResource;
+
+	/**
+	 * @param $var
+	 * @param $value
+	 */
+	public function __construct ($var, $value) {
+		$this->_code = 'var ' . $var . '=' . \json_encode($value);
+	}
+
+	/**
+	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @return string
+	 */
+	public function HTML () {
+		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;' . $this->_code . '</script>';
+	}
+
+	/**
+	 * @param QuarkModel|IQuarkAuthorizableModel $user = null
+	 * @param array $fields = null
+	 * @param string $var = self::PROXY_SESSION_VAR
+	 *
+	 * @return QuarkProxyJSViewResource
+	 */
+	public static function ForSession (QuarkModel $user = null, $fields = null, $var = self::PROXY_SESSION_VAR) {
+		return new self($var, $user == null ? 'null' : $user->Extract($fields));
+	}
+}
+
+/**
  * Trait QuarkLexingViewResource
  *
  * @package Quark
@@ -5014,6 +5079,18 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 
 	/**
+	 * @param $source
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Instance ($source) {
+		if ($this->_type instanceof IQuarkModel)
+			$this->_list[] = new QuarkModel($this->_type, $source);
+
+		return $this;
+	}
+
+	/**
 	 * @return QuarkCollection
 	 */
 	public function Reverse () {
@@ -5076,8 +5153,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 
 	/**
-	 * @param $fields
-	 * @param $weak
+	 * @param array $fields = null
+	 * @param bool $weak = false
 	 *
 	 * @return array
 	 */
@@ -5312,8 +5389,8 @@ trait QuarkModelBehavior {
 	}
 
 	/**
-	 * @param array $fields
-	 * @param bool  $weak
+	 * @param array $fields = null
+	 * @param bool $weak = false
 	 *
 	 * @return \stdClass
 	 */
@@ -5985,8 +6062,8 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
-	 * @param array $fields
-	 * @param bool  $weak
+	 * @param array $fields = null
+	 * @param bool $weak = false
 	 *
 	 * @return \stdClass
 	 */
@@ -6812,15 +6889,15 @@ class QuarkField {
 
 	/**
 	 * @param $key
-	 * @param $value
+	 * @param string $type
 	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
-	public static function is ($key, $value, $nullable = false) {
+	public static function is ($key, $type, $nullable = false) {
 		if ($nullable && $key == null) return true;
 
-		$comparator = 'is_' . $value;
+		$comparator = 'is_' . $type;
 
 		return $comparator($key);
 	}
