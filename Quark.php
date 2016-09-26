@@ -10980,7 +10980,9 @@ class QuarkURI {
 	 * @return QuarkURI
 	 */
 	public function AppendQuery ($query = []) {
-		$this->query .= (strlen($this->query) == 0 ? '' : '&') . http_build_query($query);
+		$this->query .=
+			(strlen($this->query) == 0 ? '' : '&') .
+			(is_scalar($query) ? $query : http_build_query($query));
 
 		return $this;
 	}

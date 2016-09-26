@@ -58,7 +58,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	/**
 	 * @param QuarkURI $uri
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 */
