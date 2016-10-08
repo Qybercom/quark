@@ -310,7 +310,7 @@ Quark.MVC.Template = function (selector, tags) {
 	 * @return {*}
 	 */
 	that.Compile = function () {
-		return that._compile(that.Tags, that._content);
+		return that._compile(that._content, that.Tags);
 	};
 
 	/**
@@ -322,17 +322,17 @@ Quark.MVC.Template = function (selector, tags) {
 	 *
 	 * @private
 	 */
-	that._compile = function (tags, content, prefix) {
+	that._compile = function (content, tags, prefix) {
 		if (content == undefined) return;
 
-		var append = '';
+		var append = '', key = '';
 
 		for (key in tags) {
 			if (tags[key] == undefined) continue;
             append = (prefix ? prefix : '') + key;
 
 			content = tags[key].constructor == Object
-				? that._compile(tags[key], content, append + '.')
+				? that._compile(content, tags[key], append + '.')
 				: content.replace(new RegExp('{' + that._escape(append) + '}', 'gim'), tags[key].toString());
 		}
 

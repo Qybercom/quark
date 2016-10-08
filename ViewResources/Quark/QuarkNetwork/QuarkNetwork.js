@@ -109,29 +109,22 @@ Quark.Network.Client = function (host, port, on) {
 
     var that = this;
 
-    var events = {};
-    var _response = [];
+    var _event = {};
+    var _response = {};
 
     on.message = function (e) {
         try {
-            var input = JSON.parse(e.data);
+            var input = JSON.parse(e.data), key = '';
 
-            if (input.response != undefined && _response[input.response] instanceof Function)
-                _response[input.response](input.response, input.data, input.session);
+			if (input.response != undefined)
+				for (key in _response)
+					if (input.response.match(new RegExp('^' + key, 'i')) && _response[key] instanceof Function)
+                		_response[key](input.response, input.data, input.session);
 
-            if (input.event != undefined) {
-                input.event = input.event.toLowerCase();
-
-                if (events[input.event] instanceof Array) {
-                    var i = 0;
-
-                    while (i < events[input.event].length) {
-                        events[input.event][i](input.event, input.data, input.session);
-
-                        i++;
-                    }
-                }
-            }
+			if (input.event != undefined)
+				for (key in _event)
+					if (input.event.match(new RegExp('^' + key, 'i')) && _event[key] instanceof Function)
+                		_event[key](input.event, input.data, input.session);
         }
         catch (e) {
             on.error(e);
@@ -140,21 +133,15 @@ Quark.Network.Client = function (host, port, on) {
 
     /**
      * @param {string} url
-     * @param {Function} listener
+     * @param {Function=} [event]
      *
-     * @return {boolean}
+     * @return {Function|undefined}
      */
-    that.Event = function (url, listener) {
-        if (!(listener instanceof Function)) return false;
+    that.Event = function (url, event) {
+        if (event instanceof Function)
+            _event[url] = event;
 
-        url = url.toLowerCase();
-
-        if (events[url] == undefined)
-            events[url] = [];
-
-        events[url].push(listener);
-
-        return true;
+        return _event[url] == undefined ? undefined : _event[url];
     };
 
     /**

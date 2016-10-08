@@ -224,7 +224,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Query ($query, $options) {
-		$out = \pg_query($this->_connection, $query . ';');
+		$out = @\pg_query($this->_connection, $query . ';');
 
 		if (!$out)
 			Quark::Log('[PostgreSQL] Query error "' . $query . '". Error: ' . \pg_last_error($this->_connection));

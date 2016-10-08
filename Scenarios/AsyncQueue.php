@@ -4,6 +4,8 @@ namespace Quark\Scenarios;
 use Quark\IQuarkTask;
 
 use Quark\QuarkArchException;
+use Quark\QuarkCLIBehavior;
+use Quark\QuarkObject;
 use Quark\QuarkTask;
 
 /**
@@ -12,6 +14,8 @@ use Quark\QuarkTask;
  * @package Quark\Scenarios
  */
 class AsyncQueue implements IQuarkTask {
+	use QuarkCLIBehavior;
+
 	/**
 	 * @param int $argc
 	 * @param array $argv
@@ -21,7 +25,10 @@ class AsyncQueue implements IQuarkTask {
 	 * @throws QuarkArchException
 	 */
 	public function Task ($argc, $argv) {
-		if (!QuarkTask::AsyncQueue())
-			throw new QuarkArchException('Can not bind async queue on [' . QuarkTask::QUEUE . ']');
+		$queue = $this->ServiceArg();
+		$queue = $queue == null ? QuarkTask::QUEUE : QuarkObject::ConstValue($queue);
+
+		if (!QuarkTask::AsyncQueue($queue))
+			throw new QuarkArchException('Can not bind async queue on [' . QuarkObject::Stringify($queue) . ']');
 	}
 }

@@ -182,7 +182,7 @@ class MongoDB implements IQuarkDataProvider {
 	/**
 	 * @param QuarkURI $uri
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkConnectionException
 	 */

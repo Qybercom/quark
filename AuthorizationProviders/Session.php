@@ -183,10 +183,14 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields) {
 			$fields = $model->RuntimeFields();
+			var_dump($model);
 			$out = $session->user->ExportGeneric($model);
 
+			if (!isset($session->session))
+				$session->session = new \stdClass();
+
 			foreach ($fields as $key => $value)
-				$session->session->$key = $out->$key;
+				$session->session->$key = isset($out->$key) ? $out->$key : null;
 		}
 
 		return $session->Save();

@@ -244,7 +244,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			? $options['mode']
 			: MYSQLI_STORE_RESULT;
 
-		$out = $this->_connection->query($query, $mode);
+		$out = @$this->_connection->query($query, $mode);
 
 		if (!$out)
 			Quark::Log('[MySQL] Query error "' . $query . '". Error: ' . $this->_connection->error);
