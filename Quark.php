@@ -7762,6 +7762,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 		$string = new self($this->_key);
 		$string->_val = $raw;
 		$string->_ciphered = true;
+		$string->_extract = $this->_extract;
 
 		return new QuarkModel($string);
 	}
@@ -7782,7 +7783,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 	public function PolymorphicExtract () {
 		if ($this->_ciphered)
 			$this->Decipher();
-
+		
 		return (string)($this->_extract
 			? $this->_cipher->Cipher($this->_extract, $this->_val)
 			: $this->_val);
