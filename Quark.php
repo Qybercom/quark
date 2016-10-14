@@ -292,7 +292,9 @@ class Quark {
 	 * @return string
 	 */
 	public static function GeneratePassword ($length = 10, $readable = true, $firstLetter = true) {
-		return ($firstLetter ? self::ALPHABET_PASSWORD_LETTERS[rand(0, strlen(self::ALPHABET_PASSWORD_LETTERS) - 1)]: '')
+		$alphabet = self::ALPHABET_PASSWORD_LETTERS;
+
+		return ($firstLetter ? $alphabet[rand(0, strlen($alphabet) - 1)]: '')
 			. substr(
 				self::TextID(
 					pow($length, $length),
