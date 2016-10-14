@@ -30,6 +30,11 @@ class Quark {
 	const UNIT_MEGABYTE = 1048576;
 	const UNIT_GIGABYTE = 1073741824;
 
+	const ALPHABET_ALL = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	const ALPHABET_PASSWORD = 'abcdefgpqstxyzABCDEFGHKMNPQRSTXYZ123456789';
+	const ALPHABET_PASSWORD_LOW = 'abcdefgpqstxyz123456789';
+	const ALPHABET_PASSWORD_LETTERS = 'abcdefgpqstxyz';
+
 	/**
 	 * @var QuarkConfig $_config
 	 */
@@ -244,6 +249,58 @@ class Quark {
 	 */
 	public static function GuID () {
 		return sha1(self::DuID());
+	}
+
+	/**
+	 * @param int $id
+	 * @param string $alphabet = self::ALPHABET_ALL
+	 * @param int $base = 2
+	 * @param int $mod = PHP_INT_MAX
+	 *
+	 * @return string
+	 */
+	public static function TextID ($id, $alphabet = self::ALPHABET_ALL, $base = 2, $mod = PHP_INT_MAX) {
+		$number = (string)$id;
+
+		$i = 0;
+		$lenNum = strlen($number);
+		$out = '';
+
+		while ($i < $lenNum) {
+			$result = (string)(((pow($base, (int)$number[$i] < 3 ? 3 : $number[$i]) % $mod) * $base) % $mod);
+
+			$j = 0;
+			$lenRes = strlen($result);
+			$alphabet = str_shuffle($alphabet);
+
+			while ($j < $lenRes) {
+				$out .= $alphabet[$result[$j] % (pow($result[$j], $j) + 1)];
+				$j++;
+			}
+
+			$i++;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param int $length = 10
+	 * @param bool $readable = true
+	 * @param bool $firstLetter = true
+	 *
+	 * @return string
+	 */
+	public static function GeneratePassword ($length = 10, $readable = true, $firstLetter = true) {
+		return ($firstLetter ? self::ALPHABET_PASSWORD_LETTERS[rand(0, strlen(self::ALPHABET_PASSWORD_LETTERS) - 1)]: '')
+			. substr(
+				self::TextID(
+					pow($length, $length),
+					$readable ? self::ALPHABET_PASSWORD_LOW : self::ALPHABET_ALL
+				),
+				0,
+				$length - (int)$firstLetter
+		);
 	}
 
 	/**
@@ -2895,6 +2952,22 @@ trait QuarkCLIBehavior {
 	}
 
 	/**
+	 * @param string $arg = ''
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return bool
+	 */
+	private function _isFlag ($arg = '', $flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		$flag = $prefixFlag . $flag;
+		$alias = $prefixAlias . $alias;
+
+		return $arg == $flag || ($alias != '' && $arg == $alias);
+	}
+
+	/**
 	 * @param string $flag = ''
 	 * @param string $alias = ''
 	 * @param string $prefixFlag = '--'
@@ -2903,15 +2976,38 @@ trait QuarkCLIBehavior {
 	 * @return bool
 	 */
 	public function HasFlag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
-		$args = $alias != '';
-
-		$flag = $prefixFlag . $flag;
-		$alias = $prefixAlias . $alias;
-		
 		foreach ($this->_shellInput as $arg)
-			if ($arg == $flag || ($args && $arg == $alias)) return true;
+			if ($this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)) return true;
 		
 		return false;
+	}
+
+	/**
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return mixed
+	 */
+	public function Flag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		$i = 0;
+		$size = sizeof($this->_shellInput);
+
+		while ($i < $size) {
+			$arg = $this->_shellInput[$i];
+			$next = isset($this->_shellInput[$i + 1]) ? $this->_shellInput[$i + 1] : null;
+
+			$ok = $this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)
+				&& $next !== null
+				&& !$this->_isFlag($next, $flag, $alias, $prefixFlag, $prefixAlias);
+
+			if ($ok) return $next;
+
+			$i++;
+		}
+
+		return null;
 	}
 
 	/**
@@ -5670,6 +5766,24 @@ trait QuarkModelBehavior {
 	 */
 	public function LocalizedAssert ($rule, $message = '', $field = '') {
 		return QuarkField::LocalizedAssert($rule, $message, $field);
+	}
+
+	/**
+	 * @param array $options
+	 * @param string $key = ''
+	 *
+	 * @return mixed
+	 */
+	public function UserOption ($options, $key = '') {
+		return !isset($options[QuarkModel::OPTION_USER_OPTIONS])
+			? null
+			: (func_num_args() == 2
+				? (isset($options[QuarkModel::OPTION_USER_OPTIONS][$key])
+					? $options[QuarkModel::OPTION_USER_OPTIONS][$key]
+					: null
+				)
+				: $options[QuarkModel::OPTION_USER_OPTIONS]
+			);
 	}
 }
 

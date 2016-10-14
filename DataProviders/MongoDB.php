@@ -337,7 +337,18 @@ class MongoDB implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function FindOne (IQuarkModel $model, $criteria, $options = []) {
-		return self::_record($this->_collection($model, $options)->findOne($criteria, self::_fields($options)));
+		/**
+		 * @var \MongoCursor $raw
+		 */
+		$raw = $this->_collection($model, $options)->find($criteria, self::_fields($options))->limit(1);
+
+		if (isset($options[QuarkModel::OPTION_SORT]))
+			$raw->sort($options[QuarkModel::OPTION_SORT]);
+
+		foreach ($raw as $document)
+			return self::_record($document);
+
+		return null;
 	}
 
 	/**

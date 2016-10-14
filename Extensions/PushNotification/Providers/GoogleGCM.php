@@ -46,7 +46,7 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	 * @param string $key
 	 * @param $value
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function PNPOption ($key, $value) {
 		if (is_string($value))
@@ -85,11 +85,13 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		return QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response)->success == 1;
+		$out = QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response);
+
+		return $out && $out->success == 1;
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	public function PNPReset () {
 		$this->_devices = array();
