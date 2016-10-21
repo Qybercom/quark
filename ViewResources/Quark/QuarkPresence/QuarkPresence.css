@@ -24,6 +24,7 @@ body {
 }
 
 .quark-button.block {
+    display: inline-block;
     text-shadow: none;
     margin: 0;
 }

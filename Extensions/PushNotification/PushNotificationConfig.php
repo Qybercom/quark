@@ -59,7 +59,7 @@ class PushNotificationConfig implements IQuarkExtensionConfig {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ExtensionOptions ($ini) {
 		foreach ($ini as $key => $value) {

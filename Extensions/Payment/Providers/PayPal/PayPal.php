@@ -79,7 +79,7 @@ class PayPal implements IQuarkPaymentProvider {
 	 * @param string $appSecret
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function PaymentProviderApplication ($appId, $appSecret, $ini) {
 		$this->appId = $appId;

@@ -68,6 +68,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 			$this->_buffer = '';
 
 			$response = new QuarkDTO(new QuarkHTMLIOProcessor());
+			$response->Protocol(QuarkDTO::HTTP_VERSION_1_1);
 			$response->Status(101, 'Switching Protocols');
 			$response->Headers(array(
 				QuarkDTO::HEADER_CONNECTION => QuarkDTO::CONNECTION_UPGRADE,

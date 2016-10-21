@@ -100,12 +100,11 @@ trait QuarkPresenceControlComponent {
 		if (!($view instanceof IQuarkPresenceControlViewModelWithBreadcrumbs)) return '';
 
 		$breadcrumbs = $view->PresenceBreadcrumbs();
-		if (!QuarkObject::IsArrayOf($breadcrumbs, new QuarkKeyValuePair())) return '';
-
 		$out = array();
 
 		foreach ($breadcrumbs as $breadcrumb)
-			$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
+			if ($breadcrumb instanceof QuarkKeyValuePair)
+				$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
 
 		return ($header ? $this->_headerWidget($right) : '') . implode('<span class="presence-breadcrumb-delimiter">' . $delimiter . '</span>', $out);
 	}

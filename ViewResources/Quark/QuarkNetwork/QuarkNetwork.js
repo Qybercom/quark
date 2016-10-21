@@ -119,12 +119,12 @@ Quark.Network.Client = function (host, port, on) {
 			if (input.response != undefined)
 				for (key in _response)
 					if (input.response.match(new RegExp('^' + key, 'i')) && _response[key] instanceof Function)
-                		_response[key](input.response, input.data, input.session);
+                		return _response[key](input.response, input.data, input.session);
 
 			if (input.event != undefined)
 				for (key in _event)
 					if (input.event.match(new RegExp('^' + key, 'i')) && _event[key] instanceof Function)
-                		_event[key](input.event, input.data, input.session);
+                		return _event[key](input.event, input.data, input.session);
         }
         catch (e) {
             on.error(e);

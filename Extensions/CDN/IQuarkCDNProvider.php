@@ -12,10 +12,11 @@ interface IQuarkCDNProvider {
 	/**
 	 * @param string $appId
 	 * @param string $appSecret
+	 * @param object $ini
 	 *
 	 * @return mixed
 	 */
-	public function CDNApplication($appId, $appSecret);
+	public function CDNApplication($appId, $appSecret, $ini);
 
 	/**
 	 * @param string $id

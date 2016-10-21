@@ -100,6 +100,18 @@
 
 
 /**
+ * .quark-language-select
+ */
+.quark-language-select {
+	width: 65px;
+    border: 0;
+    outline: none;
+	vertical-align: top;
+}
+
+
+
+/**
  * .quark-scroll component
  */
 .quark-scrollable {

@@ -41,10 +41,11 @@ class NeutrinoCDN implements IQuarkCDNProvider {
 	/**
 	 * @param string $appId
 	 * @param string $appSecret
+	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
-	public function CDNApplication ($appId, $appSecret) {
+	public function CDNApplication ($appId, $appSecret, $ini) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
 	}

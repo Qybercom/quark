@@ -50,7 +50,7 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	 * @param string $appId
 	 * @param string $appSecret
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function SocialNetworkApplication ($appId, $appSecret) {
 		$this->_appId = $appId;

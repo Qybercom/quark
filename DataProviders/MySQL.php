@@ -52,6 +52,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	const TYPE_DATETIME = 'DATETIME';
 	const TYPE_TEXT = 'TEXT';
 
+	const MYSQLI_RECONNECT = 'mysqli.reconnect';
+
 	/**
 	 * @var \mysqli $_connection
 	 */
@@ -63,6 +65,11 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	private $_sql;
 
 	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri;
+
+	/**
 	 * @param QuarkURI $uri
 	 *
 	 * @return void
@@ -71,10 +78,14 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
+		$this->_uri = $uri;
 		$this->_connection = \mysqli_init();
 
 		if (!$this->_connection)
 			throw new QuarkArchException('MySQLi initialization fault');
+
+		if (ini_get(self::MYSQLI_RECONNECT) == 1)
+			ini_set(self::MYSQLI_RECONNECT, 0);
 
 		$options = $uri->options;
 
@@ -243,6 +254,9 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$mode = isset($options['mode'])
 			? $options['mode']
 			: MYSQLI_STORE_RESULT;
+
+		if (!@$this->_connection->ping())
+			$this->Connect($this->_uri);
 
 		$out = @$this->_connection->query($query, $mode);
 

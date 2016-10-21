@@ -73,6 +73,10 @@ textarea.quark-input {
     box-sizing: border-box;
 }
 
+select.quark-input {
+    padding: 7px 0 13px 7px;
+}
+
 button.quark-button {
 	background: none;
 	border: none;
@@ -100,6 +104,15 @@ button.quark-button {
     color: rgba(0,0,0,0);
     text-decoration: none;
     cursor: pointer;
+}
+
+.quark-link.underlined {
+    color: rgb(150, 150, 150);
+	text-decoration: underline;
+}
+
+.quark-link.underlined:hover {
+    color: rgb(0, 0, 0);
 }
 
 .quark-button-group {

@@ -138,6 +138,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Open = function (dialog, confirm, data) {
+		dialog = dialog || $($(selector).attr('quark-dialog'));
+
 		that.Reset(dialog);
 
 		dialog.data('button', data);
@@ -150,6 +152,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Close = function (dialog, action) {
+		dialog = dialog || $($(selector).attr('quark-dialog'));
+
 		if (opt.close instanceof Function && opt.close(dialog, action) === false) return;
 
 		dialog.fadeOut(500);
@@ -628,6 +632,39 @@ Quark.Controls.Range = function (selector, opt) {
 				e.target.find('input[type="hidden"]').val(frame.value);
 			}
 		});
+	});
+};
+
+Quark.Controls.LocalizedInput = function (selector, opt) {
+	var that = this;
+
+	opt = opt || {};
+		opt.labels = opt.labels != undefined ? opt.labels : {'*': 'Any'};
+
+	that.Elem = $(selector);
+
+	that.Elem.each(function () {
+		var elem = $(this),
+			language = '',
+			languages = elem.attr('quark-languages'),
+			selected = elem.attr('quark-language'),
+			select = '<select class="quark-input quark-language-select">',
+			i = 0;
+
+		languages = languages == undefined ? [] : languages.split(',');
+		languages.unshift('*');
+
+		while (i < languages.length) {
+			select += '<option value="' + languages[i] + '"' + (languages[i] == selected ? ' selected="selected"' : '') + '>'
+					+ (opt.labels[languages[i]] != undefined ? opt.labels[languages[i]] : languages[i])
+					+ '</option>';
+
+			i++;
+		}
+
+		select += '</select>';
+
+		elem.after(select);
 	});
 };
 

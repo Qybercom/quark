@@ -28,7 +28,7 @@ class CloudPayments implements IQuarkPaymentProvider {
 	 * @param string $appSecret
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function PaymentProviderApplication ($appId, $appSecret, $ini) {
 		$this->user = $appId;
@@ -46,7 +46,7 @@ class CloudPayments implements IQuarkPaymentProvider {
 	 * @param \Quark\Extensions\Payment\IQuarkPaymentScenario $data
 	 * @param string $url
 	 *
-	 * @return QuarkHTTPClient
+	 * @return QuarkDTO
 	 */
 	public function API ($data, $url) {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());

@@ -1420,7 +1420,11 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	 * @return void
 	 */
 	public function EnvironmentOptions ($ini) {
-		// TODO: Implement EnvironmentOptions() method.
+		if (isset($ini->DefaultNotFoundStatus))
+			$this->DefaultNotFoundStatus($ini->DefaultNotFoundStatus);
+
+		if (isset($ini->DefaultServerErrorStatus))
+			$this->DefaultServerErrorStatus($ini->DefaultServerErrorStatus);
 	}
 
 	/**
@@ -3540,6 +3544,13 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function CurrentLanguage () {
+		return Quark::CurrentLanguage();
+	}
+
+	/**
 	 * @return QuarkModel|IQuarkApplicationSettingsModel
 	 */
 	public function ApplicationSettings () {
@@ -3562,6 +3573,13 @@ trait QuarkContainerBehavior {
 	 */
 	public function ConstByValue ($value) {
 		return QuarkObject::ClassConstByValue(get_class($this), $value);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function Constants () {
+		return QuarkObject::ClassConstants(get_called_class());
 	}
 
 	/**
@@ -3935,19 +3953,28 @@ class QuarkObject {
 	}
 
 	/**
-	 * @param string $class
+	 * @param string|object $class
 	 * @param $value
 	 *
 	 * @return mixed
 	 */
 	public static function ClassConstByValue ($class, $value) {
-		$reflection = new \ReflectionClass($class);
-		$defined = $reflection->getConstants();
+		$defined = self::ClassConstants($class);
 
 		foreach ($defined as $key => $const)
 			if ($const == $value) return $key;
 
 		return null;
+	}
+
+	/**
+	 * @param string|object $class
+	 *
+	 * @return array
+	 */
+	public static function ClassConstants ($class) {
+		$reflection = new \ReflectionClass($class);
+		return $reflection->getConstants();
 	}
 
 	/**
@@ -5949,6 +5976,7 @@ class QuarkModel implements IQuarkContainer {
 
 	const SORT_ASC = 1;
 	const SORT_DESC = -1;
+	const LIMIT_NO = '___limit_no___';
 
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior $_model = null
@@ -6646,6 +6674,10 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public static function Find (IQuarkModel $model, $criteria = [], $options = [], callable $after = null) {
 		$records = array();
+
+		if (isset($options[self::OPTION_LIMIT]) && $options[self::OPTION_LIMIT] == self::LIMIT_NO)
+			unset($options[self::OPTION_LIMIT]);
+
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
 		if ($raw != null)
@@ -10635,7 +10667,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$service = new QuarkService($url, new QuarkJSONIOProcessor(), new QuarkJSONIOProcessor());
 		}
 		catch (QuarkHTTPException $e) {
-			if ($this->_unknown != '')
+			if ($this->_unknown)
 				$service = new QuarkService($this->_unknown, new QuarkJSONIOProcessor(), new QuarkJSONIOProcessor());
 		}
 
@@ -10871,6 +10903,15 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		if (isset($ini->Controller))
 			$this->ControllerURI($ini->Controller);
+		
+		if (isset($ini->StreamConnect))
+			$this->StreamConnect($ini->StreamConnect);
+		
+		if (isset($ini->StreamClose))
+			$this->StreamClose($ini->StreamClose);
+		
+		if (isset($ini->StreamUnknown))
+			$this->StreamUnknown($ini->StreamUnknown);
 	}
 
 	/**
@@ -10972,7 +11013,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		echo '[cluster.node.client.connect] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
 
 		$this->_announce();
-		$this->_pipe($this->_connect, 'StreamConnect', $client);
+
+		if ($this->_connect)
+			$this->_pipe($this->_connect, 'StreamConnect', $client);
 	}
 
 	/**
@@ -10996,7 +11039,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		echo '[cluster.node.client.close] ', $client, ' -> ', $this->_cluster->Server(), "\r\n";
 
 		$this->_announce();
-		$this->_pipe($this->_connect, 'StreamClose', $client, null, $client->Session() ? $client->Session()->Extract() : null);
+
+		if ($this->_close)
+			$this->_pipe($this->_close, 'StreamClose', $client, null, $client->Session() ? $client->Session()->Extract() : null);
 	}
 
 	/**
@@ -11702,7 +11747,6 @@ class QuarkURI {
 class QuarkDTO {
 	const HTTP_VERSION_1_0 = 'HTTP/1.0';
 	const HTTP_VERSION_1_1 = 'HTTP/1.1';
-	const HTTP_VERSION_2_0 = 'HTTP/2.0';
 	const HTTP_PROTOCOL_REQUEST = '#^(.*) (.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
 	const HTTP_PROTOCOL_RESPONSE = '#^(.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
 

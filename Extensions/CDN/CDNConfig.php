@@ -40,7 +40,7 @@ class CDNConfig implements IQuarkExtensionConfig {
 		$this->appId = $id;
 		$this->appSecret = $secret;
 
-		$this->_provider->CDNApplication($this->appId, $this->appSecret);
+		$this->_provider->CDNApplication($this->appId, $this->appSecret, null);
 	}
 
 	/**
@@ -77,7 +77,7 @@ class CDNConfig implements IQuarkExtensionConfig {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ExtensionOptions ($ini) {
 		if (isset($ini->AppID))
@@ -85,6 +85,8 @@ class CDNConfig implements IQuarkExtensionConfig {
 
 		if (isset($ini->AppSecret))
 			$this->appSecret = $ini->AppSecret;
+
+		$this->_provider->CDNApplication($this->appId, $this->appSecret, $ini);
 	}
 
 	/**
