@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\AdminLTE;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\AdminLTE
  */
-class AdminLTESkin implements IQuarkViewResource, IQuarkForeignViewResource {
+class AdminLTESkin implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const ALL = '_all-skins';
 	const BLUE = 'skin-blue';
 	const BLUE_LIGHT = 'skin-blue-light';

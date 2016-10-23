@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\TwitterBootstrap\Plugins;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkCSSViewResourceType;
@@ -11,7 +11,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\TwitterBootstrap\Plugins
  */
-class TBSHoverDropdown implements IQuarkViewResource {
+class TBSHoverDropdown implements IQuarkSpecifiedViewResource {
 	private $_version = '';
 
 	/**

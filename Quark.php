@@ -4264,7 +4264,7 @@ class QuarkView implements IQuarkContainer {
 		$this->ResourceList();
 
 		/**
-		 * @var IQuarkViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource $resource
+		 * @var IQuarkViewResource|IQuarkSpecifiedViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource $resource
 		 */
 		foreach ($this->_resources as $resource) {
 			if ($resource instanceof IQuarkInlineViewResource) {
@@ -4275,8 +4275,9 @@ class QuarkView implements IQuarkContainer {
 				continue;
 			}
 
-			$type = $resource->Type();
+			if (!($resource instanceof IQuarkSpecifiedViewResource)) continue;
 
+			$type = $resource->Type();
 			if (!($type instanceof IQuarkViewResourceType)) continue;
 
 			$location = $resource->Location();
@@ -4340,8 +4341,8 @@ class QuarkView implements IQuarkContainer {
 		$this->_resources($buffer);
 
 		if ($this->_view instanceof IQuarkViewModelWithComponents) {
-			$this->_resource(QuarkProjectViewResource::CSS($this->_view->ViewStylesheet()));
-			$this->_resource(QuarkProjectViewResource::JS($this->_view->ViewController()));
+			$this->_resource(QuarkGenericViewResource::CSS($this->_view->ViewStylesheet()));
+			$this->_resource(QuarkGenericViewResource::JS($this->_view->ViewController()));
 		}
 
 		return $this->_resources;
@@ -4372,6 +4373,11 @@ class QuarkView implements IQuarkContainer {
 
 		if ($resource instanceof IQuarkViewResourceWithDependencies)
 			$this->_resource_dependencies($resource->Dependencies(), 'ViewResource ' . get_class($resource) . ' specified invalid value for `Dependencies`. Expected array of IQuarkViewResource.');
+
+		if ($resource instanceof IQuarkCombinedViewResource) {
+			$this->_resource(QuarkGenericViewResource::CSS($resource->LocationStylesheet()));
+			$this->_resource(QuarkGenericViewResource::JS($resource->LocationController()));
+		}
 
 		if (!$this->_resource_loaded($resource))
 			$this->_resources[] = $resource;
@@ -4414,13 +4420,12 @@ class QuarkView implements IQuarkContainer {
 		if ($dependency instanceof IQuarkMultipleViewResource) return false;
 
 		$class = get_class($dependency);
-		$location = $dependency->Location();
 
 		/**
 		 * @var IQuarkViewResource $resource
 		 */
 		foreach ($this->_resources as $resource)
-			if (get_class($resource) == $class && $resource->Location() == $location) return true;
+			if (get_class($resource) == $class) return true;
 
 		return false;
 	}
@@ -4550,8 +4555,8 @@ class QuarkView implements IQuarkContainer {
 				$this->_layout->_resources($this->_view->ViewLayoutResources());
 
 			if ($this->_view instanceof IQuarkViewModelWithLayoutComponents) {
-				$this->_layout->_resource(QuarkProjectViewResource::CSS($this->_view->ViewLayoutStylesheet()));
-				$this->_layout->_resource(QuarkProjectViewResource::JS($this->_view->ViewLayoutController()));
+				$this->_layout->_resource(QuarkGenericViewResource::CSS($this->_view->ViewLayoutStylesheet()));
+				$this->_layout->_resource(QuarkGenericViewResource::JS($this->_view->ViewLayoutController()));
 			}
 
 			$this->_layout->_resources($this->ResourceList());
@@ -4715,7 +4720,7 @@ class QuarkView implements IQuarkContainer {
 
 		foreach ($errors as $error)
 			if ($error->Key() == $field)
-				$out .= str_replace('{error}', $error->Value()->Of($this->_language), $template);
+				$out .= str_replace('{error}', $error->Value()->Of(Quark::CurrentLanguage()), $template);
 
 		return $out;
 	}
@@ -4940,7 +4945,14 @@ interface IQuarkViewModelWithProxySession extends IQuarkViewModel {
  *
  * @package Quark
  */
-interface IQuarkViewResource {
+interface IQuarkViewResource { }
+
+/**
+ * Interface IQuarkViewSpecifiedResource
+ *
+ * @package Quark
+ */
+interface IQuarkSpecifiedViewResource extends IQuarkViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -4950,6 +4962,7 @@ interface IQuarkViewResource {
 	 * @return string
 	 */
 	public function Location();
+
 }
 
 /**
@@ -4957,7 +4970,7 @@ interface IQuarkViewResource {
  *
  * @package Quark
  */
-interface IQuarkViewResourceWithDependencies {
+interface IQuarkViewResourceWithDependencies extends IQuarkViewResource {
 	/**
 	 * @return IQuarkViewResource[]
 	 */
@@ -4969,7 +4982,7 @@ interface IQuarkViewResourceWithDependencies {
  *
  * @package Quark
  */
-interface IQuarkViewResourceWithBackwardDependencies {
+interface IQuarkViewResourceWithBackwardDependencies extends IQuarkViewResource {
 	/**
 	 * @return IQuarkViewResource[]
 	 */
@@ -4981,7 +4994,7 @@ interface IQuarkViewResourceWithBackwardDependencies {
  *
  * @package Quark
  */
-interface IQuarkLocalViewResource {
+interface IQuarkLocalViewResource extends IQuarkViewResource {
 	/**
 	 * @return bool
 	 */
@@ -4993,7 +5006,7 @@ interface IQuarkLocalViewResource {
  *
  * @package Quark
  */
-interface IQuarkForeignViewResource {
+interface IQuarkForeignViewResource extends IQuarkViewResource {
 	/**
 	 * @return QuarkDTO
 	 */
@@ -5005,7 +5018,7 @@ interface IQuarkForeignViewResource {
  *
  * @package Quark
  */
-interface IQuarkInlineViewResource {
+interface IQuarkInlineViewResource extends IQuarkViewResource {
 	/**
 	 * @return string
 	 */
@@ -5017,14 +5030,31 @@ interface IQuarkInlineViewResource {
  *
  * @package Quark
  */
-interface IQuarkMultipleViewResource { }
+interface IQuarkMultipleViewResource extends IQuarkViewResource { }
 
 /**
- * Class QuarkProjectViewResource
+ * Interface IQuarkCombinedViewResource
  *
  * @package Quark
  */
-class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkMultipleViewResource {
+interface IQuarkCombinedViewResource extends IQuarkViewResource {
+	/**
+	 * @return string
+	 */
+	public function LocationStylesheet();
+
+	/**
+	 * @return string
+	 */
+	public function LocationController();
+}
+
+/**
+ * Class QuarkGenericViewResource
+ *
+ * @package Quark
+ */
+class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @var IQuarkViewResourceType $_type = null
 	 */
@@ -5041,14 +5071,21 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	private $_minimize = true;
 
 	/**
+	 * @var IQuarkViewResource[] $_dependencies = []
+	 */
+	private $_dependencies = array();
+
+	/**
 	 * @param string $location
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
 	 */
-	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true) {
+	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = []) {
 		$this->_location = $location;
 		$this->_type = $type;
 		$this->_minimize = $minimize;
+		$this->_dependencies = $dependencies;
 	}
 
 	/**
@@ -5073,30 +5110,41 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	}
 
 	/**
-	 * @param IQuarkViewResource|string $location
-	 *
-	 * @return QuarkProjectViewResource|IQuarkViewResource
+	 * @return IQuarkViewResource[]
 	 */
-	public static function CSS ($location) {
+	public function Dependencies () {
+		return $this->_dependencies;
+	}
+
+	/**
+	 * @param IQuarkViewResource|string $location
+	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
+	 */
+	public static function CSS ($location, $minimize = true, $dependencies = []) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkCSSViewResourceType())
+				: new self($location, new QuarkCSSViewResourceType(), $minimize, $dependencies)
 			);
 	}
 
 	/**
 	 * @param IQuarkViewResource|string $location
+	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
 	 *
-	 * @return QuarkProjectViewResource|IQuarkViewResource
+	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public static function JS ($location) {
+	public static function JS ($location, $minimize = true, $dependencies = []) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkJSViewResourceType())
+				: new self($location, new QuarkJSViewResourceType(), $minimize, $dependencies)
 			);
 	}
 }
@@ -5106,7 +5154,7 @@ class QuarkProjectViewResource implements IQuarkViewResource, IQuarkLocalViewRes
  *
  * @package Quark
  */
-class QuarkLocalCoreJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource {
+class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -5134,7 +5182,7 @@ class QuarkLocalCoreJSViewResource implements IQuarkViewResource, IQuarkLocalVie
  *
  * @package Quark
  */
-class QuarkLocalCoreCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource {
+class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -5265,11 +5313,11 @@ class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 }
 
 /**
- * Trait QuarkLexingViewResource
+ * Trait QuarkLexingViewResourceBehavior
  *
  * @package Quark
  */
-trait QuarkLexingViewResource {
+trait QuarkLexingViewResourceBehavior {
 	/**
 	 * @param string $content = ''
 	 * @param bool $full = false
@@ -5302,6 +5350,35 @@ trait QuarkLexingViewResource {
 	 */
 	public static function Styles ($content = '') {
 		return preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content);
+	}
+}
+
+/**
+ * Trait QuarkCombinedViewResource
+ *
+ * @package Quark
+ */
+trait QuarkCombinedViewResourceBehavior {
+	/**
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkGenericViewResource
+	 */
+	public function ViewResourceStylesheet ($minimize = true) {
+		return $this instanceof IQuarkCombinedViewResource
+			? QuarkGenericViewResource::CSS($this->LocationStylesheet(), $minimize)
+			: null;
+	}
+
+	/**
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkGenericViewResource
+	 */
+	public function ViewResourceController ($minimize = true) {
+		return $this instanceof IQuarkCombinedViewResource
+			? QuarkGenericViewResource::JS($this->LocationController(), $minimize)
+			: null;
 	}
 }
 
@@ -5355,6 +5432,7 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 		return '<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
 	}
 }
+
 /**
  * Interface IQuarkViewFragment
  *
@@ -7766,6 +7844,15 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param string $value = ''
+	 *
+	 * @return string
+	 */
+	public function Current ($value = '') {
+		return $this->Of(Quark::CurrentLanguage(), func_num_args() != 0 && is_scalar($value) ? $value : null);
+	}
+
+	/**
 	 * @return string
 	 */
 	public function ControlValue () {
@@ -7829,7 +7916,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Link ($raw) {
 		return new QuarkModel($this, array(
-			'values' => json_decode($raw),
+			'values' => json_decode(strlen($raw) != 0 && $raw[0] == '{' ? $raw : base64_decode($raw)),
 			'default' => $this->default
 		));
 	}

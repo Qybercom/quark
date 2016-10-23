@@ -196,6 +196,17 @@ Quark.CSS = function (selector) {
 };
 
 /**
+ * http://stackoverflow.com/a/6969486
+ *
+ * @param {string} str
+ *
+ * @return {string}
+ */
+Quark.EscapeRegEx = function (str) {
+	return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+};
+
+/**
  * http://stackoverflow.com/a/25840184/2097055
  */
 Quark.Base64 = {

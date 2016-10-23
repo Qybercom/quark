@@ -1,17 +1,16 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkPresenceControl;
 
-use Quark\IQuarkLocalViewResource;
+use Quark\IQuarkCombinedViewResource;
 use Quark\IQuarkViewModel;
 use Quark\IQuarkViewModelWithResources;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
-use Quark\QuarkCSSViewResourceType;
-
+use Quark\QuarkCombinedViewResourceBehavior;
 use Quark\QuarkViewBehavior;
 
+use Quark\ViewResources\jQuery\jQueryCore;
 use Quark\ViewResources\Quark\QuarkPresence\QuarkPresence;
 
 /**
@@ -19,21 +18,22 @@ use Quark\ViewResources\Quark\QuarkPresence\QuarkPresence;
  *
  * @package Quark\ViewResources\Quark\QuarkPresenceControl
  */
-class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies, IQuarkViewModel, IQuarkViewModelWithResources {
+class QuarkPresenceControl implements IQuarkCombinedViewResource, IQuarkViewResourceWithDependencies, IQuarkViewModel, IQuarkViewModelWithResources {
 	use QuarkViewBehavior;
+	use QuarkCombinedViewResourceBehavior;
 
 	/**
-	 * @return IQuarkViewResourceType
+	 * @return string
 	 */
-	public function Type () {
-		return new QuarkCSSViewResourceType();
+	public function LocationStylesheet () {
+		return __DIR__ . '/QuarkPresenceControl.css';
 	}
 
 	/**
 	 * @return string
 	 */
-	public function Location () {
-		return __DIR__ . '/QuarkPresenceControl.css';
+	public function LocationController () {
+		return __DIR__ . '/QuarkPresenceControl.js';
 	}
 
 	/**
@@ -41,6 +41,7 @@ class QuarkPresenceControl implements IQuarkViewResource, IQuarkLocalViewResourc
 	 */
 	public function Dependencies () {
 		return array(
+			new jQueryCore(),
 			new QuarkPresence()
 		);
 	}

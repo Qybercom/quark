@@ -2,6 +2,7 @@
 namespace Quark\ViewResources\HighlightJS;
 
 use Quark\IQuarkForeignViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithBackwardDependencies;
@@ -15,7 +16,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\HighlightJS
  */
-class HighlightJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithBackwardDependencies {
+class HighlightJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithBackwardDependencies {
 	const CURRENT_VERSION = '9.3.0';
 
 	/**

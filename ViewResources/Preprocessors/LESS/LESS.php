@@ -3,7 +3,6 @@ namespace Quark\ViewResources\Preprocessors\LESS;
 
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithBackwardDependencies;
 
 use Quark\Quark;
@@ -66,20 +65,6 @@ class LESS implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewRe
 			$less->Obfuscate();
 
 		return '<style type="text/css">' . $less->Content() . '</style>';
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

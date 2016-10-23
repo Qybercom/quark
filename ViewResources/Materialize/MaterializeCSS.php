@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Materialize;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -16,7 +17,7 @@ use Quark\ViewResources\Google\GoogleFont;
  *
  * @package Quark\ViewResources\Materialize
  */
-class MaterializeCSS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
+class MaterializeCSS implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = Materialize::CURRENT_VERSION
 	 */

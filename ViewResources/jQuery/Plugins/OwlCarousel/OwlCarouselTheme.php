@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\jQuery\Plugins\OwlCarousel;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkForeignViewResource;
 
@@ -13,7 +13,7 @@ use Quark\QuarkDTO;
  *
  * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
-class OwlCarouselTheme implements IQuarkViewResource, IQuarkForeignViewResource {
+class OwlCarouselTheme implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = OwlCarousel::CURRENT_VERSION
 	 */

@@ -2,12 +2,10 @@
 namespace Quark\ViewResources\Quark\QuarkNetwork;
 
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkMultipleViewResource;
 
-use Quark\QuarkJSViewResourceType;
 use Quark\QuarkStreamEnvironment;
 use Quark\QuarkURI;
 
@@ -36,20 +34,6 @@ class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, 
 
 		if ($stream != '');
 			$this->_stream = QuarkStreamEnvironment::ConnectionURI($stream);
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		return new QuarkJSViewResourceType();
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

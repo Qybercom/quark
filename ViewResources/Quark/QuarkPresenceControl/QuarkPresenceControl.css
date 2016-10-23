@@ -269,3 +269,14 @@ body .quark-button:hover {
 .presence-breadcrumb-delimiter {
 	font-size: 12px;
 }
+
+#presence-menu-side-controller {
+	display: none;
+	width: 100%;
+	color: rgb(150,150,150) !important;
+}
+
+#presence-menu-side-controller:hover {
+	background: rgb(240,240,240);
+	color: rgb(0,0,0);
+}

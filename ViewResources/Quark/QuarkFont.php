@@ -3,7 +3,6 @@ namespace Quark\ViewResources\Quark;
 
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 
 use Quark\Quark;
 
@@ -43,20 +42,6 @@ class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 		$this->_font = $font;
 		$this->_family = $family;
 		$this->_fallback = $fallback;
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\AdminLTE;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceWithBackwardDependencies;
@@ -21,7 +22,7 @@ use Quark\ViewResources\Quark\QuarkLegacyIESupport;
  *
  * @package Quark\ViewResources\AdminLTE
  */
-class AdminLTE implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithBackwardDependencies {
+class AdminLTE implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithBackwardDependencies {
 	const CURRENT_VERSION = '2.3.3';
 
 	/**

@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\Google;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkMultipleViewResource;
@@ -16,7 +16,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\Google
  */
-class GoogleFont implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
+class GoogleFont implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
 	const OPTION_SIZES = 'sizes';
 	const OPTION_SUBSETS = 'subsets';
 

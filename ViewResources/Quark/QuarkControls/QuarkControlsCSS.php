@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkControls;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkLocalViewResource;
 
@@ -12,7 +12,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\Quark\QuarkControls
  */
-class QuarkControlsCSS implements IQuarkViewResource, IQuarkLocalViewResource {
+class QuarkControlsCSS implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */

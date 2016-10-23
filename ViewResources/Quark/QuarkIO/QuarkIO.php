@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkIO;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkLocalViewResource;
@@ -16,7 +17,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\Quark\QuarkIO
  */
-class QuarkIO implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkIO implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */

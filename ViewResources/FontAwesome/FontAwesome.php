@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\FontAwesome;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\FontAwesome
  */
-class FontAwesome implements IQuarkViewResource, IQuarkForeignViewResource {
+class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '4.6.3';
 
 	/**

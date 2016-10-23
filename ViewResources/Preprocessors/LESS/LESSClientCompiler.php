@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\Preprocessors\LESS;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkForeignViewResource;
 
@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\Preprocessors\LESS
  */
-class LESSClientCompiler implements IQuarkViewResource, IQuarkForeignViewResource {
+class LESSClientCompiler implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.7.1';
 
 	/**

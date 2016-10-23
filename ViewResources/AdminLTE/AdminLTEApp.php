@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\AdminLTE;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\AdminLTE
  */
-class AdminLTEApp implements IQuarkViewResource, IQuarkForeignViewResource {
+class AdminLTEApp implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = AdminLTE::CURRENT_VERSION
 	 */

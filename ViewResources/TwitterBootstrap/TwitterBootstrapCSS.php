@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\TwitterBootstrap;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkForeignViewResource;
 
@@ -13,7 +13,7 @@ use Quark\QuarkDTO;
  *
  * @package Quark\ViewResources\TwitterBootstrap
  */
-class TwitterBootstrapCSS implements IQuarkViewResource, IQuarkForeignViewResource {
+class TwitterBootstrapCSS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
 	 */

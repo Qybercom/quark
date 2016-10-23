@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\jQuery\Plugins\OwlCarousel;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -16,7 +17,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
-class OwlCarouselJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
+class OwlCarouselJS implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = OwlCarousel::CURRENT_VERSION
 	 */

@@ -2,20 +2,20 @@
 namespace Quark\ViewResources\ShowdownJS;
 
 use Quark\IQuarkForeignViewResource;
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
-use Quark\QuarkLexingViewResource;
+use Quark\QuarkLexingViewResourceBehavior;
 
 /**
  * Class ShowdownJS
  *
  * @package Quark\ViewResources\ShowdownJS
  */
-class ShowdownJS implements IQuarkViewResource, IQuarkForeignViewResource {
-	use QuarkLexingViewResource;
+class ShowdownJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
+	use QuarkLexingViewResourceBehavior;
 
 	const CURRENT_VERSION = '1.4.0';
 

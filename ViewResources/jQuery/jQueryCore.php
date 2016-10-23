@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\jQuery;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\jQuery
  */
-class jQueryCore implements IQuarkViewResource, IQuarkForeignViewResource {
+class jQueryCore implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.2.4';
 
 	/**

@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Google;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -19,7 +20,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\Google
  */
-class GoogleMap implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class GoogleMap implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	const FORMAT_PNG = 'png';
 	const FORMAT_PNG8 = 'png8';
 	const FORMAT_PNG32 = 'png32';

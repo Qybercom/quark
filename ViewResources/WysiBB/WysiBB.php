@@ -2,12 +2,13 @@
 namespace Quark\ViewResources\WysiBB;
 
 use Quark\IQuarkForeignViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
-use Quark\QuarkLexingViewResource;
+use Quark\QuarkLexingViewResourceBehavior;
 
 use Quark\ViewResources\jQuery\jQueryCore;
 use Quark\ViewResources\WysiBB\Themes\DefaultTheme;
@@ -17,8 +18,8 @@ use Quark\ViewResources\WysiBB\Themes\DefaultTheme;
  *
  * @package Quark\ViewResources\WysiBB
  */
-class WysiBB implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
-	use QuarkLexingViewResource;
+class WysiBB implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkLexingViewResourceBehavior;
 
 	/**
 	 * @var IWysiBBTheme $_theme

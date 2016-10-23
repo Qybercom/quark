@@ -4,9 +4,7 @@ namespace Quark\ViewResources\ChartJS;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkMultipleViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
-use Quark\Quark;
 
 /**
  * Class ChartJSChart
@@ -69,20 +67,6 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 				. '$(\'' . $this->_selector . '\').each(function(){if(!$(this).is(\'canvas\'))throw new Error(\'Selector "' . $this->_selector . '" is not a canvas\');var chart' . self::$_id++ . '=new Chart($(this)[0].getContext(\'2d\')).'
 				. $this->_chart->ChartJSType() . '(' . json_encode($this->_chart->ChartJSData()) . ',' . json_encode($this->_options) . ');});'
 			 	. ($script ? '</script>' : '');
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

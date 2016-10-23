@@ -56,18 +56,4 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 			$this->_js
 		);
 	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
 }

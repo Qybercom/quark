@@ -2,6 +2,7 @@
 namespace Quark\ViewResources\Quark\QuarkPresence;
 
 use Quark\IQuarkLocalViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -15,7 +16,7 @@ use Quark\ViewResources\Quark\QuarkControls\QuarkControlsCSS;
  *
  * @package Quark\ViewResources\Quark\QuarkPresence
  */
-class QuarkPresenceControlsCSS implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkPresenceControlsCSS implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */

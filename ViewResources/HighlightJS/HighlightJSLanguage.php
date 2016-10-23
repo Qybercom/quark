@@ -3,7 +3,7 @@ namespace Quark\ViewResources\HighlightJS;
 
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkMultipleViewResource;
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
@@ -14,7 +14,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\HighlightJS
  */
-class HighlightJSLanguage implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
+class HighlightJSLanguage implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
 	const PHP = 'php';
 	const CSS = 'css';
 	const JAVASCRIPT = 'javascript';

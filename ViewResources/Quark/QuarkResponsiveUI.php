@@ -38,20 +38,6 @@ class QuarkResponsiveUI implements IQuarkViewResource, IQuarkLocalViewResource, 
 	/**
 	 * @return string
 	 */
-	public function Location () {
-		// TODO: Implement Location() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
 	public function HTML () {
 		return '<meta name="viewport" content="width=' . $this->_width . ', initial-scale=' . $this->_scale . '" />';
 	}

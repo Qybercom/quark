@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\MomentJS;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkForeignViewResource;
 
@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\MomentJS
  */
-class MomentJS implements IQuarkViewResource, IQuarkForeignViewResource {
+class MomentJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.13.0';
 
 	/**

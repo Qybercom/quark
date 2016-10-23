@@ -635,9 +635,18 @@ Quark.Controls.Range = function (selector, opt) {
 	});
 };
 
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
 Quark.Controls.LocalizedInput = function (selector, opt) {
 	var that = this,
-		_encode = function () {},
+		_encode = function (json) {
+			try { return Quark.Base64.Encode(JSON.stringify(json)); }
+			catch (e) { return null; }
+		},
 		_decode = function (json) {
 			try { return JSON.parse(Quark.Base64.Decode(json)); }
 			catch (e) { return null; }
@@ -654,7 +663,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			language = '',
 			languages = elem.attr('quark-languages'),
 			selected = elem.attr('quark-language'),
-			select = '<select class="quark-input quark-language-select">',
+			select = '<select class="quark-input quark-language-select" name="' + elem.attr('name') + '_language">',
 			json = _decode(val),
 			i = 0;
 
@@ -671,20 +680,43 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 		select += '</select>';
 
-		elem
-			.after(select)
-			.val(json != null && json[selected] != undefined ? json[selected] : '')
-			.data('_orig_val', val);
-	});
+		var copy = elem.clone();
+		copy
+			.attr('name', copy.attr('name') + '_localized')
+			.val(json != null && json[selected] != undefined ? json[selected] : '');
 
-		$(document).on('change', 'select.quark-language-select', function () {
-			var lang = $(this),
-				elem = lang.prev(selector),
-				json = _decode(elem.data('_orig_val')),
+		elem
+			.css('display', 'none')
+			.after(select)
+			.after(copy);
+
+		elem.parent().find('[name="' + elem.attr('name') + '_localized"]').on('change', function () {
+			var localized = $(this),
+				name = localized.attr('name').replace(/_localized$/, ''),
+				orig = localized.parent().find('[name="' + name + '"]'),
+				lang = orig.parent().find('[name="' + name + '_language"]'),
+				json = _decode(orig.val()),
 				selected = lang.val();
 
-			elem.val(json != null && json[selected] != undefined ? json[selected] : '');
+			if (json == null)
+				json = {};
+
+			json[selected] = localized.val();
+
+			orig.val(_encode(json));
 		});
+	});
+
+	$(document).on('change', 'select.quark-language-select', function () {
+		var lang = $(this),
+			name = lang.attr('name').replace(/_language$/, ''),
+			orig = lang.parent().find('[name="' + name + '"]'),
+			display = lang.parent().find('[name="' + orig.attr('name') + '_localized"]'),
+			json = _decode(orig.val()),
+			selected = lang.val();
+
+		display.val(json != null && json[selected] != undefined ? json[selected] : '');
+	});
 };
 
 Quark.Controls.Scrollable = function (selector, opt) {

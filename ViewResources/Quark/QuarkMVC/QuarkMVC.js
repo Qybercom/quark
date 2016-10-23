@@ -333,17 +333,9 @@ Quark.MVC.Template = function (selector, tags) {
 
 			content = tags[key].constructor == Object
 				? that._compile(content, tags[key], append + '.')
-				: content.replace(new RegExp('{' + that._escape(append) + '}', 'gim'), tags[key].toString());
+				: content.replace(new RegExp('{' + Quark.EscapeRegEx(append) + '}', 'gim'), tags[key].toString());
 		}
 
 		return content;
 	};
-
-    /**
-     * http://stackoverflow.com/a/6969486
-     * @private
-     */
-    that._escape = function (str) {
-        return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-    };
 };

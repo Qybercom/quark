@@ -1,11 +1,13 @@
 <?php
 namespace Quark\ViewResources\TwitterBootstrap\BSKit;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
+
 use Quark\ViewResources\TwitterBootstrap\Plugins\TBSHoverDropdown;
 use Quark\ViewResources\TwitterBootstrap\TwitterBootstrap;
 
@@ -14,7 +16,7 @@ use Quark\ViewResources\TwitterBootstrap\TwitterBootstrap;
  *
  * @package Quark\ViewResources\TwitterBootstrap\BSKit
  */
-class BSKit implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
+class BSKit implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @var string $_location
 	 */

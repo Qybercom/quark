@@ -3,7 +3,6 @@ namespace Quark\ViewResources\Quark;
 
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 
 /**
  * Class QuarkLegacyIESupport
@@ -31,20 +30,6 @@ class QuarkLegacyIESupport implements IQuarkViewResource, IQuarkInlineViewResour
 	public function __construct ($html5shiv = self::VERSION_HTML5SHIV, $respondJs = self::VERSION_RESPONDJS) {
 		$this->_html5shiv = $html5shiv;
 		$this->_respondJs = $respondJs;
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

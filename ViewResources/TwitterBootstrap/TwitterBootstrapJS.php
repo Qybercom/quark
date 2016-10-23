@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\TwitterBootstrap;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -16,7 +17,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\TwitterBootstrap
  */
-class TwitterBootstrapJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
+class TwitterBootstrapJS implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = TwitterBootstrap::CURRENT_VERSION
 	 */

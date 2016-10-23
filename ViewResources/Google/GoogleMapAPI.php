@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\Google;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\Google
  */
-class GoogleMapAPI implements IQuarkViewResource, IQuarkForeignViewResource {
+class GoogleMapAPI implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	/**
 	 * @var string $_key = ''
 	 */

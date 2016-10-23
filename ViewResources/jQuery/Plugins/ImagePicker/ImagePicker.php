@@ -2,7 +2,6 @@
 namespace Quark\ViewResources\jQuery\Plugins\ImagePicker;
 
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
 /**
@@ -23,20 +22,6 @@ class ImagePicker implements IQuarkViewResource, IQuarkViewResourceWithDependenc
 	 */
 	public function __construct ($version = self::CURRENT_VERSION) {
 		$this->_version = $version;
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

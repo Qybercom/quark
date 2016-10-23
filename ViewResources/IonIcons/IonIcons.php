@@ -1,7 +1,7 @@
 <?php
 namespace Quark\ViewResources\IonIcons;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResourceType;
 
@@ -13,7 +13,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\IonIcons
  */
-class IonIcons implements IQuarkViewResource, IQuarkForeignViewResource {
+class IonIcons implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const CURRENT_VERSION = '2.0.1';
 
 	/**

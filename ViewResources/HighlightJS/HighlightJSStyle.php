@@ -2,7 +2,7 @@
 namespace Quark\ViewResources\HighlightJS;
 
 use Quark\IQuarkForeignViewResource;
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
@@ -13,7 +13,7 @@ use Quark\QuarkCSSViewResourceType;
  *
  * @package Quark\ViewResources\HighlightJS
  */
-class HighlightJSStyle implements IQuarkViewResource, IQuarkForeignViewResource {
+class HighlightJSStyle implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	const STYLE_DEFAULT = 'default';
 	const STYLE_DARKULA = 'darkula';
 	const STYLE_GITHUB = 'github';

@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkGX;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -18,7 +19,7 @@ use Quark\ViewResources\Quark\QuarkUX\QuarkUX;
  *
  * @package Quark\ViewResources\Quark\QuarkGX
  */
-class QuarkGX implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies{
+class QuarkGX implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies{
 	/**
 	 * @return string
 	 */

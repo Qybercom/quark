@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Materialize;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -16,7 +17,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\Materialize
  */
-class MaterializeJS implements IQuarkViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
+class MaterializeJS implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
 	 * @var string $_version = Materialize::CURRENT_VERSION
 	 */

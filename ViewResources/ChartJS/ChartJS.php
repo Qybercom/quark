@@ -2,6 +2,7 @@
 namespace Quark\ViewResources\ChartJS;
 
 use Quark\IQuarkForeignViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
@@ -17,7 +18,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  *
  * @package Quark\ViewResources\ChartJS
  */
-class ChartJS implements IQuarkViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
+class ChartJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
 	const CURRENT_VERSION = '1.0.2';
 
 	/**

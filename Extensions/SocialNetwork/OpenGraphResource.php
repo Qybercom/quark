@@ -66,20 +66,6 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	}
 
 	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
 	 * @param string $property
 	 * @param string $content
 	 * @param string $key = self::KEY_PROPERTY
@@ -99,7 +85,7 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	public function App ($config) {
 		$extension = Quark::Config()->Extension($config);
 
-		return $extension instanceof SocialNetworkConfig ? $this->Property(self::PROPERTY_FB_APP_ID, $extension->appId) : '';
+		return $extension instanceof SocialNetworkConfig ? $this->Property(self::PROPERTY_FB_APP_ID, $extension->appId) : null;
 	}
 
 	/**

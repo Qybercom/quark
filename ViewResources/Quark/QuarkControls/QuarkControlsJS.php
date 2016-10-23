@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkControls;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -17,7 +18,7 @@ use Quark\ViewResources\Quark\QuarkUX\QuarkUX;
  *
  * @package Quark\ViewResources\Quark\QuarkControls
  */
-class QuarkControlsJS implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkControlsJS implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */

@@ -2,7 +2,7 @@
 namespace Quark\ViewResources\Quark\QuarkNetwork;
 
 use Quark\IQuarkLocalViewResource;
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkJSViewResourceType;
@@ -12,7 +12,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\Quark\QuarkNetwork
  */
-class QuarkNetwork implements IQuarkViewResource, IQuarkLocalViewResource {
+class QuarkNetwork implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */

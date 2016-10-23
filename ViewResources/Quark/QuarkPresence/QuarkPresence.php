@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Quark\QuarkPresence;
 
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
@@ -15,7 +16,7 @@ use Quark\ViewResources\Quark\QuarkUI;
  *
  * @package Quark\ViewResources\Quark\QuarkPresence
  */
-class QuarkPresence implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+class QuarkPresence implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return string
 	 */

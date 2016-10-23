@@ -3,7 +3,6 @@ namespace Quark\ViewResources\Quark;
 
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
 
 /**
  * Class QuarkMainMeta
@@ -28,20 +27,6 @@ class QuarkMainMeta implements IQuarkViewResource, IQuarkInlineViewResource {
 	public function __construct ($description = '', $keywords = []) {
 		$this->_description = $description;
 		$this->_keywords = $keywords;
-	}
-
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		// TODO: Implement Type() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		// TODO: Implement Location() method.
 	}
 
 	/**

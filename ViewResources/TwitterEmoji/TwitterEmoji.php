@@ -2,7 +2,7 @@
 namespace Quark\ViewResources\TwitterEmoji;
 
 use Quark\IQuarkForeignViewResource;
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
 
 use Quark\QuarkDTO;
@@ -15,7 +15,7 @@ use Quark\QuarkJSViewResourceType;
  *
  * @package Quark\ViewResources\TwitterEmoji
  */
-class TwitterEmoji implements IQuarkViewResource, IQuarkForeignViewResource {
+class TwitterEmoji implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
