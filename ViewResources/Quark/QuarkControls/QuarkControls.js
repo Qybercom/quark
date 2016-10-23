@@ -636,7 +636,12 @@ Quark.Controls.Range = function (selector, opt) {
 };
 
 Quark.Controls.LocalizedInput = function (selector, opt) {
-	var that = this;
+	var that = this,
+		_encode = function () {},
+		_decode = function (json) {
+			try { return JSON.parse(Quark.Base64.Decode(json)); }
+			catch (e) { return null; }
+		};
 
 	opt = opt || {};
 		opt.labels = opt.labels != undefined ? opt.labels : {'*': 'Any'};
@@ -645,10 +650,12 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 	that.Elem.each(function () {
 		var elem = $(this),
+			val = elem.val(),
 			language = '',
 			languages = elem.attr('quark-languages'),
 			selected = elem.attr('quark-language'),
 			select = '<select class="quark-input quark-language-select">',
+			json = _decode(val),
 			i = 0;
 
 		languages = languages == undefined ? [] : languages.split(',');
@@ -664,8 +671,20 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 		select += '</select>';
 
-		elem.after(select);
+		elem
+			.after(select)
+			.val(json != null && json[selected] != undefined ? json[selected] : '')
+			.data('_orig_val', val);
 	});
+
+		$(document).on('change', 'select.quark-language-select', function () {
+			var lang = $(this),
+				elem = lang.prev(selector),
+				json = _decode(elem.data('_orig_val')),
+				selected = lang.val();
+
+			elem.val(json != null && json[selected] != undefined ? json[selected] : '');
+		});
 };
 
 Quark.Controls.Scrollable = function (selector, opt) {

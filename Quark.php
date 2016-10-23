@@ -7766,6 +7766,13 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function ControlValue () {
+		return base64_encode(json_encode($this->values));
+	}
+
+	/**
 	 * @param array|object $dictionary = []
 	 * @param string $default = QuarkLanguage::ANY
 	 *
@@ -7801,7 +7808,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Fields () {
 		return array(
-			'values' => '',
+			'values' => new \stdClass(),
 			'default' => ''
 		);
 	}
@@ -7821,17 +7828,17 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkModel($this, json_decode($raw));
+		return new QuarkModel($this, array(
+			'values' => json_decode($raw),
+			'default' => $this->default
+		));
 	}
 
 	/**
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return json_encode(array(
-			'values' => $this->values,
-			'default' => $this->default
-		));
+		return json_encode($this->values);
 	}
 }
 
