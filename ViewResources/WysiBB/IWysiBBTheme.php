@@ -1,11 +1,11 @@
 <?php
 namespace Quark\ViewResources\WysiBB;
 
-use Quark\IQuarkViewResource;
+use Quark\IQuarkSpecifiedViewResource;
 
 /**
  * Interface IWysiBBTheme
  *
  * @package Quark\ViewResources\WysiBB
  */
-interface IWysiBBTheme extends IQuarkViewResource { }
+interface IWysiBBTheme extends IQuarkSpecifiedViewResource { }
