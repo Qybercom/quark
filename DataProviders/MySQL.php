@@ -2,6 +2,7 @@
 namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
+use Quark\IQuarkModelWithCustomPrimaryKey;
 use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
@@ -79,6 +80,10 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function Connect (QuarkURI $uri) {
 		$this->_uri = $uri;
+
+		if (!function_exists('mysqli_init'))
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, '[MySQL] Connection error: this PHP installation does not have configured MySQL extension');
+
 		$this->_connection = \mysqli_init();
 
 		if (!$this->_connection)
@@ -115,7 +120,12 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		return $this->_sql->Insert($model, $options);
+		$out = $this->_sql->Insert($model, $options);
+
+		$pk = $this->PrimaryKey($model)->Key();
+		$model->$pk = $this->_connection->insert_id;
+
+		return $out;
 	}
 
 	/**
@@ -156,7 +166,14 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return new QuarkKeyValuePair('id', 0);
+		$pk = 'id';
+
+		if ($model instanceof IQuarkModelWithCustomPrimaryKey) {
+			$_pk = $model->PrimaryKey();
+			$pk = $_pk !== null ? $_pk : $pk;
+		}
+
+		return new QuarkKeyValuePair($pk, 0);
 	}
 
 	/**

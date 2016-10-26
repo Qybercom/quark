@@ -51,6 +51,11 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	private $_sql;
 
 	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri;
+
+	/**
 	 * @param QuarkURI $uri
 	 *
 	 * @return void
@@ -58,6 +63,11 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
+		$this->_uri = $uri;
+
+		if (!function_exists('pg_connect'))
+			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, '[PostgreSQL] Connection error: this PHP installation does not have configured PostgreSQL extension');
+
 		$this->_connection = @\pg_connect(
 			'host=\'' . $uri->host . '\'' .
 			'port=\'' . $uri->port . '\'' .
@@ -80,7 +90,26 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		return $this->_sql->Insert($model, $options);
+		$epk = false;
+		$ppk = $this->PrimaryKey($model);
+		$pk = $ppk->Key();
+
+		if (!isset($options[QuarkSQL::OPTION_QUERY_REVIEWER])) {
+			$sign = Quark::GuID();
+			$model->$pk = $sign;
+			$epk = true;
+
+			$options[QuarkSQL::OPTION_QUERY_REVIEWER] = function ($query) use ($pk, $sign) {
+				return str_replace('\'' . $sign . '\'', 'default', $query) . ' RETURNING ' . $this->EscapeChar() . $pk . $this->EscapeChar();
+			};
+		}
+
+		$out = $this->_sql->Insert($model, $options);
+
+		if ($epk && $out)
+			$model->$pk = \pg_fetch_result($out, 0, $pk);
+
+		return $out;
 	}
 
 	/**
@@ -118,7 +147,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	/**
 	 * @param IQuarkModel $model
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
 		return new QuarkKeyValuePair('id', 0);
@@ -224,6 +253,9 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Query ($query, $options) {
+		if (!@\pg_ping($this->_connection))
+			$this->Connect($this->_uri);
+
 		$out = @\pg_query($this->_connection, $query . ';');
 
 		if (!$out)

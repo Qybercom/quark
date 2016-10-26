@@ -446,6 +446,15 @@ class Quark {
 	}
 
 	/**
+	 * @return string
+	 */
+	public static function CurrentLanguageFamily () {
+		return self::$_currentLanguage != QuarkLanguage::ANY && !preg_match('#[a-z]{2}\-[A-Z]{2}#Uis', self::$_currentLanguage)
+			? strtolower(self::$_currentLanguage) . '-' . strtoupper(self::$_currentLanguage)
+			: '';
+	}
+
+	/**
 	 * @param string $path
 	 * @param callable $process = null
 	 *
@@ -615,6 +624,11 @@ class QuarkConfig {
 	 * @var object $_localizationDictionary = null
 	 */
 	private $_localizationDictionary = null;
+
+	/**
+	 * @var bool $_localizationByFamily = true
+	 */
+	private $_localizationByFamily = true;
 
 	/**
 	 * @var array $_queues = []
@@ -1113,6 +1127,18 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param bool $localize = true
+	 *
+	 * @return bool
+	 */
+	public function LocalizationByFamily ($localize = true) {
+		if (func_num_args() != 0)
+			$this->_localizationByFamily = $localize;
+		
+		return $this->_localizationByFamily;
+	}
+
+	/**
 	 * @param string $key = ''
 	 * @param bool $strict = false
 	 *
@@ -1123,12 +1149,16 @@ class QuarkConfig {
 
 		$lang_current = Quark::CurrentLanguage();
 		$lang_any = QuarkLanguage::ANY;
+		$lang_family = Quark::CurrentLanguageFamily();
 
 		return isset($locale->$key->$lang_current)
 			? $locale->$key->$lang_current
-			: (!$strict && isset($locale->$key->$lang_any)
-				? $locale->$key->$lang_any
-				: ''
+			: (!$strict && $this->_localizationByFamily && isset($locale->$lang_family)
+				? $locale->$lang_family
+				: (!$strict && isset($locale->$key->$lang_any)
+					? $locale->$key->$lang_any
+					: ''
+				)
 			);
 	}
 
@@ -4152,11 +4182,6 @@ class QuarkView implements IQuarkContainer {
 	private $_theme = '';
 
 	/**
-	 * @var string $_languageExpected = QuarkLanguage::ANY
-	 */
-	private static $_languageExpected = QuarkLanguage::ANY;
-
-	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
 	 * @param QuarkDTO|object|array $vars = []
 	 * @param IQuarkViewResource[] $resources = []
@@ -4166,7 +4191,7 @@ class QuarkView implements IQuarkContainer {
 	public function __construct (IQuarkViewModel $view = null, $vars = [], $resources = []) {
 		if ($view == null) return;
 
-		$this->_language = self::$_languageExpected;
+		$this->_language = Quark::CurrentLanguage();
 		$this->_view = $view;
 		
 		$vars = $this->Vars($vars);
@@ -4177,6 +4202,9 @@ class QuarkView implements IQuarkContainer {
 		$this->Vars($this->_view);
 
 		$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
+		
+		if (Quark::Config()->LocalizationByFamily() && !is_file($this->_file))
+			$_file = $this->_file = $this->_localized_theme(Quark::CurrentLanguageFamily());
 		
 		if (!is_file($this->_file))
 			$_file = $this->_file = $this->_localized_theme(self::GENERIC_LOCALIZATION);
@@ -6575,6 +6603,9 @@ class QuarkModel implements IQuarkContainer {
 				return $out;
 		}
 
+		if ($model instanceof IQuarkModelWithDefaultExtract)
+			$fields = $model->DefaultExtract($fields, $weak);
+
 		foreach ($model as $key => $value) {
 			if ($key == '') continue;
 
@@ -6605,6 +6636,13 @@ class QuarkModel implements IQuarkContainer {
 				if (is_string($rule) && property_exists($output, $rule))
 					$buffer->$rule = QuarkObject::Property($output, $rule, null);
 			}
+		}
+
+		if ($model instanceof IQuarkModelWithAfterExtract) {
+			$out = $model->AfterExtract($buffer, $fields, $weak);
+
+			if ($out !== null)
+				return $out;
 		}
 
 		return $buffer;
@@ -7150,6 +7188,37 @@ interface IQuarkModelWithBeforeExtract {
 }
 
 /**
+ * Interface IQuarkModelWithAfterExtract
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterExtract {
+	/**
+	 * @param $output
+	 * @param $fields
+	 * @param $weak
+	 *
+	 * @return mixed
+	 */
+	public function AfterExtract($output, $fields, $weak);
+}
+
+/**
+ * Interface IQuarkModelWithDefaultExtract
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithDefaultExtract {
+	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
+	 * @return array
+	 */
+	public function DefaultExtract($fields, $weak);
+}
+
+/**
  * Interface IQuarkApplicationSettingsModel
  *
  * @package Quark
@@ -7278,6 +7347,14 @@ class QuarkField {
 
 	const TYPE_DATE = 'QuarkDate';
 	const TYPE_TIMESTAMP = '_timestamp';
+
+	const ASSERT_LESS_THEN = '$lt';
+	const ASSERT_LESS_THEN_OR_EQUAL = '$lte';
+	const ASSERT_EQUAL = '$eq';
+	const ASSERT_GREAT_THEN_OR_EQUAL = '$gte';
+	const ASSERT_GREAT_THEN = '$gt';
+	const ASSERT_IN = '$in';
+	const ASSERT_NOT_EQUAL = '$ne';
 
 	/**
 	 * @var QuarkKeyValuePair[] $_errors
@@ -7857,6 +7934,24 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function ControlValue () {
 		return base64_encode(json_encode($this->values));
+	}
+
+	/**
+	 * @param callable $assert = null
+	 *
+	 * @return bool
+	 */
+	public function Assert (callable $assert = null) {
+		if ($assert == null) return true;
+
+		$out = true;
+
+		foreach ($this->values as $value) {
+			$ok = $assert($value);
+			$out &= $ok === null ? true : $ok;
+		}
+
+		return $out;
 	}
 
 	/**
@@ -15645,7 +15740,9 @@ class QuarkOpenSSLCipher implements IQuarkEncryptionProtocol {
 class QuarkSQL {
 	const OPTION_AS = 'option.as';
 	const OPTION_SCHEMA_GENERATE_PRINT = 'option.schema_print';
-	const OPTION_DEBUG_QUERY = 'option.debug.query';
+	const OPTION_QUERY_TEST = 'option.query.test';
+	const OPTION_QUERY_DEBUG = 'option.query.debug';
+	const OPTION_QUERY_REVIEWER = 'option.query.reviewer';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
 
@@ -15730,10 +15827,22 @@ class QuarkSQL {
 			$i
 		);
 
-		if (isset($options[self::OPTION_DEBUG_QUERY]) && $options[self::OPTION_DEBUG_QUERY])
+		if (!isset($options[self::OPTION_QUERY_TEST]))
+			$options[self::OPTION_QUERY_TEST] = false;
+		
+		if (isset($options[self::OPTION_QUERY_REVIEWER])) {
+			$reviewer = $options[self::OPTION_QUERY_REVIEWER];
+			$query = is_callable($reviewer) ? $reviewer($query) : $query;
+		}
+		
+		$out = $test || $options[self::OPTION_QUERY_TEST]
+			? $query
+			: $this->_provider->Query($query, $options);
+
+		if (isset($options[self::OPTION_QUERY_DEBUG]) && $options[self::OPTION_QUERY_DEBUG])
 			Quark::Log('[QuarkSQL] Query: "' . $query . '"');
 
-		return $test ? $query : $this->_provider->Query($query, $options);
+		return $out;
 	}
 
 	/**

@@ -103,13 +103,13 @@
  * .quark-language-select
  */
 .quark-language-select {
-	width: 65px;
+	width: 65px !important;
     border: 0;
     outline: none;
-	vertical-align: top;
-	margin: 7px 0 0 1px;
+    vertical-align: top;
+    margin: 7px 0 0 1px;
     padding: 0 0 0 7px !important;
-    height: 20px;
+    height: 20px !important;
 }
 
 

@@ -74,7 +74,9 @@ textarea.quark-input {
 }
 
 select.quark-input {
-    padding: 7px 0 13px 7px;
+    padding: 7px 0 7px 7px;
+    width: 176px;
+	height: 36px;
 }
 
 button.quark-button {
