@@ -6071,6 +6071,7 @@ class QuarkModel implements IQuarkContainer {
 	const OPTION_EXTRACT = 'extract';
 	const OPTION_VALIDATE = 'validate';
 	const OPTION_EXPORT_SUB_MODEL = 'export_sub';
+	const OPTION_REVERSE = 'reverse';
 
 	const OPTION_USER_OPTIONS = '___user___';
 	const OPTION_FORCE_DEFINITION = '___force_definition___';
@@ -6799,6 +6800,9 @@ class QuarkModel implements IQuarkContainer {
 		if ($raw != null)
 			foreach ($raw as $item)
 				$records[] = self::_record($model, $item, $options, $after);
+
+		if (isset($options[self::OPTION_REVERSE]))
+			$records = array_reverse($records);
 
 		return isset($options[self::OPTION_EXTRACT])
 			? $records

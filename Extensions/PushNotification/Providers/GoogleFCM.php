@@ -11,7 +11,7 @@ use Quark\Extensions\PushNotification\Device;
  * @package Quark\Extensions\PushNotification\Providers
  */
 class GoogleFCM implements IQuarkPushNotificationProvider {
-	const TYPE = 'android_fcm';
+	const TYPE = 'fcm';
 
 	/**
 	 * @var Device[] $_devices = []
