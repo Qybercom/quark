@@ -18,6 +18,7 @@ use Quark\Extensions\PushNotification\Device;
 class GoogleGCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
 	const BULK_MAX = 1000;
+	const ERROR_NOT_REGISTERED = 'NotRegistered';
 
 	/**
 	 * @var Device[] $_devices = []
@@ -56,16 +57,16 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	}
 
 	/**
-	 * @param Device $device
+	 * @param Device &$device
 	 */
-	public function PNPDevice (Device $device) {
-		$this->_devices[] = $device->id;
+	public function PNPDevice (Device &$device) {
+		$this->_devices[] = $device;
 	}
 
 	/**
 	 * @return Device[]
 	 */
-	public function PNPDevices () {
+	public function &PNPDevices () {
 		return $this->_devices;
 	}
 
@@ -76,7 +77,11 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PNPSend($payload, $options = []) {
-		$size = sizeof($this->_devices);
+		$devices = array();
+		foreach ($this->_devices as $key => &$device)
+			$devices[$key] = $device->id;
+
+		$size = sizeof($devices);
 		if ($size == 0) return true;
 
 		$i = 0;
@@ -86,7 +91,7 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 			$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 			$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
 			$request->Data(array(
-				'registration_ids' => array_slice($this->_devices, $i * self::BULK_MAX, self::BULK_MAX),
+				'registration_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
 				'data' => $payload,
 			));
 
@@ -94,9 +99,21 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 
 			$out = QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response);
 
-			if (!$out || $out->success != 1) {
+			if (!$out || !isset($out->results) || !is_array($out->results) || $out->success == 0) {
 				Quark::Log('[GoogleGCM] Error during sending push notification. Google GCM response: ' . print_r($out, true));
 				return false;
+			}
+
+			foreach ($out->results as $key => $result) {
+				if (isset($result->error) && $result->error == self::ERROR_NOT_REGISTERED) {
+					$this->_devices[$key]->deleted = true;
+					continue;
+				}
+
+				if (isset($result->registration_id)) {
+					$this->_devices[$key]->id = $result->registration_id;
+					continue;
+				}
 			}
 
 			$i++;

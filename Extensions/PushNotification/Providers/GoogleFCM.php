@@ -50,16 +50,16 @@ class GoogleFCM implements IQuarkPushNotificationProvider {
 	}
 
 	/**
-	 * @param Device $device
+	 * @param Device &$device
 	 */
-	public function PNPDevice (Device $device) {
-		$this->_devices[] = $device->id;
+	public function PNPDevice (Device &$device) {
+		$this->_devices[] = $device;
 	}
 
 	/**
 	 * @return Device[]
 	 */
-	public function PNPDevices () {
+	public function &PNPDevices () {
 		return $this->_devices;
 	}
 

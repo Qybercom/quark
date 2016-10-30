@@ -75,7 +75,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	 * @param string $key
 	 * @param $value
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function PNPOption ($key, $value) {
 		switch ($key) {
@@ -97,9 +97,9 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
-	 * @param Device $device
+	 * @param Device &$device
 	 */
-	public function PNPDevice (Device $device) {
+	public function PNPDevice (Device &$device) {
 		if (!preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id)) {
 			Quark::Log('[AppleAPNS] Invalid device id "' . $device->id . '"', Quark::LOG_WARN);
 			return;
@@ -111,7 +111,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	/**
 	 * @return Device[]
 	 */
-	public function PNPDevices () {
+	public function &PNPDevices () {
 		return $this->_devices;
 	}
 
@@ -184,7 +184,7 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	public function PNPReset () {
 		$this->_devices = array();

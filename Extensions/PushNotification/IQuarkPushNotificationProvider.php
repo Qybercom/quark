@@ -26,12 +26,12 @@ interface IQuarkPushNotificationProvider {
 	/**
 	 * @param Device $device
 	 */
-	public function PNPDevice(Device $device);
+	public function PNPDevice(Device &$device);
 
 	/**
 	 * @return Device[]
 	 */
-	public function PNPDevices();
+	public function &PNPDevices();
 
 	/**
 	 * @param object|array $payload

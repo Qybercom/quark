@@ -61,6 +61,13 @@ class PushNotification implements IQuarkExtension {
 	}
 
 	/**
+	 * @return Device[]
+	 */
+	public function &Devices () {
+		return $this->_devices;
+	}
+
+	/**
 	 * @param IQuarkPushNotificationProvider $provider
 	 * @param array                          $options
 	 */

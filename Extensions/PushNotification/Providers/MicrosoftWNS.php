@@ -77,14 +77,14 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	/**
 	 * @param Device $device
 	 */
-	public function PNPDevice (Device $device) {
+	public function PNPDevice (Device &$device) {
 		$this->_devices[] = $device;
 	}
 
 	/**
 	 * @return Device[]
 	 */
-	public function PNPDevices () {
+	public function &PNPDevices () {
 		return $this->_devices;
 	}
 

@@ -29,6 +29,11 @@ class Device implements IQuarkModel, IQuarkModelWithAfterPopulate {
 	public $date = '';
 
 	/**
+	 * @var bool $deleted = false
+	 */
+	public $deleted = false;
+
+	/**
 	 * @param string $type = ''
 	 * @param string $id = ''
 	 * @param QuarkDate|string $date = ''
@@ -46,7 +51,8 @@ class Device implements IQuarkModel, IQuarkModelWithAfterPopulate {
 		return array(
 			'id' => '',
 			'type' => '',
-			'date' => QuarkDate::GMTNow()
+			'date' => QuarkDate::GMTNow(),
+			'deleted' => false
 		);
 	}
 
@@ -63,7 +69,7 @@ class Device implements IQuarkModel, IQuarkModelWithAfterPopulate {
 	/**
 	 * @param $raw
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function AfterPopulate ($raw) {
 		$raw = (object)$raw;
