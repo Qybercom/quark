@@ -17,6 +17,7 @@ use Quark\Extensions\PushNotification\Device;
  */
 class GoogleGCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'android';
+	const BULK_MAX = 1000;
 
 	/**
 	 * @var Device[] $_devices = []
@@ -75,22 +76,30 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PNPSend($payload, $options = []) {
-		if (sizeof($this->_devices) == 0) return true;
+		$size = sizeof($this->_devices);
+		if ($size == 0) return true;
 
-		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-		$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
-		$request->Data(array(
-			'registration_ids' => $this->_devices,
-			'data' => $payload,
-		));
+		$i = 0;
+		$queues = ceil($size / self::BULK_MAX);
 
-		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+		while ($i < $queues) {
+			$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+			$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
+			$request->Data(array(
+				'registration_ids' => array_slice($this->_devices, $i * self::BULK_MAX, self::BULK_MAX),
+				'data' => $payload,
+			));
 
-		$out = QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response);
+			$response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		if (!$out || $out->success != 1) {
-			Quark::Log('[GoogleGCM] Error during sending push notification. Google GCM response: ' . print_r($out, true));
-			return false;
+			$out = QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response);
+
+			if (!$out || $out->success != 1) {
+				Quark::Log('[GoogleGCM] Error during sending push notification. Google GCM response: ' . print_r($out, true));
+				return false;
+			}
+
+			$i++;
 		}
 
 		return true;
