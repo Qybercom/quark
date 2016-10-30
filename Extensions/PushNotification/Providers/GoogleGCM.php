@@ -99,10 +99,12 @@ class GoogleGCM implements IQuarkPushNotificationProvider {
 
 			$out = QuarkHTTPClient::To('https://android.googleapis.com/gcm/send', $request, $response);
 
-			if (!$out || !isset($out->results) || !is_array($out->results) || $out->success == 0) {
-				Quark::Log('[GoogleGCM] Error during sending push notification. Google GCM response: ' . print_r($out, true));
+			if (!$out || !isset($out->results) || !is_array($out->results)) {
+				Quark::Log('[GoogleGCM] Error during sending push notification. Google GCM response: ' . print_r($out, true), Quark::LOG_WARN);
 				return false;
 			}
+
+			Quark::Log('[GoogleGCM] Push notification sent. Results: [success:' . $out->success . ', failure:' . $out->failure . ', canonical:' . $out->canonical_ids . ']');
 
 			foreach ($out->results as $key => $result) {
 				if (isset($result->error) && $result->error == self::ERROR_NOT_REGISTERED) {
