@@ -5,25 +5,15 @@ use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
 use Quark\Quark;
-use Quark\QuarkCertificate;
 use Quark\QuarkDTO;
-use Quark\QuarkFormIOProcessor;
-use Quark\QuarkHTTPClient;
-use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
-use Quark\QuarkURI;
 
 /**
- * Class QuarkRelayAuth
+ * Class QuarkMicroServiceAuth
  *
  * @package Quark\AuthorizationProviders
  */
-class QuarkRelayAuth implements IQuarkAuthorizationProvider {
-	/**
-	 * @var string $-source = ''
-	 */
-	private $_source = '';
-
+class QuarkMicroServiceAuth implements IQuarkAuthorizationProvider {
 	/**
 	 * @var string $_appId = ''
 	 */
@@ -35,21 +25,12 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 	private $_appSecret = '';
 
 	/**
-	 * @var QuarkCertificate $_certificate
-	 */
-	private $_certificate;
-
-	/**
-	 * @param string $source = ''
 	 * @param string $appId = ''
 	 * @param string $appSecret = ''
-	 * @param QuarkCertificate $certificate = null
 	 */
-	public function __construct ($source = '', $appId = '', $appSecret = '', QuarkCertificate $certificate = null) {
-		$this->_source = $source;
+	public function __construct ($appId = '', $appSecret = '') {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
-		$this->_certificate = $certificate;
 	}
 
 	/**
@@ -60,37 +41,19 @@ class QuarkRelayAuth implements IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
-		$auth = $input->AuthorizationProvider();
-
-		if ($auth == null || $auth->Key() != $this->_appId) {
-			Quark::Log('[QuarkRelayAuth] Cannot init session. Application ID expected "' . $this->_appId . '" but received "' . $auth->Key() . '".');
+		if (!isset($input->appId)) {
+			Quark::Log('[QuarkMicroServiceAuth] Cannot init session. Client did not passed application ID.', Quark::LOG_WARN);
 			return null;
 		}
 
-		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
-		$request->Signature($input->Signature());
-
-		$query = QuarkURI::BuildQuery($this->_source, array(
-			'user' => $auth->Value(),
-			'session' => sha1($this->_appId . $auth->Value() . $this->_appSecret)
-		), true);
-
-		$response = new QuarkDTO(new QuarkJSONIOProcessor());
-
-		/**
-		 * @var QuarkDTO|\stdClass $session
-		 */
-		$session = QuarkHTTPClient::To($this->_source . $query, $request, $response, $this->_certificate);
-
-		if (!isset($session->status) || $session->status != 200 || !isset($session->user)) {
-			Quark::Log('[QuarkRelayAuth] Cannot get session from ' . $this->_source . '. Target endpoint response: ' . print_r($session, true));
+		if (!isset($input->appToken)) {
+			Quark::Log('[QuarkMicroServiceAuth] Cannot init session. Client did not passed application token.', Quark::LOG_WARN);
 			return null;
 		}
 
 		$output = new QuarkDTO();
-		$output->AuthorizationProvider($auth);
-		$output->Signature($input->Signature());
-		$output->Data($session->user);
+		$output->AuthorizationProvider(new QuarkKeyValuePair($input->appId, $input->appToken));
+		$output->Data($input->Data());
 
 		return $output;
 	}

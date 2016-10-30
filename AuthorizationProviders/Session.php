@@ -5,6 +5,7 @@ use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizableModelWithRuntimeFields;
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkModel;
+use Quark\IQuarkModelWithCustomCollectionName;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
@@ -30,19 +31,25 @@ use Quark\DataProviders\QuarkDNA;
  *
  * @package Quark\AuthorizationProviders
  */
-class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWithDataProvider {
+class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWithDataProvider, IQuarkModelWithCustomCollectionName {
 	const COOKIE_NAME = 'PHPSESSID';
 	const STORAGE = 'quark.session';
+	const COLLECTION = 'Session';
 
 	/**
-	 * @var string $_storage
+	 * @var string $_storage = self::STORAGE
 	 */
-	private $_storage = '';
+	private $_storage = self::STORAGE;
 
 	/**
 	 * @var string $_cookie = self::COOKIE_NAME
 	 */
 	private $_cookie = self::COOKIE_NAME;
+
+	/**
+	 * @var string $_collection = self::COLLECTION
+	 */
+	private $_collection = self::COLLECTION;
 
 	/**
 	 * @var bool $_init = false
@@ -52,10 +59,12 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	/**
 	 * @param string $storage = self::STORAGE
 	 * @param string $cookie = self::COOKIE_NAME
+	 * @param string $collection = self::COLLECTION
 	 */
-	public function __construct ($storage = self::STORAGE, $cookie = self::COOKIE_NAME) {
+	public function __construct ($storage = self::STORAGE, $cookie = self::COOKIE_NAME, $collection = self::COLLECTION) {
 		$this->_storage = $storage;
 		$this->_cookie = $cookie;
+		$this->_collection = $collection;
 		$this->_init = func_num_args() != 0;
 	}
 
@@ -183,7 +192,6 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields) {
 			$fields = $model->RuntimeFields();
-			var_dump($model);
 			$out = $session->user->ExportGeneric($model);
 
 			if (!isset($session->session))
@@ -204,6 +212,9 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	public function SessionOptions ($ini) {
 		if (isset($ini->DataProvider))
 			$this->_storage = $ini->DataProvider;
+
+		if (isset($ini->Collection))
+			$this->_collection = $ini->Collection;
 	}
 
 	/**
@@ -216,6 +227,13 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		}
 
 		return $this->_storage;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function CollectionName () {
+		return $this->_collection;
 	}
 
 	/**
