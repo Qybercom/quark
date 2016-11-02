@@ -508,11 +508,14 @@ class Quark {
 
 	/**
 	 * @param bool $args = false
+	 * @param bool $trace = true
 	 *
-	 * @return int|bool
+	 * @return array|int|bool
 	 */
-	public static function CallStack ($args = false) {
-		return self::Trace(debug_backtrace($args ? DEBUG_BACKTRACE_PROVIDE_OBJECT : DEBUG_BACKTRACE_IGNORE_ARGS));
+	public static function CallStack ($args = false, $trace = true) {
+		$stack = debug_backtrace($args ? DEBUG_BACKTRACE_PROVIDE_OBJECT : DEBUG_BACKTRACE_IGNORE_ARGS);
+
+		return $trace ? self::Trace($stack) : $stack;
 	}
 
 	/**
@@ -870,7 +873,7 @@ class QuarkConfig {
 		else {
 			$settings = $this->_settingsApp;
 
-			Quark::Log('[QuarkConfig::_loadSettings] Load criteria for ApplicationSettings is null, so default ' . get_class($this->_settingsApp) . ' model returned');
+			Quark::Log('[QuarkConfig::_loadSettings] Load criteria for ApplicationSettings is null, so default ' . get_class($this->_settingsApp->Model()) . ' model returned');
 		}
 
 		if ($settings == null || !($settings->Model() instanceof IQuarkApplicationSettingsModel)) return false;
@@ -6096,6 +6099,11 @@ class QuarkModel implements IQuarkContainer {
 	private $_errors = array();
 
 	/**
+	 * @var bool $_default = false
+	 */
+	private $_default = false;
+
+	/**
 	 * @var QuarkKeyValuePair[] $_errorFlux
 	 */
 	private static $_errorFlux = array();
@@ -6111,8 +6119,10 @@ class QuarkModel implements IQuarkContainer {
 		 */
 		$this->_model = clone $model;
 
-		if (func_num_args() == 1)
+		if (func_num_args() == 1) {
 			$source = $model;
+			$this->_default = true;
+		}
 
 		if ($source instanceof QuarkModel)
 			$source = $source->Model();
@@ -6234,7 +6244,7 @@ class QuarkModel implements IQuarkContainer {
 			if ($out === false) return $this;
 		}
 
-		$this->_model = self::_import($this->_model, $source);
+		$this->_model = self::_import($this->_model, $source, $this->_default);
 
 		if ($this->_model instanceof IQuarkModelWithAfterPopulate) {
 			$out = $this->_model->AfterPopulate($source);
@@ -6331,6 +6341,9 @@ class QuarkModel implements IQuarkContainer {
 		if (func_num_args() == 1 || (!is_array($fields) && !is_object($fields)))
 			$fields = $model->Fields();
 
+		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
+			$fields = array_replace($fields, (array)$model->RuntimeFields());
+
 		$output = clone $model;
 
 		if (!is_array($fields) && !is_object($fields)) return $output;
@@ -6362,10 +6375,11 @@ class QuarkModel implements IQuarkContainer {
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $source
+	 * @param bool $default = false
 	 *
 	 * @return IQuarkModel|QuarkModelBehavior
 	 */
-	private static function _import (IQuarkModel $model, $source) {
+	private static function _import (IQuarkModel $model, $source, $default = false) {
 		if (!is_array($source) && !is_object($source)) return $model;
 
 		$fields = (array)$model->Fields();
@@ -6373,7 +6387,7 @@ class QuarkModel implements IQuarkContainer {
 		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
 			$fields = array_replace($fields, (array)$model->RuntimeFields());
 
-		if ($model instanceof IQuarkModelWithDataProvider && ($model instanceof IQuarkModelWithManageableDataProvider ? $model->DataProviderForSubModel($source) : true)) {
+		if (!$default && $model instanceof IQuarkModelWithDataProvider && ($model instanceof IQuarkModelWithManageableDataProvider ? $model->DataProviderForSubModel($source) : true)) {
 			/**
 			 * @var IQuarkModel $model
 			 */
@@ -6389,7 +6403,6 @@ class QuarkModel implements IQuarkContainer {
 
 		foreach ($source as $key => $value) {
 			if ($key == '') continue;
-
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			$property = QuarkObject::Property($fields, $key, $value);
