@@ -386,7 +386,11 @@ Quark.Controls.DynamicList = function (selector, opt) {
 	});
 
 	$(document).on('click', '.quark-list-item .item-remove', function (e) {
-		$(this).parents('.quark-list-item').remove();
+		var item = $(this).parents('.quark-list-item'),
+			remove = opt.remove instanceof Function ? opt.remove(item, e) : true;
+
+		if (remove)
+			item.remove();
 
 		if (opt.preventDefault)
 			return false;
@@ -441,7 +445,9 @@ Quark.Controls.Toggle = function (selector, opt) {
 		var input = elem.find('input[type="hidden"]');
 
 		if (input.length == 0)
-			elem.append('<input type="hidden" name="' + name + '" value="' + (enabled ? 'on' : 'off') + '" />');
+			input = elem
+				.append('<input type="hidden" name="' + name + '" value="' + (enabled ? 'on' : 'off') + '" />')
+				.find('input[type="hidden"]');
 
 		input.val(enabled ? 'on' : 'off');
 	};
@@ -457,11 +463,12 @@ Quark.Controls.Toggle = function (selector, opt) {
 	});
 
 	that.Elem.each(function () {
-		var val = $(this).attr('quark-enabled'),
+		var elem = $(this),
+			val = elem.attr('quark-enabled'),
 			enabled = val == 'true' || val == '1';
 
-		that._attr(enabled, $(this));
-		$(this).html(enabled ? opt.enabled.html : opt.disabled.html);
+		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
+		that._attr(enabled, elem);
 	});
 
 	/**

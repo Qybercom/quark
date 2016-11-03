@@ -4356,14 +4356,12 @@ class QuarkView implements IQuarkContainer {
 			$this->_resources = array();
 		}
 
-		if ($this->_view instanceof IQuarkViewModelWithProxySession) {
-			$var = $this->_view->ViewProxySessionVariable();
+		if ($this->_view instanceof IQuarkViewModelWithVariableProxy) {
+			$vars = $this->_view->ViewVariableProxy($this->_vars);
 
-			$this->_resource(QuarkProxyJSViewResource::ForSession(
-				$this->User(),
-				$this->_view->ViewProxySessionExtractFields(),
-				$var === null ? QuarkProxyJSViewResource::PROXY_SESSION_VAR : $var
-			));
+			if (QuarkObject::isTraversable($vars))
+				foreach ($vars as $key => $value)
+					$this->_resource(new QuarkProxyJSViewResource($key, $value instanceof QuarkModel ? $value->Extract() : $value));
 		}
 		
 		if ($this->_view instanceof IQuarkViewModelWithResources)
@@ -4955,20 +4953,17 @@ interface IQuarkViewModelWithVariableDiscovering extends IQuarkViewModel {
 }
 
 /**
- * Interface IQuarkViewModelWithProxySession
+ * Interface IQuarkViewModelWithVariableProxy
  *
  * @package Quark
  */
-interface IQuarkViewModelWithProxySession extends IQuarkViewModel {
+interface IQuarkViewModelWithVariableProxy extends IQuarkViewModel {
 	/**
-	 * @return string
+	 * @param $vars
+	 *
+	 * @return mixed
 	 */
-	public function ViewProxySessionVariable();
-
-	/**
-	 * @return array
-	 */
-	public function ViewProxySessionExtractFields();
+	public function ViewVariableProxy($vars);
 }
 
 /**
@@ -5277,7 +5272,7 @@ trait QuarkInlineViewResource {
  *
  * @package Quark
  */
-class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
 	use QuarkInlineViewResource;
 
 	/**
@@ -5293,7 +5288,7 @@ class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewR
  *
  * @package Quark
  */
-class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
 	use QuarkInlineViewResource;
 
 	/**
@@ -5310,7 +5305,7 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
  *
  * @package Quark
  */
-class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
 	const PROXY_SESSION_VAR = 'session_user';
 
 	use QuarkInlineViewResource;
@@ -5320,7 +5315,7 @@ class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	 * @param $value
 	 */
 	public function __construct ($var, $value) {
-		$this->_code = 'var ' . $var . '=' . \json_encode($value);
+		$this->_code = 'var ' . $var . '=' . \json_encode($value) . ';';
 	}
 
 	/**
@@ -7955,20 +7950,29 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 
 	/**
 	 * @param callable $assert = null
+	 * @param callable $onEmpty = null
 	 *
 	 * @return bool
 	 */
-	public function Assert (callable $assert = null) {
+	public function Assert (callable $assert = null, callable $onEmpty = null) {
 		if ($assert == null) return true;
 
 		$out = true;
+		$empty = true;
+		$_empty = null;
 
-		foreach ($this->values as $value) {
-			$ok = $assert($value);
+		foreach ($this->values as $language => $value) {
+			$ok = $assert($value, $language);
 			$out &= $ok === null ? true : $ok;
+			$empty = false;
 		}
 
-		return $out;
+		if ($empty && $onEmpty != null) {
+			$_empty = $onEmpty();
+			$_empty = $_empty === null ? true : $_empty;
+		}
+
+		return $empty && $onEmpty != null ? $_empty : $out;
 	}
 
 	/**
@@ -8008,18 +8012,14 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	public function Fields () {
 		return array(
 			'values' => new \stdClass(),
-			'default' => ''
+			'default' => QuarkLanguage::ANY
 		);
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
-	public function Rules () {
-		return array(
-			QuarkField::is($this->default, QuarkField::TYPE_STRING)
-		);
-	}
+	public function Rules () { }
 
 	/**
 	 * @param $raw
