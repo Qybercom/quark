@@ -154,7 +154,8 @@ button.quark-button {
 }
 
 .quark-message.info {
-    border: 1px solid #CDD9FF;
+	background: rgba(205,217,255,0.3);
+    /*border: 1px solid #CDD9FF;*/
 }
 
 .quark-message.info:before {
@@ -162,8 +163,8 @@ button.quark-button {
 }
 
 .quark-message.warn {
-    /*border: 1px solid #E8E8AD;*/
-    border: 1px solid rgb(211, 190, 2);
+	background: rgba(211,190,2,0.3);
+    /*border: 1px solid rgb(211, 190, 2);*/
 }
 
 .quark-message.warn:before {
@@ -171,25 +172,25 @@ button.quark-button {
 }
 
 .quark-message.fatal {
-    border: 1px solid #ff9960;
+	background: rgba(255,153,96,0.3);
+    /*border: 1px solid #ff9960;*/
 }
 
 .quark-message.fatal:before {
-    /*border: 1px solid #ffceaf;*/
     color: #ff9960;
 }
 
 .quark-message.question {
-    border: 1px solid rgb(230, 230, 230);
+    background: rgba(230,230,230,0.3);
+    /*border: 1px solid rgb(230, 230, 230);*/
 }
 
 .quark-message.ok {
-    /*border: 1px solid rgb(167, 255, 167);*/
-    border: 1px solid rgb(1, 165, 1);
+	background: rgba(1,165,1,0.3);
+    /*border: 1px solid rgb(1, 165, 1);*/
 }
 
 .quark-message.ok:before {
-    /*border: 1px solid rgb(167, 255, 167);*/
     color: rgb(1, 165, 1);
 }
 
