@@ -6344,11 +6344,12 @@ class QuarkModel implements IQuarkContainer {
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
 		foreach ($fields as $key => &$field) {
-			if ($key == '') continue;
 			if (is_int($key) && $field instanceof QuarkKeyValuePair) {
 				$fields[$field->Key()] = $field->Value();
 				unset($fields[$key]);
 			}
+
+			if ($key == '') continue;
 
 			if (isset($model->$key)) {
 				if (is_scalar($field) && is_scalar($model->$key))
@@ -6440,7 +6441,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return IQuarkModel|QuarkModelBehavior|bool
 	 */
 	private static function _export (IQuarkModel $model, $options = []) {
-		$fields = $model->Fields();
+		$fields = self::_normalizeFields($model);
 		$forceDefinition = isset($options[self::OPTION_FORCE_DEFINITION]) && $options[self::OPTION_FORCE_DEFINITION];
 
 		if (!isset($options[self::OPTION_VALIDATE]))
@@ -6490,6 +6491,26 @@ class QuarkModel implements IQuarkContainer {
 		return $value instanceof IQuarkLinkedModel
 			? $value->Unlink()
 			: (is_callable($property) ? $property($key, $value, false) : $value);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 *
+	 * @return mixed
+	 */
+	private static function _normalizeFields (IQuarkModel $model) {
+		$fields = $model->Fields();
+
+		if (!QuarkObject::isTraversable($fields)) return $fields;
+
+		foreach ($fields as $key => &$field) {
+			if (!is_int($key) || (!$field instanceof QuarkKeyValuePair)) continue;
+
+			$fields[$field->Key()] = $field->Value();
+			unset($fields[$key]);
+		}
+		
+		return $fields;
 	}
 
 	/**
