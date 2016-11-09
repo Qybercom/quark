@@ -420,6 +420,15 @@ class Quark {
 	}
 
 	/**
+	 * @param IQuarkPrimitive $primitive
+	 *
+	 * @return IQuarkContainer|null
+	 */
+	public static function ContainerOfInstance (IQuarkPrimitive $primitive) {
+		return self::ContainerOf(spl_object_hash($primitive));
+	}
+
+	/**
 	 * Free associated containers
 	 */
 	public static function ContainerFree () {
@@ -5864,6 +5873,36 @@ trait QuarkModelBehavior {
 	public function Source () {
 		return $this->__call('Source', func_get_args());
 	}
+	
+	/**
+	 * @return bool[]
+	 */
+	public function ValidationRules () {
+		return $this->__call('ValidationRules', func_get_args());
+	}
+
+	/**
+	 * @return QuarkKeyValuePair[]
+	 */
+	public function RawValidationErrors () {
+		return $this->__call('RawValidationErrors', func_get_args());
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string[]
+	 */
+	public function ValidationErrors ($language = QuarkLanguage::ANY) {
+		return $this->__call('ValidationErrors', func_get_args());
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function Operation () {
+		return $this->__call('Operation', func_get_args());
+	}
 
 	/**
 	 * @return IQuarkModel
@@ -6099,6 +6138,11 @@ class QuarkModel implements IQuarkContainer {
 	private $_default = false;
 
 	/**
+	 * @var string $_op = ''
+	 */
+	private $_op = '';
+
+	/**
 	 * @var QuarkKeyValuePair[] $_errorFlux
 	 */
 	private static $_errorFlux = array();
@@ -6198,7 +6242,7 @@ class QuarkModel implements IQuarkContainer {
 	 *
 	 * @return IQuarkModel|QuarkModelBehavior
 	 */
-	public function Model ($model = null) {
+	public function &Model ($model = null) {
 		if (func_num_args() != 0)
 			$this->_model = $model;
 
@@ -6339,7 +6383,7 @@ class QuarkModel implements IQuarkContainer {
 		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
 			$fields = array_replace($fields, (array)$model->RuntimeFields());
 
-		$output = clone $model;
+		$output = $model;
 
 		if (!is_array($fields) && !is_object($fields)) return $output;
 
@@ -6524,7 +6568,7 @@ class QuarkModel implements IQuarkContainer {
 
 		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
 
-		$output = clone $model;
+		$output = $model;
 
 		if ($model instanceof IQuarkStrongModel) {
 			$fields = (array)$model->Fields();
@@ -6544,7 +6588,7 @@ class QuarkModel implements IQuarkContainer {
 
 		if ($output instanceof IQuarkModelWithBeforeValidate && $output->BeforeValidate() === false) return false;
 
-		$valid = $check ? QuarkField::Rules($output->Rules()) : $output->Rules();
+		$valid = $check ? QuarkField::Rules($model->Rules()) : $model->Rules();
 		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
 		
 		foreach ($output as $key => $value) {
@@ -6717,6 +6761,13 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function Operation () {
+		return $this->_op;
+	}
+
+	/**
 	 * @param string $name
 	 *
 	 * @return mixed
@@ -6735,6 +6786,7 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	private function _op ($name, $options = []) {
 		$name = ucfirst(strtolower($name));
+		$this->_op = $name;
 
 		$hook = 'Before' . $name;
 		$ok = QuarkObject::is($this->_model, 'Quark\IQuarkModelWith' . $hook)
@@ -6743,8 +6795,9 @@ class QuarkModel implements IQuarkContainer {
 
 		if ($ok !== null && !$ok) return false;
 
-		$model = self::_export(clone $this->_model, $options);
+		$model = self::_export($this->_model, $options);
 		$this->_errors = self::$_errorFlux;
+		$this->_op = '';
 
 		if (!$model) return false;
 
@@ -7802,11 +7855,22 @@ class QuarkField {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $field
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
 	 *
 	 * @return bool
 	 */
-	public static function Unique (IQuarkModel $model, $field) {
-		return QuarkModel::Count($model, array($field => $model->$field)) == 0;
+	public static function Unique (IQuarkModel $model, $field, $op = [QuarkModel::OPERATION_CREATE]) {
+		/**
+		 * @var QuarkModel $container
+		 */
+		$container = Quark::ContainerOfInstance($model);
+
+		if ($container == null) {
+			Quark::Log('[QuarkField::Unique] Cannot get container of given model instance of ' . get_class($model), Quark::LOG_WARN);
+			return false;
+		}
+		
+		return in_array($container->Operation(), $op) ? QuarkModel::Count($model, array($field => $model->$field)) == 0 : true;
 	}
 
 	/**

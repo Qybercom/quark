@@ -39,8 +39,6 @@ class MicroServiceConfig implements IQuarkExtensionConfig {
 		$this->_provider = $provider;
 		$this->appId = $id;
 		$this->appSecret = $secret;
-
-		$this->_provider->MicroServiceApplication($this->appId, $this->appSecret);
 	}
 
 	/**
