@@ -3577,6 +3577,15 @@ trait QuarkContainerBehavior {
 
 	/**
 	 * @param string $key = ''
+	 *
+	 * @return object
+	 */
+	public function LocalizationDictionaryOf ($key = '') {
+		return Quark::Config()->LocalizationDictionaryOf($key);
+	}
+
+	/**
+	 * @param string $key = ''
 	 * @param bool $strict = false
 	 *
 	 * @return string
@@ -3609,6 +3618,15 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @param string $name = ''
+	 *
+	 * @return QuarkURI
+	 */
+	public function StreamConnectionURI ($name = '') {
+		return QuarkStreamEnvironment::ConnectionURI($name);
+	}
+
+	/**
 	 * @param string $value
 	 *
 	 * @return mixed
@@ -3621,6 +3639,13 @@ trait QuarkContainerBehavior {
 	 * @return array
 	 */
 	public function Constants () {
+		return QuarkObject::ClassConstants(get_called_class());
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function ClassConstants () {
 		return QuarkObject::ClassConstants(get_called_class());
 	}
 

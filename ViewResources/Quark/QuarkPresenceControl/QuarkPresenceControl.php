@@ -12,6 +12,7 @@ use Quark\QuarkViewBehavior;
 
 use Quark\ViewResources\jQuery\jQueryCore;
 use Quark\ViewResources\Quark\QuarkPresence\QuarkPresence;
+use Quark\ViewResources\Quark\QuarkUX\QuarkUX;
 
 /**
  * Class QuarkPresenceControl
@@ -42,7 +43,8 @@ class QuarkPresenceControl implements IQuarkCombinedViewResource, IQuarkViewReso
 	public function Dependencies () {
 		return array(
 			new jQueryCore(),
-			new QuarkPresence()
+			new QuarkPresence(),
+			new QuarkUX()
 		);
 	}
 
