@@ -144,6 +144,15 @@ body .quark-button:hover {
     width: auto;
 }
 
+.presence-block.wide {
+    max-width: 1200px;
+}
+
+.presence-block.large {
+    max-width: 1000px;
+}
+
+
 .presence-block.main {
     max-width: 700px;
 }
