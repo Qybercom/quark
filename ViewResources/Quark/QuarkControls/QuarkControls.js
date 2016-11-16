@@ -709,8 +709,12 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 				json = {};
 
 			json[selected] = localized.val();
+			var val = _encode(json);
 
-			orig.val(_encode(json));
+			if (opt.change instanceof Function)
+				opt.change(json[selected], json ,val);
+
+			orig.val(val);
 		});
 	});
 
@@ -720,10 +724,39 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			orig = lang.parent().find('[name="' + name + '"]'),
 			display = lang.parent().find('[name="' + orig.attr('name') + '_localized"]'),
 			json = _decode(orig.val()),
-			selected = lang.val();
+			selected = lang.val(),
+			val = json != null && json[selected] != undefined ? json[selected] : '';
 
-		display.val(json != null && json[selected] != undefined ? json[selected] : '');
+		if (opt.localize instanceof Function)
+			opt.localize(selected, val);
+
+		display.val(val);
 	});
+
+	that.Localize = function (language, value, selector) {
+		$(selector || that.Elem).each(function () {
+			var elem = $(this),
+				name = elem.attr('name'),
+				lang = elem.parent().find('[name="' + name + '_language"]'),
+				display = elem.parent().find('[name="' + name + '_localized"]'),
+				json = _decode(elem.val());
+
+			language = language || lang.val();
+
+			if (value != undefined) {
+				json[language] = value;
+				elem.val(_encode(json));
+			}
+
+			var val = json != null && json[language] != undefined ? json[language] : '';
+
+			if (opt.localize instanceof Function && opt.localizeSelf)
+				opt.localize(language, val);
+
+			lang.val(language);
+			display.val(val);
+		});
+	};
 };
 
 Quark.Controls.Scrollable = function (selector, opt) {

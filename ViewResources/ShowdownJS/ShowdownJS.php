@@ -82,6 +82,13 @@ class ShowdownJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 	public static function ToHTML ($content = '', $full = false, $css = '') {
 		$content = "\r\n" . $content . "\r\n";
 
+		$content = preg_replace('#\#\#\#\#\#\#(.*)\n#', '<h6>$1</h6>', $content);
+		$content = preg_replace('#\#\#\#\#\#(.*)\n#', '<h5>$1</h5>', $content);
+		$content = preg_replace('#\#\#\#\#(.*)\n#', '<h4>$1</h4>', $content);
+		$content = preg_replace('#\#\#\#(.*)\n#', '<h3>$1</h3>', $content);
+		$content = preg_replace('#\#\#(.*)\n#', '<h2>$1</h2>', $content);
+		$content = preg_replace('#\#(.*)\n#', '<h1>$1</h1>', $content);
+
 		$content = preg_replace('#\#\#\#\#\#\#(.*)\#\#\#\#\#\##Uis', '<h6>$1</h6>', $content);
 		$content = preg_replace('#\#\#\#\#\#(.*)\#\#\#\#\##Uis', '<h5>$1</h5>', $content);
 		$content = preg_replace('#\#\#\#\#(.*)\#\#\#\##Uis', '<h4>$1</h4>', $content);
@@ -108,8 +115,8 @@ class ShowdownJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 		}, $content);
 
 		$content = preg_replace('#\n\>(.*)#', '<blockquote>$1</blockquote>', $content);
-		$content = preg_replace('#\n [\-\*] (.*)#', '<ul><li>$1</li></ul>', $content);
-		$content = preg_replace('#\n [0-9*]\. (.*)#', '<ol><li>$1</li></ol>', $content);
+		$content = preg_replace('#\n ?[\-\*] (.*)#', '<ul><li>$1</li></ul>', $content);
+		$content = preg_replace('#\n ?[0-9*]\. (.*)#', '<ol><li>$1</li></ol>', $content);
 
 		$content = preg_replace('#\!\[(.*)\]\((.*)\)#Uis', '<img src="$2" class="showdown-image" alt="$1" />', $content);
 		$content = preg_replace('#\[(.*)\]\((.*)\)#Uis', '<a href="$2" class="quark-button">$1</a>', $content);
@@ -122,6 +129,7 @@ class ShowdownJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 
 		$content = preg_replace('#\*\*(.*)\*\*#Ui', '<b>$1</b>', $content);
 		$content = preg_replace('#\*(.*)\*#Ui', '<i>$1</i>', $content);
+		$content = preg_replace('#\~\~(.*)\~\~#Ui', '<s>$1</s>', $content);
 		$content = preg_replace('#\&i\:(.*)\;#Ui', '<span class="fa $1"></span>', $content);
 
 		$content = trim($content);

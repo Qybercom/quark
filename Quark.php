@@ -4347,10 +4347,10 @@ class QuarkView implements IQuarkContainer {
 
 			$location = $resource->Location();
 			$content = '';
+			
+			if ($resource instanceof IQuarkForeignViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(false))) { }
 
-			if ($resource instanceof IQuarkForeignViewResource) { }
-
-			if ($resource instanceof IQuarkLocalViewResource) {
+			if ($resource instanceof IQuarkLocalViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(true))) {
 				$res = new QuarkSource($location, true);
 
 				if ($obfuscate && $resource->CacheControl())
@@ -5074,6 +5074,20 @@ interface IQuarkForeignViewResource extends IQuarkViewResource {
 }
 
 /**
+ * Interface IQuarkViewResourceWithLocationControl
+ *
+ * @package Quark
+ */
+interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResource {
+	/**
+	 * @param bool $local
+	 *
+	 * @return bool
+	 */
+	public function LocationControl($local);
+}
+
+/**
  * Interface IQuarkInlineViewResource
  *
  * @package Quark
@@ -5114,7 +5128,7 @@ interface IQuarkCombinedViewResource extends IQuarkViewResource {
  *
  * @package Quark
  */
-class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithLocationControl, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @var IQuarkViewResourceType $_type = null
 	 */
@@ -5136,6 +5150,11 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkLoc
 	private $_dependencies = array();
 
 	/**
+	 * @var bool $_local = true
+	 */
+	private $_local = true;
+
+	/**
 	 * @param string $location
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
@@ -5146,6 +5165,18 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkLoc
 		$this->_type = $type;
 		$this->_minimize = $minimize;
 		$this->_dependencies = $dependencies;
+	}
+
+	/**
+	 * @param bool $local = true
+	 *
+	 * @return bool
+	 */
+	public function Local ($local = true) {
+		if (func_num_args() != 0)
+			$this->_local = $local;
+
+		return $this->_local;
 	}
 
 	/**
@@ -5167,6 +5198,22 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkLoc
 	 */
 	public function CacheControl () {
 		return $this->_minimize;
+	}
+
+	/**
+	 * @return void
+	 */
+	public function RequestDTO () {
+		// TODO: Implement RequestDTO() method.
+	}
+
+	/**
+	 * @param bool $local
+	 *
+	 * @return bool
+	 */
+	public function LocationControl ($local) {
+		return $this->_local;
 	}
 
 	/**
