@@ -643,6 +643,11 @@ class QuarkConfig {
 	private $_localizationByFamily = true;
 
 	/**
+	 * @var string $_localizationExtract = QuarkLocalizedString::EXTRACT_CURRENT
+	 */
+	private $_localizationExtract = QuarkLocalizedString::EXTRACT_CURRENT;
+
+	/**
 	 * @var array $_queues = []
 	 */
 	private $_queues = array();
@@ -1148,6 +1153,18 @@ class QuarkConfig {
 			$this->_localizationByFamily = $localize;
 		
 		return $this->_localizationByFamily;
+	}
+
+	/**
+	 * @param string $localization = QuarkLocalizedString::EXTRACT_CURRENT
+	 *
+	 * @return string
+	 */
+	public function LocalizationExtract ($localization = QuarkLocalizedString::EXTRACT_CURRENT) {
+		if (func_num_args() != 0)
+			$this->_localizationExtract = $localization;
+
+		return $this->_localizationExtract;
 	}
 
 	/**
@@ -7913,6 +7930,45 @@ class QuarkField {
 
 	/**
 	 * @param $key
+	 * @param bool $type = false
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public static function Bool ($key, $type = false, $nullable = false) {
+		if ($nullable && $key == null) return true;
+
+		return preg_match('#^(true|false)$#Ui', QuarkObject::Stringify($key)) && ($type ? is_bool($key) : true);
+	}
+
+	/**
+	 * @param $key
+	 * @param bool $type = false
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public static function Int ($key, $type = false, $nullable = false) {
+		if ($nullable && $key == null) return true;
+
+		return preg_match('#^([0-9]+)$#', $key) && ($type ? is_int($key) : true);
+	}
+
+	/**
+	 * @param $key
+	 * @param bool $type = false
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public static function Float ($key, $type = false, $nullable = false) {
+		if ($nullable && $key == null) return true;
+
+		return preg_match('#^([0-9]+\.[0-9]+)$#', $key) && ($type ? is_float($key) : true);
+	}
+
+	/**
+	 * @param $key
 	 * @param $values
 	 * @param bool $nullable = false
 	 * 
@@ -8041,7 +8097,12 @@ class QuarkField {
  *
  * @package Quark
  */
-class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
+class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBeforeExtract {
+	const EXTRACT_CURRENT = 'localized.extract.current';
+	const EXTRACT_ANY = 'localized.extract.any';
+	const EXTRACT_VALUES = 'localized.extract.values';
+	const EXTRACT_FULL = 'localized.extract.full';
+
 	/**
 	 * @var object $values = null
 	 */
@@ -8096,6 +8157,15 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Current ($value = '') {
 		return $this->Of(Quark::CurrentLanguage(), func_num_args() != 0 && is_scalar($value) ? $value : null);
+	}
+
+	/**
+	 * @param string $value = ''
+	 *
+	 * @return string
+	 */
+	public function Any ($value = '') {
+		return $this->Of(QuarkLanguage::ANY, func_num_args() != 0 && is_scalar($value) ? $value : null);
 	}
 
 	/**
@@ -8195,6 +8265,39 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel {
 	 */
 	public function Unlink () {
 		return json_encode($this->values);
+	}
+
+	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
+	 * @return mixed
+	 */
+	public function BeforeExtract ($fields, $weak) {
+		$extract = $this->_extract($fields);
+		if ($extract !== null) return $extract;
+
+		$extract = $this->_extract(Quark::Config()->LocalizationExtract());
+		if ($extract !== null) return $extract;
+
+		return $this->Of($this->default);
+	}
+
+	/**
+	 * @param $criteria
+	 *
+	 * @return string|object|null
+	 */
+	private function _extract ($criteria) {
+		switch ($criteria) {
+			case self::EXTRACT_CURRENT: return $this->Current(); break;
+			case self::EXTRACT_ANY: return $this->Of(QuarkLanguage::ANY); break;
+			case self::EXTRACT_VALUES: return $this->values; break;
+			case self::EXTRACT_FULL: return $this; break;
+			default: break;
+		}
+		
+		return null;
 	}
 }
 
@@ -15569,30 +15672,33 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkINIIOProcessor implements IQuarkIOProcessor {
+	const PATTERN_BLOCK = '#\[([^\n]*)\][\s\n]*(([^\n]*\s?\=\s?[^\n]*[\s\n]*)*)#is';
+	const PATTERN_PAIR = '#([^\n]*)\s?\=\s?([^\n]*)\n#Ui';
+
 	const MIME = 'plain/text';
+
+	/**
+	 * @var bool $_cast = true
+	 */
+	private $_cast = true;
 	
 	/**
-	 * @var int $_scanner = INI_SCANNER_NORMAL
+	 * @param bool $cast = true
 	 */
-	private $_scanner = INI_SCANNER_NORMAL;
-	
-	/**
-	 * @param int $scanner = INI_SCANNER_NORMAL
-	 */
-	public function __construct ($scanner = INI_SCANNER_NORMAL) {
-		$this->Scanner($scanner);
+	public function __construct ($cast = true) {
+		$this->Cast($cast);
 	}
-	
+
 	/**
-	 * @param int $scanner = =INI_SCANNER_NORMAL
+	 * @param bool $cast = true
 	 *
-	 * @return int
+	 * @return bool
 	 */
-	public function Scanner ($scanner = INI_SCANNER_NORMAL) {
+	public function Cast ($cast = true) {
 		if (func_num_args() != 0)
-			$this->_scanner = $scanner;
+			$this->_cast = $cast;
 		
-		return $this->_scanner;
+		return $this->_cast;
 	}
 
 	/**
@@ -15606,6 +15712,11 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	 * @return string
 	 */
 	public function Encode ($data) {
+		if (!QuarkObject::isTraversable($data)) {
+			Quark::Log('[QuarkINIIOProcessor::Encode] Provided $data argument is not an object or array. Cannot encode. Data (' . gettype($data) . '): ' . $data, Quark::LOG_WARN);
+			return null;
+		}
+
 		$out = '';
 		
 		foreach ($data as $name => $section) {
@@ -15624,18 +15735,54 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 		
 		return $out;
 	}
-	
+
 	/**
 	 * @param $raw
 	 *
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		$out = @\parse_ini_string($raw, true, $this->_scanner);
-		
-		if ($out == false) {
-			Quark::Log('[QuarkINIIOProcessor] Decoding error: ' . QuarkException::LastError());
+		if (!is_string($raw)) {
+			Quark::Log('[QuarkINIIOProcessor::Decode] Provided $raw argument is not a string. Cannot decode. Raw (' . gettype($raw) . '): ' . print_r($raw, true), Quark::LOG_WARN);
 			return null;
+		}
+
+		if (!preg_match_all(self::PATTERN_BLOCK, $raw . "\r\n", $ini, PREG_SET_ORDER)) return null;
+
+		$out = array();
+
+		foreach ($ini as $value)
+			$out[$value[1]] = self::DecodePairs($value[2], $this->_cast);
+		
+		return QuarkObject::Merge($out);
+	}
+
+	/**
+	 * @param string $raw = ''
+	 * @param bool $cast = true
+	 *
+	 * @return mixed
+	 */
+	public static function DecodePairs ($raw = '', $cast = true) {
+		if (!preg_match_all(self::PATTERN_PAIR, $raw, $pairs, PREG_SET_ORDER)) return null;
+
+		$out = array();
+
+		foreach ($pairs as $pair) {
+			$value = trim($pair[2]);
+
+			if ($cast) {
+				if (strtolower($value) == 'true') $value = true;
+				if (strtolower($value) == 'false') $value = false;
+				if (strtolower($value) == 'null') $value = null;
+				if (QuarkField::Int($value)) $value = (int)$value;
+				if (QuarkField::Float($value)) $value = (float)$value;
+			}
+
+			if (is_string($value))
+				$value = preg_replace('#\\\(.)#Ui', '$1', preg_replace('#^\"(.*)\"$#i', '$1', $value));
+
+			$out[$pair[1]] = $value;
 		}
 		
 		return QuarkObject::Merge($out);
