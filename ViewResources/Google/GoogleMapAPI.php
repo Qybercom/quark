@@ -37,7 +37,7 @@ class GoogleMapAPI implements IQuarkSpecifiedViewResource, IQuarkForeignViewReso
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://maps.googleapis.com/maps/api/js?libraries=geometry&sensor=false';
+		return 'https://maps.googleapis.com/maps/api/js?libraries=geometry&sensor=false'. (strlen($this->_key) != 0 ? '&key=' . $this->_key : '');
 	}
 
 	/**
