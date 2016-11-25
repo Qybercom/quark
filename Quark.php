@@ -2869,6 +2869,13 @@ trait QuarkServiceBehavior {
 	public function Input () {
 		return $this->__call('Input', func_get_args());
 	}
+
+	/**
+	 * @return QuarkSession
+	 */
+	public function Session () {
+		return $this->__call('Session', func_get_args());
+	}
 }
 
 /**
@@ -2889,7 +2896,16 @@ trait QuarkStreamBehavior {
 		$env = Quark::CurrentEnvironment();
 		$url = $this->URL($service);
 
-		if ($env instanceof QuarkStreamEnvironment) $out = $env->BroadcastNetwork($url, $data);
+		if ($env instanceof QuarkStreamEnvironment) {
+			$session = $this->Session();
+			$clients = $env->Cluster()->Server()->Clients();
+
+			foreach ($clients as $i => &$client)
+				if ($client->ID() == $session->ConnectionID())
+					$client->Session($session->ID());
+			
+			$out = $env->BroadcastNetwork($url, $data);
+		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
 			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
@@ -4074,6 +4090,23 @@ class QuarkObject {
 		if (is_array($value)) return 'array';
 
 		return (string)$value;
+	}
+
+	/**
+	 * @param $var
+	 * @param bool $objectToNull = false
+	 *
+	 * @return bool|int|float|string|array|object|null
+	 */
+	public static function DefaultValueOfType ($var, $objectToNull = true) {
+		if (is_bool($var)) return false;
+		if (is_int($var)) return 0;
+		if (is_float($var)) return 0.0;
+		if (is_string($var)) return '';
+		if (is_array($var)) return array();
+		if (is_object($var) && !$objectToNull) return new \stdClass();
+		
+		return null;
 	}
 }
 
@@ -7119,7 +7152,7 @@ interface IQuarkModelWithManageableDataProvider extends IQuarkModelWithDataProvi
  *
  * @package Quark
  */
-interface IQuarkLinkedModel {
+interface IQuarkLinkedModel extends IQuarkModel {
 	/**
 	 * @param $raw
 	 *
@@ -7138,7 +7171,7 @@ interface IQuarkLinkedModel {
  *
  * @package Quark
  */
-interface IQuarkStrongModel { }
+interface IQuarkStrongModel extends IQuarkModel { }
 
 /**
  * Interface IQuarkStrongModelWithRuntimeFields
@@ -8954,6 +8987,106 @@ class QuarkGenericModel implements IQuarkModel, IQuarkModelWithManageableDataPro
 }
 
 /**
+ * Class QuarkLazyLink
+ *
+ * @package Quark
+ */
+class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBeforeExtract {
+	/**
+	 * @var IQuarkLinkedModel $_model
+	 */
+	private $_model;
+
+	/**
+	 * @var $_value
+	 */
+	private $_value;
+
+	/**
+	 * @param IQuarkLinkedModel $model
+	 * @param $value = null
+	 */
+	public function __construct (IQuarkLinkedModel $model, $value = null) {
+		/**
+		 * @var QuarkModel|IQuarkLinkedModel $_model
+		 */
+		$_model = new QuarkModel($model);
+
+		$this->_model = $model;
+		$this->_value = func_num_args() == 2 ? $value : QuarkObject::DefaultValueOfType($_model->Unlink());
+	}
+
+	/**
+	 * @param IQuarkLinkedModel $model = null
+	 *
+	 * @return IQuarkLinkedModel
+	 */
+	public function Model (IQuarkLinkedModel $model = null) {
+		if ($model != null)
+			$this->_model = $model;
+		
+		return $this->_model;
+	}
+
+	/**
+	 * @param $value = null
+	 *
+	 * @return mixed
+	 */
+	public function Value ($value = null) {
+		if (func_num_args() != 0)
+			$this->_value = $value;
+		
+		return $this->_value;
+	}
+
+	/**
+	 * @return QuarkModel|IQuarkLinkedModel
+	 */
+	public function Retrieve () {
+		return $this->_model->Link($this->_value);
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function Fields () { }
+
+	/**
+	 * @return void
+	 */
+	public function Rules () { }
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		$this->_value = $raw;
+
+		return new QuarkModel($this);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->_value;
+	}
+
+	/**
+	 * @param array $fields
+	 * @param bool $weak
+	 *
+	 * @return mixed
+	 */
+	public function BeforeExtract ($fields, $weak) {
+		return $this->_value;
+	}
+}
+
+/**
  * Class QuarkSessionSource
  *
  * @package Quark
@@ -9289,7 +9422,7 @@ class QuarkSession {
 	 * @return QuarkSession
 	 */
 	public static function Get (QuarkKeyValuePair $id = null) {
-		if ($id == null) return null;
+		if ($id == null || $id->Key() == null) return null;
 
 		/**
 		 * @var QuarkSessionSource $source

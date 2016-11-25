@@ -1,0 +1,87 @@
+#ChatKit-input {
+	width: auto;
+	max-width: 1000px;
+	margin: 0;
+	display: none;
+}
+
+#ChatKit-input textarea {
+}
+
+#ChatKit-history {
+	width: auto;
+	max-width: 1000px;
+	height: 100%;
+	margin: 0;
+	padding-bottom: 0;
+	overflow: auto;
+}
+
+#ChatKit-history > .quark-presence-column {
+	width: 95%;
+}
+
+#ChatKit-history .ChatKit-message {
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-avatar {
+	background: center center no-repeat;
+	background-size: cover;
+	width: 30px;
+	height: 30px;
+	border-radius: 50px;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-user {
+	font-size: 12px;
+	font-weight: 600;
+	width: auto;
+	color: rgb(0,0,0);
+	margin: 0 0 0 5px;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-user:hover {
+	color: rgb(0,225,80) !important;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-payload {
+	background-color: rgb(240, 241, 245);
+	max-width: 800px;
+	width: auto;
+	border: 1px;
+	padding: 10px;
+	margin: 0 0 2px 0;
+	word-wrap: break-word;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-payload:nth-child(3) {
+	border-top-left-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-payload:nth-last-child(3) {
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+}
+
+#ChatKit-history .ChatKit-message.own .ChatKit-payload {
+	background-color: rgb(20, 165, 122);
+	color: rgb(255,255,255);
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-payload.image {
+	background: center center no-repeat;
+	background-size: cover;
+	width: 240px;
+	height: 240px;
+}
+
+#ChatKit-history .ChatKit-message .ChatKit-date {
+	color: rgb(200, 210, 210);
+	font-size: 10px;
+	margin: 0 0 0 5px;
+}
+
+#ChatKit-message-template {
+	display: none;
+}

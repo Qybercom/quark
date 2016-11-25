@@ -30,8 +30,8 @@ Quark.MVC.Model = function (data) {
 	that.Data = data || {};
 
 	/**
-	 * @param selector
-	 * @param handlers
+	 * @param {string} selector
+	 * @param {object} handlers
 	 */
 	that.Form = function (selector, handlers) {
         if (Quark.MVC.Model._selectors.indexOf(selector) + 1) return;
@@ -90,9 +90,9 @@ Quark.MVC.Model = function (data) {
 	};
 
 	/**
-	 * @param template
+	 * @param {string} template
      *
-     * @return string
+     * @return {string}
 	 */
 	that.Map = function (template) {
 		if (!that._templates[template])
