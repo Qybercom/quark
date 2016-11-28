@@ -113,14 +113,12 @@ var ChatKit = function (opt) {
 		if (current === false) return;
 		that.Conversation.Current = current;
 
-		var payload = opt.payload(data),
-			last = opt.isLastMemberMessage(data);
+		var payload = opt.payload(data);
 
-		if (that.Conversation.Last != null && last !== false) opt.messageMemberLast(data, payload);
-		else {
-			that.Conversation.Last = last;
-			opt.messageMemberNew(data, payload, new Quark.MVC.Model(data));
-		}
+		if (opt.isLastMemberMessage(data)) opt.messageMemberLast(data, payload);
+		else opt.messageMemberNew(data, payload, new Quark.MVC.Model(data));
+
+		that.Conversation.Last = opt.sender(data);
 
 		$('#ChatKit-history').scrollTop(opt.scrollTop);
 	};
