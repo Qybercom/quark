@@ -14,7 +14,7 @@ use Quark\QuarkCSSViewResourceType;
  * @package Quark\ViewResources\FontAwesome
  */
 class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
-	const CURRENT_VERSION = '4.6.3';
+	const CURRENT_VERSION = '4.7.0';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

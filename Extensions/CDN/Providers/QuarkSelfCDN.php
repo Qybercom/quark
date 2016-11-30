@@ -11,6 +11,7 @@ use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkModel;
 use Quark\QuarkModelSource;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 
 use Quark\DataProviders\QuarkDNA;
@@ -89,8 +90,10 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 		if (isset($ini->FSHost))
 			$this->_fsHost = $ini->FSHost;
 
-		if (isset($ini->Storage))
-			$this->_storage = $ini->Storage;
+		if (isset($ini->Storage)) {
+			$this->_storage = QuarkObject::ConstValue($ini->Storage);
+			$this->_init = true;
+		}
 	}
 
 	/**

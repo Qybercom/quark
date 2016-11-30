@@ -51,6 +51,7 @@
 	border: 1px;
 	padding: 10px;
 	margin: 0 0 2px 0;
+	word-break: break-all;
 	word-wrap: break-word;
 }
 

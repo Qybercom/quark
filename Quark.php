@@ -516,6 +516,15 @@ class Quark {
 	}
 
 	/**
+	 * @param QuarkException $e
+	 *
+	 * @return int|bool
+	 */
+	public static function LogException (QuarkException $e) {
+		return self::Log($e->message, $e->lvl);
+	}
+
+	/**
 	 * @param bool $args = false
 	 * @param bool $trace = true
 	 *
@@ -646,6 +655,11 @@ class QuarkConfig {
 	 * @var string $_localizationExtract = QuarkLocalizedString::EXTRACT_CURRENT
 	 */
 	private $_localizationExtract = QuarkLocalizedString::EXTRACT_CURRENT;
+
+	/**
+	 * @var bool $_localizationParseFailedToAny = false
+	 */
+	private $_localizationParseFailedToAny = false;
 
 	/**
 	 * @var array $_queues = []
@@ -1165,6 +1179,18 @@ class QuarkConfig {
 			$this->_localizationExtract = $localization;
 
 		return $this->_localizationExtract;
+	}
+
+	/**
+	 * @param bool $force = false
+	 *
+	 * @return bool
+	 */
+	public function LocalizationParseFailedToAny ($force = false) {
+		if (func_num_args() != 0)
+			$this->_localizationParseFailedToAny = $force;
+		
+		return $this->_localizationParseFailedToAny;
 	}
 
 	/**
@@ -8287,8 +8313,15 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 * @return mixed
 	 */
 	public function Link ($raw) {
+		$values = json_decode(strlen($raw) != 0 && $raw[0] == '{' ? $raw : base64_decode($raw));
+		
 		return new QuarkModel($this, array(
-			'values' => json_decode(strlen($raw) != 0 && $raw[0] == '{' ? $raw : base64_decode($raw)),
+			'values' => json_last_error() == 0
+				? $values
+				: (Quark::Config()->LocalizationParseFailedToAny()
+					? (object)array(QuarkLanguage::ANY => $raw)
+					: null
+				),
 			'default' => $this->default
 		));
 	}

@@ -7,6 +7,7 @@ use Quark\IQuarkStrongModel;
 use Quark\IQuarkLinkedModel;
 
 use Quark\Quark;
+use Quark\QuarkException;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkModel;
@@ -42,7 +43,13 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->URL();
+		try {
+			return $this->URL();
+		}
+		catch (QuarkException $e) {
+			Quark::LogException($e);
+			return '';
+		}
 	}
 
 	/**
