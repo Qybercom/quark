@@ -662,6 +662,11 @@ class QuarkConfig {
 	private $_localizationParseFailedToAny = false;
 
 	/**
+	 * @var string $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL
+	 */
+	private $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL;
+
+	/**
 	 * @var array $_queues = []
 	 */
 	private $_queues = array();
@@ -1176,7 +1181,7 @@ class QuarkConfig {
 	 */
 	public function LocalizationExtract ($localization = QuarkLocalizedString::EXTRACT_CURRENT) {
 		if (func_num_args() != 0)
-			$this->_localizationExtract = $localization;
+			$this->_localizationExtract = QuarkObject::ConstValue($localization);
 
 		return $this->_localizationExtract;
 	}
@@ -1215,6 +1220,18 @@ class QuarkConfig {
 					: ''
 				)
 			);
+	}
+
+	/**
+	 * @param string $mode = QuarkModel::CONFIG_VALIDATION_ALL
+	 *
+	 * @return string
+	 */
+	public function ModelValidation ($mode = QuarkModel::CONFIG_VALIDATION_ALL) {
+		if (func_num_args() != 0)
+			$this->_modelValidation = QuarkObject::ConstValue($mode);
+		
+		return $this->_modelValidation;
 	}
 
 	/**
@@ -6270,6 +6287,9 @@ class QuarkModel implements IQuarkContainer {
 	const SORT_DESC = -1;
 	const LIMIT_NO = '___limit_no___';
 
+	const CONFIG_VALIDATION_ALL = 'model.validation.all';
+	const CONFIG_VALIDATION_STORE = 'model.validation.store';
+
 	/**
 	 * @var IQuarkModel|QuarkModelBehavior $_model = null
 	 */
@@ -6942,6 +6962,9 @@ class QuarkModel implements IQuarkContainer {
 			: true;
 
 		if ($ok !== null && !$ok) return false;
+
+		if ($name == self::OPERATION_REMOVE && !isset($options[self::OPTION_VALIDATE]) && Quark::Config()->ModelValidation() == self::CONFIG_VALIDATION_STORE)
+			$options[self::OPTION_VALIDATE] = false;
 
 		$model = self::_export($this->_model, $options);
 		$this->_errors = self::$_errorFlux;
