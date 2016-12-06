@@ -31,6 +31,7 @@ class Quark {
 	const UNIT_GIGABYTE = 1073741824;
 
 	const ALPHABET_ALL = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+	const ALPHABET_LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 	const ALPHABET_PASSWORD = 'abcdefgpqstxyzABCDEFGHKMNPQRSTXYZ123456789';
 	const ALPHABET_PASSWORD_LOW = 'abcdefgpqstxyz123456789';
 	const ALPHABET_PASSWORD_LETTERS = 'abcdefgpqstxyz';
@@ -303,6 +304,43 @@ class Quark {
 				0,
 				$length - (int)$firstLetter
 		);
+	}
+
+	/**
+	 * @param string $pattern = ''
+	 *
+	 * @return string
+	 */
+	public static function GenerateByPattern ($pattern = '') {
+		if (!preg_match_all('#(\\\?.)(\{([\d]+)\})*#', $pattern, $found, PREG_SET_ORDER)) return '';
+
+		$out = '';
+		$alphabet = self::ALPHABET_LETTERS;
+		$last = strlen($alphabet) - 1;
+
+		foreach ($found as $item) {
+			if (!isset($item[3])) {
+				$out .= $item[1];
+				continue;
+			}
+
+			$i = 0;
+			$count = $item[3] == '' ? 1 : (int)$item[3];
+
+			while ($i < $count) {
+				switch ($item[1]) {
+					case '\d': $out .= mt_rand(0, 9); break;
+					case '\c': $out .= $alphabet[mt_rand(0, $last)]; break;
+					case '\C': $out .= strtoupper($alphabet[mt_rand(0, $last)]); break;
+					case '\s': $out .= ' '; break;
+					default: $out .= $item[1]; break;
+				}
+
+				$i++;
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -8556,6 +8594,11 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	private $_isNull = false;
 
 	/**
+	 * @var bool $_nullable = false
+	 */
+	private $_nullable = false;
+
+	/**
 	 * @param IQuarkCulture $culture
 	 * @param string $value = self::NOW
 	 */
@@ -8733,10 +8776,27 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @param bool $is = false
+	 *
 	 * @return bool
 	 */
-	public function IsNull () {
+	public function IsNull ($is = false) {
+		if (func_num_args() != 0)
+			$this->_isNull = $is;
+
 		return $this->_isNull;
+	}
+
+	/**
+	 * @param bool $is = false
+	 *
+	 * @return $this
+	 */
+	public function Nullable ($is = false) {
+		if (func_num_args() != 0)
+			$this->_nullable = $is;
+
+		return $this;
 	}
 
 	/**
@@ -8903,7 +8963,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->_fromTimestamp ? $this->Timestamp() : $this->DateTime();
+		return $this->_nullable && $this->_isNull
+			? null
+			: ($this->_fromTimestamp ? $this->Timestamp() : $this->DateTime());
 	}
 
 	/**
