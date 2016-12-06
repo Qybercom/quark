@@ -160,28 +160,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$(opt.box).fadeOut(500);
 	};
 
-	$(function () {
-		if ($(opt.box).length == 0)
-			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
-
-		$(opt.box).hide(0);
-
-		$('.quark-dialog').each(function () {
-			var dialog = $(this);
-
-			dialog.hide(0);
-
-			dialog.appendTo(opt.box);
-			dialog.find('.quark-dialog-state').hide(0);
-		});
-	});
-
-	$(document).on('click', '.quark-dialog-confirm', function (e) {
-		e.preventDefault();
-
-		var action = $(this);
-		var dialog = action.parent('.quark-dialog');
-
+	that.Submit = function (dialog, action) {
 		$.ajax({
 			url: action.attr('href'),
 			dataType: 'json',
@@ -201,15 +180,55 @@ Quark.Controls.Dialog = function (selector, opt) {
 				that.Error(dialog);
 			}
 		});
+	};
+
+	that._id = Quark.GuID();
+
+	$(function () {
+		if ($(opt.box).length == 0)
+			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
+
+		$(opt.box).hide(0);
+
+		$(selector).each(function () {
+			var elem = $(this),
+				dialog = $(elem.attr('quark-dialog'));
+
+			dialog.data('quark-dialog-object', that);
+		});
+
+		$('.quark-dialog').each(function () {
+			var dialog = $(this);
+
+			dialog.data('quark-dialog-id', that._id);
+
+			dialog.hide(0);
+
+			dialog.appendTo(opt.box);
+			dialog.find('.quark-dialog-state').hide(0);
+		});
+	});
+
+	$(document).on('click', '.quark-dialog-confirm', function (e) {
+		e.preventDefault();
+
+		var action = $(this),
+			dialog = action.parent('.quark-dialog');
+
+		if (dialog.data('quark-dialog-id') != that._id) return;
+
+		dialog.data('quark-dialog-object').Submit(dialog, action);
 	});
 
 	$(document).on('click', '.quark-dialog-close', function (e) {
 		e.preventDefault();
 
-		var action = $(this);
-		var dialog = action.parent('.quark-dialog');
+		var action = $(this),
+			dialog = action.parent('.quark-dialog');
 
-		that.Close(dialog, action);
+		if (dialog.data('quark-dialog-id') != that._id) return;
+
+		dialog.data('quark-dialog-object').Close(dialog, action);
 	});
 
 	$(document).on('click', selector, function (e) {

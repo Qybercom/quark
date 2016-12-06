@@ -8551,6 +8551,11 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	private $_fromTimestamp = false;
 
 	/**
+	 * @var bool $_isNull = false
+	 */
+	private $_isNull = false;
+
+	/**
 	 * @param IQuarkCulture $culture
 	 * @param string $value = self::NOW
 	 */
@@ -8591,13 +8596,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return \DateTime
 	 */
 	public function Value ($value = '') {
-		if (func_num_args() != 0 && is_string($value)) {
-			if (!is_numeric($value)) $this->_date = new \DateTime($value);
-			else {
+		if (func_num_args() != 0) {
+			if (is_numeric($value)) {
 				$this->_date = new \DateTime();
 				$this->_date->setTimestamp((int)$value);
 				$this->_fromTimestamp = true;
 			}
+			elseif (is_string($value)) $this->_date = new \DateTime($value);
+			else $this->_isNull = true;
 		}
 
 		return $this->_date;
@@ -8724,6 +8730,13 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		$this->_fromTimestamp = $store;
 		
 		return $this;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsNull () {
+		return $this->_isNull;
 	}
 
 	/**
