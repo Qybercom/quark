@@ -35,7 +35,12 @@ class Quark {
 	const ALPHABET_PASSWORD = 'abcdefgpqstxyzABCDEFGHKMNPQRSTXYZ123456789';
 	const ALPHABET_PASSWORD_LOW = 'abcdefgpqstxyz123456789';
 	const ALPHABET_PASSWORD_LETTERS = 'abcdefgpqstxyz';
-
+	
+	/**
+	 * @var bool $_init = false
+	 */
+	private static $_init = false;
+	
 	/**
 	 * @var QuarkConfig $_config
 	 */
@@ -87,14 +92,35 @@ class Quark {
 
 		return self::$_config;
 	}
+	
+	/**
+	 * @return bool
+	 */
+	public static function _init () {
+		if (!self::$_init) {
+			if (!ini_get('date.timezone')) {
+				ini_set('date.timezone', 'UTC');
+				self::Log('Missed "date.timezone" in PHP configuration. UTC used.', self::LOG_WARN);
+			}
+			
+			spl_autoload_extensions('.php');
+			
+			self::Import(__DIR__, function ($class) { return substr($class, 6); });
+			self::Import(self::Host());
+			
+			self::$_init = true;
+		}
+		
+		return self::$_init;
+	}
 
 	/**
-	 * @param QuarkConfig $config
+	 * @param QuarkConfig $config = null
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Run (QuarkConfig $config) {
-		self::$_config = $config;
+	public static function Run (QuarkConfig $config = null) {
+		self::$_config = $config ? $config : new QuarkConfig();
 		self::$_config->ConfigReady();
 
 		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
@@ -616,11 +642,6 @@ class Quark {
 	}
 }
 
-spl_autoload_extensions('.php');
-
-Quark::Import(__DIR__, function ($class) { return substr($class, 6); });
-Quark::Import(Quark::Host());
-
 /**
  * Class QuarkConfig
  *
@@ -658,6 +679,11 @@ class QuarkConfig {
 	 * @var string $_mode = Quark::MODE_DEV
 	 */
 	private $_mode = Quark::MODE_DEV;
+	
+	/**
+	 * @var bool $_allowINIFallback = false
+	 */
+	private $_allowINIFallback = false;
 
 	/**
 	 * @var QuarkModel|IQuarkApplicationSettingsModel $_settingsApp = null
@@ -831,6 +857,18 @@ class QuarkConfig {
 			$this->_mode = $mode;
 
 		return $this->_mode;
+	}
+	
+	/**
+	 * @param bool $fallback = false
+	 *
+	 * @return bool
+	 */
+	public function AllowINIFallback ($fallback = false) {
+		if (func_num_args() != 0)
+			$this->_allowINIFallback = $fallback;
+		
+		return $this->_allowINIFallback;
 	}
 
 	/**
@@ -1283,7 +1321,11 @@ class QuarkConfig {
 		
 		if (!$this->_ini) return;
 
-		$ini = QuarkFile::FromLocation($this->_ini, true)->Decode(new QuarkINIIOProcessor());
+		$file = QuarkFile::FromLocation($this->_ini);
+		
+		if (!$file->Exists() && $this->_allowINIFallback) return;
+		
+		$ini = $file->Load()->Decode(new QuarkINIIOProcessor());
 		$callback = $this->_ready;
 
 		if ($callback != null)
@@ -10419,9 +10461,12 @@ class QuarkServer implements IQuarkEventable {
 		
 		$this->Timeout(0);
 		$this->Blocking(0);
-
-		$sock = socket_import_stream($this->_socket);
-        socket_set_option($sock, SOL_TCP, TCP_NODELAY, true);
+		
+		if (!function_exists('\socket_import_stream')) Quark::Log('[QuarkServer] Function \socket_import_stream does not exists. Cannot set TCP_NO_DELAY to main server socket', Quark::LOG_WARN);
+		else {
+			$sock = \socket_import_stream($this->_socket);
+			\socket_set_option($sock, SOL_TCP, TCP_NODELAY, true);
+		}
 
 		$this->_read = array($this->_socket);
 		$this->_run = true;
@@ -14676,6 +14721,20 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @var string $_lastCopy = ''
 	 */
 	protected $_lastCopy = '';
+	
+	/**
+	 * @param bool $warn = true
+	 * 
+	 * @return bool
+	 */
+	public static function MimeExtensionExists ($warn = true) {
+		if (function_exists('\finfo_open')) return true;
+		
+		if ($warn)
+			Quark::Log('[QuarkFile] Mime extension not loaded. Check your PHP configuration. ' . self::TYPE_APPLICATION_OCTET_STREAM . ' used for response of file type', Quark::LOG_WARN);
+		
+		return false;
+	}
 
 	/**
 	 * @param string $location
@@ -14685,10 +14744,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public static function Mime ($location) {
 		if (!$location) return false;
+		if (!self::MimeExtensionExists()) return self::TYPE_APPLICATION_OCTET_STREAM;
 
-		$info = finfo_open(FILEINFO_MIME_TYPE);
-		$type = finfo_file($info, $location);
-		finfo_close($info);
+		$info = \finfo_open(FILEINFO_MIME_TYPE);
+		$type = \finfo_file($info, $location);
+		\finfo_close($info);
 
 		return $type;
 	}
@@ -14700,10 +14760,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public static function MimeOf ($content) {
 		if (!$content) return false;
-
-		$info = finfo_open(FILEINFO_MIME_TYPE);
-		$type = finfo_buffer($info, $content);
-		finfo_close($info);
+		if (!self::MimeExtensionExists()) return self::TYPE_APPLICATION_OCTET_STREAM;
+		
+		$info = \finfo_open(FILEINFO_MIME_TYPE);
+		$type = \finfo_buffer($info, $content);
+		\finfo_close($info);
 
 		return $type;
 	}
@@ -16812,3 +16873,5 @@ class QuarkSource extends QuarkFile {
 		return $source;
 	}
 }
+
+Quark::_init();
