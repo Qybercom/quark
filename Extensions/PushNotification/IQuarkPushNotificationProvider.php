@@ -34,12 +34,19 @@ interface IQuarkPushNotificationProvider {
 	public function &PNPDevices();
 
 	/**
+	 * @param IQuarkPushNotificationDetails $details
+	 *
+	 * @return mixed
+	 */
+	public function PNPDetails(IQuarkPushNotificationDetails $details);
+
+	/**
 	 * @param object|array $payload
 	 * @param array $options
 	 *
 	 * @return mixed
 	 */
-	public function PNPSend($payload, $options = []);
+	public function PNPSend($payload, $options);
 
 	/**
 	 * @return mixed

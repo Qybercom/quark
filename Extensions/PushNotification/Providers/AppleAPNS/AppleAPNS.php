@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\PushNotification\Providers;
+namespace Quark\Extensions\PushNotification\Providers\AppleAPNS;
 
 use Quark\Quark;
 use Quark\QuarkCertificate;
@@ -9,13 +9,14 @@ use Quark\QuarkModel;
 use Quark\QuarkTCPNetworkTransport;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
 
 use Quark\Extensions\PushNotification\Device;
 
 /**
  * Class AppleAPNS
  *
- * @package Quark\Extensions\PushNotification\Providers
+ * @package Quark\Extensions\PushNotification\Providers\AppleAPNS
  */
 class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider {
 	const TYPE = 'ios';
@@ -25,13 +26,19 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	const OPTION_PRODUCTION = 'ssl://gateway.push.apple.com:2195';
 	const OPTION_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
 
-	const OPTION_ALERT = 'alert';
-	const OPTION_BADGE = 'badge';
-	const OPTION_SOUND = 'sound';
-
 	const INI_CERTIFICATE_LOCATION = 'ios.Certificate.Location';
 	const INI_CERTIFICATE_PASSPHRASE = 'ios.Certificate.Passphrase';
 	const INI_SANDBOX = 'ios.Sandbox';
+
+	/**
+	 * @var Device[] $_devices = []
+	 */
+	private $_devices = array();
+
+	/**
+	 * @var IQuarkPushNotificationDetails|AppleAPNSDetails $_details
+	 */
+	private $_details;
 
 	/**
 	 * @var QuarkCertificate $_certificate
@@ -42,11 +49,6 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	 * @var string $_host = self::OPTION_PRODUCTION
 	 */
 	private $_host = self::OPTION_PRODUCTION;
-
-	/**
-	 * @var Device[] $_devices = []
-	 */
-	private $_devices = array();
 
 	/**
 	 * @var array $_payload = []
@@ -98,14 +100,20 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 
 	/**
 	 * @param Device &$device
+	 *
+	 * @return bool
 	 */
 	public function PNPDevice (Device &$device) {
+		if ($device->type != self::TYPE) return false;
+
 		if (!preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id)) {
 			Quark::Log('[AppleAPNS] Invalid device id "' . $device->id . '"', Quark::LOG_WARN);
-			return;
+			return false;
 		}
 
 		$this->_devices[] = $device;
+
+		return true;
 	}
 
 	/**
@@ -116,31 +124,35 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	}
 
 	/**
+	 * @param IQuarkPushNotificationDetails $details
+	 *
+	 * @return void
+	 */
+	public function PNPDetails (IQuarkPushNotificationDetails $details) {
+		$this->_details = $details;
+	}
+
+	/**
 	 * @param object|array $payload
 	 * @param array $options
 	 *
 	 * @return mixed
 	 */
-	public function PNPSend ($payload, $options = []) {
+	public function PNPSend ($payload, $options) {
 		if ($this->_certificate == null) {
 			Quark::Log('[AppleAPNS] Certificate was not specified or given path for ios.Certificate.Location in "ini" was not resolved', Quark::LOG_WARN);
 			return false;
 		}
 
-		$alert = '';
 		$data = $payload;
 
 		if (is_scalar($payload)) {
-			$alert = $payload;
+			$this->_details->Alert($payload);
 			$data = array();
 		}
 
 		$this->_payload = array(
-			'aps' => array(
-				'alert' => isset($options[self::OPTION_ALERT]) ? $options[self::OPTION_ALERT] : $alert,
-				'badge' => isset($options[self::OPTION_BADGE]) ? $options[self::OPTION_BADGE] : 1,
-				'sound' => isset($options[self::OPTION_SOUND]) ? $options[self::OPTION_SOUND] : 'default'
-			),
+			'aps' => $this->_details->PNDetails($payload, $options),
 			'data' => $data
 		);
 

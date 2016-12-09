@@ -1370,7 +1370,7 @@ class QuarkConfig {
 
 		$components = Quark::Components();
 
-		foreach ($components as $i => &$component) {
+		foreach ($components as $key => &$component) {
 			if ($component instanceof QuarkSessionSource) {
 				$options = self::_ini($ini, self::INI_AUTHORIZATION_PROVIDER, $component->Name());
 
@@ -15728,13 +15728,26 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\"#UisS';
 	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
-	
+	const PATTERN_META = '#^\s*\<\?xml\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*\?\>#UisS';
+
 	const MIME = 'text/xml';
 	const ROOT = 'root';
 	const ITEM = 'item';
+	const VERSION_1_0 = '1.0';
+	const ENCODING_UTF_8 = 'utf-8';
 
 	/**
-	 * @var string $_root = self::ROOT
+	 * @var string $version = self::VERSION_1_0
+	 */
+	private $_version = self::VERSION_1_0;
+
+	/**
+	 * @var string $_encoding = self::ENCODING_UTF_8
+	 */
+	private $_encoding = self::ENCODING_UTF_8;
+
+	/**
+	 * @var QuarkXMLNode $root = null
 	 */
 	private $_root = self::ROOT;
 
@@ -15759,24 +15772,28 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	private $_lists = 0;
 
 	/**
-	 * @param string $root = self::ROOT
+	 * @param QuarkXMLNode $root = null
 	 * @param string $item = self::ITEM
 	 * @param bool $forceNull = true
+	 * @param string $version = self::VERSION_1_0
+	 * @param string $encoding = self::ENCODING_UTF_8
 	 */
-	public function __construct ($root = self::ROOT, $item = self::ITEM, $forceNull = true) {
+	public function __construct (QuarkXMLNode $root = null, $item = self::ITEM, $forceNull = true, $version = self::VERSION_1_0, $encoding = self::ENCODING_UTF_8) {
 		\libxml_use_internal_errors(true);
 
-		$this->Root($root);
+		$this->Root($root == null ? new QuarkXMLNode(self::ROOT) : $root);
 		$this->Item($item);
 		$this->ForceNull($forceNull);
+		$this->Version($version);
+		$this->Encoding($encoding);
 	}
 	
 	/**
-	 * @param string $root = self::ROOT
+	 * @param QuarkXMLNode $root = null
 	 *
-	 * @return string
+	 * @return QuarkXMLNode
 	 */
-	public function Root ($root = self::ROOT) {
+	public function Root (QuarkXMLNode $root = null) {
 		if (func_num_args() != 0)
 			$this->_root = $root;
 		
@@ -15808,6 +15825,30 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @param string $version = self::VERSION_1_0
+	 *
+	 * @return string
+	 */
+	public function Version ($version = self::VERSION_1_0) {
+		if (func_num_args() != 0)
+			$this->_version = $version;
+
+		return $this->_version;
+	}
+
+	/**
+	 * @param string $encoding = self::ENCODING_UTF_8
+	 *
+	 * @return string
+	 */
+	public function Encoding ($encoding = self::ENCODING_UTF_8) {
+		if (func_num_args() != 0)
+			$this->_encoding = $encoding;
+		
+		return $this->_encoding;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function MimeType () { return self::MIME; }
@@ -15818,9 +15859,15 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return string
 	 */
 	public function Encode ($data) {
-		$out = $this->_init ? '' : '<?xml version="1.0" encoding="utf-8" ?><' . $this->_root . '>';
-		$append = $this->_init ? '' : '</' . $this->_root . '>';
-		$this->_init = true;
+		if (!$this->_init) {
+			$this->_init = true;
+			$this->_root->Data($data);
+
+			return '<?xml version="' . $this->_version . '" encoding="' . $this->_encoding . '" ?>'
+				 . $this->_root->ToXML($this);
+		}
+
+		$out = '';
 		$i = $this->_lists == 0 ? '' : $this->_lists;
 		
 		if (QuarkObject::isIterative($data)) {
@@ -15828,12 +15875,12 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 			foreach ($data as $item)
 				$out .= $item instanceof QuarkXMLNode
-					? $item->ToXML($this)
+					? $item->ToXML($this, $this->_item)
 					: ('<' . $this->_item . $i . '>' . $this->Encode($item) . '</' . $this->_item . $i . '>');
 
 			$this->_lists--;
 			
-			return $out . $append;
+			return $out;
 		}
 
 		if (QuarkObject::isAssociative($data)) {
@@ -15842,39 +15889,55 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 					? $value->ToXML($this, $key)
 					: '<' . $key . '>' . $this->Encode($value) . '</' . $key . '>';
 
-			return $out . $append;
+			return $out;
 		}
 
-		return $data . $append;
+		return $data;
 	}
 
 	/**
 	 * @param $raw
+	 * @param bool $_meta = true
 	 *
 	 * @return mixed
 	 */
-	public function Decode ($raw) {
+	public function Decode ($raw, $_meta = true) {
+		if ($_meta && preg_match(self::PATTERN_META, $raw, $info)) {
+			$meta = self::DecodeAttributes($info[2]);
+
+			if (isset($meta->version))
+				$this->_version = $meta->version;
+			
+			if (isset($meta->encoding))
+				$this->_encoding = $meta->encoding;
+		}
+
 		if (!preg_match_all(self::PATTERN_ELEMENT, $raw, $xml, PREG_SET_ORDER)) return null;
 
 		$out = array();
 		$item = '';
+
+		if ($_meta) {
+			$this->_root->Name($xml[0][1]);
+
+			if ($xml[0][2] != '')
+				$this->_root->Attributes(self::DecodeAttributes($xml[0][2]));
+		}
 
 		foreach ($xml as $value) {
 			$key = $value[1];
 			$buffer = null;
 
 			if (sizeof($value) == 8) {
-				$buffer = $this->Decode($value[7]);
+				$buffer = $this->Decode($value[7], false);
 				if (!$buffer) $buffer = $value[7];
 			}
 
-			if (preg_match_all(self::PATTERN_ATTRIBUTE, $value[2], $attributes, PREG_SET_ORDER)) {
-				$params = array();
+			$attributes = self::DecodeAttributes($value[2]);
 
-				foreach ($attributes as $attribute)
-					$params[$attribute[1]] = $attribute[2];
-
-				$buffer = new QuarkXMLNode($buffer, $params);
+			if ($attributes !== null) {
+				$buffer = new QuarkXMLNode($key, $buffer, $attributes);
+				$buffer->Single(!isset($value[7]));
 			}
 
 			if (isset($out[$key])) {
@@ -15898,6 +15961,22 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @param string $data = ''
+	 *
+	 * @return object
+	 */
+	public static function DecodeAttributes ($data = '') {
+		if (!preg_match_all(self::PATTERN_ATTRIBUTE, $data, $attributes, PREG_SET_ORDER)) return null;
+
+		$out = array();
+
+		foreach ($attributes as $attribute)
+			$out[$attribute[1]] = $attribute[2];
+
+		return (object)$out;
+	}
+
+	/**
 	 * @param string $raw
 	 *
 	 * @return mixed
@@ -15912,6 +15991,11 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
  */
 class QuarkXMLNode {
 	/**
+	 * @var string $_name = ''
+	 */
+	private $_name = '';
+	
+	/**
 	 * @var $_data = null
 	 */
 	private $_data = null;
@@ -15920,6 +16004,11 @@ class QuarkXMLNode {
 	 * @var array $_attributes = []
 	 */
 	private $_attributes = array();
+
+	/**
+	 * @var bool $_single = false
+	 */
+	private $_single = false;
 
 	/**
 	 * @param $key
@@ -15955,12 +16044,28 @@ class QuarkXMLNode {
 	}
 
 	/**
+	 * @param string $name = ''
 	 * @param $data = []
 	 * @param array|object $attributes = []
+	 * @param bool $single = false
 	 */
-	public function __construct ($data = [], $attributes = []) {
+	public function __construct ($name = '', $data = [], $attributes = [], $single = false) {
+		$this->_name = $name;
 		$this->_data = is_scalar($data) ? $data : (object)$data;
 		$this->_attributes = (object)$attributes;
+		$this->_single = $single;
+	}
+
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return string
+	 */
+	public function Name ($name = '') {
+		if (func_num_args() != 0)
+			$this->_name = $name;
+
+		return $this->_name;
 	}
 	
 	/**
@@ -16001,6 +16106,18 @@ class QuarkXMLNode {
 	}
 
 	/**
+	 * @param bool $single = false
+	 *
+	 * @return bool
+	 */
+	public function Single ($single = false) {
+		if (func_num_args() != 0)
+			$this->_single = $single;
+		
+		return $this->_single;
+	}
+
+	/**
 	 * @param QuarkXMLIOProcessor $processor
 	 * @param string $node
 	 *
@@ -16008,12 +16125,15 @@ class QuarkXMLNode {
 	 */
 	public function ToXML (QuarkXMLIOProcessor $processor, $node = '') {
 		$attributes = '';
-		$node = func_num_args() == 2 ? $node : $processor->Item();
+		$node = $this->_name == '' ? $node : $this->_name;
 
 		foreach ($this->_attributes as $key => $value)
-			$attributes .= ' ' . $key . '="'. $value . '"';
+			if ($value !== null || ($value === null && $processor->ForceNull()))
+				$attributes .= ' ' . $key . '="'. $value . '"';
 
-		return '<' . $node . $attributes . '>' . $processor->Encode($this->_data) . '</' . $node . '>';
+		return $this->_single
+			? ('<' . $node . $attributes . ' />')
+			: ('<' . $node . $attributes . '>' . $processor->Encode($this->_data) . '</' . $node . '>');
 	}
 
 	/**
@@ -16030,7 +16150,7 @@ class QuarkXMLNode {
 		foreach ($xml->attributes() as $key => $value)
 			$attributes[$key] = (string)$value;
 		
-		return new self($out, $attributes);
+		return new self($xml->getName(), $out, $attributes);
 	}
 }
 
