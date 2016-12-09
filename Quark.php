@@ -334,14 +334,14 @@ class Quark {
 
 	/**
 	 * @param string $pattern = ''
+	 * @param string $alphabet = self::ALPHABET_LETTERS
 	 *
 	 * @return string
 	 */
-	public static function GenerateByPattern ($pattern = '') {
+	public static function GenerateByPattern ($pattern = '', $alphabet = self::ALPHABET_LETTERS) {
 		if (!preg_match_all('#(\\\?.)(\{([\d]+)\})*#', $pattern, $found, PREG_SET_ORDER)) return '';
 
 		$out = '';
-		$alphabet = self::ALPHABET_LETTERS;
 		$last = strlen($alphabet) - 1;
 
 		foreach ($found as $item) {
@@ -6060,6 +6060,34 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return array|null
+	 */
+	public function FieldKeys () {
+		return $this->__call('FieldKeys', func_get_args());
+	}
+
+	/**
+	 * @return array|null
+	 */
+	public function FieldValues () {
+		return $this->__call('FieldValues', func_get_args());
+	}
+
+	/**
+	 * @return array
+	 */
+	public function PropertyKeys () {
+		return $this->__call('PropertyKeys', func_get_args());
+	}
+
+	/**
+	 * @return array
+	 */
+	public function PropertyValues () {
+		return $this->__call('PropertyValues', func_get_args());
+	}
+
+	/**
 	 * @param array $options
 	 *
 	 * @return mixed
@@ -7024,6 +7052,60 @@ class QuarkModel implements IQuarkContainer {
 		$fields = (object)$this->_model->Fields();
 
 		return isset($fields->$name) ? $fields->$name : null;
+	}
+	
+	/**
+	 * @return array|null
+	 */
+	public function FieldKeys () {
+		$fields = $this->_model->Fields();
+		if (!QuarkObject::isAssociative($fields)) return null;
+		
+		$out = array();
+		
+		foreach ($fields as $key => $value)
+			$out[] = $key;
+		
+		return $out;
+	}
+	
+	/**
+	 * @return array|null
+	 */
+	public function FieldValues () {
+		$fields = $this->_model->Fields();
+		if (!QuarkObject::isAssociative($fields)) return null;
+		
+		$out = array();
+		
+		foreach ($fields as $key => $value)
+			$out[] = $value;
+		
+		return $out;
+	}
+	
+	/**
+	 * @return array
+	 */
+	public function PropertyKeys () {
+		$out = array();
+		
+		foreach ($this->_model as $key => $value)
+			$out[] = $key;
+		
+		return $out;
+	}
+	
+	/**
+	 * @return array
+	 */
+	public function PropertyValues () {
+		$out = array();
+		
+		foreach ($this->_model as $value)
+			$out[] = $value;
+		
+		return $out;
 	}
 
 	/**
@@ -8492,7 +8574,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 	private $_rules = array();
 
 	/**
-	 * @var IQuarkEncryptionProtocol $_cipher = null
+	 * @var QuarkCipher $_cipher = null
 	 */
 	private $_cipher = null;
 
@@ -8514,7 +8596,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 	public function __construct ($key = '', $rules = [], IQuarkEncryptionProtocol $cipher = null) {
 		$this->_key = $key;
 		$this->_rules = $rules;
-		$this->_cipher = $cipher ? $cipher : new QuarkOpenSSLCipher();
+		$this->_cipher = new QuarkCipher($cipher ? $cipher : new QuarkOpenSSLCipher());
 	}
 
 	/**
@@ -8557,7 +8639,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 		if ($this->_ciphered)
 			$this->Decipher();
 
-		return $this->_cipher->Cipher($this->_key, $this->_val);
+		return $this->_cipher->Encrypt($this->_key, $this->_val);
 	}
 
 	/**
@@ -8568,7 +8650,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 			$this->Decipher();
 		
 		return (string)($this->_extract
-			? $this->_cipher->Cipher($this->_extract, $this->_val)
+			? $this->_cipher->Encrypt($this->_extract, $this->_val)
 			: $this->_val);
 	}
 
@@ -8576,7 +8658,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
 	 * @return string
 	 */
 	public function Decipher () {
-		$out = $this->_cipher->Decipher($this->_key, $this->_val);
+		$out = $this->_cipher->Decrypt($this->_key, $this->_val);
 		$this->_ciphered = false;
 		
 		return $this->_val = $out === false ? $this->_val : $out;
@@ -16277,6 +16359,87 @@ class QuarkCertificate extends QuarkFile {
 }
 
 /**
+ * Class QuarkCipher
+ *
+ * @package Quark
+ */
+class QuarkCipher {
+	const HASH_MD5 = '1';
+	const HASH_BLOW_FISH = '2';
+	const HASH_EKS_BLOW_FISH = '2a';
+	const HASH_SHA256 = '5';
+	const HASH_SHA512 = '6';
+	
+	/**
+	 * @var IQuarkEncryptionProtocol $_protocol
+	 */
+	private $_protocol;
+	
+	/**
+	 * @param IQuarkEncryptionProtocol $protocol = null
+	 */
+	public function __construct (IQuarkEncryptionProtocol $protocol = null) {
+		$this->Protocol($protocol);
+	}
+	
+	/**
+	 * @param IQuarkEncryptionProtocol $protocol = null
+	 *
+	 * @return IQuarkEncryptionProtocol
+	 */
+	public function &Protocol (IQuarkEncryptionProtocol $protocol = null) {
+		if (func_num_args() != 0)
+			$this->_protocol = $protocol;
+		
+		return $this->_protocol;
+	}
+	
+	/**
+	 * @param string $key = ''
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function Encrypt ($key = '', $data = '') {
+		return $this->_protocol == null ? '' : $this->_protocol->Encrypt($key, $data);
+	}
+	
+	/**
+	 * @param string $key = ''
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function Decrypt ($key = '', $data = '') {
+		return $this->_protocol == null ? '' : $this->_protocol->Decrypt($key, $data);
+	}
+	
+	/**
+	 * http://www.slashroot.in/how-are-passwords-stored-linux-understanding-hashing-shadow-utils
+	 * https://ubuntuforums.org/showthread.php?t=1169551&p=7348429#post7348429
+	 *
+	 * @param string $password
+	 * @param string $salt
+	 * @param string $hash = self::HASH_SHA512
+	 *
+	 * @return string
+	 */
+	public static function UnixPassword ($password = '', $salt = '', $hash = self::HASH_SHA512) {
+		return crypt($password, '$' . $hash . '$' . $salt . '$');
+	}
+	
+	/**
+	 * @param int $chars = 8
+	 * @param string $alphabet = Quark::ALPHABET_PASSWORD
+	 *
+	 * @return string
+	 */
+	public static function UnixPasswordSalt ($chars = 8, $alphabet = Quark::ALPHABET_PASSWORD) {
+		return Quark::GenerateByPattern('\c{' . $chars . '}', $alphabet);
+	}
+}
+
+/**
  * Interface IQuarkEncryptionProtocol
  *
  * @package Quark
@@ -16288,7 +16451,7 @@ interface IQuarkEncryptionProtocol {
 	 *
 	 * @return string
 	 */
-	public function Cipher($key, $data);
+	public function Encrypt($key, $data);
 
 	/**
 	 * @param string $key
@@ -16296,7 +16459,7 @@ interface IQuarkEncryptionProtocol {
 	 *
 	 * @return string
 	 */
-	public function Decipher($key, $data);
+	public function Decrypt($key, $data);
 }
 
 /**
@@ -16332,7 +16495,7 @@ class QuarkOpenSSLCipher implements IQuarkEncryptionProtocol {
 	 *
 	 * @return string
 	 */
-	public function Cipher ($key, $data) {
+	public function Encrypt ($key, $data) {
 		return base64_encode(openssl_encrypt($data, $this->_algorithm, $key, OPENSSL_RAW_DATA, $this->_iv()));
 	}
 
@@ -16342,7 +16505,7 @@ class QuarkOpenSSLCipher implements IQuarkEncryptionProtocol {
 	 *
 	 * @return string
 	 */
-	public function Decipher ($key, $data) {
+	public function Decrypt ($key, $data) {
 		return openssl_decrypt(base64_decode($data), $this->_algorithm, $key, OPENSSL_RAW_DATA, $this->_iv());
 	}
 
@@ -16809,12 +16972,12 @@ interface IQuarkSQLDataProvider {
  */
 class QuarkSource extends QuarkFile {
 	/**
-	 * @var array $_trim = []
+	 * @var string[] $_trim = []
 	 */
 	private $_trim = array();
 
 	/**
-	 * @var array $__trim
+	 * @var string[] $__trim
 	 */
 	private static $__trim = array(
 		',',';','?',':',
@@ -16826,7 +16989,7 @@ class QuarkSource extends QuarkFile {
 	);
 
 	/**
-	 * @param string[] $trim
+	 * @param string[] $trim = []
 	 *
 	 * @return string[]
 	 */
@@ -16847,12 +17010,12 @@ class QuarkSource extends QuarkFile {
 	}
 
 	/**
-	 * @param string $source
-	 * @param array  $trim
+	 * @param string $source = ''
+	 * @param string[] $trim = []
 	 *
 	 * @return string
 	 */
-	public static function ObfuscateString ($source = '', $trim = array()) {
+	public static function ObfuscateString ($source = '', $trim = []) {
 		$trim = func_num_args() == 3 ? $trim : self::$__trim;
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';
 

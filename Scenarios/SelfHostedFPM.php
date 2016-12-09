@@ -21,7 +21,7 @@ use Quark\QuarkThreadSet;
  */
 class SelfHostedFPM implements IQuarkTask {
 	/**
-	 * @var array $_secure
+	 * @var string[] $_secure
 	 */
 	private $_secure = array(
 		'/Services',
@@ -31,12 +31,24 @@ class SelfHostedFPM implements IQuarkTask {
 		'/runtime',
 		'.htaccess',
 	);
+	
+	/**
+	 * @param string[] $secure = []
+	 *
+	 * @return string[]
+	 */
+	public function Secure ($secure = []) {
+		if (func_num_args() != 0)
+			$this->_secure = $secure;
+		
+		return $this->_secure;
+	}
 
 	/**
 	 * @param int $argc
 	 * @param array $argv
 	 *
-	 * @return mixed
+	 * @return void
 	 *
 	 * @throws QuarkArchException
 	 */
@@ -46,7 +58,25 @@ class SelfHostedFPM implements IQuarkTask {
 		if ($fpm == null)
 			throw new QuarkArchException('Attempt to start a not configured self-hosted FPM instance');
 
-		$http = new QuarkHTTPServer($fpm, function (QuarkDTO $request) {
+		$http = self::Instance($fpm, $this->_secure);
+
+		if (!$http->Bind())
+			throw new QuarkArchException('Can not bind self-hosted FPM instance on ' . $fpm);
+
+		QuarkThreadSet::Queue(function () use (&$http) {
+			$http->Pipe();
+		});
+	}
+	
+	/**
+	 * @param string $uri = QuarkFPMEnvironment::SELF_HOSTED
+	 * @param string[] $secure = []
+	 * @param bool $log = true
+	 *
+	 * @return QuarkHTTPServer
+	 */
+	public static function Instance ($uri = QuarkFPMEnvironment::SELF_HOSTED, $secure = [], $log = true) {
+		return new QuarkHTTPServer($uri, function (QuarkDTO $request) use ($secure, $log) {
 			$file = new QuarkFile(Quark::Host() . $request->URI()->path);
 
 			try {
@@ -54,7 +84,7 @@ class SelfHostedFPM implements IQuarkTask {
 					/**
 					 * http://stackoverflow.com/a/684005/2097055
 					 */
-					if (preg_match('#' . implode('|', $this->_secure) . '#Uis', $request->URI()->Query())) {
+					if (preg_match('#' . implode('|', $secure) . '#Uis', $request->URI()->Query())) {
 						$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_403_FORBIDDEN);
 
 						$out = $response->SerializeResponse();
@@ -76,8 +106,8 @@ class SelfHostedFPM implements IQuarkTask {
 
 					$service = new QuarkService(
 						$request->URI()->Query(),
-						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::PROCESSOR_REQUEST) : null,
-						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::PROCESSOR_RESPONSE) : null
+						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_REQUEST) : null,
+						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_RESPONSE) : null
 					);
 
 					unset($i, $provider, $env);
@@ -114,18 +144,13 @@ class SelfHostedFPM implements IQuarkTask {
 				$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_500_SERVER_ERROR);
 				$out = $response->SerializeResponse();
 			}
-
-			echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $request->URI()->Query(), ': ', $response->Status(), ' (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), ")\r\n";
+			
+			if ($log)
+				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $request->URI()->Query(), ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
+			
 			unset($file, $response, $request);
 
 			return $out;
-		});
-
-		if (!$http->Bind())
-			throw new QuarkArchException('Can not bind self-hosted FPM instance on ' . $fpm);
-
-		QuarkThreadSet::Queue(function () use (&$http) {
-			$http->Pipe();
 		});
 	}
 }
