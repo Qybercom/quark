@@ -25,10 +25,6 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	const OPTION_CLIENT_ID = 'client_id';
 	const OPTION_CLIENT_SECRET = 'client_secret';
 
-	const OPTION_TYPE = 'type';
-	const OPTION_VALUE = 'value';
-	const OPTION_VISUAL = 'visual';
-
 	const HEADER_STATUS = 'X-WNS-STATUS';
 	const HEADER_NOTIFICATION_STATUS = 'X-WNS-NOTIFICATIONSTATUS';
 	const HEADER_MESSAGE_ID = 'X-WNS-MSG-ID';
@@ -49,9 +45,9 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	private $_details;
 
 	/**
-	 * @var array $_config = null
+	 * @var array $_config = []
 	 */
-	private $_config = null;
+	private $_config = array();
 
 	/**
 	 * MicrosoftWNS constructor.
@@ -73,17 +69,21 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	public function PNPConfig ($config) {
 		if (!is_array($config)) return;
 
-		$this->_config = $config;
+		$this->_config = (array)$config;
 	}
 
 	/**
 	 * @param string $key
 	 * @param $value
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function PNPOption ($key, $value) {
-		// TODO: Implement PNPOption() method.
+		switch ($key) {
+			case self::OPTION_CLIENT_ID: $this->_config[self::OPTION_CLIENT_ID] = $value; break;
+			case self::OPTION_CLIENT_SECRET: $this->_config[self::OPTION_CLIENT_SECRET] = $value; break;
+			default: break;
+		}
 	}
 
 	/**
