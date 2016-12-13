@@ -6060,30 +6060,40 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @param bool $runtime = true
+	 *
 	 * @return array|null
 	 */
-	public function FieldKeys () {
+	public function FieldKeys ($runtime = true) {
 		return $this->__call('FieldKeys', func_get_args());
 	}
 
 	/**
+	 * @param string[] $exclude = []
+	 * @param bool $runtime = true
+	 * 
 	 * @return array|null
 	 */
-	public function FieldValues () {
+	public function FieldValues ($exclude = [], $runtime = true) {
 		return $this->__call('FieldValues', func_get_args());
 	}
 
 	/**
+	 * @param bool $runtime = true
+	 *
 	 * @return array
 	 */
-	public function PropertyKeys () {
+	public function PropertyKeys ($runtime = true) {
 		return $this->__call('PropertyKeys', func_get_args());
 	}
 
 	/**
+	 * @param string[] $exclude = []
+	 * @param bool $runtime = true
+	 * 
 	 * @return array
 	 */
-	public function PropertyValues () {
+	public function PropertyValues ($exclude = [], $runtime = true) {
 		return $this->__call('PropertyValues', func_get_args());
 	}
 
@@ -6399,7 +6409,7 @@ class QuarkModel implements IQuarkContainer {
 	const CONFIG_VALIDATION_STORE = 'model.validation.store';
 
 	/**
-	 * @var IQuarkModel|QuarkModelBehavior $_model = null
+	 * @var IQuarkModel|IQuarkStrongModelWithRuntimeFields|QuarkModelBehavior $_model = null
 	 */
 	private $_model = null;
 
@@ -7055,9 +7065,11 @@ class QuarkModel implements IQuarkContainer {
 	}
 	
 	/**
+	 * @param bool $runtime = true
+	 *
 	 * @return array|null
 	 */
-	public function FieldKeys () {
+	public function FieldKeys ($runtime = true) {
 		$fields = $this->_model->Fields();
 		if (!QuarkObject::isAssociative($fields)) return null;
 		
@@ -7066,44 +7078,73 @@ class QuarkModel implements IQuarkContainer {
 		foreach ($fields as $key => $value)
 			$out[] = $key;
 		
+		if ($runtime && $this->_model instanceof IQuarkStrongModelWithRuntimeFields) {
+			$fields = $this->_model->RuntimeFields();
+			
+			if (QuarkObject::isAssociative($fields))
+				foreach ($fields as $key => $value)
+					$out[] = $key;
+		}
+		
 		return $out;
 	}
 	
 	/**
+	 * @param string[] $exclude = []
+	 * @param bool $runtime = true
+	 * 
 	 * @return array|null
 	 */
-	public function FieldValues () {
+	public function FieldValues ($exclude = [], $runtime = true) {
 		$fields = $this->_model->Fields();
 		if (!QuarkObject::isAssociative($fields)) return null;
 		
 		$out = array();
 		
 		foreach ($fields as $key => $value)
-			$out[] = $value;
+			if (!in_array($key, $exclude))
+				$out[] = $value;
+		
+		if ($runtime && $this->_model instanceof IQuarkStrongModelWithRuntimeFields) {
+			$fields = $this->_model->RuntimeFields();
+			
+			if (QuarkObject::isAssociative($fields))
+				foreach ($fields as $key => $value)
+					$out[] = $value;
+		}
 		
 		return $out;
 	}
 	
 	/**
+	 * @param bool $runtime = true
+	 *
 	 * @return array
 	 */
-	public function PropertyKeys () {
+	public function PropertyKeys ($runtime = true) {
 		$out = array();
+		$fields = $this->FieldKeys($runtime);
 		
 		foreach ($this->_model as $key => $value)
-			$out[] = $key;
+			if (!($this->_model instanceof IQuarkStrongModel) || in_array($key, $fields))
+				$out[] = $key;
 		
 		return $out;
 	}
 	
 	/**
+	 * @param string[] $exclude = []
+	 * @param bool $runtime = true
+	 * 
 	 * @return array
 	 */
-	public function PropertyValues () {
+	public function PropertyValues ($exclude = [], $runtime = true) {
 		$out = array();
+		$fields = $this->FieldKeys($runtime);
 		
-		foreach ($this->_model as $value)
-			$out[] = $value;
+		foreach ($this->_model as $key => $value)
+			if (!in_array($key, $exclude) && (!($this->_model instanceof IQuarkStrongModel) || in_array($key, $fields)))
+				$out[] = $value;
 		
 		return $out;
 	}
@@ -8723,6 +8764,19 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	private $_nullable = false;
 
 	/**
+	 * @var array $_components
+	 */
+	private static $_components = array(
+		'Y' => '([\d]{4})',
+		'm' => '([\d]{2})',
+		'd' => '([\d]{2})',
+		'H' => '([\d]{2})',
+		'i' => '([\d]{2})',
+		's' => '([\d]{2})',
+		'u' => '([\d]{6})'
+	);
+	
+	/**
 	 * @param IQuarkCulture $culture
 	 * @param string $value = self::NOW
 	 */
@@ -8812,21 +8866,24 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param QuarkDate $with
+	 * @param QuarkDate $with = null
+	 * @param bool $interval = false
 	 *
-	 * @return int
+	 * @return int|QuarkDateInterval
 	 */
-	public function Interval (QuarkDate $with = null) {
+	public function Interval (QuarkDate $with = null, $interval = false) {
 		if ($with == null) return 0;
 
 		$start = $this->_date->getTimestamp();
 		$end = $with->Value()->getTimestamp();
-
-		return $end - $start;
+		
+		$out = $end - $start;
+		
+		return $interval ? QuarkDateInterval::FromSeconds($out) : $out;
 	}
 
 	/**
-	 * @param string $offset
+	 * @param string|QuarkDateInterval $offset
 	 * @param bool $copy = false
 	 *
 	 * @return QuarkDate
@@ -8836,7 +8893,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 
 		$out = $copy ? clone $this : $this;
 
-		if (!@$out->_date->modify($offset))
+		if (!@$out->_date->modify($offset instanceof QuarkDateInterval ? $offset->Modifier() : $offset))
 			Quark::Log('[QuarkDate] Invalid value for $offset argument. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
 
 		return $out;
@@ -9039,29 +9096,28 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param int $time
+	 * @param string $date = ''
+	 * @param string $in = ''
+	 * @param string $out = ''
 	 *
-	 * @return string
+	 * @return mixed
 	 */
-	public static function FancyTime ($time) {
-		$offset = $time / 3600;
-
-		$hours = floor($offset);
-		$minutes = ($offset - $hours) * 60;
-		$seconds = ($minutes - floor($minutes)) * 60;
-
-		$dir = $hours >= 0;
-		$one = abs($hours) < 10;
-
-		$hours = ($dir ? '+' : '-') . ($one ? '0' : '') . abs($hours);
-
-		if ($minutes < 10)
-			$minutes = '0' . $minutes;
-
-		if ($seconds < 10)
-			$seconds = '0' . $seconds;
-
-		return $hours . ':' . $minutes . ':' . $seconds;
+	public static function Convert ($date = '', $in = '', $out = '') {
+		$replace = array();
+		
+		$in = preg_replace_callback('#[a-zA-Z]#Uis', function ($item) use(&$replace) {
+			if (!isset(self::$_components[$item[0]])) return $item[0];
+			
+			$replace[$item[0]] = '$' . (sizeof($replace) + 1);
+			
+			return self::$_components[$item[0]];
+		}, $in);
+		
+		$out = preg_replace_callback('#[a-zA-Z]#Uis', function ($item) use($replace) {
+			return isset($replace[$item[0]]) ? $replace[$item[0]] : $item[0];
+		}, $out);
+		
+		return preg_replace('#' . $in . '#Uis', $out, $date);
 	}
 
 	/**
@@ -9109,6 +9165,376 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public function BeforeExtract ($fields, $weak) {
 		return $this->DateTime();
+	}
+}
+
+/**
+ * Class QuarkDateInterval
+ *
+ * @package Quark
+ */
+class QuarkDateInterval {
+	const ROUND_CEIL = 'ceil';
+	const ROUND_FLOOR = 'floor';
+	
+	const UNIT_YEAR = 'years';
+	const UNIT_MONTH = 'months';
+	const UNIT_DAY = 'days';
+	const UNIT_HOUR = 'hours';
+	const UNIT_MINUTE = 'minutes';
+	const UNIT_SECOND = 'seconds';
+	
+	const SECONDS_IN_YEAR = 31536000;
+	const SECONDS_IN_MONTH = 2678400;
+	const SECONDS_IN_DAY = 86400;
+	const SECONDS_IN_HOUR = 3600;
+	const SECONDS_IN_MINUTE = 60;
+	const SECONDS_IN_SECOND = 1;
+	
+	const MINUTES_IN_YEAR = 525600;
+	const MINUTES_IN_MONTH = 44640;
+	const MINUTES_IN_DAY = 1440;
+	const MINUTES_IN_HOUR = 60;
+	const MINUTES_IN_MINUTE = 1;
+	
+	const HOURS_IN_YEAR = 8760;
+	const HOURS_IN_MONTH = 744;
+	const HOURS_IN_DAY = 24;
+	const HOURS_IN_HOUR = 1;
+	
+	const DAYS_IN_YEAR = 365;
+	const DAYS_IN_MONTH = 31;
+	const DAYS_IN_DAY = 1;
+	
+	const MONTHS_IN_YEAR = 12;
+	const MONTHS_IN_MONTH = 1;
+	
+	const YEARS_IN_YEAR = 1;
+	
+	/**
+	 * @var array $_dividers
+	 */
+	private static $_dividers = array(
+		self::UNIT_SECOND => array(
+			self::UNIT_YEAR => self::SECONDS_IN_YEAR,
+			self::UNIT_MONTH => self::SECONDS_IN_MONTH,
+			self::UNIT_DAY => self::SECONDS_IN_DAY,
+			self::UNIT_HOUR => self::SECONDS_IN_HOUR,
+			self::UNIT_MINUTE => self::SECONDS_IN_MINUTE,
+			self::UNIT_SECOND => self::SECONDS_IN_SECOND
+		),
+		self::UNIT_MINUTE => array(
+			self::UNIT_YEAR => self::MINUTES_IN_YEAR,
+			self::UNIT_MONTH => self::MINUTES_IN_MONTH,
+			self::UNIT_DAY => self::MINUTES_IN_DAY,
+			self::UNIT_HOUR => self::MINUTES_IN_HOUR,
+			self::UNIT_MINUTE => self::MINUTES_IN_MINUTE
+		),
+		self::UNIT_HOUR => array(
+			self::UNIT_YEAR => self::HOURS_IN_YEAR,
+			self::UNIT_MONTH => self::HOURS_IN_MONTH,
+			self::UNIT_DAY => self::HOURS_IN_DAY,
+			self::UNIT_HOUR => self::HOURS_IN_HOUR
+		),
+		self::UNIT_DAY => array(
+			self::UNIT_YEAR => self::DAYS_IN_YEAR,
+			self::UNIT_MONTH => self::DAYS_IN_MONTH,
+			self::UNIT_DAY => self::DAYS_IN_DAY
+		),
+		self::UNIT_MONTH => array(
+			self::UNIT_YEAR => self::MONTHS_IN_YEAR,
+			self::UNIT_MONTH => self::MONTHS_IN_MONTH
+		),
+		self::UNIT_YEAR => array(
+			self::UNIT_YEAR => self::YEARS_IN_YEAR
+		)
+	);
+	
+	/**
+	 * @var array $_order
+	 */
+	private static $_order = array(
+		self::UNIT_YEAR => 0,
+		self::UNIT_MONTH => 1,
+		self::UNIT_DAY => 2,
+		self::UNIT_HOUR => 3,
+		self::UNIT_MINUTE => 4,
+		self::UNIT_SECOND => 5,
+	);
+	
+	/**
+	 * @var int $years = 0
+	 */
+	public $years = 0;
+	
+	/**
+	 * @var int $months = 0
+	 */
+	public $months = 0;
+	
+	/**
+	 * @var int $days = 0
+	 */
+	public $days = 0;
+	
+	/**
+	 * @var int $hours = 0
+	 */
+	public $hours = 0;
+	
+	/**
+	 * @var int $minutes = 0
+	 */
+	public $minutes = 0;
+	
+	/**
+	 * @var int $seconds = 0
+	 */
+	public $seconds = 0;
+	
+	/**
+	 * @param int $years = 0
+	 * @param int $months = 0
+	 * @param int $days = 0
+	 * @param int $hours = 0
+	 * @param int $minutes = 0
+	 * @param int $seconds = 0
+	 */
+	public function __construct ($years = 0, $months = 0, $days = 0, $hours = 0, $minutes = 0, $seconds = 0) {
+		$this->years = $years;
+		$this->months = $months;
+		$this->days = $days;
+		
+		$this->hours = $hours;
+		$this->minutes = $minutes;
+		$this->seconds = $seconds;
+	}
+	
+	/**
+	 * @param bool $ceil = true
+	 * 
+	 * @return int
+	 */
+	public function Years ($ceil = true) {
+		$full = $this->months + $this->days + $this->hours + $this->minutes + $this->seconds;
+		
+		return $this->years + (int)($ceil && $full != 0);
+	}
+	
+	/**
+	 * @param bool $ceil = true
+	 * 
+	 * @return int
+	 */
+	public function Months ($ceil = true) {
+		$full = $this->days + $this->hours + $this->minutes + $this->seconds;
+		$months = $this->years * self::MONTHS_IN_YEAR;
+		
+		return $months + $this->months + (int)($ceil && $full != 0);
+	}
+	
+	/**
+	 * @param bool $ceil = true
+	 * 
+	 * @return int
+	 */
+	public function Days ($ceil = true) {
+		$full = $this->hours + $this->minutes + $this->seconds;
+		$days = $this->years * self::DAYS_IN_YEAR
+			  + $this->months * self::DAYS_IN_MONTH;
+		
+		return $days + $this->days + (int)($ceil && $full != 0);
+	}
+	
+	/**
+	 * @param bool $ceil = true
+	 * 
+	 * @return int
+	 */
+	public function Hours ($ceil = true) {
+		$full = $this->minutes + $this->seconds;
+		$hours = $this->years * self::HOURS_IN_YEAR
+			   + $this->months * self::HOURS_IN_MONTH
+			   + $this->days * self::HOURS_IN_DAY;
+		
+		return $hours + $this->hours + (int)($ceil && $full != 0);
+	}
+	
+	/**
+	 * @param bool $ceil = true
+	 * 
+	 * @return int
+	 */
+	public function Minutes ($ceil = true) {
+		$full = $this->seconds;
+		$minutes = $this->years * self::MINUTES_IN_YEAR
+				 + $this->months * self::MINUTES_IN_MONTH
+				 + $this->days * self::MINUTES_IN_DAY
+				 + $this->hours * self::MINUTES_IN_HOUR;
+		
+		return $minutes + $this->minutes + (int)($ceil && $full != 0);
+	}
+	
+	/**
+	 * @return int
+	 */
+	public function Seconds () {
+		$seconds = $this->years * self::SECONDS_IN_YEAR
+				 + $this->months * self::SECONDS_IN_MONTH
+				 + $this->days * self::SECONDS_IN_DAY
+				 + $this->hours * self::SECONDS_IN_HOUR
+				 + $this->minutes * self::SECONDS_IN_MINUTE;
+		
+		return $seconds + $this->seconds;
+	}
+	
+	/**
+	 * @param string $format = ''
+	 *
+	 * @return string|null
+	 */
+	public function Format ($format = '') {
+		return QuarkDate::Convert(
+			$f = str_pad($this->years, 4, '0', STR_PAD_LEFT) . '-' .
+			str_pad($this->months, 2, '0', STR_PAD_LEFT) . '-' .
+			str_pad($this->days, 2, '0', STR_PAD_LEFT) . ' ' .
+			str_pad($this->hours, 2, '0', STR_PAD_LEFT) . ':' .
+			str_pad($this->minutes, 2, '0', STR_PAD_LEFT) . ':' .
+			str_pad($this->seconds, 2, '0', STR_PAD_LEFT),
+			'Y-m-d H:i:s',
+			$format
+		);
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function Modifier () {
+		return ''
+			. $this->years . ' years '
+			. $this->months . ' months '
+			. $this->days . ' days '
+			. $this->hours . ' hours '
+			. $this->minutes . ' minutes '
+			. $this->seconds . ' seconds ';
+	}
+	
+	/**
+	 * @param string $interval = ''
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromDate ($interval = '') {
+		$date = new \DateTime($interval);
+		
+		return new self(
+			(int)$date->format('Y'),
+			(int)$date->format('m'),
+			(int)$date->format('d'),
+			(int)$date->format('H'),
+			(int)$date->format('i'),
+			(int)$date->format('s')
+		);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromYears ($interval = 0) {
+		return self::FromUnit(self::UNIT_YEAR, $interval);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromMonths ($interval = 0) {
+		return self::FromUnit(self::UNIT_MONTH, $interval);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromDays ($interval = 0) {
+		return self::FromUnit(self::UNIT_DAY, $interval);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromHours ($interval = 0) {
+		return self::FromUnit(self::UNIT_HOUR, $interval);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromMinutes ($interval = 0) {
+		return self::FromUnit(self::UNIT_MINUTE, $interval);
+	}
+	
+	/**
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromSeconds ($interval = 0) {
+		return self::FromUnit(self::UNIT_SECOND, $interval);
+	}
+	
+	/**
+	 * @param string $unit = self::UNIT_SECOND
+	 * @param int $interval = 0
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public static function FromUnit ($unit = self::UNIT_SECOND, $interval = 0) {
+		$round = $interval < 0 ? self::ROUND_CEIL : self::ROUND_FLOOR;
+		$order = isset(self::$_order[$unit]) ? self::$_order[$unit] : -1;
+		
+		$years   = $order >= 0 ? self::Calculate(self::UNIT_YEAR,   $unit, $round, $interval) : 0;
+		$months  = $order >= 1 ? self::Calculate(self::UNIT_MONTH,  $unit, $round, $interval, $years) : 0;
+		$days    = $order >= 2 ? self::Calculate(self::UNIT_DAY,    $unit, $round, $interval, $years, $months): 0;
+		$hours   = $order >= 3 ? self::Calculate(self::UNIT_HOUR,   $unit, $round, $interval, $years, $months, $days): 0;
+		$minutes = $order >= 4 ? self::Calculate(self::UNIT_MINUTE, $unit, $round, $interval, $years, $months, $days, $hours): 0;
+		$seconds = $order >= 5 ? self::Calculate(self::UNIT_SECOND, $unit, $round, $interval, $years, $months, $days, $hours, $minutes) : 0;
+		
+		return new self($years, $months, $days, $hours, $minutes, $seconds);
+	}
+	
+	/**
+	 * @param string $target = self::UNIT_SECOND
+	 * @param string $unit = self::UNIT_SECOND
+	 * @param string $round = self::ROUND_CEIL
+	 * @param int $interval = 0
+	 * @param int $years = 0
+	 * @param int $months = 0
+	 * @param int $days = 0
+	 * @param int $hours = 0
+	 * @param int $minutes = 0
+	 *
+	 * @return int
+	 */
+	public static function Calculate ($target = self::UNIT_SECOND, $unit = self::UNIT_SECOND, $round = self::ROUND_CEIL, $interval = 0, $years = 0, $months = 0, $days = 0, $hours = 0, $minutes = 0) {
+		$args = func_num_args();
+		
+		return (isset(self::$_dividers[$unit][$target]) ? $round($interval / self::$_dividers[$unit][$target]) : $interval)
+			- (
+				($args > 4 && isset(self::$_dividers[$target][self::UNIT_YEAR]) ? $years * self::$_dividers[$target][self::UNIT_YEAR] : 0) +
+				($args > 5 && isset(self::$_dividers[$target][self::UNIT_MONTH]) ? $months * self::$_dividers[$target][self::UNIT_MONTH] : 0) +
+				($args > 6 && isset(self::$_dividers[$target][self::UNIT_DAY]) ? $days * self::$_dividers[$target][self::UNIT_DAY] : 0) +
+				($args > 7 && isset(self::$_dividers[$target][self::UNIT_HOUR]) ? $hours * self::$_dividers[$target][self::UNIT_HOUR] : 0) +
+				($args > 8 && isset(self::$_dividers[$target][self::UNIT_MINUTE]) ? $minutes * self::$_dividers[$target][self::UNIT_MINUTE] : 0) +
+			0);
 	}
 }
 

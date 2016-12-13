@@ -82,9 +82,11 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 * @param string $icon = null
 	 */
 	public function __construct ($title = null, $body = null, $icon = null) {
-		$this->Title($title);
-		$this->Body($body);
-		$this->Icon($icon);
+		$args = func_num_args();
+
+		if ($args > 0) $this->Title($title);
+		if ($args > 1) $this->Body($body);
+		if ($args > 2) $this->Icon($icon);
 	}
 
 	/**
