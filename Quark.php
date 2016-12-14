@@ -6096,6 +6096,36 @@ trait QuarkModelBehavior {
 	public function PropertyValues ($exclude = [], $runtime = true) {
 		return $this->__call('PropertyValues', func_get_args());
 	}
+	
+	/**
+	 * @param $default
+	 *
+	 * @return callable
+	 */
+	public function Nullable ($default) {
+		$store = $default;
+		$stored = false;
+		
+		/** @noinspection PhpUnusedParameterInspection
+		 *
+		 * @param string $key
+		 * @param mixed $value
+		 * @param bool $changed
+		 *
+		 * @return mixed
+		 */
+		return function ($key, $value, $changed) use ($default, &$store, &$stored) {
+			if ($changed) {
+				if (is_scalar($value))
+					settype($value, gettype($default));
+					
+				$store = $value;
+				$stored = true;
+			}
+			
+			return $stored ? $store : null;
+		};
+	}
 
 	/**
 	 * @param array $options
@@ -6221,6 +6251,16 @@ trait QuarkModelBehavior {
 	 */
 	public function LocalizedAssert ($rule, $message = '', $field = '') {
 		return QuarkField::LocalizedAssert($rule, $message, $field);
+	}
+	
+	/**
+	 * @param string $field = ''
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
+	 *
+	 * @return bool
+	 */
+	public function Unique ($field = '', $op = [QuarkModel::OPERATION_CREATE]) {
+		return $this instanceof IQuarkModel ? QuarkField::Unique($this, $field, $op) : false;
 	}
 
 	/**
@@ -6672,7 +6712,7 @@ class QuarkModel implements IQuarkContainer {
 		$output = $model;
 
 		if (!is_array($fields) && !is_object($fields)) return $output;
-
+		
 		foreach ($fields as $key => &$field) {
 			if (is_int($key) && $field instanceof QuarkKeyValuePair) {
 				$fields[$field->Key()] = $field->Value();
@@ -6680,17 +6720,20 @@ class QuarkModel implements IQuarkContainer {
 			}
 
 			if ($key == '') continue;
-
+			
 			if (isset($model->$key)) {
-				if (is_scalar($field) && is_scalar($model->$key))
-					settype($model->$key, gettype($field));
-
-				$output->$key = $model->$key;
+				if (is_callable($field)) $output->$key = $field($key, $model->$key, !is_callable($model->$key));
+				else {
+					if (is_scalar($field) && is_scalar($model->$key))
+						settype($model->$key, gettype($field));
+					
+					$output->$key = $model->$key;
+				}
 			}
 			else $output->$key = $field instanceof IQuarkModel
 				? QuarkModel::Build($field, empty($model->$key) ? null : $model->$key)
 				: (is_callable($field)
-					? (empty($model->$key) ? $field($key, null, null) : $model->$key)
+					? $field($key, null, false)
 					: $field
 				);
 		}
@@ -6820,7 +6863,7 @@ class QuarkModel implements IQuarkContainer {
 
 		return $value instanceof IQuarkLinkedModel
 			? $value->Unlink()
-			: (is_callable($property) ? $property($key, $value, false) : $value);
+			: (is_callable($property) ? $property($key, $value, !is_callable($value)) : $value);
 	}
 
 	/**
@@ -9764,6 +9807,69 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 */
 	public function BeforeExtract ($fields, $weak) {
 		return $this->_value;
+	}
+}
+
+/**
+ * Class QuarkNullable
+ * 
+ * @property $value = ''
+ * @property $default = ''
+ *
+ * @package Quark
+ */
+class QuarkNullable implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymorphicModel {
+	/**
+	 * @var bool $_changed = false
+	 */
+	private $_changed = false;
+	
+	/**
+	 * @param $value
+	 */
+	public function __construct ($value) {
+		$this->value = $value;
+		$this->default = $value;
+	}
+	
+	/**
+	 * @return mixed
+	 */
+	public function Fields () {
+		return array(
+			'value' => $this->value,
+			'default' => $this->value
+		);
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function Rules () { }
+	
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		$this->_changed = true;
+		
+		return $this->value = $raw;
+	}
+	
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->_changed ? $this->value : null;
+	}
+	
+	/**
+	 * @return mixed
+	 */
+	public function PolymorphicExtract () {
+		return $this->_changed ? $this->value : null;
 	}
 }
 
