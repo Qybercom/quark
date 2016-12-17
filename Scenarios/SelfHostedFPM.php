@@ -115,6 +115,7 @@ class SelfHostedFPM implements IQuarkTask {
 					$request->Processor($service->Input()->Processor());
 					$service->Input()->Merge($request->UnserializeRequest($request->Raw()));
 					$service->Input()->Signature($request->Signature());
+					$service->InitProcessors();
 
 					$body = QuarkHTTPServer::ServicePipeline($service);
 

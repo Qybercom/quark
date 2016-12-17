@@ -110,16 +110,16 @@ Quark.Controls.Dialog = function (selector, opt) {
 		dialog.find('.quark-dialog-state.wait').slideDown();
 	};
 
-	that.Success = function (dialog, trigger) {
+	that.Success = function (trigger, dialog, data) {
 		dialog.find('.quark-dialog-state').slideUp();
 		dialog.find('.quark-dialog-state.success').slideDown();
 		dialog.find('.quark-dialog-confirm').slideUp();
 
 		if (opt.success instanceof Function)
-			opt.success(trigger, dialog);
+			opt.success(trigger, dialog, data);
 	};
 
-	that.Error = function (dialog, data) {
+	that.Error = function (trigger, dialog, data) {
 		if (data != undefined && data.errors instanceof Array) {
 			var i = 0;
 			var errors = '';
@@ -135,6 +135,9 @@ Quark.Controls.Dialog = function (selector, opt) {
 
 		dialog.find('.quark-dialog-state').slideUp();
 		dialog.find('.quark-dialog-state.error').slideDown();
+
+		if (opt.error instanceof Function)
+			opt.error(trigger, dialog, data);
 	};
 
 	that.Open = function (dialog, confirm, data) {
@@ -172,12 +175,12 @@ Quark.Controls.Dialog = function (selector, opt) {
 			},
 
 			success: function (data) {
-				if (opt.successCriteria(data)) that.Success(dialog, dialog.data('button'));
-				else that.Error(dialog, data);
+				if (opt.successCriteria(data)) that.Success(dialog.data('button'), dialog, data);
+				else that.Error(dialog.data('button'), dialog, data);
 			},
 
 			error: function () {
-				that.Error(dialog);
+				that.Error(null, dialog, null);
 			}
 		});
 	};
@@ -709,7 +712,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		var copy = elem.clone();
 		copy
 			.attr('name', copy.attr('name') + '_localized')
-			.val(json != null && json[selected] != undefined ? json[selected] : '');
+			.val(json != null && json[selected] != undefined ? json[selected] : (json['*'] != undefined ? json['*'] : ''));
 
 		elem
 			.css('display', 'none')

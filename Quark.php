@@ -3792,6 +3792,15 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @param string $const = ''
+	 *
+	 * @return mixed
+	 */
+	public function ConstValue ($const = '') {
+		return QuarkObject::ClassConstValue(get_class($this), $const);
+	}
+
+	/**
 	 * @return array
 	 */
 	public function Constants () {
@@ -4188,6 +4197,16 @@ class QuarkObject {
 			if ($const == $value) return $key;
 
 		return null;
+	}
+
+	/**
+	 * @param string|object $class
+	 * @param string $const
+	 *
+	 * @return mixed
+	 */
+	public static function ClassConstValue ($class, $const) {
+		return self::ConstValue(is_object($class) ? get_class($class) : $class . '::' . $const);
 	}
 
 	/**
@@ -11898,11 +11917,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 	/**
 	 * @param string $name
-	 * @param string $data
+	 * @param array|object $data
 	 *
 	 * @return bool
 	 */
-	public static function ControllerCommand ($name = '', $data = '') {
+	public static function ControllerCommand ($name = '', $data = []) {
 		$client = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
 
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$name, &$data) {
@@ -12164,7 +12183,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkSession $session = null
 	 * @param bool $signature = false
 	 *
-	 * @return string
+	 * @return array
 	 */
 	public static function Payload ($type = self::PACKAGE_REQUEST, $url = '', $data = [], QuarkSession $session = null, $signature = false) {
 		$payload = array(
