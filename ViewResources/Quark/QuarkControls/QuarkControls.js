@@ -160,6 +160,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		if (opt.close instanceof Function && opt.close(dialog, action) === false) return;
 
 		dialog.fadeOut(500);
+		dialog.find('.quark-dialog-state').slideUp();
 		$(opt.box).fadeOut(500);
 	};
 
