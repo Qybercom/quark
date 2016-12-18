@@ -16280,6 +16280,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\"#UisS';
 	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
 	const PATTERN_META = '#^\s*\<\?xml\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*\?\>#UisS';
+	const PATTERN_COMMENT = '#\<\!\-\-(.*)\-\-\>#is';
 
 	const MIME = 'text/xml';
 	const ROOT = 'root';
@@ -16321,6 +16322,11 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @var int $_lists = 0;
 	 */
 	private $_lists = 0;
+
+	/**
+	 * @var string[] $_comments = []
+	 */
+	private $_comments = array();
 
 	/**
 	 * @param QuarkXMLNode $root = null
@@ -16400,6 +16406,13 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @return string[]
+	 */
+	public function Comments () {
+		return $this->_comments;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function MimeType () { return self::MIME; }
@@ -16453,6 +16466,12 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw, $_meta = true) {
+		$raw = preg_replace_callback(self::PATTERN_COMMENT, function ($item) {
+			$this->_comments[] = trim($item[1]);
+
+			return '';
+		}, $raw);
+
 		if ($_meta && preg_match(self::PATTERN_META, $raw, $info)) {
 			$meta = self::DecodeAttributes($info[2]);
 
@@ -16752,6 +16771,7 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_BLOCK = '#\[([^\n]*)\][\s\n]*(([^\n]*\s?\=\s?[^\n]*[\s\n]*)*)#is';
 	const PATTERN_PAIR = '#([^\n]*)\s?\=\s?([^\n]*)\n#Ui';
+	const PATTERN_COMMENT = '#\;(.*)\n#i';
 
 	const MIME = 'plain/text';
 
@@ -16759,6 +16779,11 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	 * @var bool $_cast = true
 	 */
 	private $_cast = true;
+
+	/**
+	 * @var string[] $_comments = []
+	 */
+	private $_comments = array();
 	
 	/**
 	 * @param bool $cast = true
@@ -16777,6 +16802,13 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 			$this->_cast = $cast;
 		
 		return $this->_cast;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Comments () {
+		return $this->_comments;
 	}
 
 	/**
@@ -16825,7 +16857,13 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 			return null;
 		}
 
-		if (!preg_match_all(self::PATTERN_BLOCK, $raw . "\r\n", $ini, PREG_SET_ORDER)) return null;
+		$raw = preg_replace_callback(self::PATTERN_COMMENT, function ($item) {
+			$this->_comments[] = trim($item[1]);
+
+			return "\r\n";
+		}, $raw . "\r\n");
+
+		if (!preg_match_all(self::PATTERN_BLOCK, $raw, $ini, PREG_SET_ORDER)) return null;
 
 		$out = array();
 
