@@ -16771,7 +16771,7 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_BLOCK = '#\[([^\n]*)\][\s\n]*(([^\n]*\s?\=\s?[^\n]*[\s\n]*)*)#is';
 	const PATTERN_PAIR = '#([^\n]*)\s?\=\s?([^\n]*)\n#Ui';
-	const PATTERN_COMMENT = '#\;(.*)\n#i';
+	const PATTERN_COMMENT = '#\n[\;\#](.*)\n|(.*\=\s*\"(.*)\")\s*[\;\#]\s*(.*)\n|\n\[(.*)\]\s*[\;\#](.*)\n#UiS';
 
 	const MIME = 'plain/text';
 
@@ -16858,10 +16858,14 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 		}
 
 		$raw = preg_replace_callback(self::PATTERN_COMMENT, function ($item) {
-			$this->_comments[] = trim($item[1]);
+			$size = sizeof($item);
+			$this->_comments[] = trim($item[$size - 1]);
 
-			return "\r\n";
-		}, $raw . "\r\n");
+			if ($size == 7) return '[' . $item[5] . ']';
+			if ($size == 5) return $item[2];
+
+			return '';
+		}, "\n" . str_replace("\n", "\n\n", $raw) . "\n");
 
 		if (!preg_match_all(self::PATTERN_BLOCK, $raw, $ini, PREG_SET_ORDER)) return null;
 
@@ -16898,7 +16902,7 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 			if (is_string($value))
 				$value = preg_replace('#\\\(.)#Ui', '$1', preg_replace('#^\"(.*)\"$#i', '$1', $value));
 
-			$out[$pair[1]] = $value;
+			$out[trim($pair[1])] = $value;
 		}
 		
 		return QuarkObject::Merge($out);
