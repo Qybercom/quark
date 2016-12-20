@@ -5786,7 +5786,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 *
 	 * @return bool
 	 */
-	private function _type ($item) {
+	public function TypeIs ($item) {
 		return $item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type);
 	}
 
@@ -5796,8 +5796,23 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return QuarkCollection
 	 */
 	public function Add ($item) {
-		if ($this->_type($item))
+		if ($this->TypeIs($item))
 			$this->_list[] = $item instanceof QuarkModel ? $item : new QuarkModel($item);
+
+		return $this;
+	}
+
+	/**
+	 * @param $needle
+	 * @param callable $compare
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Remove ($needle, callable $compare) {
+		if ($this->TypeIs($needle))
+			foreach ($this->_list as $key => &$item)
+				if ($compare($item, $needle, $key))
+					unset($this->_list[$key]);
 
 		return $this;
 	}
@@ -5824,21 +5839,21 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 
 	/**
-	 * @param          $needle
+	 * @param $needle
 	 * @param callable $compare
 	 *
 	 * @return bool
 	 */
 	public function In ($needle, callable $compare) {
-		foreach ($this->_list as $item)
-			if ($compare($item, $needle)) return true;
+		foreach ($this->_list as $key => &$item)
+			if ($compare($item, $needle, $key)) return true;
 
 		return false;
 	}
 
 	/**
 	 * @param array $source
-	 * @param callable $iterator
+	 * @param callable $iterator = null
 	 *
 	 * @return QuarkCollection
 	 */
@@ -5853,14 +5868,14 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 		$this->_list = array();
 
-		foreach ($source as $item)
-			$this->Add($iterator($item));
+		foreach ($source as $key => &$item)
+			$this->Add($iterator($item, $key));
 
 		return $this;
 	}
 
 	/**
-	 * @param callable $iterator
+	 * @param callable $iterator = null
 	 *
 	 * @return array
 	 */
@@ -5870,8 +5885,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 		$output = array();
 
-		foreach ($this->_list as $item)
-			$output[] = $iterator($item);
+		foreach ($this->_list as $key => &$item)
+			$output[] = $iterator($item, $key);
 
 		return $output;
 	}
@@ -5887,7 +5902,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 		$out = array();
 
-		foreach ($this->_list as $item)
+		foreach ($this->_list as $key => &$item)
 			$out[] = $item->Extract($fields, $weak);
 
 		return $out;
@@ -6010,7 +6025,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function offsetSet ($offset, $value) {
-		if (!$this->_type($value)) return;
+		if (!$this->TypeIs($value)) return;
 
 		if ($offset === null) $this->_list[] = $value;
 		else $this->_list[(int)$offset] = $value;
