@@ -17513,8 +17513,10 @@ class QuarkSQL {
 					default: $sort = ''; break;
 				}
 
-				$output .= ' ' . $this->Field($key) . ' ' . $sort;
+				$output .= $this->Field($key) . ' ' . $sort . ',';
 			}
+
+			$output = trim($output, ',');
 		}
 
 		if (isset($options[QuarkModel::OPTION_LIMIT]))
