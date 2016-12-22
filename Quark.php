@@ -3823,6 +3823,44 @@ trait QuarkContainerBehavior {
 	public function Template ($source = '', $data = []) {
 		return QuarkView::TemplateString($source, $data);
 	}
+
+	/**
+	 * @param string $key = ''
+	 * @param array $data = []
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function TemplatedLocalizationOf ($key = '', $data = [], $language = QuarkLanguage::ANY) {
+		return $this->Template($this->LocalizationOf($key, $language), $data);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param array $data = []
+	 *
+	 * @return object
+	 */
+	public function TemplatedLocalizationDictionaryOf ($key = '', $data = []) {
+		$out = new \stdClass();
+		$locales = $this->LocalizationDictionaryOf($key);
+
+		foreach ($locales as $key => $locale)
+			$out->$key = $this->Template($locale, $data);
+
+		return $out;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param array $data = []
+	 * @param bool $strict = false
+	 *
+	 * @return string
+	 */
+	public function TemplatedCurrentLocalizationOf ($key = '', $data = [], $strict = false) {
+		return $this->Template($this->CurrentLocalizationOf($key, $strict), $data);
+	}
 }
 
 /**
@@ -9846,7 +9884,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 
 /**
  * Class QuarkNullable
- * 
+ *
  * @property $value = ''
  * @property $default = ''
  *

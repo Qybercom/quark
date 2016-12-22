@@ -102,9 +102,10 @@ trait QuarkPresenceControlComponent {
 		$breadcrumbs = $view->PresenceBreadcrumbs();
 		$out = array();
 
-		foreach ($breadcrumbs as $breadcrumb)
-			if ($breadcrumb instanceof QuarkKeyValuePair)
-				$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
+		if (QuarkObject::isTraversable($breadcrumbs))
+			foreach ($breadcrumbs as $breadcrumb)
+				if ($breadcrumb instanceof QuarkKeyValuePair)
+					$out[] = '<a class="quark-button presence-breadcrumb" href="' . $breadcrumb->Key() . '">' . $breadcrumb->Value() . '</a>';
 
 		return ($header ? $this->_headerWidget($right) : '') . implode('<span class="presence-breadcrumb-delimiter">' . $delimiter . '</span>', $out);
 	}
