@@ -62,6 +62,18 @@ class MailConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
+	 * @param string $username = ''
+	 *
+	 * @return string
+	 */
+	public function Username ($username = '') {
+		if (func_num_args() != 0)
+			$this->_username = $username;
+
+		return $this->_username;
+	}
+
+	/**
 	 * @return IQuarkMailProvider
 	 */
 	public function &MailProvider () {
@@ -99,7 +111,7 @@ class MailConfig implements IQuarkExtensionConfig {
 	/**
 	 * @param object $ini
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function ExtensionOptions ($ini) {
 		if (isset($ini->Username))
@@ -116,6 +128,8 @@ class MailConfig implements IQuarkExtensionConfig {
 		
 		if (isset($ini->CertificatePassphrase))
 			$this->_certificate->Passphrase($ini->CertificatePassphrase);
+
+		$this->_provider->MailINI($ini);
 	}
 
 	/**

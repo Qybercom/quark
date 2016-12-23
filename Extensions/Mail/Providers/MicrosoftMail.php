@@ -12,6 +12,15 @@ use Quark\Extensions\Mail\IQuarkMailProvider;
  */
 class MicrosoftMail implements IQuarkMailProvider {
 	/**
+	 * @param object $ini
+	 *
+	 * @return void
+	 */
+	public function MailINI ($ini) {
+		// TODO: Implement MailINI() method.
+	}
+
+	/**
 	 * @param string $username
 	 * @param string $password
 	 *

@@ -22,6 +22,8 @@ class Mail implements IQuarkExtension {
 	const HEADER_TO = 'To';
 	const HEADER_FROM = 'From';
 
+	const DEFAULT_SUBJECT = 'No subject';
+
 	/**
 	 * @var MailConfig $_config
 	 */
@@ -46,6 +48,11 @@ class Mail implements IQuarkExtension {
 	 * @var QuarkFile[] $_files = []
 	 */
 	private $_files = array();
+
+	/**
+	 * @var string $_subject = self::DEFAULT_SUBJECT
+	 */
+	private $_subject = self::DEFAULT_SUBJECT;
 
 	/**
 	 * @var string $_log = ''
@@ -79,7 +86,7 @@ class Mail implements IQuarkExtension {
 		if (!($this->_config instanceof MailConfig)) return;
 
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
-		$this->_dto->Header(self::HEADER_FROM, $this->_config->From());
+		$this->_sender = $this->_config->From();
 
 		$this->Subject($subject);
 		$this->Content($content);
@@ -115,19 +122,18 @@ class Mail implements IQuarkExtension {
 	}
 
 	/**
-	 * @param string $email
 	 * @param string $name
+	 * @param string $email
 	 *
 	 * @return Mail|string
 	 */
-	public function From ($email = '', $name = '') {
-		if (func_num_args() == 0)
-			return $this->_sender;
+	public function From ($name = '', $email = '') {
+		$num = func_num_args();
 
-		$this->_sender = $name . ' <' . $email . '>';
-		$this->_dto->Header(self::HEADER_FROM, $this->_sender);
+		if ($num != 0)
+			$this->_sender = self::Sender($name, $num == 2 ? $email : $this->_config->Username());
 
-		return $this;
+		return $this->_sender;
 	}
 
 	/**
@@ -136,11 +142,10 @@ class Mail implements IQuarkExtension {
 	 * @return Mail|string
 	 */
 	public function Subject ($subject = '') {
-		if (func_num_args() == 0)
-			return $this->_dto->Header(self::HEADER_SUBJECT);
+		if (func_num_args() != 0)
+			$this->_subject = $subject;
 
-		$this->_dto->Header(self::HEADER_SUBJECT, $subject);
-		return $this;
+		return $this->_subject;
 	}
 
 	/**
@@ -166,6 +171,9 @@ class Mail implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function Send () {
+		$this->_dto->Header(self::HEADER_FROM, $this->_sender);
+		$this->_dto->Header(self::HEADER_SUBJECT, $this->_subject);
+
 		if (sizeof($this->_files) != 0)
 			$this->_dto->Data(
 				array(

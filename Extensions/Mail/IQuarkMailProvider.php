@@ -10,6 +10,13 @@ use Quark\QuarkURI;
  */
 interface IQuarkMailProvider {
 	/**
+	 * @param object $ini
+	 *
+	 * @return mixed
+	 */
+	public function MailINI($ini);
+
+	/**
 	 * @param string $username
 	 * @param string $password
 	 *

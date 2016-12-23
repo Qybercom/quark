@@ -15888,20 +15888,24 @@ interface IQuarkCulture {
  * @package Quark
  */
 class QuarkCultureISO implements IQuarkCulture {
+	const DATETIME = 'Y-m-d H:i:s';
+	const DATE = 'Y-m-d';
+	const TIME = 'H:i:s';
+	
 	/**
 	 * @return string
 	 */
-	public function DateTimeFormat () { return 'Y-m-d H:i:s'; }
+	public function DateTimeFormat () { return self::DATETIME; }
 
 	/**
 	 * @return string
 	 */
-	public function DateFormat () { return 'Y-m-d'; }
+	public function DateFormat () { return self::DATE; }
 
 	/**
 	 * @return string
 	 */
-	public function TimeFormat () { return 'H:i:s'; }
+	public function TimeFormat () { return self::TIME; }
 }
 
 /**
@@ -15910,20 +15914,24 @@ class QuarkCultureISO implements IQuarkCulture {
  * @package Quark
  */
 class QuarkCultureRU implements IQuarkCulture {
+	const DATETIME = 'd.m.Y H:i:s';
+	const DATE = 'd.m.Y';
+	const TIME = 'H:i:s';
+	
 	/**
 	 * @return string
 	 */
-	public function DateTimeFormat () { return 'd.m.Y H:i:s'; }
+	public function DateTimeFormat () { return self::DATETIME; }
 
 	/**
 	 * @return string
 	 */
-	public function DateFormat () { return 'd.m.Y'; }
+	public function DateFormat () { return self::DATE; }
 
 	/**
 	 * @return string
 	 */
-	public function TimeFormat () { return 'H:i:s'; }
+	public function TimeFormat () { return self::TIME; }
 }
 
 /**
