@@ -649,12 +649,14 @@ class Quark {
  */
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
+	const INI_LOCALIZATION_DETAILS = 'LocalizationDetails';
 	const INI_LOCAL_SETTINGS = 'LocalSettings';
 	const INI_DATA_PROVIDERS = 'DataProviders';
 	const INI_AUTHORIZATION_PROVIDER = 'AuthorizationProvider:';
 	const INI_ASYNC_QUEUES = 'AsyncQueues';
 	const INI_ENVIRONMENT = 'Environment:';
 	const INI_EXTENSION = 'Extension:';
+	const INI_CONFIGURATION = 'Configuration:';
 
 	const SERVICES = 'services';
 	const VIEWS = 'views';
@@ -726,6 +728,16 @@ class QuarkConfig {
 	private $_localizationParseFailedToAny = false;
 
 	/**
+	 * @var object $_localizationDetails = null
+	 */
+	private $_localizationDetails = null;
+
+	/**
+	 * @var string[] $_localizationDetailsLoaded = []
+	 */
+	private $_localizationDetailsLoaded = array();
+
+	/**
 	 * @var string $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL
 	 */
 	private $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL;
@@ -734,6 +746,11 @@ class QuarkConfig {
 	 * @var array $_queues = []
 	 */
 	private $_queues = array();
+
+	/**
+	 * @var object $_configuration = null
+	 */
+	private $_configuration = null;
 
 	/**
 	 * @var callable $_ready = null
@@ -970,6 +987,22 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $name
+	 * @param IQuarkConfiguration $config = null
+	 *
+	 * @return IQuarkConfiguration
+	 */
+	public function Configuration ($name, IQuarkConfiguration $config = null) {
+		if ($this->_configuration == null)
+			$this->_configuration = new \stdClass();
+
+		if ($config != null)
+			$this->_configuration->$name = $config;
+
+		return isset($this->_configuration->$name) ? $this->_configuration->$name : null;
+	}
+
+	/**
 	 * @return bool
 	 */
 	private function _loadSettings () {
@@ -1170,15 +1203,34 @@ class QuarkConfig {
 	}
 	
 	/**
+	 * @param string $key
+	 *
 	 * @return object
 	 */
-	private function _localization () {
-		if ($this->_localization == null)
-			return $this->_localizationDictionary;
-		
+	private function _localization ($key) {
 		if ($this->_localizationDictionary == null)
-			$this->_localizationDictionary = $this->_localization->Decode(new QuarkINIIOProcessor(), true);
-		
+			$this->_localizationDictionary = $this->_localization == null
+				? null
+				: $this->_localization->Decode(new QuarkINIIOProcessor(), true);
+
+		if (preg_match('#^(.*)\:\/\/.*#i', $key, $found) && !in_array($found[1], $this->_localizationDetailsLoaded)) {
+			$domain = $found[1];
+
+			if (isset($this->_localizationDetails->$domain)) {
+				$details = QuarkFile::FromLocation($this->_localizationDetails->$domain)->Decode(new QuarkINIIOProcessor(), true);
+				$this->_localizationDetailsLoaded[] = $domain;
+
+				if ($this->_localizationDictionary == null)
+					$this->_localizationDictionary = new \stdClass();
+
+				if (QuarkObject::isTraversable($details))
+					foreach ($details as $key => $block) {
+						$outKey = $domain . '://' . $key;
+						$this->_localizationDictionary->$outKey = $block;
+					}
+			}
+		}
+
 		return $this->_localizationDictionary;
 	}
 
@@ -1189,7 +1241,7 @@ class QuarkConfig {
 	 * @return bool
 	 */
 	public function LocalizationExists ($key = '', $language = QuarkLanguage::ANY) {
-		$locale = $this->_localization();
+		$locale = $this->_localization($key);
 
 		return isset($locale->$key->$language);
 	}
@@ -1202,7 +1254,7 @@ class QuarkConfig {
 	 * @return string
 	 */
 	public function LocalizationOf ($key = '', $language = QuarkLanguage::ANY, $value = '') {
-		$locale = $this->_localization();
+		$locale = $this->_localization($key);
 		
 		if (func_num_args() == 3) {
 			if ($this->_localizationDictionary == null)
@@ -1225,7 +1277,7 @@ class QuarkConfig {
 	 * @return object
 	 */
 	public function LocalizationDictionaryOf ($key = '', $dictionary = []) {
-		$locale = $this->_localization();
+		$locale = $this->_localization($key);
 		
 		if (func_num_args() == 2) {
 			if ($this->_localizationDictionary == null)
@@ -1281,7 +1333,7 @@ class QuarkConfig {
 	 * @return string
 	 */
 	public function CurrentLocalizationOf ($key = '', $strict = false) {
-		$locale = $this->_localization();
+		$locale = $this->_localization($key);
 
 		$lang_current = Quark::CurrentLanguage();
 		$lang_any = QuarkLanguage::ANY;
@@ -1359,6 +1411,26 @@ class QuarkConfig {
 		if (isset($ini[self::INI_LOCAL_SETTINGS]))
 			$this->_settingsLocal = (object)$ini[self::INI_LOCAL_SETTINGS];
 
+		if (isset($ini[self::INI_LOCALIZATION_DETAILS]))
+			$this->_localizationDetails = (object)$ini[self::INI_LOCALIZATION_DETAILS];
+
+		if (QuarkObject::isTraversable($this->_configuration))
+			foreach ($this->_configuration as $key => &$item) {
+				/**
+				 * @var IQuarkConfiguration $item
+				 */
+
+				$options = self::_ini($ini, self::INI_CONFIGURATION, QuarkObject::ConstValue($key));
+
+				if (QuarkObject::isTraversable($options)) {
+					$ready = $item->ConfigurationReady($key, $options);
+
+					if ($ready == true || $ready === null)
+						foreach ($options as $name => $value)
+							$item->$name($value);
+				}
+			}
+
 		$environments = Quark::Environment();
 
 		foreach ($environments as $i => &$environment) {
@@ -1406,6 +1478,21 @@ class QuarkConfig {
 		
 		return $name && isset($ini[$prefix . $name]) ? (object)$ini[$prefix . $name] : null;
 	}
+}
+
+/**
+ * Interface IQuarkConfiguration
+ *
+ * @package Quark
+ */
+interface IQuarkConfiguration {
+	/**
+	 * @param string $key
+	 * @param object $ini
+	 *
+	 * @return bool
+	 */
+	public function ConfigurationReady($key, $ini);
 }
 
 /**
@@ -4000,7 +4087,9 @@ class QuarkObject {
 						$out = new \stdClass();
 
 					$def = isset($out->$key) ? $out->$key : null;
-					$out->$key = self::Merge($def, $value);
+
+					if (!empty($key))
+						$out->$key = self::Merge($def, $value);
 				}
 			}
 		}
@@ -16934,7 +17023,7 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 		foreach ($ini as $value)
 			$out[$value[1]] = self::DecodePairs($value[2], $this->_cast);
-		
+
 		return QuarkObject::Merge($out);
 	}
 

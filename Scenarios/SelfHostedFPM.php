@@ -13,6 +13,7 @@ use Quark\QuarkHTTPException;
 use Quark\QuarkHTTPServer;
 use Quark\QuarkService;
 use Quark\QuarkThreadSet;
+use Quark\QuarkURI;
 
 /**
  * Class SelfHostedFPM
@@ -20,6 +21,8 @@ use Quark\QuarkThreadSet;
  * @package Quark\Scenarios
  */
 class SelfHostedFPM implements IQuarkTask {
+	const UNKNOWN_URI = '<uri_unknown>';
+
 	/**
 	 * @var string[] $_secure
 	 */
@@ -78,13 +81,14 @@ class SelfHostedFPM implements IQuarkTask {
 	public static function Instance ($uri = QuarkFPMEnvironment::SELF_HOSTED, $secure = [], $log = true) {
 		return new QuarkHTTPServer($uri, function (QuarkDTO $request) use ($secure, $log) {
 			$file = new QuarkFile(Quark::Host() . $request->URI()->path);
+			$query = $request->URI() instanceof QuarkURI ? $request->URI()->Query() : self::UNKNOWN_URI;
 
 			try {
 				if ($file->Exists()) {
 					/**
 					 * http://stackoverflow.com/a/684005/2097055
 					 */
-					if (preg_match('#' . implode('|', $secure) . '#Uis', $request->URI()->Query())) {
+					if (preg_match('#' . implode('|', $secure) . '#Uis', $query)) {
 						$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_403_FORBIDDEN);
 
 						$out = $response->SerializeResponse();
@@ -105,7 +109,7 @@ class SelfHostedFPM implements IQuarkTask {
 						if ($provider instanceof QuarkFPMEnvironment) break;
 
 					$service = new QuarkService(
-						$request->URI()->Query(),
+						$query,
 						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_REQUEST) : null,
 						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_RESPONSE) : null
 					);
@@ -134,7 +138,7 @@ class SelfHostedFPM implements IQuarkTask {
 				}
 			}
 			catch (QuarkHTTPException $e) {
-				Quark::Log('[' . $request->URI()->Query() . '] ' . $e->log, $e->lvl);
+				Quark::Log('[' . $query . '] ' . $e->log, $e->lvl);
 
 				$response = QuarkDTO::ForStatus($e->Status());
 				$out = $response->SerializeResponse();
@@ -147,7 +151,7 @@ class SelfHostedFPM implements IQuarkTask {
 			}
 			
 			if ($log)
-				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $request->URI()->Query(), ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
+				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $query, ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
 			
 			unset($file, $response, $request);
 

@@ -679,7 +679,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		},
 		_decode = function (json) {
 			try { return JSON.parse(Quark.Base64.Decode(json)); }
-			catch (e) { return null; }
+			catch (e) { return {}; }
 		};
 
 	opt = opt || {};
