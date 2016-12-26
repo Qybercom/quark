@@ -1349,6 +1349,24 @@ class QuarkConfig {
 				)
 			);
 	}
+	
+	/**
+	 * @param string $domain = ''
+	 * @param string $location = ''
+	 *
+	 * @return string|null
+	 */
+	public function LocalizationDetails ($domain = '', $location = '') {
+		if ($this->_localizationDetails == null)
+			$this->_localizationDetails = new \stdClass();
+		
+		if (func_num_args() == 2)
+			$this->_localizationDetails->$domain = $location;
+		
+		return isset($this->_localizationDetails->$domain)
+			? $this->_localizationDetails->$domain
+			: null;
+	}
 
 	/**
 	 * @param string $mode = QuarkModel::CONFIG_VALIDATION_ALL
@@ -1408,11 +1426,21 @@ class QuarkConfig {
 				$this->_queues[$name]->Key(QuarkURI::FromURI($queue));
 			}
 
-		if (isset($ini[self::INI_LOCAL_SETTINGS]))
-			$this->_settingsLocal = (object)$ini[self::INI_LOCAL_SETTINGS];
+		if (isset($ini[self::INI_LOCAL_SETTINGS])) {
+			if ($this->_settingsLocal == null)
+				$this->_settingsLocal = new \stdClass();
+			
+			foreach ($ini[self::INI_LOCAL_SETTINGS] as $key => $value)
+				$this->_settingsLocal->$key = $value;
+		}
 
-		if (isset($ini[self::INI_LOCALIZATION_DETAILS]))
-			$this->_localizationDetails = (object)$ini[self::INI_LOCALIZATION_DETAILS];
+		if (isset($ini[self::INI_LOCALIZATION_DETAILS])) {
+			if ($this->_localizationDetails == null)
+				$this->_localizationDetails = new \stdClass();
+			
+			foreach ($ini[self::INI_LOCALIZATION_DETAILS] as $key => $value)
+				$this->_localizationDetails->$key = $value;
+		}
 
 		if (QuarkObject::isTraversable($this->_configuration))
 			foreach ($this->_configuration as $key => &$item) {
