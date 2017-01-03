@@ -736,6 +736,11 @@ class QuarkConfig {
 	 * @var string[] $_localizationDetailsLoaded = []
 	 */
 	private $_localizationDetailsLoaded = array();
+	
+	/**
+	 * @var string $_localizationDetailsDelimiter = ':'
+	 */
+	private $_localizationDetailsDelimiter = ':';
 
 	/**
 	 * @var string $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL
@@ -1213,7 +1218,7 @@ class QuarkConfig {
 				? null
 				: $this->_localization->Decode(new QuarkINIIOProcessor(), true);
 
-		if (preg_match('#^(.*)\:\/\/.*#i', $key, $found) && !in_array($found[1], $this->_localizationDetailsLoaded)) {
+		if (preg_match('#^(.*)' . Quark::EscapeRegEx($this->_localizationDetailsDelimiter) . '.*#i', $key, $found) && !in_array($found[1], $this->_localizationDetailsLoaded)) {
 			$domain = $found[1];
 
 			if (isset($this->_localizationDetails->$domain)) {
@@ -1225,7 +1230,7 @@ class QuarkConfig {
 
 				if (QuarkObject::isTraversable($details))
 					foreach ($details as $key => $block) {
-						$outKey = $domain . '://' . $key;
+						$outKey = $domain . $this->_localizationDetailsDelimiter . $key;
 						$this->_localizationDictionary->$outKey = $block;
 					}
 			}
@@ -1366,6 +1371,18 @@ class QuarkConfig {
 		return isset($this->_localizationDetails->$domain)
 			? $this->_localizationDetails->$domain
 			: null;
+	}
+	
+	/**
+	 * @param string $delimiter = ':'
+	 *
+	 * @return string
+	 */
+	public function LocalizationDetailsDelimiter ($delimiter = ':') {
+		if (func_num_args() != 0)
+			$this->_localizationDetailsDelimiter = $delimiter;
+		
+		return $this->_localizationDetailsDelimiter;
 	}
 
 	/**
@@ -4441,7 +4458,7 @@ trait QuarkViewBehavior {
 	}
 
 	/**
-	 * @return mixed
+	 * @return QuarkModel|QuarkSessionBehavior|IQuarkAuthorizableModel
 	 */
 	public function User () {
 		return $this->__call('User', func_get_args());
@@ -4944,7 +4961,7 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @return QuarkModel
+	 * @return QuarkModel|QuarkSessionBehavior|IQuarkAuthorizableModel
 	 */
 	public function User () {
 		return QuarkSession::Current() ? QuarkSession::Current()->User() : null;
@@ -5900,16 +5917,615 @@ interface IQuarkViewFragment {
 }
 
 /**
+ * Class QuarkCollectionBehavior
+ *
+ * @package Quark
+ */
+trait QuarkCollectionBehavior {
+	/**
+	 * @var array $_collection = []
+	 */
+	private $_collection = array();
+	
+	/**
+	 * @return array
+	 */
+	public function Collection () {
+		return $this->_collection;
+	}
+	
+	/**
+	 * @param $document = null
+	 * @param array $query = []
+	 *
+	 * @return bool
+	 */
+	public function Match ($document = null, $query = []) {
+		if (is_scalar($query) || is_null($query)) return $document == $query;
+		if (is_scalar($document) || is_null($document))
+			return $this->_matchTarget($document, $query);
+		
+		$out = true;
+		$outChanged = false;
+		
+		foreach ($query as $key => &$rule) {
+			$len = sizeof($key);
+			
+			if ($len == 0) continue;
+			
+			if (preg_match('#\.#', $key)) {
+				$nodes = explode('.', $key);
+				$parent = $nodes[0];
+				
+				if (!isset($document->$parent)) return false;
+				
+				$newKey = implode('.', array_slice($nodes, 1));
+				
+				if (is_object($document->$parent))
+					return $this->Match($document->$parent, array($newKey => $rule));
+				
+				if (is_array($document->$parent))
+					foreach ($document->$parent as $item)
+						if ($this->Match($item, array($newKey => $rule))) return true;
+				
+				continue;
+			}
+			
+			if ($key[0] == '$') {
+				$aggregate = str_replace('$', '_aggregate_', $key);
+				
+				if (method_exists($this, $aggregate))
+					$this->_matchOut($out, $outChanged, $this->$aggregate($document, $rule));
+				
+				continue;
+			}
+			
+			if (isset($document->$key))
+				$this->_matchOut($out, $outChanged, $this->_matchTarget($document->$key, $rule));
+		}
+		
+		return $outChanged ? $out : false;
+	}
+	
+	/**
+	 * @param bool $out
+	 * @param bool $outChanged
+	 * @param bool $state
+	 */
+	private function _matchOut (&$out, &$outChanged, $state) {
+		if (!$outChanged) {
+			$out = true;
+			$outChanged = true;
+		}
+		
+		$out &= $state;
+	}
+	
+	/**
+	 * @param string $role
+	 * @param $document
+	 * @param array $query
+	 * @param $append = null
+	 *
+	 * @return bool
+	 */
+	private function _matchDocument ($role, $document, $query, $append = null) {
+		$out = true;
+		
+		foreach ($query as $state => $expected) {
+			$hook = str_replace('$', $role, $state);
+			$out &= method_exists($this, $hook)
+				? $this->$hook($document, $expected, $append)
+				: false;
+		};
+		
+		return $out;
+	}
+	
+	/**
+	 * @param $target
+	 * @param $rule
+	 *
+	 * @return bool
+	 */
+	private function _matchTarget ($target, $rule) {
+		if (is_scalar($rule) || is_null($rule) || is_object($rule))
+			return $target == $rule;
+		
+		$isoDate = null;
+		$matcher = '_array_';
+				
+		if (!is_array($target)) {
+			$date = QuarkField::DateTime($target);
+			$isoDate = $date ? QuarkDate::From($target) : null;
+			$matcher = '_compare_';
+		}
+				
+		return $this->_matchDocument($matcher, $target, $rule, $isoDate);
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _aggregate_and ($document, $rule) {
+		$state = true;
+		
+		foreach ($rule as $item)
+			$state &= $this->Match($document, $item);
+					
+		return $state;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _aggregate_nand ($document, $rule) {
+		$state = true;
+		
+		foreach ($rule as $item)
+			$state &= $this->Match($document, $item);
+					
+		return !$state;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _aggregate_or ($document, $rule) {
+		$state = false;
+		
+		foreach ($rule as $item)
+			$state |= $this->Match($document, $item);
+					
+		return $state;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _aggregate_nor ($document, $rule) {
+		$state = false;
+		
+		foreach ($rule as $item)
+			$state |= $this->Match($document, $item);
+					
+		return !$state;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _aggregate_not ($document, $rule) {
+		$state = true;
+		
+		foreach ($rule as $item)
+			$state &= !$this->Match($document, $item);
+					
+		return $state;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_elemMatch ($property, $expected) {
+		$out = false;
+		
+		foreach ($property as $item)
+			$out |= $this->Match($item, $expected);
+		
+		return $out;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @note This iterator behaves different from MongoDB: it match that ALL array elements match the criteria
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_all ($property, $expected) {
+		$out = true;
+		
+		foreach ($expected as $item) {
+			if (is_scalar($item) || is_null($item)) {
+				$out &= in_array($item, $property);
+				continue;
+			}
+			
+			$query = $item;
+			
+			if (isset($item['$elemMatch']))
+				$query = $item['$elemMatch'];
+			
+			foreach ($property as $entry)
+				$out &= $this->Match($entry, $query);
+		}
+		
+		return $out;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_size ($property, $expected) {
+		return $this->Match(sizeof($property), $expected);
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_eq ($property, $expected) {
+		return $property == $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_eq_s ($property, $expected) {
+		return $property === $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_ne ($property, $expected) {
+		return $property != $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_ne_s ($property, $expected) {
+		return $property !== $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_in ($property, $expected) {
+		return is_array($expected) ? in_array($property, $expected) : false;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_nin ($property, $expected) {
+		return is_array($expected) ? !in_array($property, $expected) : false;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_in_s ($property, $expected) {
+		return is_array($expected) ? in_array($property, $expected, true) : false;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_nin_s ($property, $expected) {
+		return is_array($expected) ? !in_array($property, $expected, true) : false;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 * @param QuarkDate $date = null
+	 *
+	 * @return bool
+	 */
+	private function _compare_lt ($property, $expected, QuarkDate $date = null) {
+		return $date ? $date->Earlier(QuarkDate::From($expected)) : $property < $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 * @param QuarkDate $date = null
+	 *
+	 * @return bool
+	 */
+	private function _compare_lte ($property, $expected, QuarkDate $date = null) {
+		return $date ? $date->Earlier(QuarkDate::From($expected)) : $property <= $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 * @param QuarkDate $date = null
+	 *
+	 * @return bool
+	 */
+	private function _compare_gt ($property, $expected, QuarkDate $date = null) {
+		return $date ? $date->Later(QuarkDate::From($expected)) : $property > $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 * @param QuarkDate $date = null
+	 *
+	 * @return bool
+	 */
+	private function _compare_gte ($property, $expected, QuarkDate $date = null) {
+		return $date ? $date->Later(QuarkDate::From($expected)) : $property >= $expected;
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_regex ($property, $expected) {
+		return preg_match($expected, $property);
+	}
+	
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $document
+	 * @param array $rule
+	 *
+	 * @return bool
+	 */
+	private function _compare_not ($document, $rule) {
+		return !$this->Match($document, $rule);
+	}
+	
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return array
+	 */
+	public function Select ($query = [], $options = []) {
+		if (!QuarkObject::isTraversable($query)) return array();
+		if (!QuarkObject::isTraversable($this->_collection)) return array();
+		
+		$out = array();
+		
+		if (sizeof($query) == 0) $out = $this->_collection;
+		else foreach ($this->_collection as $i => &$item) {
+			if ($this->Match($item, $query))
+				$out[] = $item;
+		}
+		
+		return $this->_slice($out, $options);
+	}
+	
+	/**
+	 * @param array $list = []
+	 * @param array $options = []
+	 * @param bool $preserveKeys = null
+	 *
+	 * @return array
+	 */
+	private function _slice ($list = [], $options = [], $preserveKeys = null) {
+		if (isset($options[QuarkModel::OPTION_SORT]) && QuarkObject::isTraversable($options[QuarkModel::OPTION_SORT])) {
+			foreach ($options[QuarkModel::OPTION_SORT] as $key => $sort) {
+				$items = array();
+				$i = 0;
+				$size = sizeof($this->_collection);
+				while ($i < $size) {
+					$elem = eval('return $item->' . str_replace('.', '->', $key) . ';');
+					$items[$i] = $elem;
+					$i++;
+				}
+				
+				$flags = SORT_REGULAR;
+				$dir = $sort;
+				
+				if (is_array($sort)) {
+					if (isset($sort['$natural'])) {
+						$flags = $flags | SORT_NATURAL;
+						$dir = $sort['$natural'];
+					}
+					
+					if (isset($sort['$icase'])) {
+						$flags = $flags | SORT_FLAG_CASE;
+						$dir = $sort['$icase'];
+					}
+				}
+				
+				if ($dir == QuarkModel::SORT_ASC) asort($items, $flags);
+				else arsort($items, $flags);
+				
+				$itemsOut = array();
+				
+				/** @noinspection PhpUnusedLocalVariableInspection */
+				foreach ($items as $i => &$item) {
+					if (!$preserveKeys) $itemsOut[] = $this->_collection[$i];
+					else $itemsOut[$i] = $this->_collection[$i];
+				}
+				
+				$list = $itemsOut;
+			}
+		}
+		
+		$skip = isset($options[QuarkModel::OPTION_SKIP])
+			? (int)$options[QuarkModel::OPTION_SKIP]
+			: 0;
+		
+		$limit = isset($options[QuarkModel::OPTION_LIMIT]) && $options[QuarkModel::OPTION_LIMIT] !== null
+			? (int)$options[QuarkModel::OPTION_LIMIT]
+			: null;
+		
+		return array_slice($list, $skip, $limit, $preserveKeys);
+	}
+	
+	/**
+	 * @param array $query = []
+	 * @param array|callable $update
+	 * @param array $options = []
+	 *
+	 * @return int
+	 */
+	public function Change ($query = [], $update = null, $options = []) {
+		if (!QuarkObject::isTraversable($query)) return 0;
+		if (!QuarkObject::isTraversable($this->_collection)) return 0;
+		
+		$size = sizeof($query);
+		$change = array();
+		
+		if (!isset($options[QuarkModel::OPTION_FORCE_DEFINITION]))
+			$options[QuarkModel::OPTION_FORCE_DEFINITION] = false;
+		
+		foreach ($this->_collection as $i => &$item)
+			if ($size == 0 || $this->Match($item, $query))
+				$change[$i] = $item;
+		
+		$change = $this->_slice($change, $options, true);
+		
+		foreach ($change as $i) {
+			if (is_callable($update)) $update($this->_collection[$i]);
+			else {
+				if ($options[QuarkModel::OPTION_FORCE_DEFINITION]) $this->_collection[$i] = $update;
+				else $this->_change($i, $update);
+			}
+		}
+		
+		return sizeof($change);
+	}
+	
+	/**
+	 * @param int $i
+	 * @param $update
+	 */
+	private function _change ($i, $update) {
+		if (!QuarkObject::isTraversable($update)) return;
+		
+		foreach ($update as $key => &$value) {
+			$val = QuarkObject::isAssociative($value) ? (array)$value : $value;
+			
+			if (isset($this->_collection[$i]->$key) && is_numeric($this->_collection[$i]->$key)) {
+				if (isset($val['$inc'])) $this->_collection[$i]->$key += $val['$inc'];
+				elseif (isset($val['$dec'])) $this->_collection[$i]->$key -= $val['$dec'];
+			}
+			else $this->_collection[$i]->$key = $value;
+		}
+	}
+	
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return int
+	 */
+	public function Purge ($query = [], $options = []) {
+		if (!QuarkObject::isTraversable($query)) return 0;
+		if (!QuarkObject::isTraversable($this->_collection)) return 0;
+		
+		$size = sizeof($query);
+		$purge = array();
+		
+		foreach ($this->_collection as $i => &$item)
+			if ($size == 0 || $this->Match($item, $query))
+				$purge[$i] = $item;
+		
+		$purge = $this->_slice($purge, $options, true);
+		
+		foreach ($purge as $i)
+			unset($this->_collection[$i]);
+		
+		return sizeof($purge);
+	}
+	
+	/**
+	 * Count elements of an object
+	 *
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @link http://php.net/manual/en/countable.count.php
+	 * @return int The custom count as an integer.
+	 * </p>
+	 * <p>
+	 * The return value is cast to an integer.
+	 * @since 5.1.0
+	 */
+	public function Count ($query = [], $options = []) {
+		return sizeof(func_num_args() == 0
+			? $this->_collection
+			: $this->Select($query, $options)
+		);
+	}
+}
+
+/**
  * Class QuarkCollection
  *
  * @package Quark
  */
 class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
-	/**
-	 * @var QuarkModel[]|array $_list = []
-	 */
-	private $_list = array();
-
+	use QuarkCollectionBehavior;
+	
 	/**
 	 * @var $_type  = null
 	 */
@@ -5919,14 +6535,25 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @var int $_index = 0
 	 */
 	private $_index = 0;
+	
+	/**
+	 * @var int $_page = 0
+	 */
+	private $_page = 0;
+	
+	/**
+	 * @var int $_pages = 0
+	 */
+	private $_pages = 0;
 
 	/**
 	 * @param object $type
 	 * @param array $source = []
+	 * @param bool $model = true
 	 */
-	public function __construct ($type, $source = []) {
+	public function __construct ($type, $source = [], $model = true) {
 		$this->_type = $type;
-		$this->PopulateWith($source);
+		$this->PopulateWith($source, null, $model);
 	}
 
 	/**
@@ -5942,17 +6569,18 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return bool
 	 */
 	public function TypeIs ($item) {
-		return $item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type);
+		return $item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type) || ($this->_type instanceof \stdClass && is_object($item));
 	}
 
 	/**
 	 * @param $item
+	 * @param bool $model = true
 	 *
 	 * @return QuarkCollection
 	 */
-	public function Add ($item) {
+	public function Add ($item, $model = true) {
 		if ($this->TypeIs($item))
-			$this->_list[] = $item instanceof QuarkModel ? $item : new QuarkModel($item);
+			$this->_collection[] = $item instanceof QuarkModel || !$model ? $item : new QuarkModel($item);
 
 		return $this;
 	}
@@ -5965,9 +6593,9 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function Remove ($needle, callable $compare) {
 		if ($this->TypeIs($needle))
-			foreach ($this->_list as $key => &$item)
+			foreach ($this->_collection as $key => &$item)
 				if ($compare($item, $needle, $key))
-					unset($this->_list[$key]);
+					unset($this->_collection[$key]);
 
 		return $this;
 	}
@@ -5979,7 +6607,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function Instance ($source) {
 		if ($this->_type instanceof IQuarkModel)
-			$this->_list[] = new QuarkModel($this->_type, $source);
+			$this->_collection[] = new QuarkModel($this->_type, $source);
 
 		return $this;
 	}
@@ -5988,7 +6616,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return QuarkCollection
 	 */
 	public function Reverse () {
-		$this->_list = array_reverse($this->_list);
+		$this->_collection = array_reverse($this->_collection);
 
 		return $this;
 	}
@@ -6000,7 +6628,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return bool
 	 */
 	public function In ($needle, callable $compare) {
-		foreach ($this->_list as $key => &$item)
+		foreach ($this->_collection as $key => &$item)
 			if ($compare($item, $needle, $key)) return true;
 
 		return false;
@@ -6009,22 +6637,23 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	/**
 	 * @param array $source
 	 * @param callable $iterator = null
+	 * @param bool $model = true
 	 *
 	 * @return QuarkCollection
 	 */
-	public function PopulateWith ($source, callable $iterator = null) {
+	public function PopulateWith ($source, callable $iterator = null, $model = true) {
 		if ($source instanceof QuarkCollection)
-			$source = $source->_list;
+			$source = $source->_collection;
 
 		if (!is_array($source)) return $this;
 
 		if ($iterator == null)
 			$iterator = function ($item) { return $item; };
 
-		$this->_list = array();
+		$this->_collection = array();
 
 		foreach ($source as $key => &$item)
-			$this->Add($iterator($item, $key));
+			$this->Add($iterator($item, $key), $model);
 
 		return $this;
 	}
@@ -6036,11 +6665,11 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function Collection (callable $iterator = null) {
 		if ($iterator == null)
-			$iterator = function (QuarkModel $item = null) { return $item ? $item->Model() : null; };
+			$iterator = function ($item) { return $item instanceof QuarkModel ? $item->Model() : null; };
 
 		$output = array();
 
-		foreach ($this->_list as $key => &$item)
+		foreach ($this->_collection as $key => &$item)
 			$output[] = $iterator($item, $key);
 
 		return $output;
@@ -6053,11 +6682,14 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return array
 	 */
 	public function Extract ($fields = null, $weak = false) {
-		if (!($this->_type instanceof IQuarkModel)) return $this->_list;
+		if (!($this->_type instanceof IQuarkModel)) return $this->_collection;
 
 		$out = array();
 
-		foreach ($this->_list as $key => &$item)
+		foreach ($this->_collection as $key => &$item)
+			/**
+			 * @var QuarkModel $item
+			 */
 			$out[] = $item->Extract($fields, $weak);
 
 		return $out;
@@ -6067,10 +6699,34 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return QuarkCollection
 	 */
 	public function Flush () {
-		$this->_list = array();
+		$this->_collection = array();
 		$this->_index = 0;
 
 		return $this;
+	}
+	
+	/**
+	 * @param int $page = 0
+	 *
+	 * @return int
+	 */
+	public function Page ($page = 0) {
+		if (func_num_args() != 0)
+			$this->_page = $page;
+		
+		return $this->_page;
+	}
+	
+	/**
+	 * @param int $pages = 0
+	 *
+	 * @return int
+	 */
+	public function Pages ($pages = 0) {
+		if (func_num_args() != 0)
+			$this->_pages = $pages;
+		
+		return $this->_pages;
 	}
 
 	/**
@@ -6081,7 +6737,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return mixed Can return any type.
 	 */
 	public function current () {
-		return $this->_list[$this->_index];
+		return $this->_collection[$this->_index];
 	}
 
 	/**
@@ -6115,7 +6771,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 *       Returns true on success or false on failure.
 	 */
 	public function valid () {
-		return isset($this->_list[$this->_index]);
+		return isset($this->_collection[$this->_index]);
 	}
 
 	/**
@@ -6145,7 +6801,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * The return value will be casted to boolean if non-boolean was returned.
 	 */
 	public function offsetExists ($offset) {
-		return isset($this->_list[$offset]);
+		return isset($this->_collection[$offset]);
 	}
 
 	/**
@@ -6161,7 +6817,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return mixed Can return all value types.
 	 */
 	public function offsetGet ($offset) {
-		return $this->_list[$offset];
+		return $this->_collection[$offset];
 	}
 
 	/**
@@ -6182,8 +6838,8 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	public function offsetSet ($offset, $value) {
 		if (!$this->TypeIs($value)) return;
 
-		if ($offset === null) $this->_list[] = $value;
-		else $this->_list[(int)$offset] = $value;
+		if ($offset === null) $this->_collection[] = $value;
+		else $this->_collection[(int)$offset] = $value;
 	}
 
 	/**
@@ -6199,21 +6855,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return void
 	 */
 	public function offsetUnset ($offset) {
-		unset($this->_list[(int)$offset]);
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.1.0)<br/>
-	 * Count elements of an object
-	 *
-	 * @link http://php.net/manual/en/countable.count.php
-	 * @return int The custom count as an integer.
-	 *       </p>
-	 *       <p>
-	 *       The return value is cast to an integer.
-	 */
-	public function count () {
-		return sizeof($this->_list);
+		unset($this->_collection[(int)$offset]);
 	}
 }
 
@@ -6633,6 +7275,8 @@ class QuarkModel implements IQuarkContainer {
 	const SORT_ASC = 1;
 	const SORT_DESC = -1;
 	const LIMIT_NO = '___limit_no___';
+	const LIMIT_RANDOM = 1;
+	const LIMIT_PAGED = 25;
 
 	const CONFIG_VALIDATION_ALL = 'model.validation.all';
 	const CONFIG_VALIDATION_STORE = 'model.validation.store';
@@ -7524,17 +8168,56 @@ class QuarkModel implements IQuarkContainer {
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria = []
-	 * @param int $limit = 1
+	 * @param array $options = []
 	 *
 	 * @return QuarkCollection|array
 	 */
-	public static function FindRandom (IQuarkModel $model, $criteria = [], $limit = 1) {
+	public static function FindRandom (IQuarkModel $model, $criteria = [], $options = []) {
 		$count = self::Count($model, $criteria);
-
-		return self::Find($model, $criteria, array(
-			self::OPTION_SKIP => mt_rand(0, $count),
-			self::OPTION_LIMIT => $limit
-		));
+		
+		if (!isset($options[self::OPTION_SKIP]))
+			$options[self::OPTION_SKIP] = mt_rand(0, $count == 0 ? 0 : $count - 1);
+		
+		if (!isset($options[self::OPTION_LIMIT]))
+			$options[self::OPTION_LIMIT] = self::LIMIT_RANDOM;
+		
+		return self::Find($model, $criteria, $options);
+	}
+	
+	/**
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param int $page = 1
+	 * @param array $criteria = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection|array
+	 */
+	public static function FindByPage (IQuarkModel $model, $page = 1, $criteria = [], $options = []) {
+		if (!isset($options[self::OPTION_LIMIT]))
+			$options[self::OPTION_LIMIT] = self::LIMIT_PAGED;
+		
+		$pages = 1;
+		$page = (int)$page;
+		if ($page < 1) $page = 1;
+		
+		if ($options[self::OPTION_LIMIT] != self::LIMIT_NO) {
+			$options[self::OPTION_LIMIT] = (int)$options[self::OPTION_LIMIT];
+			
+			if ($options[self::OPTION_LIMIT] < 1)
+				$options[self::OPTION_LIMIT] = 1;
+		
+			$pages = (int)ceil(self::Count($model, $criteria) / $options[self::OPTION_LIMIT]);
+		}
+		
+		if (!isset($options[self::OPTION_SKIP]))
+			$options[self::OPTION_SKIP] = ($page - 1) * $options[self::OPTION_LIMIT];
+		
+		$out = self::Find($model, $criteria, $options);
+		
+		$out->Page($page);
+		$out->Pages($pages);
+		
+		return $out;
 	}
 
 	/**
@@ -10063,6 +10746,65 @@ class QuarkNullable implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymorphic
 }
 
 /**
+ * Trait QuarkSessionBehavior
+ *
+ * @package Quark
+ */
+trait QuarkSessionBehavior {
+	/**
+	 * @var object $_rights
+	 */
+	private $_rights;
+	
+	/**
+	 * @param string $right = ''
+	 * @param bool|mixed $value = false
+	 *
+	 * @return bool|mixed
+	 */
+	public function Able ($right = '', $value = false) {
+		if ($this->_rights == null)
+			$this->_rights = new \stdClass();
+		
+		if (func_num_args() == 2)
+			$this->_rights->$right = $value;
+		
+		return isset($this->_rights->$right) ? $this->_rights->$right : false;
+	}
+	
+	/**
+	 * @param string $right = ''
+	 * @param $criteria = ''
+	 *
+	 * @return bool
+	 * 
+	 * @throws QuarkArchException
+	 */
+	public function AbleTo ($right = '', $criteria = '') {
+		if (!($this instanceof IQuarkAuthorizableModelWithAbilityControl))
+			throw new QuarkArchException('[QuarkSessionBehavior::AbleTo] Model ' . get_class($this) . ' is not an IQuarkAuthorizableModelWithAbilityControl');
+		
+		/**
+		 * @var IQuarkAuthorizableModelWithAbilityControl $this
+		 */
+		
+		return $this->AbilityControl($right, $criteria);
+	}
+	
+	/**
+	 * @param array|object $rights = []
+	 *
+	 * @return object
+	 */
+	public function Rights ($rights = []) {
+		if (func_num_args() != 0 && QuarkObject::isTraversable($rights))
+			$this->_rights = (object)$rights;
+		
+		return $this->_rights;
+	}
+}
+
+/**
  * Class QuarkSessionSource
  *
  * @package Quark
@@ -10142,7 +10884,7 @@ class QuarkSession {
 	private static $_current;
 
 	/**
-	 * @var QuarkModel|IQuarkAuthorizableModel $user
+	 * @var QuarkModel|QuarkSessionBehavior|IQuarkAuthorizableModel $user
 	 */
 	private $_user;
 
@@ -10215,7 +10957,7 @@ class QuarkSession {
 	}
 
 	/**
-	 * @return QuarkModel|IQuarkAuthorizableModel
+	 * @return QuarkModel|QuarkSessionBehavior|IQuarkAuthorizableModel
 	 */
 	public function &User () {
 		return $this->_user;
@@ -10238,7 +10980,7 @@ class QuarkSession {
 	/**
 	 * @param bool $extract = false
 	 *
-	 * @return IQuarkAuthorizableModel|QuarkModelBehavior|\stdClass
+	 * @return QuarkSessionBehavior|IQuarkAuthorizableModel|QuarkModelBehavior|\stdClass
 	 */
 	private function _session ($extract = false) {
 		return $this->_user instanceof QuarkModel
@@ -10354,6 +11096,42 @@ class QuarkSession {
 	 */
 	public function Commit () {
 		return $this->_source->Provider()->SessionCommit($this->_source->Name(), $this->_session(), $this->ID());
+	}
+	
+	/**
+	 * @return bool
+	 * @throws QuarkArchException
+	 */
+	private function _able () {
+		if ($this->_user == null) return false;
+		
+		if (!QuarkObject::Uses($this->_user->Model(), 'Quark\\QuarkSessionBehavior'))
+			throw new QuarkArchException('[QuarkSession::Able] Model ' . get_class($this->_user->Model()) . ' does not uses QuarkSessionBehavior');
+		
+		return true;
+	}
+	
+	/**
+	 * @param string $right = ''
+	 *
+	 * @return bool|mixed
+	 * 
+	 * @throws QuarkArchException
+	 */
+	public function Able ($right = '') {
+		return $this->_able() && $this->_user->Able($right);
+	}
+	
+	/**
+	 * @param string $right = ''
+	 * @param $criteria = ''
+	 *
+	 * @return bool
+	 * 
+	 * @throws QuarkArchException
+	 */
+	public function AbleTo ($right = '', $criteria = '') {
+		return $this->_able() && $this->_user->AbleTo($right, $criteria);
 	}
 
 	/**
@@ -10530,6 +11308,21 @@ interface IQuarkAuthorizableModel extends IQuarkModel {
  * @package Quark
  */
 interface IQuarkAuthorizableModelWithRuntimeFields extends IQuarkAuthorizableModel, IQuarkStrongModelWithRuntimeFields { }
+
+/**
+ * Interface IQuarkAuthorizableModelWithAbilityControl
+ *
+ * @package Quark
+ */
+interface IQuarkAuthorizableModelWithAbilityControl extends IQuarkAuthorizableModel {
+	/**
+	 * @param string $right
+	 * @param $criteria
+	 *
+	 * @return bool
+	 */
+	public function AbilityControl($right, $criteria);
+}
 
 /**
  * Class QuarkKeyValuePair

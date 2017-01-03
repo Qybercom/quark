@@ -11,6 +11,7 @@ use Quark\QuarkException;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkModel;
+use Quark\QuarkModelBehavior;
 
 /**
  * Class CDNResource
@@ -20,6 +21,8 @@ use Quark\QuarkModel;
  * @package Quark\Extensions\CDN
  */
 class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+	use QuarkModelBehavior;
+	
 	/**
 	 * @var CDNConfig $_config
 	 */
@@ -137,7 +140,7 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	}
 
 	/**
-	 * @return mixed
+	 * @return void
 	 */
 	public function Rules () {
 		// TODO: Implement Rules() method.

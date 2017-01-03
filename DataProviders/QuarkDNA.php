@@ -7,9 +7,11 @@ use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
+use Quark\QuarkCollection;
 use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 
 /**
@@ -38,10 +40,10 @@ class QuarkDNA implements IQuarkDataProvider {
 		$collection = QuarkModel::CollectionName($model, $options);
 
 		if (sizeof((array)$this->_db) == 0)
-			$this->_db = (object)array($collection => array());
+			$this->_db = (object)array($collection => new QuarkCollection(new \stdClass(), array(), false));
 
 		if (!isset($this->_db->$collection))
-			$this->_db->$collection = array();
+			$this->_db->$collection = new QuarkCollection(new \stdClass(), array(), false);
 
 		return $collection;
 	}
@@ -50,7 +52,15 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return bool
 	 */
 	private function _transaction () {
-		$this->_storage->Content(json_encode($this->_db));
+		$db = new \stdClass();
+		
+		foreach ($this->_db as $name => &$collection)
+			/**
+			 * @var QuarkCollection $collection
+			 */
+			$db->$name = $collection->Extract();
+			
+		$this->_storage->Content(json_encode($db));
 
 		return $this->_storage->SaveContent();
 	}
@@ -74,7 +84,14 @@ class QuarkDNA implements IQuarkDataProvider {
 			$this->_storage->SaveContent();
 		}
 
-		$this->_db = json_decode($this->_storage->Content());
+		$db = json_decode($this->_storage->Content());
+		
+		if ($this->_db == null)
+			$this->_db = new \stdClass();
+		
+		if (QuarkObject::isTraversable($db))
+			foreach ($db as $name => &$collection)
+				$this->_db->$name = new QuarkCollection(new \stdClass(), $collection, false);
 	}
 
 	/**
@@ -88,10 +105,10 @@ class QuarkDNA implements IQuarkDataProvider {
 
 		$pk = $this->PrimaryKey($model)->Key();
 
-		$model->$pk = isset($model->$pk) ? $model->$pk: new QuarkDNAID();
+		$model->$pk = isset($model->$pk) ? $model->$pk: Quark::GuID();
 		$model->$pk = (string)$model->$pk;
 
-		$this->_db->{$collection}[] = $model;
+		$this->_db->{$collection}->Add((object)$model, false);
 
 		unset($pk, $collection);
 
@@ -109,39 +126,22 @@ class QuarkDNA implements IQuarkDataProvider {
 
 		$pk = $this->PrimaryKey($model)->Key();
 		$new = false;
-		$ok = false;
 
-		if (!isset($model->$pk)) {
-			$model->$pk = new QuarkDNAID();
+		if (!isset($model->$pk) || !is_scalar($model->$pk)) {
+			$model->$pk = Quark::GuID();
 			$new = true;
 		}
 
 		if ($new) {
-			$this->_db->{$collection}[] = $model;
+		$this->_db->{$collection}->Add($model, false);
 			return $this->_transaction();
 		}
-
+		
 		$model->$pk = (string)$model->$pk;
-
-		foreach ($this->_db->$collection as $i => &$document) {
-			if (!isset($document->$pk) || $document->$pk != (string)$model->$pk) continue;
-
-			$this->_db->{$collection}[$i] = $model;
-
-			$ok = $this->_transaction();
-			break;
-		}
-
-		if (!$ok) {
-			$this->_db->{$collection}[] = $model;
-			$ok = $this->_transaction();
-		}
-
-		$model->$pk = new QuarkDNAID($model->$pk);
-
-		unset($i, $document, $new, $pk, $collection);
-
-		return $ok;
+		
+		return $this->_db->{$collection}->Change(array(
+			$pk = $model->$pk
+		), $model);
 	}
 
 	/**
@@ -159,19 +159,10 @@ class QuarkDNA implements IQuarkDataProvider {
 
 		if (!isset($model->$pk))
 			throw new QuarkArchException('Model ' . get_class($model) . ' doe not have a primary key. Operation `remove` can not be executed');
-
-		$model->$pk = (string)$model->$pk;
-
-		foreach ($this->_db->$collection as $i => &$document) {
-			if (!isset($document->$pk) || $document->$pk != $model->$pk) continue;
-
-			unset($this->_db->{$collection}[$i]);
-			return $this->_transaction();
-		}
-
-		unset($i, $document, $pk, $collection);
-
-		return false;
+		
+		return $this->_db->{$collection}->Purge(array(
+			$pk = $model->$pk
+		));
 	}
 
 	/**
@@ -180,259 +171,103 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return new QuarkKeyValuePair($model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : '_id', new QuarkDNAID());
+		return new QuarkKeyValuePair($model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : '_id', '');
 	}
 
 	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
 	 * @param $options
-	 * @param bool|true $one
 	 *
-	 * @return array|null
+	 * @return array
 	 */
-	private function _find (IQuarkModel $model, $criteria, $options, $one = true) {
+	private function _find (IQuarkModel $model, $criteria, $options) {
 		$collection = $this->_collection($model, $options);
-		$pk = $this->PrimaryKey($model)->Key();
-		$query = new QuarkDNAQuery($criteria);
-		$out = $one ? null : array();
-
-		foreach ($this->_db->$collection as $i => &$document) {
-			if (!isset($document->$pk)) continue;
-			if (!QuarkDNAID::IsValid($document->$pk)) continue;
-
-			$document->$pk = new QuarkDNAID($document->$pk);
-
-			if (!$query->Match($document, $options)) continue;
-
-			if (!$one) $out[] = $document;
-			else {
-				$out = $document;
-				break;
-			}
-		}
-
-		unset($i, $document, $query, $collection);
-
-		return $out;
+		
+		return $this->_db->{$collection}->Select($criteria, $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options) {
-		return $this->_find($model, $criteria, $options, false);
-	}
-
-	/**
-	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
-	 *
-	 * @return mixed
-	 */
-	public function FindOne (IQuarkModel $model, $criteria, $options) {
 		return $this->_find($model, $criteria, $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $id
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
+	 *
+	 * @return mixed
+	 */
+	public function FindOne (IQuarkModel $model, $criteria, $options) {
+		$options[QuarkModel::OPTION_LIMIT] = 1;
+		
+		$records = $this->_find($model, $criteria, $options);
+		
+		return sizeof($records) == 0 ? null : $records[0];
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param $id
+	 * @param $options
 	 *
 	 * @return mixed
 	 *
 	 * @throws QuarkArchException
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options) {
-		return $this->_find(
-			$model,
-			array($this->PrimaryKey($model)->Key() => $id),
-			$options
-		);
+		$pk = $this->PrimaryKey($model);
+		
+		return $this->FindOne($model, array(
+			$pk->Key() => $id
+		), $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options) {
-		// TODO: Implement Update() method.
+		$collection = $this->_collection($model, $options);
+		
+		return $this->_db->{$collection}->Change($criteria, $model, $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
 	public function Delete (IQuarkModel $model, $criteria, $options) {
-		// TODO: Implement Delete() method.
+		$collection = $this->_collection($model, $options);
+		
+		return $this->_db->{$collection}->Purge($criteria, $options);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $limit
-	 * @param             $skip
-	 * @param             $options
+	 * @param $criteria
+	 * @param $limit
+	 * @param $skip
+	 * @param $options
 	 *
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
-		// TODO: Implement Count() method.
-	}
-}
-
-/**
- * Class QuarkDNAID
- *
- * @package Quark\DataProviders
- */
-class QuarkDNAID {
-	const SHORT_ID = 7;
-
-	/**
-	 * @var string $_id
-	 */
-	private $_id = '';
-
-	/**
-	 * @param string $id
-	 *
-	 * http://stackoverflow.com/a/9517767/2097055
-	 *
-	 * @throws QuarkArchException
-	 */
-	public function __construct ($id = '') {
-		if (!self::IsValid($id))
-			throw new QuarkArchException('QuarkDNAID allows only string as `$id` param. ' . print_r($id, true) . ' (' . gettype($id) . ') given');
-
-		$this->_id = func_num_args() == 0 ? self::Generate() : (string)$id;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function __toString () {
-		return $this->_id;
-	}
-
-	/**
-	 * @param int $length = self::SHORT_ID
-	 *
-	 * @return string
-	 */
-	public function Short ($length = self::SHORT_ID) {
-		return substr($this->_id, 0, $length);
-	}
-
-	/**
-	 * @return string
-	 */
-	public static function Generate () {
-		return Quark::GuID();
-	}
-
-	/**
-	 * @param string $id
-	 *
-	 * @return bool
-	 */
-	public static function IsValid ($id) {
-		return is_scalar($id) || (is_object($id) && method_exists($id, '__toString'));
-	}
-
-	/**
-	 * @param string $id
-	 * @param int $length = self::SHORT_ID
-	 *
-	 * @return bool
-	 */
-	public function Eq ($id, $length = self::SHORT_ID) {
-		return $this->_id == $id || $this->Short($length) == $id;
-	}
-}
-
-/**
- * Class QuarkDNAQuery
- *
- * @package Quark\DataProviders
- */
-class QuarkDNAQuery {
-	/**
-	 * @var array $_query
-	 */
-	private $_query;
-
-	/**
-	 * @param array $query
-	 */
-	public function __construct ($query) {
-		$this->_query = $query;
-	}
-
-	/**
-	 * @param $document
-	 * @param array $options
-	 * @param array $query
-	 *
-	 * @return bool
-	 */
-	public function Match ($document, $options = [], $query = []) {
-		$output = true;
-		$query = func_num_args() == 3 ? $query : $this->_query;
-
-		if (!is_array($query) || sizeof($query) == 0) return true;
-
-		foreach ($query as $key => $rule) {
-			$value = $rule;
-
-			switch ($key) {
-				case '$lte': $output &= $document <= $value; break;
-				case '$lt': $output &= $document < $value; break;
-				case '$gt': $output &= $document > $value; break;
-				case '$gte': $output &= $document >= $value; break;
-				case '$ne': $output &= $document != $value; break;
-
-				case '$and':
-					$value = $this->Match($rule, ' AND ');
-					$output &= ' (' . $value . ') ';
-					break;
-
-				case '$or':
-					$value = $this->Match($rule, ' OR ');
-					$output &= ' (' . $value . ') ';
-					break;
-
-				case '$nor':
-					$value = $this->Match($rule, ' NOT OR ');
-					$output &= ' (' . $value . ') ';
-					break;
-
-				default:
-					$field = eval('return $document->' . str_replace('.', '->', $key) . ';');
-					$output &= is_string($key)
-						? ($field instanceof QuarkDNAID
-							? $field->Eq($value)
-							: (is_array($rule)
-								? $this->Match($field, $options, $rule)
-								: $field == $value
-							)
-						)
-						: false;
-					break;
-			}
-		}
-
-		return $output;
+		$collection = $this->_collection($model, $options);
+		
+		return $this->_db->{$collection}->Count($criteria, $options);
 	}
 }

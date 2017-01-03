@@ -115,7 +115,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
@@ -130,7 +130,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
@@ -146,7 +146,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
@@ -178,8 +178,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param array       $options
+	 * @param $criteria
+	 * @param array $options
 	 *
 	 * @return array
 	 */
@@ -196,8 +196,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param array       $options
+	 * @param $criteria
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
@@ -222,8 +222,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -233,8 +233,8 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -244,10 +244,10 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $limit
-	 * @param             $skip
-	 * @param             $options
+	 * @param $criteria
+	 * @param $limit
+	 * @param $skip
+	 * @param $options
 	 *
 	 * @return int
 	 */
