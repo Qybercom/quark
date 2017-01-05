@@ -90,8 +90,8 @@ class QuarkDNA implements IQuarkDataProvider {
 			$this->_db = new \stdClass();
 		
 		if (QuarkObject::isTraversable($db))
-			foreach ($db as $name => &$collection) {//shuffle($collection);
-				$this->_db->$name = new QuarkCollection(new \stdClass(), $collection);}
+			foreach ($db as $name => &$collection)
+				$this->_db->$name = new QuarkCollection(new \stdClass(), $collection);
 	}
 
 	/**
