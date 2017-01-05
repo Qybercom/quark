@@ -375,7 +375,7 @@ class Quark {
 	 * @return mixed
 	 */
 	public static function EscapeRegEx ($regEx = '') {
-		return preg_replace('#[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]#Uis', '\\$&', $regEx);
+		return preg_replace('#([\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|])#Uis', '\\\$1', $regEx);
 	}
 
 	/**
@@ -6528,6 +6528,15 @@ trait QuarkCollectionBehavior {
 			: $this->Select($query, $options)
 		);
 	}
+
+	/**
+	 * @param array $options = []
+	 *
+	 * @return array
+	 */
+	public function Aggregate ($options = []) {
+		return $this->_slice($this->_collection, $options);
+	}
 }
 
 /**
@@ -6538,6 +6547,7 @@ trait QuarkCollectionBehavior {
 class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	use QuarkCollectionBehavior {
 		Select as private _select;
+		Aggregate as private _aggregate;
 	}
 	
 	/**
@@ -6760,12 +6770,19 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @param array $query = []
 	 * @param array $options = []
 	 *
-	 * @return QuarkCollection|array
+	 * @return QuarkCollection
 	 */
 	public function Select ($query = [], $options = []) {
-		$result = $this->_select($query, $options);
-		
-		return new self($this->_type, $result);
+		return new self($this->_type, $this->_select($query, $options));
+	}
+
+	/**
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Aggregate ($options = []) {
+		return new self($this->_type, $this->_aggregate($options));
 	}
 	
 	/**
