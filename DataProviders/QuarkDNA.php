@@ -40,10 +40,10 @@ class QuarkDNA implements IQuarkDataProvider {
 		$collection = QuarkModel::CollectionName($model, $options);
 
 		if (sizeof((array)$this->_db) == 0)
-			$this->_db = (object)array($collection => new QuarkCollection(new \stdClass(), array(), false));
+			$this->_db = (object)array($collection => new QuarkCollection(new \stdClass()));
 
 		if (!isset($this->_db->$collection))
-			$this->_db->$collection = new QuarkCollection(new \stdClass(), array(), false);
+			$this->_db->$collection = new QuarkCollection(new \stdClass());
 
 		return $collection;
 	}
@@ -90,8 +90,8 @@ class QuarkDNA implements IQuarkDataProvider {
 			$this->_db = new \stdClass();
 		
 		if (QuarkObject::isTraversable($db))
-			foreach ($db as $name => &$collection)
-				$this->_db->$name = new QuarkCollection(new \stdClass(), $collection, false);
+			foreach ($db as $name => &$collection) {//shuffle($collection);
+				$this->_db->$name = new QuarkCollection(new \stdClass(), $collection);}
 	}
 
 	/**
@@ -107,8 +107,8 @@ class QuarkDNA implements IQuarkDataProvider {
 
 		$model->$pk = isset($model->$pk) ? $model->$pk: Quark::GuID();
 		$model->$pk = (string)$model->$pk;
-
-		$this->_db->{$collection}->Add((object)$model, false);
+		
+		$this->_db->{$collection}->Add(json_decode(json_encode($model)));
 
 		unset($pk, $collection);
 
@@ -133,7 +133,7 @@ class QuarkDNA implements IQuarkDataProvider {
 		}
 
 		if ($new) {
-		$this->_db->{$collection}->Add($model, false);
+		$this->_db->{$collection}->Add($model);
 			return $this->_transaction();
 		}
 		
@@ -184,7 +184,7 @@ class QuarkDNA implements IQuarkDataProvider {
 	private function _find (IQuarkModel $model, $criteria, $options) {
 		$collection = $this->_collection($model, $options);
 		
-		return $this->_db->{$collection}->Select($criteria, $options);
+		return $this->_db->{$collection}->Select($criteria, $options)->Extract();
 	}
 
 	/**

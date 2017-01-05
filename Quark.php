@@ -6369,44 +6369,56 @@ trait QuarkCollectionBehavior {
 	 */
 	private function _slice ($list = [], $options = [], $preserveKeys = null) {
 		if (isset($options[QuarkModel::OPTION_SORT]) && QuarkObject::isTraversable($options[QuarkModel::OPTION_SORT])) {
-			foreach ($options[QuarkModel::OPTION_SORT] as $key => $sort) {
-				$items = array();
-				$i = 0;
-				$size = sizeof($this->_collection);
-				while ($i < $size) {
-					$elem = eval('return $item->' . str_replace('.', '->', $key) . ';');
-					$items[$i] = $elem;
-					$i++;
-				}
-				
-				$flags = SORT_REGULAR;
-				$dir = $sort;
-				
-				if (is_array($sort)) {
-					if (isset($sort['$natural'])) {
-						$flags = $flags | SORT_NATURAL;
-						$dir = $sort['$natural'];
-					}
-					
-					if (isset($sort['$icase'])) {
-						$flags = $flags | SORT_FLAG_CASE;
-						$dir = $sort['$icase'];
-					}
-				}
-				
-				if ($dir == QuarkModel::SORT_ASC) asort($items, $flags);
-				else arsort($items, $flags);
-				
-				$itemsOut = array();
+			$sort = $options[QuarkModel::OPTION_SORT];
+			
+			/**
+			 * http://wp-kama.ru/question/php-usort-sortirovka-massiva-po-dvum-polyam
+			 */
+			usort($list, function ($a, $b) use ($sort) {
+				$res = 0;
 				
 				/** @noinspection PhpUnusedLocalVariableInspection */
-				foreach ($items as $i => &$item) {
-					if (!$preserveKeys) $itemsOut[] = $this->_collection[$i];
-					else $itemsOut[$i] = $this->_collection[$i];
+				$a = (object)$a;
+				/** @noinspection PhpUnusedLocalVariableInspection */
+				$b = (object)$b;
+		
+				foreach ($sort as $key => $mode) {
+					$accessor = str_replace('.', '->', str_replace('->', '', $key));
+					
+					$elem_a = eval('return isset($b->' . $accessor . ') ? $a->' . $accessor . ' : null;');
+					$elem_b = eval('return isset($b->' . $accessor . ') ? $b->' . $accessor . ' : null;');
+					
+					$dir = $mode;
+					
+					if (!is_string($elem_a) && !is_string($elem_b)) {
+						if ($elem_a == $elem_b) continue;
+						$res = $elem_a < $elem_b ? -1 : 1;
+					}
+					else {
+						$elem_a = (string)$elem_a;
+						$elem_b = (string)$elem_b;
+						
+						$nat = isset($mode['$natural']);
+						$icase = isset($mode['$icase']);
+						
+						if (is_array($mode)) {
+							if ($nat) $dir = $mode['$natural'];
+							if ($icase) $dir = $mode['$icase'];
+						}
+						
+						$res = $nat
+							? ($icase ? strnatcasecmp($elem_a, $elem_b) : strnatcmp($elem_a, $elem_b))
+							: ($icase ? strcasecmp($elem_a, $elem_b) : strcmp($elem_a, $elem_b));
+						
+						if ($res == 0) continue;
+					}
+					
+					if ($dir == QuarkModel::SORT_DESC) $res = -$res;
+					break;
 				}
 				
-				$list = $itemsOut;
-			}
+				return $res;
+			});
 		}
 		
 		$skip = isset($options[QuarkModel::OPTION_SKIP])
@@ -6524,12 +6536,19 @@ trait QuarkCollectionBehavior {
  * @package Quark
  */
 class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
-	use QuarkCollectionBehavior;
+	use QuarkCollectionBehavior {
+		Select as private _select;
+	}
 	
 	/**
 	 * @var $_type  = null
 	 */
 	private $_type = null;
+	
+	/**
+	 * @var bool $_model = true
+	 */
+	private $_model = true;
 
 	/**
 	 * @var int $_index = 0
@@ -6549,11 +6568,12 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	/**
 	 * @param object $type
 	 * @param array $source = []
-	 * @param bool $model = true
 	 */
-	public function __construct ($type, $source = [], $model = true) {
+	public function __construct ($type, $source = []) {
 		$this->_type = $type;
-		$this->PopulateWith($source, null, $model);
+		$this->_model = $this->_type instanceof IQuarkModel;
+		
+		$this->PopulateWith($source);
 	}
 
 	/**
@@ -6574,13 +6594,12 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 	/**
 	 * @param $item
-	 * @param bool $model = true
 	 *
 	 * @return QuarkCollection
 	 */
-	public function Add ($item, $model = true) {
+	public function Add ($item) {
 		if ($this->TypeIs($item))
-			$this->_collection[] = $item instanceof QuarkModel || !$model ? $item : new QuarkModel($item);
+			$this->_collection[] = !$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item);
 
 		return $this;
 	}
@@ -6620,6 +6639,15 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 
 		return $this;
 	}
+	
+	/**
+	 * @return QuarkCollection
+	 */
+	public function Shuffle () {
+		shuffle($this->_collection);
+		
+		return $this;
+	}
 
 	/**
 	 * @param $needle
@@ -6637,11 +6665,10 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	/**
 	 * @param array $source
 	 * @param callable $iterator = null
-	 * @param bool $model = true
 	 *
 	 * @return QuarkCollection
 	 */
-	public function PopulateWith ($source, callable $iterator = null, $model = true) {
+	public function PopulateWith ($source, callable $iterator = null) {
 		if ($source instanceof QuarkCollection)
 			$source = $source->_collection;
 
@@ -6653,7 +6680,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		$this->_collection = array();
 
 		foreach ($source as $key => &$item)
-			$this->Add($iterator($item, $key), $model);
+			$this->Add($iterator($item, $key));
 
 		return $this;
 	}
@@ -6728,7 +6755,19 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		
 		return $this->_pages;
 	}
-
+	
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection|array
+	 */
+	public function Select ($query = [], $options = []) {
+		$result = $this->_select($query, $options);
+		
+		return new self($this->_type, $result);
+	}
+	
 	/**
 	 * (PHP 5 &gt;= 5.0.0)<br/>
 	 * Return the current element
@@ -9454,6 +9493,11 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 * @return mixed
 	 */
 	public function Link ($raw) {
+		if ($raw instanceof QuarkLocalizedString)
+			return new QuarkModel($this, $raw);
+		
+		if (!is_scalar($raw)) return null;
+		
 		$values = json_decode(strlen($raw) != 0 && $raw[0] == '{' ? $raw : base64_decode($raw));
 		
 		return new QuarkModel($this, array(
