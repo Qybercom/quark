@@ -11537,11 +11537,18 @@ trait QuarkNetwork {
 	/**
 	 * @param resource $socket
 	 * http://php.net/manual/ru/function.stream-socket-shutdown.php#109982
+	 * https://github.com/reactphp/socket/blob/master/src/Connection.php
+	 * http://chat.stackoverflow.com/transcript/message/7727858#7727858
 	 *
 	 * @return bool
 	 */
 	public static function SocketClose ($socket) {
-		return $socket ? stream_socket_shutdown($socket, STREAM_SHUT_RDWR) : false;
+		if (!$socket) return false;
+
+		stream_socket_shutdown($socket, STREAM_SHUT_RDWR);
+		stream_set_blocking($socket, false);
+
+		return fclose($socket);
 	}
 
 	/**
@@ -11859,7 +11866,7 @@ class QuarkClient implements IQuarkEventable {
 		if (!$this->_socket)
 			return false;
 
-		$data = stream_get_contents($this->_socket, $max);
+		$data = @stream_get_contents($this->_socket, $max);
 
 		return strlen($data) != 0 ? $data : false;
 	}
@@ -11973,7 +11980,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Closed () {
-		return !$this->_socket || (feof($this->_socket) === true && $this->_connected);
+		return !$this->_socket || (@feof($this->_socket) === true && $this->_connected);
 	}
 
 	/**
