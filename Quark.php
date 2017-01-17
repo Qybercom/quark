@@ -7711,7 +7711,7 @@ class QuarkModel implements IQuarkContainer {
 
 		if (!$forceDefinition && $options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		$output = self::_normalize($model);
+		$output = clone self::_normalize($model);
 
 		foreach ($model as $key => $value) {
 			if ($key == '') continue;
