@@ -63,7 +63,7 @@ class PushNotification implements IQuarkExtension {
 	 *
 	 * @return PushNotification
 	 */
-	public function Device (Device $device = null) {
+	public function Device (Device &$device = null) {
 		if ($device != null)
 			$this->_devices[] = $device;
 
