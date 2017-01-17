@@ -10267,6 +10267,11 @@ class QuarkDateInterval {
 	 * @var int $seconds = 0
 	 */
 	public $seconds = 0;
+
+	/**
+	 * @var bool $_positive = true
+	 */
+	private $_positive = true;
 	
 	/**
 	 * @param int $years = 0
@@ -10275,8 +10280,9 @@ class QuarkDateInterval {
 	 * @param int $hours = 0
 	 * @param int $minutes = 0
 	 * @param int $seconds = 0
+	 * @param bool $positive = true
 	 */
-	public function __construct ($years = 0, $months = 0, $days = 0, $hours = 0, $minutes = 0, $seconds = 0) {
+	public function __construct ($years = 0, $months = 0, $days = 0, $hours = 0, $minutes = 0, $seconds = 0, $positive = true) {
 		$this->years = $years;
 		$this->months = $months;
 		$this->days = $days;
@@ -10284,6 +10290,8 @@ class QuarkDateInterval {
 		$this->hours = $hours;
 		$this->minutes = $minutes;
 		$this->seconds = $seconds;
+		
+		$this->_positive = $positive;
 	}
 	
 	/**
@@ -10363,23 +10371,33 @@ class QuarkDateInterval {
 		
 		return $seconds + $this->seconds;
 	}
+
+	/**
+	 * @return bool
+	 */
+	public function Positive () {
+		return $this->_positive;
+	}
 	
 	/**
 	 * @param string $format = ''
+	 * @param bool $sign = false
 	 *
 	 * @return string|null
 	 */
-	public function Format ($format = '') {
-		return QuarkDate::Convert(
-			$f = str_pad($this->years, 4, '0', STR_PAD_LEFT) . '-' .
-			str_pad($this->months, 2, '0', STR_PAD_LEFT) . '-' .
-			str_pad($this->days, 2, '0', STR_PAD_LEFT) . ' ' .
-			str_pad($this->hours, 2, '0', STR_PAD_LEFT) . ':' .
-			str_pad($this->minutes, 2, '0', STR_PAD_LEFT) . ':' .
-			str_pad($this->seconds, 2, '0', STR_PAD_LEFT),
-			'Y-m-d H:i:s',
-			$format
-		);
+	public function Format ($format = '', $sign = false) {
+		return
+			($sign ? ($this->_positive ? '+' : '-') : '') .
+			QuarkDate::Convert(
+				$f = str_pad(abs($this->years), 4, '0', STR_PAD_LEFT) . '-' .
+				str_pad(abs($this->months), 2, '0', STR_PAD_LEFT) . '-' .
+				str_pad(abs($this->days), 2, '0', STR_PAD_LEFT) . ' ' .
+				str_pad(abs($this->hours), 2, '0', STR_PAD_LEFT) . ':' .
+				str_pad(abs($this->minutes), 2, '0', STR_PAD_LEFT) . ':' .
+				str_pad(abs($this->seconds), 2, '0', STR_PAD_LEFT),
+				'Y-m-d H:i:s',
+				$format
+			);
 	}
 	
 	/**
@@ -10484,7 +10502,7 @@ class QuarkDateInterval {
 		$minutes = $order >= 4 ? self::Calculate(self::UNIT_MINUTE, $unit, $round, $interval, $years, $months, $days, $hours): 0;
 		$seconds = $order >= 5 ? self::Calculate(self::UNIT_SECOND, $unit, $round, $interval, $years, $months, $days, $hours, $minutes) : 0;
 		
-		return new self($years, $months, $days, $hours, $minutes, $seconds);
+		return new self($years, $months, $days, $hours, $minutes, $seconds, $interval >= 0);
 	}
 	
 	/**

@@ -171,6 +171,8 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 		usort($devices, function ($a, $b) {
 			$date = $b->date instanceof QuarkModel ? $b->date->Model() : $b->date;
 
+			if (!isset($a->date)) return 1;
+
 			return $a->date->Earlier($date)
 				? 1
 				: ($a->date->Later($date)
