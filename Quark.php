@@ -6605,28 +6605,30 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	/**
 	 * @param $item
 	 *
-	 * @return QuarkCollection
+	 * @return bool
 	 */
 	public function Add ($item) {
-		if ($this->TypeIs($item))
-			$this->_collection[] = !$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item);
+		if (!$this->TypeIs($item)) return false;
 
-		return $this;
+		$this->_collection[] = !$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item);
+
+		return true;
 	}
 
 	/**
 	 * @param $needle
 	 * @param callable $compare
 	 *
-	 * @return QuarkCollection
+	 * @return bool
 	 */
 	public function Remove ($needle, callable $compare) {
-		if ($this->TypeIs($needle))
-			foreach ($this->_collection as $key => &$item)
-				if ($compare($item, $needle, $key))
-					unset($this->_collection[$key]);
+		if (!$this->TypeIs($needle)) return false;
 
-		return $this;
+		foreach ($this->_collection as $key => &$item)
+			if ($compare($item, $needle, $key))
+				unset($this->_collection[$key]);
+
+		return true;
 	}
 
 	/**
@@ -6783,6 +6785,45 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function Aggregate ($options = []) {
 		return new self($this->_type, $this->_aggregate($options));
+	}
+
+	/**
+	 * @return QuarkCollection|IQuarkLinkedModel[]
+	 */
+	public function RetrieveLazy () {
+		$out = new self($this->_type->Model());
+
+		foreach ($this->_collection as $item)
+			/**
+			 * @var QuarkLazyLink|IQuarkLinkedModel $item
+			 */
+			$out[] = $item->Retrieve();
+
+		return $out;
+	}
+
+	/**
+	 * @param QuarkModel|IQuarkLinkedModel $item
+	 * @param $value = null
+	 *
+	 * @return bool
+	 */
+	public function AddLazy ($item, $value = null) {
+		$type = $this->_type->Model();
+		$add = $item instanceof QuarkModel ? $item->Model() : $item;
+		$typeOk = $add instanceof $type;
+
+		return $typeOk ? $this->Add(new QuarkLazyLink($add, $value)) : false;
+	}
+
+	/**
+	 * @param IQuarkLinkedModel $model
+	 * @param $value = null
+	 *
+	 * @return QuarkCollection|QuarkLazyLink[]|IQuarkLinkedModel[]
+	 */
+	public static function Lazy (IQuarkLinkedModel $model, $value = null) {
+		return new self(new QuarkLazyLink($model, $value));
 	}
 	
 	/**
@@ -7666,10 +7707,10 @@ class QuarkModel implements IQuarkContainer {
 			$property = QuarkObject::Property($fields, $key, $value);
 
 			if ($property instanceof QuarkCollection) {
-				$class = get_class($property->Type());
+				$class = $property->Type();
 
 				$model->$key = $property->PopulateWith($value, function ($item) use ($key, $class) {
-					return self::_link(new $class(), $item, $key);
+					return self::_link(clone $class, $item, $key);
 				});
 			}
 			else $model->$key = self::_link($property, $value, $key);
@@ -10678,17 +10719,17 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	private $_value;
 
 	/**
-	 * @param IQuarkLinkedModel $model
+	 * @var bool $_linked = false
+	 */
+	private $_linked = false;
+
+	/**
+	 * @param IQuarkLinkedModel $model = null
 	 * @param $value = null
 	 */
 	public function __construct (IQuarkLinkedModel $model, $value = null) {
-		/**
-		 * @var QuarkModel|IQuarkLinkedModel $_model
-		 */
-		$_model = new QuarkModel($model);
-
 		$this->_model = $model;
-		$this->_value = func_num_args() == 2 ? $value : QuarkObject::DefaultValueOfType($_model->Unlink());
+		$this->_value = func_num_args() == 2 ? $value : '';
 	}
 
 	/**
@@ -10716,9 +10757,18 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function Linked () {
+		return $this->_linked;
+	}
+
+	/**
 	 * @return QuarkModel|IQuarkLinkedModel
 	 */
 	public function Retrieve () {
+		$this->_linked = true;
+
 		return $this->_model->Link($this->_value);
 	}
 	
@@ -10747,6 +10797,9 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 * @return mixed
 	 */
 	public function Unlink () {
+		if ($this->_linked)
+			$this->_value = $this->_model->Unlink();
+
 		return $this->_value;
 	}
 
@@ -11554,6 +11607,7 @@ trait QuarkNetwork {
 
 	/**
 	 * @param resource $socket
+	 *
 	 * http://php.net/manual/ru/function.stream-socket-shutdown.php#109982
 	 * https://github.com/reactphp/socket/blob/master/src/Connection.php
 	 * http://chat.stackoverflow.com/transcript/message/7727858#7727858

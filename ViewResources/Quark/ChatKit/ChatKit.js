@@ -71,7 +71,8 @@ var ChatKit = function (opt) {
 	 */
 	that.Conversation = {
 		Current: null,
-		Last: null
+		Last: null,
+		History: []
 	};
 
 	var response = '';
@@ -115,7 +116,7 @@ var ChatKit = function (opt) {
 
 		var payload = opt.payload(data);
 
-		if (opt.isLastMemberMessage(data)) opt.messageMemberLast(data, payload);
+		if (that.Conversation.History.length != 0 && opt.isLastMemberMessage(data)) opt.messageMemberLast(data, payload);
 		else opt.messageMemberNew(data, payload, new Quark.MVC.Model(data));
 
 		that.Conversation.Last = opt.sender(data);
@@ -130,6 +131,8 @@ var ChatKit = function (opt) {
 	 */
 	that.History = function (history) {
 		if (!(history instanceof Array)) return false;
+
+		that.Conversation.History = history;
 
 		var message = new Quark.MVC.Model();
 		var i = 0, out = '', last = 0, j = 0, sender = '';
@@ -146,16 +149,15 @@ var ChatKit = function (opt) {
 
 			message.Data = history[i];
 			message.Data._payload = '';
+			message.Data._own = opt.isOwnMessage(history[i]) ? ' own' : '';
 
 			j = i;
 			while (history[j] != undefined && opt.sender(history[j]) === last) {
 				message.Data._payload += opt.payload(history[j]);
+				message.Data._date = opt.date(history[j]);
 
 				j++;
 			}
-
-			message.Data._date = opt.date(message.Data);
-			message.Data._own = opt.isOwnMessage(history[i]) ? ' own' : '';
 
 			out += message.Map('#ChatKit-message-template');
 
