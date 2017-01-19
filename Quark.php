@@ -7953,7 +7953,7 @@ class QuarkModel implements IQuarkContainer {
 					: $value);
 		}
 
-		if (func_num_args() == 0 || $fields === null) return $output;
+		if ($fields === null) return $output;
 
 		$buffer = new \stdClass();
 		$property = null;
