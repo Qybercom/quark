@@ -104,9 +104,7 @@ class QuarkDNA implements IQuarkDataProvider {
 		$collection = $this->_collection($model);
 
 		$pk = $this->PrimaryKey($model)->Key();
-
-		$model->$pk = isset($model->$pk) ? $model->$pk: Quark::GuID();
-		$model->$pk = (string)$model->$pk;
+		$model->$pk = Quark::GuID();
 		
 		$this->_db->{$collection}->Add(json_decode(json_encode($model)));
 
