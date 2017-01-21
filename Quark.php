@@ -6502,8 +6502,9 @@ trait QuarkCollectionBehavior {
 				$purge[$i] = $item;
 		
 		$purge = $this->_slice($purge, $options, true);
-		
-		foreach ($purge as $i)
+
+		/** @noinspection PhpUnusedLocalVariableInspection */
+		foreach ($purge as $i => &$item)
 			unset($this->_collection[$i]);
 		
 		return sizeof($purge);
@@ -10714,9 +10715,9 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	private $_model;
 
 	/**
-	 * @var $_value
+	 * @var $value
 	 */
-	private $_value;
+	public $value;
 
 	/**
 	 * @var bool $_linked = false
@@ -10729,7 +10730,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 */
 	public function __construct (IQuarkLinkedModel $model, $value = null) {
 		$this->_model = $model;
-		$this->_value = func_num_args() == 2 ? $value : '';
+		$this->value = func_num_args() == 2 ? $value : '';
 	}
 
 	/**
@@ -10745,18 +10746,6 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	}
 
 	/**
-	 * @param $value = null
-	 *
-	 * @return mixed
-	 */
-	public function Value ($value = null) {
-		if (func_num_args() != 0)
-			$this->_value = $value;
-		
-		return $this->_value;
-	}
-
-	/**
 	 * @return bool
 	 */
 	public function Linked () {
@@ -10769,7 +10758,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	public function Retrieve () {
 		$this->_linked = true;
 
-		return $this->_model->Link($this->_value);
+		return $this->_model->Link($this->value);
 	}
 	
 	/**
@@ -10788,7 +10777,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		$this->_value = $raw;
+		$this->value = $raw;
 
 		return new QuarkModel($this);
 	}
@@ -10798,9 +10787,9 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 */
 	public function Unlink () {
 		if ($this->_linked)
-			$this->_value = $this->_model->Unlink();
+			$this->value = $this->_model->Unlink();
 
-		return $this->_value;
+		return $this->value;
 	}
 
 	/**
@@ -10810,7 +10799,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 * @return mixed
 	 */
 	public function BeforeExtract ($fields, $weak) {
-		return $this->_value;
+		return $this->value;
 	}
 }
 
