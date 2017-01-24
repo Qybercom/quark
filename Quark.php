@@ -7645,9 +7645,15 @@ class QuarkModel implements IQuarkContainer {
 		if (!is_array($fields) && !is_object($fields)) return $output;
 		
 		foreach ($fields as $key => &$field) {
+			/**
+			 * @var mixed $field
+			 */
 			if (is_int($key) && $field instanceof QuarkKeyValuePair) {
 				$fields[$field->Key()] = $field->Value();
 				unset($fields[$key]);
+
+				$key = $field->Key();
+				$field = $field->Value();
 			}
 
 			if ($key == '') continue;
@@ -7655,10 +7661,10 @@ class QuarkModel implements IQuarkContainer {
 			if (isset($model->$key)) {
 				if (is_callable($field)) $output->$key = $field($key, $model->$key, !is_callable($model->$key));
 				else {
-					if (is_scalar($field) && is_scalar($model->$key))
-						settype($model->$key, gettype($field));
-					
 					$output->$key = $model->$key;
+					
+					if (is_scalar($field) && is_scalar($model->$key))
+						settype($output->$key, gettype($field));
 				}
 			}
 			else $output->$key = $field instanceof IQuarkModel
@@ -7696,12 +7702,12 @@ class QuarkModel implements IQuarkContainer {
 			if ($ppk instanceof QuarkKeyValuePair) {
 				$pk = $ppk->Key();
 
-				if (!isset($model->$pk))
+				if (!isset($fields[$pk]))
 					$fields[$pk] = $ppk->Value();
 			}
 		}
 
-		foreach ($source as $key => $value) {
+		foreach ($source as $key => &$value) {
 			if ($key == '') continue;
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
@@ -7753,9 +7759,9 @@ class QuarkModel implements IQuarkContainer {
 
 		if (!$forceDefinition && $options[self::OPTION_VALIDATE] && !self::_validate($model)) return false;
 
-		$output = clone self::_normalize($model);
+		$output = self::_normalize(clone $model);
 
-		foreach ($model as $key => $value) {
+		foreach ($model as $key => &$value) {
 			if ($key == '') continue;
 
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) {

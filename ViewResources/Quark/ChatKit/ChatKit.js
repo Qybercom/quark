@@ -120,6 +120,7 @@ var ChatKit = function (opt) {
 		else opt.messageMemberNew(data, payload, new Quark.MVC.Model(data));
 
 		that.Conversation.Last = opt.sender(data);
+		that.Conversation.History.push(data);
 
 		$('#ChatKit-history').scrollTop(opt.scrollTop);
 	};
