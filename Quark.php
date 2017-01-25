@@ -601,6 +601,28 @@ class Quark {
 	}
 
 	/**
+	 * @param bool $trace = false
+	 *
+	 * @return array|int|bool
+	 */
+	public static function ShortCallStack ($trace = false) {
+		$stack = self::CallStack(false, false);
+		$out = array();
+
+		foreach ($stack as $item)
+			$out[]  = (isset($item['class']) ? $item['class'] : '')
+					. (isset($item['type']) ? $item['type'] : '')
+					. $item['function']
+					. ' ('
+					. (isset($item['file']) ? $item['file'] : '[file]')
+					. ':'
+					. (isset($item['line']) ? $item['line'] : '[line]')
+					. ')';
+
+		return $trace ? self::Trace($out) : $out;
+	}
+
+	/**
 	 * @return bool
 	 */
 	public static function MemoryAvailable () {
@@ -6487,10 +6509,11 @@ trait QuarkCollectionBehavior {
 	/**
 	 * @param array $query = []
 	 * @param array $options = []
+	 * @param bool $preserveKeys = false
 	 *
 	 * @return int
 	 */
-	public function Purge ($query = [], $options = []) {
+	public function Purge ($query = [], $options = [], $preserveKeys = false) {
 		if (!QuarkObject::isTraversable($query)) return 0;
 		if (!QuarkObject::isTraversable($this->_collection)) return 0;
 		
@@ -6506,6 +6529,9 @@ trait QuarkCollectionBehavior {
 		/** @noinspection PhpUnusedLocalVariableInspection */
 		foreach ($purge as $i => &$item)
 			unset($this->_collection[$i]);
+		
+		if (!$preserveKeys)
+			$this->_collection = array_values($this->_collection);
 		
 		return sizeof($purge);
 	}
@@ -6915,7 +6941,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return mixed Can return all value types.
 	 */
 	public function offsetGet ($offset) {
-		return $this->_collection[$offset];
+		return isset($this->_collection[$offset]) ? $this->_collection[$offset] : null;
 	}
 
 	/**
