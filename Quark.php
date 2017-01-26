@@ -178,6 +178,32 @@ class Quark {
 	}
 
 	/**
+	 * @param $string
+	 * @param bool $values = true
+	 *
+	 * @return int[]|array
+	 */
+	public static function StringToBytes ($string, $values = true) {
+		$bytes = unpack('C*', $string);
+
+		return $values ? array_values($bytes) : $bytes;
+	}
+
+	/**
+	 * @param int[] $bytes
+	 *
+	 * @return string
+	 */
+	public static function BytesToString ($bytes = []) {
+		$out = '';
+
+		foreach ($bytes as $byte)
+			$out .= chr($byte);
+
+		return $out;
+	}
+
+	/**
 	 * @return string
 	 */
 	public static function HostIP () {
@@ -3153,6 +3179,29 @@ trait QuarkServiceBehavior {
 	public function Session () {
 		return $this->__call('Session', func_get_args());
 	}
+
+	/**
+	 * @param string $url = ''
+	 * @param string $method = QuarkDTO::METHOD_GET
+	 * @param QuarkDTO|object|array $input = []
+	 * @param QuarkSession $session = null
+	 *
+	 * @return mixed
+	 */
+	public function InvokeURL ($url = '', $method = QuarkDTO::METHOD_GET, $input = [], QuarkSession $session = null) {
+		$num = func_num_args();
+
+		$service = new QuarkService($url);
+		$service->Input()->Merge($num < 3 ? $this->Input() : $input);
+		$service->Session($num < 4 ? $this->Session() : $session);
+		$service->Input()->URI(QuarkURI::FromURI($url));
+		
+		$output = $service->Invoke($method, $input !== null ? array($service->Input()) : array(), true);
+
+		unset($service);
+
+		return $output;
+	}
 }
 
 /**
@@ -3165,13 +3214,12 @@ trait QuarkStreamBehavior {
 
 	/**
 	 * @param QuarkDTO|object|array $data
-	 * @param IQuarkStreamNetwork $service = null
+	 * @param string $url = ''
 	 *
 	 * @return bool
 	 */
-	public function Broadcast ($data, IQuarkStreamNetwork $service = null) {
+	public function Broadcast ($data, $url = '') {
 		$env = Quark::CurrentEnvironment();
-		$url = $this->URL($service);
 
 		if ($env instanceof QuarkStreamEnvironment) {
 			$session = $this->Session();
@@ -3181,16 +3229,26 @@ trait QuarkStreamBehavior {
 				if ($client->ID() == $session->ConnectionID())
 					$client->Session($session->ID());
 			
-			$out = $env->BroadcastNetwork($url, $data);
+			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
 		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
 			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
 		);
 
-		unset($url, $env, $service, $data);
+		unset($env, $service, $data);
 
 		return $out;
+	}
+
+	/**
+	 * @param QuarkDTO|object|array $data
+	 * @param IQuarkStreamNetwork $service = null
+	 *
+	 * @return bool
+	 */
+	public function BroadcastService ($data, IQuarkStreamNetwork $service = null) {
+		return $this->Broadcast($data, $this->URL($service));
 	}
 
 	/**
@@ -3206,6 +3264,24 @@ trait QuarkStreamBehavior {
 
 		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
 		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
+	}
+
+	/**
+	 * @param string $url = ''
+	 * @param QuarkDTO|object|array $input = []
+	 * @param QuarkSession $session = null
+	 *
+	 * @return mixed
+	 */
+	public function InvokeStream ($url = '', $input = [], QuarkSession $session = null) {
+		$num = func_num_args();
+		
+		return $this->InvokeURL(
+			$url,
+			'Stream',
+			$num < 3 ? $this->Input() : $input,
+			$num < 4 ? $this->Session() : $session
+		);
 	}
 
 	/**
@@ -3569,30 +3645,50 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
+	 * @param IQuarkService|IQuarkServiceWithAccessControl|IQuarkPolymorphicService $service = null
+	 *
 	 * @return IQuarkService|IQuarkServiceWithAccessControl|IQuarkPolymorphicService
 	 */
-	public function &Service () {
+	public function &Service (IQuarkService $service = null) {
+		if (func_num_args() != 0)
+			$this->_service = $service;
+
 		return $this->_service;
 	}
 
 	/**
+	 * @param QuarkDTO $input = null
+	 *
 	 * @return QuarkDTO
 	 */
-	public function &Input () {
+	public function &Input (QuarkDTO $input = null) {
+		if (func_num_args() != 0)
+			$this->_input = $input;
+
 		return $this->_input;
 	}
 
 	/**
+	 * @param QuarkDTO $output = null
+	 *
 	 * @return QuarkDTO
 	 */
-	public function &Output () {
+	public function &Output (QuarkDTO $output = null) {
+		if (func_num_args() != 0)
+			$this->_output = $output;
+
 		return $this->_output;
 	}
 
 	/**
+	 * @param QuarkSession $session = null
+	 *
 	 * @return QuarkSession
 	 */
-	public function &Session () {
+	public function &Session (QuarkSession $session = null) {
+		if (func_num_args() != 0)
+			$this->_session = $session;
+		
 		return $this->_session;
 	}
 
@@ -3691,6 +3787,8 @@ class QuarkService implements IQuarkContainer {
 	 * @param array $args = []
 	 * @param bool $session = false
 	 *
+	 * @return mixed
+	 *
 	 * @throws QuarkArchException
 	 */
 	public function Invoke ($method, $args = [], $session = false) {
@@ -3735,6 +3833,8 @@ class QuarkService implements IQuarkContainer {
 
 		if ($this->_service instanceof IQuarkAuthorizableService && !$empty)
 			$this->_output->Merge($this->_session->Output(), false);
+
+		return $output;
 	}
 
 	/**
@@ -13500,7 +13600,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			
 			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
 
-			if ($data)
+			if ($data !== null)
 				$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data, $session));
 
 			unset($data, $session);
