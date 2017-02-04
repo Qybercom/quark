@@ -122,8 +122,9 @@ class GoogleFCM implements IQuarkPushNotificationProvider {
 
 		while ($i < $queues) {
 			$data = array(
+				'content_available' => true,
 				'registration_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
-				'data' => $payload,
+				'data' => $payload
 			);
 
 			if ($changed)

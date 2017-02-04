@@ -26,6 +26,7 @@ use Quark\QuarkJSONIOProcessor;
 class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	const OPTION_PAGE = 'page';
 	const OPTION_RESPONSE = '___rest_response___';
+	const OPTION_LOWER_COLLECTION = '___lower_collection___';
 
 	/**
 	 * @var QuarkURI
@@ -200,6 +201,9 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
+		if (!isset($options[self::OPTION_LOWER_COLLECTION]))
+			$options[self::OPTION_LOWER_COLLECTION] = true;
+
 		try {
 			$class = self::_class($model, $options);
 			$pk = $this->_pk($model);
@@ -208,7 +212,10 @@ class RESTService implements IQuarkDataProvider, IQuarkExtension {
 
 			if (!isset($api->status) || $api->status != 200) return false;
 
-			$class = QuarkObject::ClassOf($model);
+			$class = QuarkModel::CollectionName($model, $options);
+
+			if ($options[self::OPTION_LOWER_COLLECTION])
+				$class = strtolower($class);
 
 			if (isset($api->$class->$pk))
 				$model->$pk = $model->$pk instanceof \MongoId

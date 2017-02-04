@@ -265,10 +265,12 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 * @return mixed
 	 */
 	public function PNDetails ($payload, $options) {
-		$out = array();
+		$out = array('alert' => 'test');
 
-		foreach ($this->_changes as $key)
-			$out[$key] = $this->$key;
+		foreach ($this->_changes as $i => &$key) {
+			$k = strlen($key) != 0 && $key[0] == '_' ? substr($key, 1) : $key;
+			$out[$k] = $this->$key;
+		}
 
 		return sizeof($out) == 0 ? null : $out;
 	}

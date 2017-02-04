@@ -72,6 +72,11 @@ class Quark {
 	private static $_currentLanguage = '';
 
 	/**
+	 * @var float $_execTime = 0.0
+	 */
+	private static $_execTime = 0.0;
+
+	/**
 	 * @var null $_null = null
 	 */
 	private static $_null = null;
@@ -120,6 +125,8 @@ class Quark {
 	 * @throws QuarkArchException
 	 */
 	public static function Run (QuarkConfig $config = null) {
+		self::$_execTime = microtime(true);
+		
 		self::$_config = $config ? $config : new QuarkConfig();
 		self::$_config->ConfigReady();
 
@@ -687,6 +694,13 @@ class Quark {
 		}
 
 		return '-';
+	}
+
+	/**
+	 * @return float
+	 */
+	public static function ExecutionTime () {
+		return microtime(true) - self::$_execTime;
 	}
 }
 
@@ -3225,9 +3239,14 @@ trait QuarkStreamBehavior {
 			$session = $this->Session();
 			$clients = $env->Cluster()->Server()->Clients();
 
-			foreach ($clients as $i => &$client)
-				if ($client->ID() == $session->ConnectionID())
+			foreach ($clients as $i => &$client) {
+				$connection = $session->Connection();
+
+				if ($connection && $client->ID() == $connection->ID())
 					$client->Session($session->ID());
+			}
+
+			unset($connection, $clients, $session);
 			
 			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
 		}
@@ -3236,7 +3255,7 @@ trait QuarkStreamBehavior {
 			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
 		);
 
-		unset($env, $service, $data);
+		unset($env, $data);
 
 		return $out;
 	}
@@ -3263,6 +3282,22 @@ trait QuarkStreamBehavior {
 		$env = Quark::CurrentEnvironment();
 
 		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
+		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
+	}
+
+	/**
+	 * @param string $channel = ''
+	 * @param callable(QuarkSession $client) $sender = null
+	 * @param bool $auth = true
+	 *
+	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true) {
+		$env = Quark::CurrentEnvironment();
+
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth, $channel);
 		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
 	}
 
@@ -3736,13 +3771,13 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param bool $checkSignature = false
-	 * @param string $connection = ''
+	 * @param QuarkClient $connection = null
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function Authorize ($checkSignature = false, $connection = '') {
+	public function Authorize ($checkSignature = false, QuarkClient &$connection = null) {
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
 
 		$service = get_class($this->_service);
@@ -11152,9 +11187,9 @@ class QuarkSession {
 	private $_output;
 
 	/**
-	 * @var string $_connection = ''
+	 * @var QuarkClient $_connection = null
 	 */
-	private $_connection = '';
+	private $_connection = null;
 
 	/**
 	 * @var null $_null
@@ -11338,9 +11373,9 @@ class QuarkSession {
 	}
 
 	/**
-	 * @return string
+	 * @return QuarkClient
 	 */
-	public function ConnectionID () {
+	public function &Connection () {
 		return $this->_connection;
 	}
 
@@ -11402,13 +11437,13 @@ class QuarkSession {
 	/**
 	 * @param string $provider
 	 * @param QuarkDTO $input
-	 * @param string $connection = ''
+	 * @param QuarkClient $connection = null
 	 *
 	 * @return QuarkSession
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Init ($provider, QuarkDTO $input, $connection = '') {
+	public static function Init ($provider, QuarkDTO $input, QuarkClient &$connection = null) {
 		/**
 		 * @var QuarkSessionSource $source
 		 */
@@ -11461,6 +11496,7 @@ class QuarkSession {
 		unset($this->_user);
 		unset($this->_source);
 		unset($this->_output);
+		unset($this->_connection);
 	}
 }
 
@@ -11941,6 +11977,11 @@ class QuarkClient implements IQuarkEventable {
 	private $_id = '';
 
 	/**
+	 * @var string[] $_channels = []
+	 */
+	private $_channels = array();
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkNetworkTransport $transport
 	 * @param QuarkCertificate $certificate
@@ -12212,6 +12253,48 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function ID () {
 		return $this->_id;
+	}
+
+	/**
+	 * @param string|string[] $channel = ''
+	 *
+	 * @return QuarkClient
+	 */
+	public function Subscribe ($channel = '') {
+		if (is_array($channel)) $this->_channels = array_merge($this->_channels, $channel);
+		else $this->_channels[] = $channel;
+
+		return $this;
+	}
+
+	/**
+	 * @param string $channel = ''
+	 *
+	 * @return QuarkClient
+	 */
+	public function Unsubscribe ($channel = '') {
+		foreach ($this->_channels as $i => &$c)
+			if ($channel == $c)
+				unset($this->_channels[$i]);
+		
+		return $this;
+	}
+
+	/**
+	 * @param string $channel = ''
+	 * @param bool $strict = false
+	 *
+	 * @return bool
+	 */
+	public function Subscribed ($channel = '', $strict = false) {
+		return in_array($channel, $this->_channels, $strict);
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function &Channels () {
+		return $this->_channels;
 	}
 }
 
@@ -13319,7 +13402,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			if ($connected)
 				$service->Input()->Remote($client->URI());
 
-			if (!$connected || $service->Authorize(false, $client->ID()))
+			if (!$connected || $service->Authorize(false, $client))
 				$service->Invoke($method, $input !== null ? array($service->Input()) : array(), $connected);
 
 			$session = $service->Session();
@@ -13585,16 +13668,23 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 	/**
 	 * @param string $url
-	 * @param callable(QuarkSession $client) $sender
+	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
+	 * @param string|callable(QuarkClient $client) $filter = null
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($url, callable &$sender = null, $auth = true) {
+	public function BroadcastLocal ($url, callable &$sender = null, $auth = true, &$filter = null) {
 		$ok = true;
 		$clients = $this->_cluster->Server()->Clients();
+		$filtered = func_num_args() == 4;
 
 		foreach ($clients as $i => &$client) {
+			if ($filtered) {
+				if (is_string($filter) && !$client->Subscribed($filter)) continue;
+				if (is_callable($filter) && !call_user_func_array($filter, array(&$client))) continue;
+			}
+
 			$session = QuarkSession::Get($client->Session());
 			if ($auth && ($session == null || $session->User() == null)) continue;
 			
@@ -13606,7 +13696,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			unset($data, $session);
 		}
 
-		unset($out, $session, $i, $client, $clients, $sender);
+		unset($out, $session, $i, $client, $clients, $sender, $filter, $filtered);
 
 		return $ok;
 	}
