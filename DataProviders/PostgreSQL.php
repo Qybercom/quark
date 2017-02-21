@@ -21,6 +21,8 @@ use Quark\QuarkConnectionException;
  * @package Quark\DataProviders
  */
 class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
+	CONST CONNECTION_OPTIONS = 'options';
+
 	const OPTION_SCHEMA_ENCODING = 'ENCODING';
 	const OPTION_SCHEMA_LC_COLLATE = 'LC_COLLATE';
 	const OPTION_SCHEMA_LC_CTYPE = 'LC_CTYPE';
@@ -74,7 +76,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			'dbname=\'' . QuarkSQL::DBName($uri->path) . '\'' .
 			'user=\'' . $uri->user . '\'' .
 			'password=\'' . $uri->pass . '\'' .
-			'options=\'' . $uri->options . '\''
+			'options=\'' . $uri->Options('options') . '\''
 		);
 
 		if (!$this->_connection)
@@ -85,7 +87,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
@@ -100,7 +102,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			$epk = true;
 
 			$options[QuarkSQL::OPTION_QUERY_REVIEWER] = function ($query) use ($pk, $sign) {
-				return str_replace('\'' . $sign . '\'', 'default', $query) . ' RETURNING ' . $this->EscapeChar() . $pk . $this->EscapeChar();
+				return str_replace('\'' . $sign . '\'', 'default', $query) . ' RETURNING ' . $this->EscapeField($pk);
 			};
 		}
 
@@ -114,12 +116,12 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		$pk = $this->_sql->Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($model->$pk)) return false;
 
@@ -130,12 +132,12 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
 	public function Remove (IQuarkModel $model, $options = []) {
-		$pk = $this->_sql->Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($model->$pk)) return false;
 
@@ -150,7 +152,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		return new QuarkKeyValuePair('id', 0);
+		return $this->_sql->Pk($model, 'id', 0);
 	}
 
 	/**
@@ -197,7 +199,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return $this->FindOne($model, array(
-			$this->_sql->Pk($model) => $id
+			$this->PrimaryKey($model)->Key() => $id
 		), $options);
 	}
 
@@ -265,19 +267,30 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	}
 
 	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function EscapeCollection ($name) {
+		return '"' . $name . '"';
+	}
+
+	/**
+	 * @param string $field
+	 *
+	 * @return string
+	 */
+	public function EscapeField ($field) {
+		return '"' . $field . '"';
+	}
+
+	/**
 	 * @param string $value
 	 *
 	 * @return string
 	 */
-	public function Escape ($value) {
+	public function EscapeValue ($value) {
 		return \pg_escape_string($this->_connection, $value);
-	}
-
-	/**
-	 * @return string
-	 */
-	public function EscapeChar () {
-		return '"';
 	}
 
 	/**
@@ -327,7 +340,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (!isset($options[self::OPTION_SCHEMA_ENCODING]))
 			$options[self::OPTION_SCHEMA_ENCODING] = self::DEFAULT_ENCODING;
 
-		$pk = QuarkSQL::Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 		$fields = '';
 		$properties = $model->Fields();
 

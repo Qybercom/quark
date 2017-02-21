@@ -2,7 +2,6 @@
 namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
-use Quark\IQuarkModelWithCustomPrimaryKey;
 use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
@@ -92,13 +91,12 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (ini_get(self::MYSQLI_RECONNECT) == 1)
 			ini_set(self::MYSQLI_RECONNECT, 0);
 
-		$options = $uri->options;
+		$options = $uri->Options();
 
-		if (is_array($options))
-			foreach ($options as $key => $value) {
-				if (!$this->_connection->options($key, $value))
-					throw new QuarkArchException('MySQLi option set error');
-			}
+		foreach ($options as $key => $value) {
+			if (!$this->_connection->options($key, $value))
+				throw new QuarkArchException('MySQLi option set error');
+		}
 
 		if (!@$this->_connection->real_connect(
 			$uri->host,
@@ -135,7 +133,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Save (IQuarkModel $model, $options = []) {
-		$pk = $this->_sql->Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($model->$pk)) return false;
 
@@ -151,7 +149,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Remove (IQuarkModel $model, $options = []) {
-		$pk = $this->_sql->Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($model->$pk)) return false;
 
@@ -166,14 +164,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return QuarkKeyValuePair
 	 */
 	public function PrimaryKey (IQuarkModel $model) {
-		$pk = 'id';
-
-		if ($model instanceof IQuarkModelWithCustomPrimaryKey) {
-			$_pk = $model->PrimaryKey();
-			$pk = $_pk !== null ? $_pk : $pk;
-		}
-
-		return new QuarkKeyValuePair($pk, 0);
+		return $this->_sql->Pk($model, 'id', 0);
 	}
 
 	/**
@@ -216,7 +207,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function FindOneById (IQuarkModel $model, $id, $options = []) {
 		return $this->FindOne($model, array(
-			$this->_sql->Pk($model) => $id
+			$this->PrimaryKey($model)->Key() => $id
 		), $options);
 	}
 
@@ -284,19 +275,30 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	}
 
 	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function EscapeCollection ($name) {
+		return '`' . $name . '`';
+	}
+
+	/**
+	 * @param string $field
+	 *
+	 * @return string
+	 */
+	public function EscapeField ($field) {
+		return '`' . $field . '`';
+	}
+
+	/**
 	 * @param string $value
 	 *
 	 * @return string
 	 */
-	public function Escape ($value) {
+	public function EscapeValue ($value) {
 		return $this->_connection->real_escape_string($value);
-	}
-
-	/**
-	 * @return string
-	 */
-	public function EscapeChar () {
-		return '`';
 	}
 
 	/**
@@ -353,7 +355,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (!isset($options[self::OPTION_SCHEMA_AUTOINCREMENT]))
 			$options[self::OPTION_SCHEMA_AUTOINCREMENT] = self::DEFAULT_AUTOINCREMENT;
 
-		$pk = QuarkSQL::Pk($model);
+		$pk = $this->PrimaryKey($model)->Key();
 		$fields = '';
 		$properties = $model->Fields();
 

@@ -4622,10 +4622,21 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param bool $localized = true
+	 *
 	 * @return string
 	 */
-	public function Theme () {
+	public function Theme ($localized = true) {
 		return $this->__call('Theme', func_get_args());
+	}
+
+	/**
+	 * @param bool $localized = true
+	 *
+	 * @return string
+	 */
+	public function ThemeURL ($localized = true) {
+		return $this->__call('ThemeURL', func_get_args());
 	}
 
 	/**
@@ -4738,6 +4749,11 @@ class QuarkView implements IQuarkContainer {
 	 * @var string $_theme = ''
 	 */
 	private $_theme = '';
+
+	/**
+	 * @var bool $_localized = false
+	 */
+	private $_localized = false;
 
 	/**
 	 * @param IQuarkViewModel|QuarkViewBehavior $view
@@ -5020,7 +5036,6 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	private function _localized_theme ($language) {
-		$language = str_replace('/', '', str_replace('.', '', $language));
 		$this->_theme = Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::VIEWS);
 
 		if ($this->_view instanceof IQuarkViewModelInTheme) {
@@ -5031,8 +5046,10 @@ class QuarkView implements IQuarkContainer {
 			
 			$this->_theme .= '/_themes/' . $theme;
 
-			if ($this->_view instanceof IQuarkViewModelInLocalizedTheme)
-				$this->_theme .= '/' . $language;
+			if ($this->_view instanceof IQuarkViewModelInLocalizedTheme) {
+				$this->_localized = true;
+				$this->_theme .= '/' . str_replace('/', '', str_replace('.', '', $language));
+			}
 		}
 
 		return Quark::NormalizePath($this->_theme . '/' . $this->_view->View() . '.php', false);
@@ -5049,10 +5066,30 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @param bool $localized = true
+	 *
 	 * @return string
 	 */
-	public function Theme () {
-		return $this->_theme;
+	public function Theme ($localized = true) {
+		return $this->_localized && !$localized
+			? substr($this->_theme, 0, strripos($this->_theme, '/'))
+			: $this->_theme;
+	}
+
+	/**
+	 * @param bool $localized = true
+	 *
+	 * @return string
+	 */
+	public function ThemeURL ($localized = true) {
+		return Quark::WebLocation($this->Theme($localized));
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Localized () {
+		return $this->_localized;
 	}
 
 	/**
@@ -6611,8 +6648,9 @@ trait QuarkCollectionBehavior {
 				$change[$i] = $item;
 		
 		$change = $this->_slice($change, $options, true);
+		$keys = array_keys($change);
 		
-		foreach ($change as $i) {
+		foreach ($keys as &$i) {
 			if (is_callable($update)) $update($this->_collection[$i]);
 			else {
 				if ($options[QuarkModel::OPTION_FORCE_DEFINITION]) $this->_collection[$i] = $update;
@@ -6713,7 +6751,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	}
 	
 	/**
-	 * @var $_type  = null
+	 * @var IQuarkModel|mixed $_type  = null
 	 */
 	private $_type = null;
 	
@@ -6857,6 +6895,17 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 			$this->Add($iterator($item, $key));
 
 		return $this;
+	}
+
+	/**
+	 * @param array $source = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function PopulateModelsWith ($source = []) {
+		return $this->PopulateWith($source, function ($item) {
+			return new QuarkModel($this->_type, $item);
+		});
 	}
 
 	/**
@@ -14063,11 +14112,6 @@ class QuarkURI {
 	public $fragment;
 
 	/**
-	 * @var string|array $options
-	 */
-	public $options;
-
-	/**
 	 * @var array $_route;
 	 */
 	private $_route = array();
@@ -14195,16 +14239,18 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $user = true
+	 * 
 	 * @return string
 	 */
-	public function Hostname () {
+	public function Hostname ($user = true) {
 		if (strpos(strtolower($this->scheme), strtolower('HTTP/')) !== false)
 			$this->scheme = 'http';
 
 		return
 			($this->scheme !== null ? $this->scheme : 'http')
 			. '://'
-			. ($this->user !== null ? $this->user . ($this->pass !== null ? ':' . $this->pass : '') . '@' : '')
+			. ($user && $this->user !== null ? $this->user . ($this->pass !== null ? ':' . $this->pass : '') . '@' : '')
 			. $this->host
 			. ($this->port !== null && $this->port != 80 ? ':' . $this->port : '');
 	}
@@ -14342,9 +14388,22 @@ class QuarkURI {
 		if (func_num_args() != 0)
 			$this->query = http_build_query((array)$query);
 		
+		return QuarkObject::Merge($this->Options());
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return array|string|null
+	 */
+	public function Options ($key = '') {
 		parse_str($this->query, $params);
 
-		return QuarkObject::Merge($params);
+		$params = is_array($params) ? $params : array();
+		
+		return func_num_args() == 0
+			? $params
+			: (isset($params[$key]) ? $params[$key] : null);
 	}
 
 	/**
@@ -18587,6 +18646,7 @@ class QuarkSQL {
 	const OPTION_QUERY_TEST = 'option.query.test';
 	const OPTION_QUERY_DEBUG = 'option.query.debug';
 	const OPTION_QUERY_REVIEWER = 'option.query.reviewer';
+	const OPTION_FIELDS = '__sql_fields__';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
 
@@ -18663,10 +18723,9 @@ class QuarkSQL {
 	 */
 	public function Query ($model, $options, $query, $test = false) {
 		$i = 1;
-		$escape = $this->_provider->EscapeChar();
 		$query = str_replace(
 			self::Collection($model),
-			$escape . QuarkModel::CollectionName($model, $options) . $escape,
+			$this->_provider->EscapeCollection(QuarkModel::CollectionName($model, $options)),
 			$query,
 			$i
 		);
@@ -18700,11 +18759,16 @@ class QuarkSQL {
 
 	/**
 	 * @param IQuarkModel $model
+	 * @param $key = 'id'
+	 * @param $value = 0
 	 *
-	 * @return string
+	 * @return QuarkKeyValuePair
 	 */
-	public static function Pk (IQuarkModel $model) {
-		return $model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : 'id';
+	public function Pk (IQuarkModel $model, $key = 'id', $value = 0) {
+		return new QuarkKeyValuePair(
+			$model instanceof IQuarkModelWithCustomPrimaryKey ? $model->PrimaryKey() : $key,
+			$value
+		);
 	}
 
 	/**
@@ -18713,10 +18777,9 @@ class QuarkSQL {
 	 * @return string
 	 */
 	public function Field ($field) {
-		if (!is_string($field)) return '';
-		$escape = $this->_provider->EscapeChar();
-
-		return $escape . $this->_provider->Escape($field) . $escape;
+		return is_string($field)
+			? $this->_provider->EscapeField($field)
+			: '';
 	}
 
 	/**
@@ -18748,7 +18811,7 @@ class QuarkSQL {
 		if (is_bool($value))
 			$value = $value ? 1 : 0;
 
-		$output = $this->_provider->Escape($value);
+		$output = $this->_provider->EscapeValue($value);
 
 		return is_string($value) ? '\'' . $output . '\'' : $output;
 	}
@@ -18827,10 +18890,10 @@ class QuarkSQL {
 		}
 
 		if (isset($options[QuarkModel::OPTION_LIMIT]))
-			$output .= ' LIMIT ' . $this->_provider->Escape($options[QuarkModel::OPTION_LIMIT]);
+			$output .= ' LIMIT ' . $this->_provider->EscapeValue($options[QuarkModel::OPTION_LIMIT]);
 
 		if (isset($options[QuarkModel::OPTION_SKIP]))
-			$output .= ' OFFSET ' . $this->_provider->Escape($options[QuarkModel::OPTION_SKIP]);
+			$output .= ' OFFSET ' . $this->_provider->EscapeValue($options[QuarkModel::OPTION_SKIP]);
 
 		return $output;
 	}
@@ -18843,26 +18906,29 @@ class QuarkSQL {
 	 * @return mixed
 	 */
 	public function Select (IQuarkModel $model, $criteria, $options = []) {
-		$fields = '*';
+		if (isset($options[self::OPTION_FIELDS])) $fields = $options[self::OPTION_FIELDS];
+		else {
+			$fields = '*';
 
-		if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
-			$fields = '';
-			$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
-			$i = 1;
+			if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
+				$fields = '';
+				$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
+				$i = 1;
 
-			foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
-				switch ($field) {
-					case self::FIELD_COUNT_ALL:
-						$key = $field;
-						break;
+				foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
+					switch ($field) {
+						case self::FIELD_COUNT_ALL:
+							$key = $field;
+							break;
 
-					default:
-						$key = $this->Field($field);
-						break;
+						default:
+							$key = $this->Field($field);
+							break;
+					}
+
+					$fields = $key . ($i == $count || !$key ? '' : ', ');
+					$i++;
 				}
-
-				$fields = $key . ($i == $count || !$key ? '' : ', ');
-				$i++;
 			}
 		}
 
@@ -18961,16 +19027,25 @@ interface IQuarkSQLDataProvider {
 	public function Query($query, $options);
 
 	/**
+	 * @param string $name
+	 *
+	 * @return string
+	 */
+	public function EscapeCollection($name);
+
+	/**
+	 * @param string $field
+	 *
+	 * @return string
+	 */
+	public function EscapeField($field);
+
+	/**
 	 * @param string $value
 	 *
 	 * @return string
 	 */
-	public function Escape($value);
-
-	/**
-	 * @return string
-	 */
-	public function EscapeChar();
+	public function EscapeValue($value);
 
 	/**
 	 * @param $type

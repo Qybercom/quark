@@ -20,6 +20,8 @@ use Quark\QuarkURI;
  * @package Quark\DataProviders
  */
 class QuarkDNA implements IQuarkDataProvider {
+	const OPTION_FORCE_ID = '___dna_force_id___';
+
 	/**
 	 * @var QuarkFile $_storage
 	 */
@@ -101,16 +103,19 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
+		if (!isset($options[self::OPTION_FORCE_ID]))
+			$options[self::OPTION_FORCE_ID] = true;
+
 		$collection = $this->_collection($model);
 
 		$pk = $this->PrimaryKey($model)->Key();
-		$model->$pk = Quark::GuID();
+		$model->$pk = $options[self::OPTION_FORCE_ID] ? Quark::GuID() : $model->$pk;
 		
 		$this->_db->{$collection}->Add(json_decode(json_encode($model)));
 
 		unset($pk, $collection);
 
-		return $this->_transaction();
+		return $this->_transaction() ? $model : null;
 	}
 
 	/**
@@ -130,16 +135,16 @@ class QuarkDNA implements IQuarkDataProvider {
 			$new = true;
 		}
 
-		if ($new) {
-		$this->_db->{$collection}->Add($model);
-			return $this->_transaction();
+		if ($new) $this->_db->{$collection}->Add($model);
+		else {
+			$model->$pk = (string)$model->$pk;
+
+			$this->_db->{$collection}->Change(array(
+				$pk => $model->$pk
+			), $model);
 		}
-		
-		$model->$pk = (string)$model->$pk;
-		
-		return $this->_db->{$collection}->Change(array(
-			$pk = $model->$pk
-		), $model);
+
+		return $this->_transaction() ? $model : null;
 	}
 
 	/**
@@ -156,11 +161,13 @@ class QuarkDNA implements IQuarkDataProvider {
 		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($model->$pk))
-			throw new QuarkArchException('Model ' . get_class($model) . ' doe not have a primary key. Operation `remove` can not be executed');
-		
-		return $this->_db->{$collection}->Purge(array(
-			$pk = $model->$pk
+			throw new QuarkArchException('Model ' . get_class($model) . ' does not have a primary key. Operation `remove` can not be executed');
+
+		$this->_db->{$collection}->Purge(array(
+			$pk => $model->$pk
 		));
+
+		return $this->_transaction();
 	}
 
 	/**
@@ -238,7 +245,9 @@ class QuarkDNA implements IQuarkDataProvider {
 	public function Update (IQuarkModel $model, $criteria, $options) {
 		$collection = $this->_collection($model, $options);
 		
-		return $this->_db->{$collection}->Change($criteria, $model, $options);
+		$count = $this->_db->{$collection}->Change($criteria, $model, $options);
+
+		return $this->_transaction() ? $count : null;
 	}
 
 	/**
@@ -251,7 +260,9 @@ class QuarkDNA implements IQuarkDataProvider {
 	public function Delete (IQuarkModel $model, $criteria, $options) {
 		$collection = $this->_collection($model, $options);
 		
-		return $this->_db->{$collection}->Purge($criteria, $options);
+		$count = $this->_db->{$collection}->Purge($criteria, $options);
+
+		return $this->_transaction() ? $count : null;
 	}
 
 	/**

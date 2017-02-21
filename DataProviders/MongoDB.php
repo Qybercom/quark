@@ -188,12 +188,7 @@ class MongoDB implements IQuarkDataProvider {
 	 */
 	public function Connect (QuarkURI $uri) {
 		try {
-			$options = array();
-
-			if (is_array($uri->options))
-				$options = $uri->options;
-
-			$connection = new \MongoClient($uri->URI(), $options);
+			$connection = new \MongoClient($uri->URI(), $uri->Options());
 			$uri->path = str_replace('/', '', $uri->path);
 
 			if (strlen(trim($uri->path)) != 0) {
