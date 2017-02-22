@@ -30,6 +30,8 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	const CONNECTION_OPTION_USERNAME = 'UID';
 	const CONNECTION_OPTION_PASSWORD = 'PWD';
 
+	const OPTION_QUERY_FREE = '___query_free___';
+
 	/**
 	 * @var resource $_connection
 	 */
@@ -96,7 +98,7 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (!isset($options[self::CONNECTION_OPTION_PASSWORD]))
 			$options[self::CONNECTION_OPTION_PASSWORD] = $uri->pass;
 
-		if (!$this->_connection = sqlsrv_connect($connect, $options))
+		if (!$this->_connection = \sqlsrv_connect($connect, $options))
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, QuarkException::LastError());
 
 		$this->_sql = new QuarkSQL($this);
@@ -109,7 +111,26 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return mixed
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		// TODO: Implement Create() method.
+		$epk = false;
+		$pk = $this->PrimaryKey($model)->Key();
+
+		if (!isset($options[QuarkSQL::OPTION_QUERY_REVIEWER])) {
+			$epk = true;
+			unset($model->$pk);
+
+			$options[QuarkSQL::OPTION_QUERY_REVIEWER] = function ($query) use ($pk) {
+				return preg_replace('#^INSERT INTO (.+) \((.*)\) VALUES (.*)#Uis', 'INSERT INTO $1 ($2) OUTPUT INSERTED.* VALUES $3', $query);
+			};
+		}
+
+		$out = $this->_sql->Insert($model, $options);
+
+		if ($epk && $out) {
+			$insert = \sqlsrv_fetch_array($out);
+			$model->$pk = $insert[0];
+		}
+
+		return $out;
 	}
 
 	/**
@@ -165,10 +186,10 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$records = $this->_sql->Select($model, $criteria, $this->_options($model, $options));
 
 		if ($records) {
-			while ($record = sqlsrv_fetch_array($records, SQLSRV_FETCH_ASSOC))
+			while ($record = \sqlsrv_fetch_array($records, SQLSRV_FETCH_ASSOC))
 				$output[] = $record;
 
-			sqlsrv_free_stmt($records);
+			\sqlsrv_free_stmt($records);
 		}
 
 		return $output;
@@ -242,12 +263,14 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		$options = $this->_options($model, $options);
 		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
 				QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER()',
-				//QuarkSQL::OPTION_FIELDS => 'ROW_NUMBER() OVER(ORDER BY Id)',
+				//QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER(ORDER BY Id)',
+				//QuarkSQL::OPTION_FIELDS => 'ROW_NUMBER() OVER(ORDER BY [Id] ASC) AS RowNum',
+				//QuarkSQL::OPTION_FIELDS => '*, COUNT(*) OVER()',
 				QuarkModel::OPTION_SKIP => $skip,
-				QuarkModel::OPTION_LIMIT => $limit == 0 ? 1 : $limit
+				QuarkModel::OPTION_LIMIT => $limit// == 0 ? 1 : $limit
 			)));
 
-		return !$result ? 0 : (int)sqlsrv_fetch_array($result)[0];
+		return !$result ? 0 : (int)\sqlsrv_fetch_array($result)[0];
 	}
 
 	/**
@@ -275,10 +298,13 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			}
 		}
 
+		if (!isset($options[self::OPTION_QUERY_FREE]))
+			$options[self::OPTION_QUERY_FREE] = false;
+
 		$hash = Quark::GuID();
 		$set = '';
 
-		$query = preg_replace_callback('#SET (\[[a-zA-Z0-9_]+\]\s*\=\s*\'?(.*)\'?,?\s?)+ WHERE#is', function ($found) use (&$hash, &$set) {
+		$query = preg_replace_callback('#SET (\[[a-zA-Z0-9_]+\]\s*\=\s*\'?(.*)\'?,?\s?)+( WHERE)?#is', function ($found) use (&$hash, &$set) {
 			$set = $found[0];
 			return $hash;
 		}, $query);
@@ -289,10 +315,13 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (isset($options[QuarkSQL::OPTION_QUERY_DEBUG]) && $options[QuarkSQL::OPTION_QUERY_DEBUG])
 			Quark::Log('[MSSQL] Query: "' . $query . '"');
 
-		$out = sqlsrv_query($this->_connection, $query);
+		$out = \sqlsrv_query($this->_connection, $query);
 
 		if (!$out)
-			Quark::Log('[MSSQL] Query error "' . $query . '". Errors: ' . print_r(sqlsrv_errors(), true));
+			Quark::Log('[MSSQL] Query error "' . $query . '". Errors: ' . print_r(\sqlsrv_errors(), true));
+
+		if ($options[self::OPTION_QUERY_FREE] && $out)
+			\sqlsrv_free_stmt($out);
 
 		return $out;
 	}

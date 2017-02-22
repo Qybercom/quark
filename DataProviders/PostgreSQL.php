@@ -93,8 +93,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
 		$epk = false;
-		$ppk = $this->PrimaryKey($model);
-		$pk = $ppk->Key();
+		$pk = $this->PrimaryKey($model)->Key();
 
 		if (!isset($options[QuarkSQL::OPTION_QUERY_REVIEWER])) {
 			$sign = Quark::GuID();
