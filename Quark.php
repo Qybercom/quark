@@ -14380,6 +14380,17 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param string $uri = ''
+	 * @param array $query = []
+	 * @param bool $weak = true
+	 *
+	 * @return string
+	 */
+	public static function Build ($uri = '', $query = [], $weak = true) {
+		return $uri . self::BuildQuery($uri, $query, $weak);
+	}
+
+	/**
 	 * @param $query = []
 	 * 
 	 * @return object
