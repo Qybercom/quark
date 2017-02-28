@@ -7869,7 +7869,7 @@ class QuarkModel implements IQuarkContainer {
 			if ($key == '') continue;
 			
 			if (isset($model->$key)) {
-				if (is_callable($field)) $output->$key = $field($key, $model->$key, !is_callable($model->$key));
+				if (self::_callableField($field)) $output->$key = $field($key, $model->$key, !is_callable($model->$key));
 				else {
 					$output->$key = $model->$key;
 					
@@ -7950,8 +7950,17 @@ class QuarkModel implements IQuarkContainer {
 			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : $value))
 			: ($property instanceof IQuarkModel
 				? ($property instanceof IQuarkNullableModel && $value == null ? null : new QuarkModel($property, $value))
-				: (is_callable($property) ? $property($key, $value, true) : $value)
+				: (self::_callableField($property) ? $property($key, $value, true) : $value)
 			);
+	}
+
+	/**
+	 * @param $property
+	 *
+	 * @return bool
+	 */
+	private static function _callableField ($property) {
+		return !is_scalar($property) && is_callable($property);
 	}
 
 	/**
@@ -8010,7 +8019,7 @@ class QuarkModel implements IQuarkContainer {
 
 		return $value instanceof IQuarkLinkedModel
 			? $value->Unlink()
-			: (is_callable($property) ? $property($key, $value, !is_callable($value)) : $value);
+			: (self::_callableField($property) ? $property($key, $value, !is_callable($value)) : $value);
 	}
 
 	/**
