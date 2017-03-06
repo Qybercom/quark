@@ -17678,9 +17678,9 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
  * @package Quark
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
-	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\"#UisS';
-	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\-]+?)\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
-	const PATTERN_META = '#^\s*\<\?xml\s*((([a-zA-Z0-9\:\_\-]+?)\=\"(.*)\")*)\s*\?\>#UisS';
+	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\.\-]+)\=\"(.*)\"#UisS';
+	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\.\-]+)\s*((([a-zA-Z0-9\:\_\.\-]+)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
+	const PATTERN_META = '#^\s*\<\?xml\s*((([a-zA-Z0-9\:\_\-\.]+?)\=\"(.*)\")*)\s*\?\>#UisS';
 	const PATTERN_COMMENT = '#\<\!\-\-(.*)\-\-\>#is';
 
 	const MIME = 'text/xml';
@@ -17900,7 +17900,11 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			$buffer = null;
 
 			if (sizeof($value) == 8) {
-				$buffer = $this->Decode($value[7], false);
+				$buffer = $this->Decode($value[6] . '>', false);
+
+				if (!$buffer)
+					$buffer = $this->Decode($value[7], false);
+
 				if (!$buffer) $buffer = $value[7];
 			}
 
@@ -17928,7 +17932,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			}
 		}
 
-		return $out;
+		return QuarkObject::isIterative($out) ? $out : (object)$out;
 	}
 
 	/**
@@ -17965,11 +17969,6 @@ class QuarkXMLNode {
 	 * @var string $_name = ''
 	 */
 	private $_name = '';
-	
-	/**
-	 * @var $_data = null
-	 */
-	private $_data = null;
 
 	/**
 	 * @var array $_attributes = []
@@ -17980,6 +17979,11 @@ class QuarkXMLNode {
 	 * @var bool $_single = false
 	 */
 	private $_single = false;
+	
+	/**
+	 * @var $_data = null
+	 */
+	private $_data = null;
 
 	/**
 	 * @param $key
