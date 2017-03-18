@@ -6579,7 +6579,7 @@ trait QuarkCollectionBehavior {
 				foreach ($sort as $key => $mode) {
 					$accessor = str_replace('.', '->', str_replace('->', '', $key));
 					
-					$elem_a = eval('return isset($b->' . $accessor . ') ? $a->' . $accessor . ' : null;');
+					$elem_a = eval('return isset($a->' . $accessor . ') ? $a->' . $accessor . ' : null;');
 					$elem_b = eval('return isset($b->' . $accessor . ') ? $b->' . $accessor . ' : null;');
 					
 					$dir = $mode;
