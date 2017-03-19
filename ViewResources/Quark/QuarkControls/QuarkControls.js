@@ -698,7 +698,9 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			i = 0;
 
 		languages = languages == undefined ? [] : languages.split(',');
-		languages.unshift('*');
+
+		if (languages.indexOf('*') == -1)
+			languages.unshift('*');
 
 		while (i < languages.length) {
 			select += '<option value="' + languages[i] + '"' + (json[selected] != undefined && languages[i] == selected ? ' selected="selected"' : '') + '>'

@@ -723,6 +723,8 @@ class QuarkConfig {
 	const SERVICES = 'services';
 	const VIEWS = 'views';
 	const RUNTIME = 'runtime';
+	
+	const LANGUAGE_DELIMITER = ',';
 
 	/**
 	 * @var IQuarkCulture $_culture = null
@@ -803,6 +805,11 @@ class QuarkConfig {
 	 * @var string $_localizationDetailsDelimiter = ':'
 	 */
 	private $_localizationDetailsDelimiter = ':';
+
+	/**
+	 * @var string[] $_languages = [QuarkLanguage::ANY]
+	 */
+	private $_languages = array(QuarkLanguage::ANY);
 
 	/**
 	 * @var string $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL
@@ -1445,6 +1452,19 @@ class QuarkConfig {
 			$this->_localizationDetailsDelimiter = $delimiter;
 		
 		return $this->_localizationDetailsDelimiter;
+	}
+	
+	/**
+	 * @param string|string[] $languages = ''
+	 * @param string $delimiter = self::LANGUAGE_DELIMITER
+	 *
+	 * @return string[]
+	 */
+	public function Languages ($languages = '', $delimiter = self::LANGUAGE_DELIMITER) {
+		if (func_num_args() != 0)
+			$this->_languages = is_array($languages) ? $languages : explode($delimiter, (string)$languages);
+		
+		return $this->_languages;
 	}
 
 	/**
@@ -4677,6 +4697,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 * @param string[] $languages = []
+	 *
+	 * @return string
+	 */
+	public function Localization ($language = QuarkLanguage::ANY, $languages = []) {
+		return $this->__call('Localization', func_get_args());
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function Compile () {
@@ -5296,6 +5326,26 @@ class QuarkView implements IQuarkContainer {
 			$this->_language = $language;
 
 		return $this->_language;
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 * @param string[] $languages = []
+	 * 
+	 * @return string
+	 */
+	public function Localization ($language = QuarkLanguage::ANY, $languages = []) {
+		$args = func_num_args();
+
+		if ($args == 0) {
+			$language = Quark::CurrentLanguage();
+			$languages = Quark::Config()->Languages();
+		}
+
+		if ($args == 1)
+			$languages = Quark::Config()->Languages();
+
+		return ' quark-language="' . $language . '" quark-languages="' . implode(QuarkConfig::LANGUAGE_DELIMITER, $languages) . '" ';
 	}
 
 	/**
@@ -7834,7 +7884,7 @@ class QuarkModel implements IQuarkContainer {
 	public static function Build ($model, $field) {
 		return $field == null && $model instanceof IQuarkNullableModel
 			? null
-			: new QuarkModel($model, $field);
+			: new QuarkModel($model);
 	}
 
 	/**
