@@ -7053,12 +7053,16 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public function RetrieveLazy () {
 		$out = new self($this->_type->Model());
+		$model = null;
 
-		foreach ($this->_collection as $item)
+		foreach ($this->_collection as $i => &$item) {
 			/**
 			 * @var QuarkLazyLink|IQuarkLinkedModel $item
+			 * @var QuarkLazyLink $model
 			 */
-			$out[] = $item->Retrieve();
+			$model = clone $item->Model();
+			$out[] = $model->Retrieve();
+		}
 
 		return $out;
 	}
@@ -7074,7 +7078,7 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		$add = $item instanceof QuarkModel ? $item->Model() : $item;
 		$typeOk = $add instanceof $type;
 
-		return $typeOk ? $this->Add(new QuarkLazyLink($add, $value)) : false;
+		return $typeOk ? $this->Add(new QuarkLazyLink($add, $value, true)) : false;
 	}
 
 	/**
@@ -11002,10 +11006,13 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	/**
 	 * @param IQuarkLinkedModel $model = null
 	 * @param $value = null
+	 * @param bool $linked = false
 	 */
-	public function __construct (IQuarkLinkedModel $model, $value = null) {
+	public function __construct (IQuarkLinkedModel $model, $value = null, $linked = false) {
 		$this->_model = $model;
-		$this->value = func_num_args() == 2 ? $value : '';
+		$this->_linked = $linked;
+		
+		$this->value = func_num_args() > 1 ? $value : '';
 	}
 
 	/**

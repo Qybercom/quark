@@ -683,7 +683,45 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		};
 
 	opt = opt || {};
+		opt.localize = opt.localize != undefined ? opt.localize : false;
 		opt.labels = opt.labels != undefined ? opt.labels : {'*': 'Any'};
+
+	/**
+	 * @param {string} name
+	 * @param {string=} postfix
+	 *
+	 * @return {string}
+	 *
+	 * @private
+	 */
+	that._name = function (name, postfix) {
+		return name.substr(0, name.lastIndexOf(']')) + (postfix || '') + ']';
+	};
+
+	/**
+	 * @param {string} name
+	 * @param {string=} postfix
+	 *
+	 * @return {string}
+	 *
+	 * @private
+	 */
+	that._nameQuery = function (name, postfix) {
+		return '[name="' + that._name(name, postfix) + '"]';
+	};
+
+	/**
+	 * @param elem
+	 * @param {string} name
+	 * @param {string=} postfix
+	 *
+	 * @return {string}
+	 *
+	 * @private
+	 */
+	that._field = function (elem, name, postfix) {
+		return elem.parent().find(that._nameQuery(name, postfix));
+	};
 
 	that.Elem = $(selector);
 
@@ -693,7 +731,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			language = '',
 			languages = elem.attr('quark-languages'),
 			selected = elem.attr('quark-language'),
-			select = '<select class="quark-input quark-language-select" name="' + elem.attr('name') + '_language">',
+			select = '<select class="quark-input quark-language-select" name="' + that._name(elem.attr('name'), '_language') + '">',
 			json = _decode(val),
 			i = 0;
 
@@ -714,7 +752,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 		var copy = elem.clone();
 		copy
-			.attr('name', copy.attr('name') + '_localized')
+			.attr('name', that._name(copy.attr('name'), '_localized'))
 			.val(json != null && json[selected] != undefined ? json[selected] : (json['*'] != undefined ? json['*'] : ''));
 
 		elem
@@ -722,32 +760,34 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			.after(select)
 			.after(copy);
 
-		elem.parent().find('[name="' + elem.attr('name') + '_localized"]').on('change', function () {
-			var localized = $(this),
-				name = localized.attr('name').replace(/_localized$/, ''),
-				orig = localized.parent().find('[name="' + name + '"]'),
-				lang = orig.parent().find('[name="' + name + '_language"]'),
-				json = _decode(orig.val()),
-				selected = lang.val();
+		elem.parent()
+			.find(that._nameQuery(elem.attr('name'), '_localized'))
+			.on('change', function () {
+				var localized = $(this),
+					name = localized.attr('name').replace(/_localized(]?)$/, '$1'),
+					orig = localized.parent().find('[name="' + name + '"]'),
+					lang = that._field(orig, name, '_language'),
+					json = _decode(orig.val()),
+					selected = lang.val();
 
-			if (json == null)
-				json = {};
+				if (json == null)
+					json = {};
 
-			json[selected] = localized.val();
-			var val = _encode(json);
+				json[selected] = localized.val();
+				var val = _encode(json);
 
-			if (opt.change instanceof Function)
-				opt.change(json[selected], json ,val);
+				if (opt.change instanceof Function)
+					opt.change(json[selected], json ,val);
 
-			orig.val(val);
-		});
+				orig.val(val);
+			});
 	});
 
 	$(document).on('change', 'select.quark-language-select', function () {
 		var lang = $(this),
-			name = lang.attr('name').replace(/_language$/, ''),
+			name = lang.attr('name').replace(/_language(]?)$/, '$1'),
 			orig = lang.parent().find('[name="' + name + '"]'),
-			display = lang.parent().find('[name="' + orig.attr('name') + '_localized"]'),
+			display = that._field(lang, orig.attr('name'), '_localized'),
 			json = _decode(orig.val()),
 			selected = lang.val(),
 			val = json != null && json[selected] != undefined ? json[selected] : '';
@@ -762,8 +802,8 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		$(selector || that.Elem).each(function () {
 			var elem = $(this),
 				name = elem.attr('name'),
-				lang = elem.parent().find('[name="' + name + '_language"]'),
-				display = elem.parent().find('[name="' + name + '_localized"]'),
+				lang = that._field(elem, name, '_language'),
+				display = that._field(elem, name, '_localized'),
 				json = _decode(elem.val());
 
 			language = language || lang.val();
