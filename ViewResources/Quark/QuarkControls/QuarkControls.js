@@ -695,7 +695,12 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 	 * @private
 	 */
 	that._name = function (name, postfix) {
-		return name.substr(0, name.lastIndexOf(']')) + (postfix || '') + ']';
+		postfix = postfix || '';
+		var i = name.lastIndexOf(']');
+
+		return i == -1
+			? (name + postfix)
+			: name.substr(0, i) + postfix + ']';
 	};
 
 	/**

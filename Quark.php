@@ -9575,7 +9575,14 @@ class QuarkField {
 			return false;
 		}
 		
-		return in_array($container->Operation(), $op) ? QuarkModel::Count($model, array($field => $model->$field)) == 0 : true;
+		return in_array($container->Operation(), $op)
+			? QuarkModel::Count($model, array(
+				$field => ($model->$field instanceof QuarkModel && $model->$field->Model() instanceof IQuarkLinkedModel
+					? $model->$field->Unlink()
+					: $model->$field
+				)
+			)) == 0
+			: true;
 	}
 
 	/**
