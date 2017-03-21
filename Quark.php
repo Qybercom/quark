@@ -846,6 +846,11 @@ class QuarkConfig {
 	private $_webHost;
 
 	/**
+	 * @var string $_streamHost = ''
+	 */
+	private $_streamHost = '';
+
+	/**
 	 * @var QuarkURI $_clusterControllerListen
 	 */
 	private $_clusterControllerListen;
@@ -1162,6 +1167,18 @@ class QuarkConfig {
 			$this->_webHost = QuarkURI::FromURI($uri);
 
 		return $this->_webHost;
+	}
+
+	/**
+	 * @param string $host = ''
+	 *
+	 * @return string
+	 */
+	public function &StreamHost ($host = '') {
+		if (func_num_args() != 0)
+			$this->_streamHost = $host;
+		
+		return $this->_streamHost;
 	}
 
 	/**
@@ -13372,10 +13389,13 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public static function ConnectionURI ($name = '') {
 		$environment = Quark::Environment();
+		$host = Quark::Config()->StreamHost();
 		
 		foreach ($environment as $env)
 			if ($env instanceof QuarkStreamEnvironment && $env->EnvironmentName() == $name)
-				return $env->ServerURI()->ConnectionURI();
+				return $host == ''
+					? $env->ServerURI()->ConnectionURI()
+					: $env->ServerURI()->ConnectionURI($host);
 
 		return null;
 	}
@@ -14592,13 +14612,18 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param string $host = ''
+	 *
 	 * @return QuarkURI
 	 */
-	public function ConnectionURI () {
+	public function ConnectionURI ($host = '') {
 		$uri = clone $this;
-
-		if ($uri->host == self::HOST_ALL_INTERFACES)
-			$uri->host = Quark::HostIP();
+			$uri->host = func_num_args() != 0
+				? $host
+				: ($uri->host == self::HOST_ALL_INTERFACES
+					? Quark::HostIP()
+					: $uri->host
+				);
 
 		return $uri;
 	}
