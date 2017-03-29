@@ -5169,7 +5169,7 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function SignedAction ($uri, $button, $method = QuarkDTO::METHOD_POST, $formStyle = self::SIGNED_ACTION_FORM_STYLE) {
-		return '<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
+		return /** @lang text */'<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
 	}
 
 	/**
@@ -6058,7 +6058,7 @@ trait QuarkLexingViewResourceBehavior {
 	 */
 	private static function _htmlTo ($content = '', $full = false) {
 		return $full
-			? preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$2', $content)
+			? preg_replace(/** @lang text */'#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$2', $content)
 			: $content;
 	}
 
@@ -6081,7 +6081,7 @@ trait QuarkLexingViewResourceBehavior {
 	 * @return string
 	 */
 	public static function Styles ($content = '') {
-		return preg_replace('#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content);
+		return preg_replace(/** @lang text */'#\<\!DOCTYPE html\>\<html\>\<head\>\<title\>\<\/title\>\<style type\=\"text\/css\"\>(.*)\<\/style\>\<\/head\>\<body\>(.*)\<\/body\>\<\/html\>#Uis', '$1', $content);
 	}
 }
 
@@ -6161,7 +6161,7 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container ($location, $content) {
-		return '<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
+		return /** @lang text */'<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
 	}
 }
 
@@ -6951,15 +6951,12 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 		if ($source instanceof QuarkCollection)
 			$source = $source->_collection;
 
-		if (!is_array($source)) return $this;
+		if (is_array($source)) {
+			$this->_collection = array();
 
-		if ($iterator == null)
-			$iterator = function ($item) { return $item; };
-
-		$this->_collection = array();
-
-		foreach ($source as $key => &$item)
-			$this->Add($iterator($item, $key));
+			foreach ($source as $key => &$item)
+				$this->Add($iterator == null ? $item : $iterator($item, $key));
+		}
 
 		return $this;
 	}
@@ -6981,13 +6978,10 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 * @return array
 	 */
 	public function Collection (callable $iterator = null) {
-		if ($iterator == null)
-			$iterator = function ($item) { return $item instanceof QuarkModel ? $item->Model() : null; };
-
 		$output = array();
 
 		foreach ($this->_collection as $key => &$item)
-			$output[] = $iterator($item, $key);
+			$output[] = $iterator == null ? $item : $iterator($item, $key);
 
 		return $output;
 	}
@@ -19070,6 +19064,7 @@ class QuarkSQL {
 		return $this->Query(
 			$model,
 			$options,
+			/** @lang text */
 			'INSERT INTO ' . self::Collection($model)
 			. ' (' . implode(', ', $keys) . ') '
 			. 'VALUES (' . implode(', ', $values) . ')'
