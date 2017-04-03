@@ -15,6 +15,7 @@ Quark.Network = {};
  *  host: string,
  *  port: number,
  *  socket: WebSocket,
+ *  secure: false,
  *  on: {
  *      message: Function,
  *      error: Function
@@ -30,6 +31,7 @@ Quark.Network.Socket = {
     port: 0,
     socket: null,
     connected: false,
+    secure: false,
     on: {
         open: function () {},
         close: function () {},
@@ -56,7 +58,7 @@ Quark.Network.Socket = {
     Connect: function () {
     	var that = this;
 
-        this.socket = new WebSocket('ws://' + this.host + ':' + this.port);
+        this.socket = new WebSocket('ws' + (this.secure ? 's' : '') + '://' + this.host + ':' + this.port);
 
         this.socket.onmessage = this.on.message;
         this.socket.onerror = this.on.error;

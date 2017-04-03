@@ -42,7 +42,13 @@ class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, 
 	public function HTML () {
 		return $this->_stream == null
 			? ''
-			: '<script type="text/javascript">var ' . $this->_var . '=new Quark.Network.Client(\'' . $this->_stream->host . '\',' . $this->_stream->port . ');</script>';
+			: (
+				'<script type="text/javascript">var ' . $this->_var . '=new Quark.Network.Client(\''
+				. $this->_stream->host . '\',' . $this->_stream->port
+				. ');'
+				. ($this->_stream->Secure() ? ($this->_var . '.secure=true;') : '')
+				. '</script>'
+			);
 	}
 
 	/**

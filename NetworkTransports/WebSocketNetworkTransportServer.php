@@ -15,11 +15,26 @@ use Quark\QuarkHTMLIOProcessor;
  * http://www.askdev.ru/a/26682
  * http://www.sanwebe.com/2013/05/chat-using-websocket-php-socket
  *
+ * @important
+ * http://www.lenholgate.com/blog/2011/07/websockets-is-a-stream-not-a-message-based-protocol.html
+ * http://stackoverflow.com/questions/31265789/websocket-invalid-frame-header#comment50526750_31265789
+ * https://github.com/CycloneCode/WSServer/blob/master/src/WSServer.php
+ * https://github.com/Cyclonecode/WSServer/blob/master/src/WSFrame.php
+ *
  * @package Quark\NetworkTransports
  */
 class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	const GuID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
+	const OP_CONTINUATION = 0X0;
+	const OP_TEXT = 0x1;
+	const OP_BINARY = 0x2;
+	const OP_CLOSE = 0x8;
+	const OP_PING = 0x09;
+	const OP_PONG = 0x0A;
+	
+	const FRAME_MIN_SIZE = 2;
+	
 	/**
 	 * @var string $_buffer
 	 */
@@ -38,7 +53,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	/**
 	 * @param QuarkClient &$client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventConnect (QuarkClient &$client) {
 		// TODO: Implement EventConnect() method.
@@ -48,7 +63,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	 * @param QuarkClient &$client
 	 * @param string $data
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventData (QuarkClient &$client, $data) {
 		$this->_buffer .= $data;
@@ -56,7 +71,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 		if ($this->_connected) {
 			$input = self::FrameIn($this->_buffer);
 			$this->_buffer = '';
-
+			
 			$client->TriggerData($input);
 		}
 		else {
@@ -90,7 +105,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	/**
 	 * @param QuarkClient &$client
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function EventClose (QuarkClient &$client) {
 		$client->TriggerClose();
@@ -137,26 +152,23 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 
 		return $out;
 	}
-
+	
 	/**
-	 * @param string $data
+     * @param string $data
+     * @param int $op = self::OP_TEXT
 	 *
 	 * @return string
-	 */
-	public static function FrameOut ($data) {
-		$b1 = 0x80 | (0x1 & 0x0f);
-
+     */
+	public static function FrameOut ($data, $op = self::OP_TEXT) {
 		$length = strlen($data);
-
-		if ($length <= 125)
-			return pack('CC', $b1, $length) . $data;
-
-		if ($length > 125 && $length < 65536)
-			return pack('CCn', $b1, 126, $length) . $data;
-
-		if ($length >= 65536)
-			return pack('CCNN', $b1, 127, $length) . $data;
-
-		return $data;
-	}
+        $out = pack('C', $op | 0x80);
+        
+        if ($length > 125 && $length <= 0xffff)
+			return $out . pack('Cn', 126, $length) . $data;
+			
+        if ($length > 0xffff)
+			return $out . pack('CNN', 127, 0, $length) . $data;
+        
+		return $out . pack('C', $length) . $data;
+    }
 }

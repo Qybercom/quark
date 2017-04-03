@@ -11,17 +11,38 @@ use Quark\QuarkFile;
  * @package Quark\Extensions\MediaProcessing\GraphicsDraw
  */
 class GDImage implements IQuarkExtension {
+	const TYPE_JPEG = 'image/jpeg';
+	const TYPE_PNG = 'image/png';
+	const TYPE_GIF = 'image/gif';
+	const TYPE_WBMP = 'image/wbmp';
+	const TYPE_WEBP = 'image/webp';
+	const TYPE_XBM = 'image/xbm';
+	const TYPE_XPM = 'image/xpm';
+	
 	/**
 	 * @var array $_processors
 	 */
 	private static $_processors = array(
-		'image/jpeg' => 'imagejpeg',
-		'image/png' => 'imagepng',
-		'image/gif' => 'imagegif',
-		'image/wbmp' => 'imagewbmp',
-		'image/webp' => 'imagewebp',
-		'image/xbm' => 'imagexbm',
-		'image/xpm' => 'imagexpm',
+		self::TYPE_JPEG => 'imagejpeg',
+		self::TYPE_PNG => 'imagepng',
+		self::TYPE_GIF => 'imagegif',
+		self::TYPE_WBMP => 'imagewbmp',
+		self::TYPE_WEBP => 'imagewebp',
+		self::TYPE_XBM => 'imagexbm',
+		self::TYPE_XPM => 'imagexpm',
+	);
+	
+	/**
+	 * @var array $_extensions
+	 */
+	private static $_extensions = array(
+		self::TYPE_JPEG => 'jpg',
+		self::TYPE_PNG => 'png',
+		self::TYPE_GIF => 'gif',
+		self::TYPE_WBMP => 'wbmp',
+		self::TYPE_WEBP => 'webp',
+		self::TYPE_XBM => 'xbm',
+		self::TYPE_XPM => 'xpm'
 	);
 
 	/**
@@ -35,13 +56,14 @@ class GDImage implements IQuarkExtension {
 	private $_image;
 
 	/**
-	 * @param int $width
-	 * @param int $height
+	 * @param int $width = 1
+	 * @param int $height = 1
+	 * @param string $type = self::TYPE_PNG
 	 */
-	public function __construct ($width = 1, $height = 1) {
+	public function __construct ($width = 1, $height = 1, $type = self::TYPE_PNG) {
 		$this->_file = new QuarkFile();
-		$this->_file->type = 'image/png';
-		$this->_file->extension = 'png';
+		$this->_file->type = $type;
+		$this->_file->extension = isset(self::$_extensions[$type]) ? self::$_extensions[$type] : 'img';
 		$this->_image = self::Canvas($width, $height);
 	}
 
@@ -282,6 +304,33 @@ class GDImage implements IQuarkExtension {
 		imagecopymerge($this->_image, $canvas, 0, 0, 0, 0, $this->Width(), $this->Height(), $alpha * 100);
 
 		return $this->_apply();
+	}
+	
+	/**
+	 * @param string $type = self::TYPE_PNG
+	 *
+	 * @return string
+	 */
+	private function _process ($type = self::TYPE_PNG) {
+		if (!isset(self::$_processors[$type])) return '';
+
+		$processor = self::$_processors[$type];
+
+		ob_start();
+		$processor($this->_image);
+		return ob_get_clean();
+	}
+	
+	/**
+	 * @param string $type = self::TYPE_PNG
+	 *
+	 * @return GDImage
+	 */
+	public function Convert ($type = self::TYPE_PNG) {
+		$image = new self($this->Width(), $this->Height(), $type);
+		$image->Content($this->_process($type));
+		
+		return $image;
 	}
 
 	/**

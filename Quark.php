@@ -410,6 +410,18 @@ class Quark {
 	public static function EscapeRegEx ($regEx = '') {
 		return preg_replace('#([\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|])#Uis', '\\\$1', $regEx);
 	}
+	
+	/**
+	 * @param int $code
+	 *
+	 * http://stackoverflow.com/a/9878531/2097055
+	 * http://il.php.net/manual/en/function.chr.php#88611
+	 *
+	 * @return string
+	 */
+	public static function UnicodeChar ($code) {
+		return mb_convert_encoding('&#' . intval($code) . ';', 'UTF-8', 'HTML-ENTITIES');
+	}
 
 	/**
 	 * @param IQuarkEnvironment $provider = null
@@ -702,6 +714,22 @@ class Quark {
 	public static function ExecutionTime () {
 		return microtime(true) - self::$_execTime;
 	}
+	
+	/**
+	 * @param string[] $names = []
+	 * @param string $fallback = ''
+	 *
+	 * @return string
+	 */
+	public static function EnvVar ($names = [], $fallback = '') {
+		foreach ($names as $name) {
+			$out = getenv($name);
+			
+			if ($out !== false) return $out;
+		}
+		
+		return $fallback;
+	}
 }
 
 /**
@@ -825,6 +853,11 @@ class QuarkConfig {
 	 * @var object $_configuration = null
 	 */
 	private $_configuration = null;
+	
+	/**
+	 * @var string $_openSSLConfig = ''
+	 */
+	private $_openSSLConfig = '';
 
 	/**
 	 * @var callable $_ready = null
@@ -1079,6 +1112,18 @@ class QuarkConfig {
 			$this->_configuration->$name = $config;
 
 		return isset($this->_configuration->$name) ? $this->_configuration->$name : null;
+	}
+	
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return string
+	 */
+	public function OpenSSLConfig ($location = '') {
+		if (func_num_args() != 0)
+			$this->_openSSLConfig = $location;
+		
+		return $this->_openSSLConfig;
 	}
 
 	/**
@@ -3375,6 +3420,8 @@ trait QuarkStreamBehavior {
  * @package Quark
  */
 trait QuarkCLIBehavior {
+	use QuarkServiceBehavior;
+
 	/**
 	 * @var array $_shellInput = []
 	 */
@@ -12021,6 +12068,42 @@ trait QuarkNetwork {
 
 		return $this->_blocking;
 	}
+	
+	/**
+	 * @var bool $_secure = false
+	 */
+	private $_secure = false;
+	
+	/**
+	 * http://php.net/manual/ru/function.stream-socket-server.php#118419
+	 * http://php.net/manual/ru/function.stream-socket-enable-crypto.php#119122
+	 *
+	 * @param int $method = -1
+	 * @param bool $flag = false
+	 * @param int $timeout = 30
+	 *
+	 * @return bool
+	 */
+	public function Secure ($method = -1, $flag = false, $timeout = 30) {
+		if (func_num_args() != 0) {
+			if (!$this->_socket) return false;
+		
+			if (!$this->_blocking) stream_set_blocking($this->_socket, 1);
+			stream_set_timeout($this->_socket, $timeout, QuarkThreadSet::TICK);
+			
+			$secure = @stream_socket_enable_crypto($this->_socket, $flag, $method);
+			
+			stream_set_timeout($this->_socket, $this->_timeout, QuarkThreadSet::TICK);
+			if (!$this->_blocking) stream_set_blocking($this->_socket, 0);
+			
+			if (!$secure)
+				$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkNetwork cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
+			
+			$this->_secure = $flag;
+		}
+		
+		return $this->_secure;
+	}
 
 	/**
 	 * @param $socket
@@ -12062,7 +12145,9 @@ class QuarkClient implements IQuarkEventable {
 	const EVENT_DATA = 'OnData';
 	const EVENT_CLOSE = 'OnClose';
 
-	use QuarkNetwork;
+	use QuarkNetwork {
+		Secure as private _secure;
+	}
 
 	/**
 	 * @var int $_timeoutConnect = 0
@@ -12083,6 +12168,11 @@ class QuarkClient implements IQuarkEventable {
 	 * @var QuarkURI $_remote
 	 */
 	private $_remote;
+	
+	/**
+	 * @var bool $_fromServer = false
+	 */
+	private $_fromServer = false;
 
 	/**
 	 * @var QuarkKeyValuePair $_session
@@ -12157,10 +12247,9 @@ class QuarkClient implements IQuarkEventable {
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 		
-		$socket = QuarkURI::FromURI($this->_uri->Socket());
-		$secure = $socket->scheme == QuarkURI::WRAPPER_SSL;
+		$socket = $this->_uri->SocketURI();
 		
-		if ($secure)
+		if ($socket->Secure())
 			$socket->scheme = QuarkURI::WRAPPER_TCP;
 		
 		$this->_socket = @stream_socket_client(
@@ -12179,8 +12268,8 @@ class QuarkClient implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure)
-			$this->EnableCryptogram();
+		if ($socket->Secure())
+			$this->Secure(true);
 
 		$this->Timeout($this->_timeout);
 		$this->Blocking($this->_blocking);
@@ -12195,17 +12284,15 @@ class QuarkClient implements IQuarkEventable {
 	}
 	
 	/**
-	 * @return bool|int
+	 * @param bool $flag = false
+	 * @param int $timeout = 30
+	 *
+	 * @return bool
 	 */
-	public function EnableCryptogram () {
-		if (!$this->_socket) return false;
-		
-		$cryptogram = @stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-			
-		if (!$cryptogram)
-			$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkClient cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
-		
-		return $cryptogram;
+	public function Secure ($flag = false, $timeout = 30) {
+		return func_num_args() != 0
+			? $this->_secure($this->_fromServer ? STREAM_CRYPTO_METHOD_TLS_SERVER : STREAM_CRYPTO_METHOD_TLS_CLIENT, $flag, $timeout)
+			: $this->_secure();
 	}
 
 	/**
@@ -12321,6 +12408,7 @@ class QuarkClient implements IQuarkEventable {
 		$uri->scheme = $scheme;
 
 		$client = new self($uri, clone $transport);
+		$client->_fromServer = true;
 
 		$client->Socket($socket);
 
@@ -12360,6 +12448,13 @@ class QuarkClient implements IQuarkEventable {
 			$this->_remote = $uri instanceof QuarkURI ? $uri : QuarkURI::FromURI($uri);
 
 		return $this->_remote;
+	}
+	
+	/**
+	 * @return bool
+	 */
+	public function FromServer () {
+		return $this->_fromServer;
 	}
 
 	/**
@@ -12443,7 +12538,9 @@ class QuarkServer implements IQuarkEventable {
 	const EVENT_ERROR_LISTEN = 'ErrorListen';
 	const EVENT_ERROR_CRYPTOGRAM = 'ErrorCryptogram';
 
-	use QuarkNetwork;
+	use QuarkNetwork {
+		Secure as private _secure;
+	}
 
 	/**
 	 * @var bool $_run = false
@@ -12504,13 +12601,14 @@ class QuarkServer implements IQuarkEventable {
 		}
 		else {
 			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
+			stream_context_set_option($stream, 'ssl', 'verify_peer', false);
+			stream_context_set_option($stream, 'ssl', 'allow_self_signed', true);
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
 
-		$socket = QuarkURI::FromURI($this->_uri->Socket());
-		$secure = $socket->scheme == QuarkURI::WRAPPER_SSL;
+		$socket = $this->_uri->SocketURI();
 
-		if ($secure)
+		if ($socket->Secure())
 			$socket->scheme = QuarkURI::WRAPPER_TCP;
 
 		$this->_socket = @stream_socket_server(
@@ -12529,9 +12627,6 @@ class QuarkServer implements IQuarkEventable {
 			return false;
 		}
 
-		if ($secure)
-			$this->EnableCryptogram();
-		
 		$this->Timeout(0);
 		$this->Blocking(0);
 		
@@ -12548,17 +12643,15 @@ class QuarkServer implements IQuarkEventable {
 	}
 	
 	/**
-	 * @return bool|int
+	 * @param bool $flag = false
+	 * @param int $timeout = 30
+	 *
+	 * @return bool
 	 */
-	public function EnableCryptogram () {
-		if (!$this->_socket) return false;
-		
-		$cryptogram = @stream_socket_enable_crypto($this->_socket, true, STREAM_CRYPTO_METHOD_TLS_SERVER);
-			
-		if (!$cryptogram)
-			$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkServer cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
-		
-		return $cryptogram;
+	public function Secure ($flag = false, $timeout = 30) {
+		return func_num_args() != 0
+			? $this->_secure(STREAM_CRYPTO_METHOD_TLS_SERVER, $flag, $timeout)
+			: $this->_secure();
 	}
 
 	/**
@@ -12574,9 +12667,12 @@ class QuarkServer implements IQuarkEventable {
 
 		if (in_array($this->_socket, $this->_read, true)) {
 			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
-
+			
 			$client = QuarkClient::ForServer($this->_transport, $socket, $address, $this->URI()->scheme);
 			$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
+
+			if ($this->_uri->SocketURI()->Secure())
+				$client->Secure(true);
 
 			$client->Delegate(QuarkClient::EVENT_CONNECT, $this);
 			$client->Delegate(QuarkClient::EVENT_DATA, $this);
@@ -12685,17 +12781,24 @@ class QuarkPeer {
 	private $_peers = array();
 
 	/**
+	 * @var QuarkCertificate $_certificate
+	 */
+	private $_certificate;
+
+	/**
 	 * @param IQuarkPeer &$protocol
 	 * @param QuarkURI|string $bind
 	 * @param QuarkURI[]|string[] $connect
+	 * @param QuarkCertificate $certificate
 	 */
-	public function __construct (IQuarkPeer &$protocol = null, $bind = '', $connect = []) {
+	public function __construct (IQuarkPeer &$protocol = null, $bind = '', $connect = [], QuarkCertificate $certificate = null) {
 		$this->_protocol = $protocol;
-		$this->_server = new QuarkServer($bind, $this->_protocol->NetworkTransport());
+		$this->_server = new QuarkServer($bind, $this->_protocol->NetworkTransport(), $certificate);
 		$this->_server->On(QuarkClient::EVENT_CONNECT, array(&$this->_protocol, 'NetworkServerConnect'));
 		$this->_server->On(QuarkClient::EVENT_DATA, array(&$this->_protocol, 'NetworkServerData'));
 		$this->_server->On(QuarkClient::EVENT_CLOSE, array(&$this->_protocol, 'NetworkServerClose'));
 
+		$this->Certificate($certificate);
 		$this->Peers($connect);
 	}
 
@@ -12716,6 +12819,18 @@ class QuarkPeer {
 			$this->_server->URI($uri);
 
 		return $this->_server->URI();
+	}
+
+	/**
+	 * @param QuarkCertificate $certificate
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function Certificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() == 1 && $certificate != null)
+			$this->_certificate = $certificate;
+
+		return $this->_certificate;
 	}
 
 	/**
@@ -12768,7 +12883,7 @@ class QuarkPeer {
 		if (!$loopBack && $uri == $server) return false;
 		if ($unique && $this->Has($uri)) return false;
 
-		$peer = new QuarkClient($uri, $this->_protocol->NetworkTransport(), null, 0, false);
+		$peer = new QuarkClient($uri, $this->_protocol->NetworkTransport(), $this->_certificate, 0, false);
 		$peer->On(QuarkClient::EVENT_CONNECT, array(&$this->_protocol, 'NetworkClientConnect'));
 		$peer->On(QuarkClient::EVENT_DATA, array(&$this->_protocol, 'NetworkClientData'));
 		$peer->On(QuarkClient::EVENT_CLOSE, array(&$this->_protocol, 'NetworkClientClose'));
@@ -13700,7 +13815,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public function ServerURI ($uri = '') {
 		if (func_num_args() != 0)
 			$this->_cluster->Server()->URI(QuarkURI::FromURI($uri));
-
+		
 		return $this->_cluster->Server()->URI();
 	}
 
@@ -13726,6 +13841,42 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$this->_cluster->Controller()->URI(QuarkURI::FromURI($uri));
 
 		return $this->_cluster->Controller()->URI();
+	}
+	
+	/**
+	 * @param QuarkCertificate $certificate = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function ServerCertificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() != 0)
+			$this->_cluster->Server()->Certificate($certificate);
+		
+		return $this->_cluster->Server()->Certificate();
+	}
+	
+	/**
+	 * @param QuarkCertificate $certificate = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function NetworkCertificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() != 0)
+			$this->_cluster->Network()->Certificate($certificate);
+		
+		return $this->_cluster->Network()->Certificate();
+	}
+	
+	/**
+	 * @param QuarkCertificate $certificate = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function ControllerCertificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() != 0)
+			$this->_cluster->Controller()->Certificate($certificate);
+		
+		return $this->_cluster->Controller()->Certificate();
 	}
 
 	/**
@@ -13754,6 +13905,23 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		if (isset($ini->Controller))
 			$this->ControllerURI($ini->Controller);
+		
+		if (isset($ini->Certificate)) {
+			$certificate = new QuarkCertificate($ini->Certificate, isset($ini->CertificatePassphrase) ? $ini->CertificatePassphrase : '');
+			
+			$this->ServerCertificate($certificate);
+			$this->NetworkCertificate($certificate);
+			$this->ControllerCertificate($certificate);
+		}
+		
+		if (isset($ini->CertificateExternal))
+			$this->ServerCertificate(new QuarkCertificate($ini->CertificateExternal, isset($ini->CertificateExternalPassphrase) ? $ini->CertificateExternalPassphrase : ''));
+		
+		if (isset($ini->CertificateInternal))
+			$this->ServerCertificate(new QuarkCertificate($ini->CertificateInternal, isset($ini->CertificateInternalPassphrase) ? $ini->CertificateInternalPassphrase : ''));
+		
+		if (isset($ini->CertificateController))
+			$this->ServerCertificate(new QuarkCertificate($ini->CertificateController, isset($ini->CertificateControllerPassphrase) ? $ini->CertificateControllerPassphrase : ''));
 		
 		if (isset($ini->StreamConnect))
 			$this->StreamConnect($ini->StreamConnect);
@@ -14150,7 +14318,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 class QuarkURI {
 	const WRAPPER_TCP = 'tcp';
 	const WRAPPER_UDP = 'udp';
-	const WRAPPER_SSL = 'ssl';
+	const WRAPPER_SSL = 'tls';
+	const WRAPPER_TLS = 'tls';
 
 	const SCHEME_HTTP = 'http';
 	const SCHEME_HTTPS = 'https';
@@ -14210,6 +14379,7 @@ class QuarkURI {
 		'tcp' => self::WRAPPER_TCP,
 		'udp' => self::WRAPPER_UDP,
 		'ssl' => self::WRAPPER_SSL,
+		'tls' => self::WRAPPER_TLS,
 		'ftp' => self::WRAPPER_TCP,
 		'ftps' => self::WRAPPER_SSL,
 		'ssh' => self::WRAPPER_SSL,
@@ -14351,6 +14521,13 @@ class QuarkURI {
 		. $this->host
 		. ':'
 		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : 80));
+	}
+	
+	/**
+	 * @return QuarkURI|null
+	 */
+	public function SocketURI () {
+		return self::FromURI($this->Socket());
 	}
 
 	/**
@@ -14620,6 +14797,17 @@ class QuarkURI {
 				);
 
 		return $uri;
+	}
+	
+	/**
+	 * @return bool
+	 */
+	public function Secure () {
+		return isset(self::$_transports[$this->scheme])
+			&& (
+				self::$_transports[$this->scheme] == self::WRAPPER_SSL ||
+				self::$_transports[$this->scheme] == self::WRAPPER_TLS
+			);
 	}
 }
 
@@ -15896,18 +16084,13 @@ class QuarkDTO {
 				if ($file != '') {
 					if (isset($head[self::HEADER_CONTENT_TRANSFER_ENCODING]) && $head[self::HEADER_CONTENT_TRANSFER_ENCODING] == self::TRANSFER_ENCODING_BASE64)
 						$found[2] = base64_decode($found[2]);
-
-					/**
-					 * @var QuarkFile $fs
-					 */
-					$fs = new QuarkModel(new QuarkFile());
-					$fs->Content($found[2]);
-
+					
+					$fs = new QuarkModel(QuarkFile::ForDownload(trim($file, '"'), $found[2]));
 					$this->_files[] = $fs;
 				}
 
 				if ($position == 'form-data') {
-					parse_str($name, $storage);
+					parse_str(trim($name, '"'), $storage);
 
 					array_walk_recursive($storage, function (&$item) use ($found, $fs) {
 						$item = $fs ? $fs : $found[2];
@@ -17247,6 +17430,22 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		return $output;
 	}
+	
+	/**
+	 * @param string $name = ''
+	 * @param string $content = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public static function ForDownload ($name = '', $content = '') {
+		$file = new self();
+		
+		$file->_loaded = true;
+		$file->name = $name;
+		$file->Content($content);
+		
+		return $file;
+	}
 
 	/**
 	 * @param array &$item
@@ -18466,19 +18665,18 @@ class QuarkXSSFilter implements IQuarkIOFilter {
 /**
  * Class QuarkCertificate
  *
- * @property string $countryName
- * @property string $stateOrProvinceName
- * @property string $localityName
- * @property string $organizationName
- * @property string $organizationalUnitName
- * @property string $commonName
- * @property string $emailAddress
- *
  * @package Quark
  */
 class QuarkCertificate extends QuarkFile {
+	const CONFIG_OPENSSL_CONF = 'OPENSSL_CONF';
+	const CONFIG_SSLEAY_CONF = 'SSLEAY_CONF';
+	
+	const ALGO_SHA512 = 'sha512';
+	
+	const DEFAULT_BITS = 2048;
+	
 	/**
-	 * @var array $_allowed
+	 * @var string[] $_allowed
 	 */
 	private static $_allowed = array(
 		'countryName',
@@ -18489,18 +18687,58 @@ class QuarkCertificate extends QuarkFile {
 		'commonName',
 		'emailAddress'
 	);
-
+	
 	/**
-	 * @return array
+	 * @return string[]
 	 */
 	public static function AllowedDataKeys () {
 		return self::$_allowed;
 	}
+	
+	/**
+	 * @var string $countryName = ''
+	 */
+	public $countryName = '';
+	
+	/**
+	 * @var string $stateOrProvinceName = ''
+	 */
+	public $stateOrProvinceName = '';
+	
+	/**
+	 * @var string $localityName = ''
+	 */
+	public $localityName = '';
+	
+	/**
+	 * @var string $organizationName = ''
+	 */
+	public $organizationName = '';
+	
+	/**
+	 * @var string $organizationalUnitName = ''
+	 */
+	public $organizationalUnitName = '';
+	
+	/**
+	 * @var string $commonName = ''
+	 */
+	public $commonName = '';
+	
+	/**
+	 * @var string $emailAddress = ''
+	 */
+	public $emailAddress = '';
 
 	/**
 	 * @var string $_passphrase = ''
 	 */
 	private $_passphrase = '';
+	
+	/**
+	 * @var string $_locationConfig = ''
+	 */
+	private $_locationConfig = '';
 
 	/**
 	 * @var string $_error = ''
@@ -18527,6 +18765,18 @@ class QuarkCertificate extends QuarkFile {
 
 		return $this->_passphrase;
 	}
+	
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return string
+	 */
+	public function LocationConfig ($location = '') {
+		if (func_num_args() != 0)
+			$this->_locationConfig = $location;
+		
+		return $this->_locationConfig;
+	}
 
 	/**
 	 * @return string
@@ -18536,26 +18786,203 @@ class QuarkCertificate extends QuarkFile {
 	}
 
 	/**
+	 * http://stackoverflow.com/a/31984753/2097055
+	 * http://php.net/manual/en/function.openssl-csr-new.php#93618
+	 *
+	 * @param int $days = QuarkDateInterval::DAYS_IN_YEAR
+	 * @param string $algo = self::ALGO_SHA512
+	 * @param int $bits = self::DEFAULT_BITS
+	 * @param int $type = OPENSSL_KEYTYPE_RSA
+	 *
 	 * @return bool
 	 */
-	public function Generate () {
+	public function Generate ($days = QuarkDateInterval::DAYS_IN_YEAR, $algo = self::ALGO_SHA512, $bits = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
 		$data = array();
 		$pem = array();
-
+		$ok = true;
+		
 		foreach ($this as $key => $value)
 			if (in_array($key, self::$_allowed, true)) $data[$key] = $value;
+		
+		$config = array(
+			'config' => Quark::EnvVar(
+				array(self::CONFIG_OPENSSL_CONF, self::CONFIG_SSLEAY_CONF),
+				Quark::Config()->OpenSSLConfig()
+			),
+			'digest_alg' => $algo,
+			'x509_extensions' => 'v3_ca',
+			'req_extensions'   => 'v3_req',
+			'private_key_bits' => (int)$bits,
+			'private_key_type' => $type,
+			'encrypt_key' => true
+		);
+		
+		$key = openssl_pkey_new();
+		$cert = @openssl_csr_new($data, $key, $config);
+		$cert = @openssl_csr_sign($cert, null, $key, $days, $config);
 
-		$key = @openssl_pkey_new();
-		$cert = @openssl_csr_new($data, $key);
-		$cert = @openssl_csr_sign($cert, null, $key, 365);
-
-		@openssl_x509_export($cert, $pem[0]);
-		@openssl_pkey_export($key, $pem[1], $this->_passphrase);
+		$ok &= @openssl_x509_export($cert, $pem[0]);
+		$ok &= @openssl_pkey_export($key, $pem[1], $this->_passphrase, $config);
 
 		$this->_error = openssl_error_string();
 		$this->_content = implode($pem);
 
-		return $this->_error == '';
+		return $ok;
+	}
+}
+
+/**
+ * Class QuarkCertificateConfiguration
+ *
+ * @package Quark
+ */
+class QuarkCertificateConfiguration implements IQuarkConfiguration {
+	/**
+	 * @var string $_countryName = ''
+	 */
+	private $_countryName = '';
+	
+	/**
+	 * @var string $_stateOrProvinceName = ''
+	 */
+	private $_stateOrProvinceName = '';
+	
+	/**
+	 * @var string $_localityName = ''
+	 */
+	private $_localityName = '';
+	
+	/**
+	 * @var string $_organizationName = ''
+	 */
+	private $_organizationName = '';
+	
+	/**
+	 * @var string $_organizationalUnitName = ''
+	 */
+	private $_organizationalUnitName = '';
+	
+	/**
+	 * @var string $_commonName = ''
+	 */
+	private $_commonName = '';
+	
+	/**
+	 * @var string $_emailAddress = ''
+	 */
+	private $_emailAddress = '';
+	
+	/**
+	 * @param string $country = ''
+	 *
+	 * @return string
+	 */
+	public function CountryName ($country = '') {
+		if (func_num_args() != 0)
+			$this->_countryName = $country;
+		
+		return $this->_countryName;
+	}
+	
+	/**
+	 * @param string $state = ''
+	 *
+	 * @return string
+	 */
+	public function StateOrProvinceName ($state = '') {
+		if (func_num_args() != 0)
+			$this->_stateOrProvinceName = $state;
+		
+		return $this->_stateOrProvinceName;
+	}
+	
+	/**
+	 * @param string $locality = ''
+	 *
+	 * @return string
+	 */
+	public function LocalityName ($locality = '') {
+		if (func_num_args() != 0)
+			$this->_localityName = $locality;
+		
+		return $this->_localityName;
+	}
+	
+	/**
+	 * @param string $organization = ''
+	 *
+	 * @return string
+	 */
+	public function OrganizationName ($organization = '') {
+		if (func_num_args() != 0)
+			$this->_organizationName = $organization;
+		
+		return $this->_organizationName;
+	}
+	
+	/**
+	 * @param string $state = ''
+	 *
+	 * @return string
+	 */
+	public function OrganizationalUnitName ($state = '') {
+		if (func_num_args() != 0)
+			$this->_organizationalUnitName = $state;
+		
+		return $this->_organizationalUnitName;
+	}
+	
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return string
+	 */
+	public function CommonName ($name = '') {
+		if (func_num_args() != 0)
+			$this->_commonName = $name;
+		
+		return $this->_commonName;
+	}
+	
+	/**
+	 * @param string $email = ''
+	 *
+	 * @return string
+	 */
+	public function EmailAddress ($email = '') {
+		if (func_num_args() != 0)
+			$this->_emailAddress = $email;
+		
+		return $this->_emailAddress;
+	}
+	
+	/**
+	 * @param string $key
+	 * @param object $ini
+	 *
+	 * @return void
+	 */
+	public function ConfigurationReady ($key, $ini) {
+		// TODO: Implement ConfigurationReady() method.
+	}
+	
+	/**
+	 * @param string $passphrase = ''
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function Certificate ($passphrase = '') {
+		$certificate = new QuarkCertificate('', $passphrase);
+		
+		$certificate->countryName = $this->_countryName;
+		$certificate->stateOrProvinceName = $this->_stateOrProvinceName;
+		$certificate->localityName = $this->_localityName;
+		$certificate->organizationName = $this->_organizationName;
+		$certificate->organizationalUnitName = $this->_organizationalUnitName;
+		$certificate->commonName = $this->_commonName;
+		$certificate->emailAddress = $this->_emailAddress;
+		
+		return $certificate;
 	}
 }
 

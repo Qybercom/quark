@@ -244,12 +244,13 @@ Quark.Base64 = {
 	},
 	/**
 	 * @param {string} e
+	 *
 	 * @return {string}
 	 */
 	Decode: function (e) {
 		var t = '', n, r, i, s, o, u, a, f = 0;
 
-		e = e.replace(/[^A-Za-z0-9\+\/\=]/g, '');
+		e = e.toString().replace(/[^A-Za-z0-9\+\/\=]/g, '');
 
 		while (f < e.length) {
 			s = this._keyStr.indexOf(e.charAt(f++));
@@ -279,7 +280,7 @@ Quark.Base64 = {
 	 * @return {string}
 	 */
 	_utf8_encode: function (e) {
-		e = e.replace(/\r\n/g,"\n");
+		e = e.toString().replace(/\r\n/g,"\n");
 
 		var t = '', n = 0;
 
@@ -334,4 +335,25 @@ Quark.Base64 = {
 
 		return t;
 	}
+};
+
+/**
+ * @param obj
+ *
+ * @return {string}
+ */
+Quark.ObjectURL = function (obj) {
+	var url = window.URL || window.webkitURL;
+	
+	return url.createObjectURL(obj);
+};
+
+/**
+ * @param {*} data
+ * @param {string} type
+ *
+ * @return {string}
+ */
+Quark.DataURL = function (data, type) {
+	return 'data:' + type + ';base64,' + Quark.Base64.Encode(data);
 };
