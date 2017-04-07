@@ -1653,19 +1653,21 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param string $ini
+	 * @param object|array $ini
 	 * @param string $prefix
 	 * @param string $name
 	 *
 	 * @return object
 	 */
 	private static function _ini ($ini, $prefix, $name) {
-		if (isset($ini[$prefix . $name]))
-			return (object)$ini[$prefix . $name];
+		$key = $prefix . $name;
+		
+		if (isset($ini[$key]))
+			return (object)$ini[$key];
 
 		$name = QuarkObject::ConstByValue($name);
 		
-		return $name && isset($ini[$prefix . $name]) ? (object)$ini[$prefix . $name] : null;
+		return $name && isset($ini[$key]) ? (object)$ini[$key] : null;
 	}
 }
 
@@ -11997,7 +11999,7 @@ trait QuarkNetwork {
 	 * @param bool $remote = false
 	 * @param bool|string $face = false
 	 *
-	 * @return QuarkURI
+	 * @return QuarkURI|null
 	 */
 	public function ConnectionURI ($remote = false, $face = false) {
 		if (!$this->_socket) return null;
@@ -12261,6 +12263,8 @@ class QuarkClient implements IQuarkEventable {
 			$stream
 		);
 
+		// TODO: Possible to implement Connection URI comparison (QuarkURI comparison)
+		/** @noinspection PhpNonStrictObjectEqualityInspection */
 		if (!$this->_socket || $this->_errorNumber != 0 || $this->ConnectionURI() == $this->ConnectionURI(true)) {
 			$this->Close(false);
 			$this->TriggerArgs(self::EVENT_ERROR_CONNECT, array('QuarkClient cannot connect to ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
