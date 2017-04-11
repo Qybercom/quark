@@ -18106,16 +18106,21 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param $data
+	 * @param bool $meta = true
 	 *
 	 * @return string
 	 */
-	public function Encode ($data) {
+	public function Encode ($data, $meta = true) {
 		if (!$this->_init) {
 			$this->_init = true;
-			$this->_root->Data($data);
+			$this->_root->Data($data instanceof QuarkXMLNode ? array($data) : $data);
 
-			return '<?xml version="' . $this->_version . '" encoding="' . $this->_encoding . '" ?>'
+			$out = ($meta ? ('<?xml version="' . $this->_version . '" encoding="' . $this->_encoding . '" ?>') : '')
 				 . $this->_root->ToXML($this);
+
+			$this->_init = false;
+
+			return $out;
 		}
 
 		$out = '';
