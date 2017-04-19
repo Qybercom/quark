@@ -1,9 +1,9 @@
 <?php
 namespace Quark\ViewResources\Trumbowyg;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
@@ -68,7 +68,7 @@ class TrumbowygLanguage implements IQuarkSpecifiedViewResource, IQuarkForeignVie
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/' . $this->_version . 'langs/' . $this->_name . '.min.js';
+		return 'https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/' . $this->_version . '/langs/' . $this->_name . '.min.js';
 	}
 
 	/**

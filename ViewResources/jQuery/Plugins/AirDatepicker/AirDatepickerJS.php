@@ -1,5 +1,5 @@
 <?php
-namespace Quark\ViewResources\Trumbowyg;
+namespace Quark\ViewResources\jQuery\Plugins\AirDatepicker;
 
 use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkViewResource;
@@ -13,20 +13,20 @@ use Quark\QuarkJSViewResourceType;
 use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
- * Class TrumbowygJS
+ * Class AirDatepickerJS
  *
- * @package Quark\ViewResources\Trumbowyg
+ * @package Quark\ViewResources\jQuery\Plugins\AirDatepicker
  */
-class TrumbowygJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
+class AirDatepickerJS implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithDependencies, IQuarkForeignViewResource {
 	/**
-	 * @var string $_version = Trumbowyg::CURRENT_VERSION
+	 * @var string $_version = AirDatepicker::CURRENT_VERSION
 	 */
-	private $_version = Trumbowyg::CURRENT_VERSION;
+	private $_version = AirDatepicker::CURRENT_VERSION;
 
 	/**
-	 * @param string $version = Trumbowyg::CURRENT_VERSION
+	 * @param string $version = ImagePicker::CURRENT_VERSION
 	 */
-	public function __construct ($version = Trumbowyg::CURRENT_VERSION) {
+	public function __construct ($version = AirDatepicker::CURRENT_VERSION) {
 		$this->_version = $version;
 	}
 
@@ -41,7 +41,7 @@ class TrumbowygJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResou
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/' . $this->_version . '/trumbowyg.min.js';
+		return 'https://cdnjs.cloudflare.com/ajax/libs/air-datepicker/' . $this->_version . '/js/datepicker.min.js';
 	}
 
 	/**

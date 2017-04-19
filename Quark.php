@@ -1666,8 +1666,11 @@ class QuarkConfig {
 			return (object)$ini[$key];
 
 		$name = QuarkObject::ConstByValue($name);
-		
-		return $name && isset($ini[$key]) ? (object)$ini[$key] : null;
+		if (!$name) return null;
+
+		$key = $prefix . $name;
+
+		return isset($ini[$key]) ? (object)$ini[$key] : null;
 	}
 }
 
@@ -5469,7 +5472,7 @@ class QuarkView implements IQuarkContainer {
 		if ($this->_view instanceof IQuarkViewModelWithVariableProcessing)
 			$this->_view->ViewVariableProcessing($this->_vars);
 
-		foreach ($this->_vars as $___name___ => $___value___)
+		foreach ($this->_vars as $___name___ => &$___value___)
 			$$___name___ = $___value___;
 
 		ob_start();

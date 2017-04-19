@@ -82,6 +82,7 @@
 .quark-input.range {
 	padding: 0;
     line-height: 0;
+	text-align: left;
 }
 
 .quark-range-slider {
@@ -92,10 +93,18 @@
 	padding: 5px;
 	cursor: pointer;
 	position: absolute;
+	z-index: 10;
 }
 
 .quark-range-slider:hover {
 	background: rgb(245,245,245);
+}
+
+.quark-range-progress {
+    display: inline-block;
+	position: absolute;
+    height: 2px;
+	border-radius: inherit;
 }
 
 
