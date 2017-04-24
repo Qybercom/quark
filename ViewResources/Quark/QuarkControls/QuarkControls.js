@@ -632,7 +632,8 @@ Quark.Controls.Range = function (selector, opt) {
 				'<div class="quark-range-slider" quark-slider-name="' + sliders[i].name + '" style="margin-left: ' + margin + 'px;">' +
 					'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />' +
 				'</div><br />' +
-				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth / 2) + 'px;">'
+				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth / 2) + 'px;"></div><br />' +
+				'<div class="quark-range-regress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (width - (margin + sliderWidth / 2)) + 'px; margin-left: ' + (margin + sliderWidth + (opt.offset / 2 * -1)) + 'px;"></div><br />'
 			);
 
 			if (opt.ready instanceof Function)
@@ -640,13 +641,19 @@ Quark.Controls.Range = function (selector, opt) {
 					name: sliders[i].name,
 					range: elem,
 					slider: elem.find('.quark-range-slider'),
-					progress: (margin / width) * 100,
-					value: (margin * range / width) + that.Min,
-					val: margin
+					progress: ((margin - opt.offset) / width) * 100,
+					value: ((margin - opt.offset) * range / width) + that.Min,
+					val: margin - opt.offset
 				});
 
 			i++;
 		}
+
+		elem.append(
+			'<br />' +'<br />' +'<br />' +
+			'<div class="quark-range-value min">' + that.Min + '</div>' +'<br />' +
+			'<div class="quark-range-value max">' + that.Max + '</div>'
+		);
 
 		var slide = new Quark.UX(elem.find('.quark-range-slider'));
 		slide.Drag({
@@ -673,10 +680,16 @@ Quark.Controls.Range = function (selector, opt) {
 
 				opt.change(frame);
 
+				var offset = val + e.target.width() / 2;
+
 				e.target.css('margin-left', (val + opt.offset) + 'px');
 				e.target.data('_slide', e.current.x - val);
 				e.target.find('input[type="hidden"]').val(frame.value);
-				e.target.parent().find('.quark-range-progress').css('width', (val + e.target.width() / 2) + 'px');
+				e.target.parent().find('.quark-range-progress').css('width', offset + 'px');
+				e.target.parent().find('.quark-range-regress').css({
+					'margin-left': (val + e.target.width() + (opt.offset / 2 * -1)) + 'px',
+					width: (width - offset) + 'px'
+				});
 			}
 		});
 	});

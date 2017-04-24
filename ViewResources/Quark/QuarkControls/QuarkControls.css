@@ -103,8 +103,30 @@
 .quark-range-progress {
     display: inline-block;
 	position: absolute;
+	float: left;
     height: 2px;
 	border-radius: inherit;
+}
+
+.quark-range-regress {
+    display: inline-block;
+	position: absolute;
+	float: right;
+    height: 2px;
+	border-radius: inherit;
+}
+
+.quark-range-value {
+	display: inline-block;
+    margin: 10px 0 0 0;
+}
+
+.quark-range-value.min {
+    float: left;
+}
+
+.quark-range-value.max {
+    float: right;
 }
 
 
