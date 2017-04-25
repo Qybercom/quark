@@ -629,11 +629,12 @@ Quark.Controls.Range = function (selector, opt) {
 			margin = ((sliders[i].value - that.Min) * width / range) + opt.offset;
 
 			elem.append(
+				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth / 2) + 'px;"></div>' +
+				'<div class="quark-range-regress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (width - (margin + sliderWidth / 2)) + 'px; margin-left: ' + (margin + sliderWidth + (opt.offset / 2 * -1)) + 'px;"></div>' +
 				'<div class="quark-range-slider" quark-slider-name="' + sliders[i].name + '" style="margin-left: ' + margin + 'px;">' +
 					'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />' +
-				'</div><br />' +
-				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth / 2) + 'px;"></div><br />' +
-				'<div class="quark-range-regress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (width - (margin + sliderWidth / 2)) + 'px; margin-left: ' + (margin + sliderWidth + (opt.offset / 2 * -1)) + 'px;"></div><br />'
+				'</div>' +
+				'<br />'
 			);
 
 			if (opt.ready instanceof Function)
@@ -650,8 +651,7 @@ Quark.Controls.Range = function (selector, opt) {
 		}
 
 		elem.append(
-			'<br />' +'<br />' +'<br />' +
-			'<div class="quark-range-value min">' + that.Min + '</div>' +'<br />' +
+			'<div class="quark-range-value min">' + that.Min + '</div>' +
 			'<div class="quark-range-value max">' + that.Max + '</div>'
 		);
 
