@@ -4824,6 +4824,11 @@ class QuarkView implements IQuarkContainer {
 	private $_resources = array();
 
 	/**
+	 * @var IQuarkViewResource[] $_resources_lazy = []
+	 */
+	private $_resources_lazy = array();
+
+	/**
 	 * @var string $_html = ''
 	 */
 	private $_html = '';
@@ -5055,6 +5060,18 @@ class QuarkView implements IQuarkContainer {
 		if (is_array($resources))
 			foreach ($resources as $resource)
 				$this->_resource($resource);
+
+		return $this;
+	}
+
+	/**
+	 * @param IQuarkViewResource[] $resources
+	 *
+	 * @return QuarkView
+	 */
+	private function _resources_lazy ($resources = []) {
+		if (is_array($resources))
+			$this->_resources_lazy = $resources;
 
 		return $this;
 	}
