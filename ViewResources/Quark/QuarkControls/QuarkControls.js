@@ -859,6 +859,27 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 	};
 };
 
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.Controls.Progress = function (selector, opt) {
+	opt = opt || {};
+
+	var that = this;
+
+	that.Elem = $(selector);
+
+	that.Elem.each(function () {
+		var elem = $(this),
+			value = elem.attr('quark-progress');
+
+		elem.append('<div class="quark-progress-mark" style="width: ' + (value.indexOf('%') != -1 ? value : value + '%') + '"></div>');
+	});
+};
+
 Quark.Controls.Scrollable = function (selector, opt) {
 	var that = this;
 

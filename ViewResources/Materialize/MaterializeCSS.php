@@ -49,12 +49,12 @@ class MaterializeCSS implements IQuarkSpecifiedViewResource, IQuarkViewResourceW
 	 */
 	public function Dependencies () {
 		return array(
-			new GoogleFont('Roboto', array(GoogleFont::OPTION_SIZES => array(
-				GoogleFont::N300,
-				GoogleFont::N600,
-				GoogleFont::N800
-			))),
-			new GoogleFont('Material Icons')
+			new GoogleFont(GoogleFont::FAMILY_MATERIAL_ICONS),
+			new GoogleFont(GoogleFont::FAMILY_ROBOTO, array(
+				GoogleFont::WEIGHT_LIGHT_300,
+				GoogleFont::WEIGHT_SEMI_BOLD_600,
+				GoogleFont::WEIGHT_EXTRA_BOLD_800
+			))
 		);
 	}
 

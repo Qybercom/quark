@@ -146,6 +146,26 @@
 
 
 /**
+ * .quark-progress component
+ */
+.quark-progress {
+	background: rgb(230,230,230);
+	display: inline-block;
+	padding: 0;
+	height: 14px;
+}
+
+.quark-progress-mark {
+	background: rgb(200,200,200);
+	display: inline-block;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+}
+
+
+
+/**
  * .quark-scroll component
  */
 .quark-scrollable {

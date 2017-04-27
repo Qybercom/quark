@@ -2220,12 +2220,11 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			if (!($service instanceof IQuarkTask))
 				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
 
-			if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior')) {
-				/**
-				 * @var QuarkCLIBehavior $service
-				 */
+			/**
+			 * @var QuarkService|IQuarkTask|QuarkCLIBehavior $service
+			 */
+			if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior'))
 				$service->ShellInput($argv);
-			}
 
 			$service->Task($argc, $argv);
 		}
@@ -4965,7 +4964,7 @@ class QuarkView implements IQuarkContainer {
 		$this->ResourceList();
 
 		/**
-		 * @var IQuarkViewResource|IQuarkSpecifiedViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource $resource
+		 * @var IQuarkViewResource|IQuarkSpecifiedViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource|IQuarkViewResourceWithLocationControl $resource
 		 */
 		foreach ($this->_resources as $resource) {
 			if ($resource instanceof IQuarkInlineViewResource) {
@@ -5221,7 +5220,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function SignedAction ($uri, $button, $method = QuarkDTO::METHOD_POST, $formStyle = self::SIGNED_ACTION_FORM_STYLE) {
-		return /** @lang text */'<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
+		/** @lang text */
+		return '<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
 	}
 
 	/**
@@ -7973,7 +7973,7 @@ class QuarkModel implements IQuarkContainer {
 		
 		foreach ($fields as $key => &$field) {
 			/**
-			 * @var mixed $field
+			 * @var mixed|callable $field
 			 */
 			if (is_int($key) && $field instanceof QuarkKeyValuePair) {
 				$fields[$field->Key()] = $field->Value();
@@ -8125,7 +8125,7 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param $property
-	 * @param $value
+	 * @param mixed|callable $value
 	 * @param $key
 	 *
 	 * @return mixed|IQuarkModel
@@ -11926,6 +11926,11 @@ trait QuarkNetwork {
 	private $_blocking = true;
 
 	/**
+	 * @var $_flags
+	 */
+	private $_flags;
+
+	/**
 	 * @var resource $_socket
 	 */
 	private $_socket;
@@ -12160,11 +12165,6 @@ class QuarkClient implements IQuarkEventable {
 	private $_timeoutConnect = 0;
 
 	/**
-	 * @var $_flags = STREAM_CLIENT_CONNECT
-	 */
-	private $_flags = STREAM_CLIENT_CONNECT;
-
-	/**
 	 * @var bool $_connected = false
 	 */
 	private $_connected = false;
@@ -12222,6 +12222,7 @@ class QuarkClient implements IQuarkEventable {
 		$this->Certificate($certificate);
 		$this->Timeout($timeout);
 		$this->Blocking($block);
+		$this->Flags(STREAM_CLIENT_CONNECT);
 
 		$this->_timeoutConnect = $this->_timeout;
 
@@ -12575,11 +12576,6 @@ class QuarkServer implements IQuarkEventable {
 	private $_clients = array();
 
 	/**
-	 * @var $_flags = STREAM_SERVER_LISTEN
-	 */
-	private $_flags = STREAM_SERVER_LISTEN;
-
-	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkNetworkTransport $transport
 	 * @param QuarkCertificate $certificate
@@ -12590,6 +12586,7 @@ class QuarkServer implements IQuarkEventable {
 		$this->Transport($transport);
 		$this->Certificate($certificate);
 		$this->Timeout($timeout);
+		$this->Flags(STREAM_SERVER_LISTEN);
 	}
 
 	/**
