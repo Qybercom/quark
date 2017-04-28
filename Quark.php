@@ -6247,7 +6247,7 @@ interface IQuarkViewFragment {
 }
 
 /**
- * Class QuarkCollectionBehavior
+ * Trait QuarkCollectionBehavior
  *
  * @package Quark
  */
@@ -6689,6 +6689,20 @@ trait QuarkCollectionBehavior {
 		
 		return $this->_slice($out, $options);
 	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return mixed|null
+	 */
+	public function SelectOne ($query = [], $options = []) {
+		$options[QuarkModel::OPTION_LIMIT] = 1;
+
+		$out = $this->Select($query, $options);
+
+		return sizeof($out) == 0 ? null : $out[0];
+	}
 	
 	/**
 	 * @param array $list = []
@@ -6872,6 +6886,23 @@ trait QuarkCollectionBehavior {
 	 */
 	public function Aggregate ($options = []) {
 		return $this->_slice($this->_collection, $options);
+	}
+
+	/**
+	 * @param array $initial = []
+	 * @param callable $navigator = null
+	 *
+	 * @return void
+	 */
+	public function Navigate ($initial = [], callable $navigator = null) {
+		if ($navigator == null) return;
+
+		$item = $this->SelectOne($initial);
+		$next = $navigator($item);
+
+		if ($next === null) return;
+
+		$this->Navigate($next, $navigator);
 	}
 }
 
