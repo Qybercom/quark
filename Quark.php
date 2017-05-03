@@ -11540,15 +11540,15 @@ class QuarkSession {
 		if ($user == null)
 			throw new QuarkArchException('[QuarkSession::ForUser] Given model is null');
 
-		$user = $user->Model();
+		$model = $user->Model();
 
-		if (!($user instanceof IQuarkAuthorizableModel))
-			throw new QuarkArchException('[QuarkSession::ForUser] Model ' . get_class($user) . ' is not an IQuarkAuthorizableModel');
+		if (!($model instanceof IQuarkAuthorizableModel))
+			throw new QuarkArchException('[QuarkSession::ForUser] Model ' . get_class($model) . ' is not an IQuarkAuthorizableModel');
 
 		if ($this->_source == null)
 			throw new QuarkArchException('[QuarkSession::ForUser] Called session does not have a connected session source. Please check that called service is a IQuarkAuthorizableService or its inheritor.');
 
-		$data = $this->_source->Provider()->Login($this->_source->Name(), $user, $criteria, $lifetime);
+		$data = $this->_source->Provider()->Login($this->_source->Name(), $model, $criteria, $lifetime);
 		if ($data == null) return false;
 		
 		$this->_user = $criteria !== null
