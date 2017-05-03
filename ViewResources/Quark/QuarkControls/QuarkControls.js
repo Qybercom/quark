@@ -580,6 +580,7 @@ Quark.Controls.Range = function (selector, opt) {
 		opt.ready = opt.ready || false;
 		opt.change = opt.change !== undefined ? opt.change : function () {};
 		opt.offset = opt.offset || 0;
+		opt.rounder = opt.rounder instanceof Function ? opt.rounder : function (val) { return val; };
 
 	that.Elem = $(selector);
 	that.Elem.attr('type', 'hidden');
@@ -626,13 +627,13 @@ Quark.Controls.Range = function (selector, opt) {
 
 		var width = parseFloat(elem.width()) - sliderWidth, i = 0, margin = 0;
 		while (i < sliders.length) {
-			margin = Math.ceil(((sliders[i].value - that.Min) * width / range) + opt.offset);
+			margin = ((sliders[i].value - that.Min) * width / range) + opt.offset;
 
 			elem.append(
 				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth) + 'px;"></div>' +
 				'<div class="quark-range-regress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (width - (margin)) + 'px; margin-left: ' + (margin + sliderWidth) + 'px;"></div>' +
 				'<div class="quark-range-slider" quark-slider-name="' + sliders[i].name + '" style="margin-left: ' + margin + 'px;">' +
-					'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />' +
+					'<input type="hidden" name="' + sliders[i].name + '" value="' + opt.rounder(sliders[i].value) + '" />' +
 				'</div>' +
 				'<br />'
 			);
@@ -643,7 +644,7 @@ Quark.Controls.Range = function (selector, opt) {
 					range: elem,
 					slider: elem.find('.quark-range-slider'),
 					progress: ((margin - opt.offset) / width) * 100,
-					value: ((margin - opt.offset) * range / width) + that.Min,
+					value: opt.rounder(((margin - opt.offset) * range / width) + that.Min),
 					val: margin - opt.offset
 				});
 
@@ -674,7 +675,7 @@ Quark.Controls.Range = function (selector, opt) {
 					range: elem,
 					slider: e.target,
 					progress: (val / width) * 100,
-					value: (val * range / width) + that.Min,
+					value: opt.rounder((val * range / width) + that.Min),
 					val: val
 				};
 
@@ -684,7 +685,7 @@ Quark.Controls.Range = function (selector, opt) {
 
 				e.target.css('margin-left', (val + opt.offset) + 'px');
 				e.target.data('_slide', e.current.x - val);
-				e.target.find('input[type="hidden"]').val(frame.value);
+				e.target.find('input[type="hidden"]').val(opt.rounder(frame.value));
 				e.target.parent().find('.quark-range-progress').css('width', offset + 'px');
 				e.target.parent().find('.quark-range-regress').css({
 					'margin-left': offset + 'px',
