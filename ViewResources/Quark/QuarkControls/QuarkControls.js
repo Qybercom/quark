@@ -681,7 +681,7 @@ Quark.Controls.Range = function (selector, opt) {
 
 				opt.change(frame);
 
-				var offset = val + e.target.width() / 2;
+				var offset = val + e.target.width() / 2 + 1;
 
 				e.target.css('margin-left', (val + opt.offset) + 'px');
 				e.target.data('_slide', e.current.x - val);
