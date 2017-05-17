@@ -27,6 +27,13 @@ class MicrosoftMail implements IQuarkMailProvider {
 	 * @return QuarkURI
 	 */
 	public function MailSMTP ($username, $password) {
-		return QuarkURI::FromURI('ssl://smtp.live.com:587')->User($username, $password);
+		return QuarkURI::FromURI('ssl://smtp.office365.com:587')->User($username, $password);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function MailStartTLS () {
+		return true;
 	}
 }

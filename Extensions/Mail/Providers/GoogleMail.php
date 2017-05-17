@@ -27,6 +27,13 @@ class GoogleMail implements IQuarkMailProvider {
 	 * @return QuarkURI
 	 */
 	public function MailSMTP ($username, $password) {
-		return QuarkURI::FromURI('ssl://smtp.gmail.com:465')->User($username, $password);
+		return QuarkURI::FromURI('ssl://smtp.gmail.com:587')->User($username, $password);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function MailStartTLS () {
+		return true;
 	}
 }

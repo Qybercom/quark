@@ -4824,11 +4824,6 @@ class QuarkView implements IQuarkContainer {
 	private $_resources = array();
 
 	/**
-	 * @var IQuarkViewResource[] $_resources_lazy = []
-	 */
-	private $_resources_lazy = array();
-
-	/**
 	 * @var string $_html = ''
 	 */
 	private $_html = '';
@@ -5060,18 +5055,6 @@ class QuarkView implements IQuarkContainer {
 		if (is_array($resources))
 			foreach ($resources as $resource)
 				$this->_resource($resource);
-
-		return $this;
-	}
-
-	/**
-	 * @param IQuarkViewResource[] $resources
-	 *
-	 * @return QuarkView
-	 */
-	private function _resources_lazy ($resources = []) {
-		if (is_array($resources))
-			$this->_resources_lazy = $resources;
 
 		return $this;
 	}
@@ -11984,6 +11967,16 @@ trait QuarkNetwork {
 	private $_socket;
 
 	/**
+	 * @var bool $_secure = false
+	 */
+	private $_secure = false;
+
+	/**
+	 * @var string $_secureFailureEvent = QuarkClient::EVENT_ERROR_CRYPTOGRAM
+	 */
+	private $_secureFailureEvent = QuarkClient::EVENT_ERROR_CRYPTOGRAM;
+
+	/**
 	 * @var int $_errorNumber
 	 */
 	private $_errorNumber = 0;
@@ -12128,11 +12121,6 @@ trait QuarkNetwork {
 	}
 	
 	/**
-	 * @var bool $_secure = false
-	 */
-	private $_secure = false;
-	
-	/**
 	 * http://php.net/manual/ru/function.stream-socket-server.php#118419
 	 * http://php.net/manual/ru/function.stream-socket-enable-crypto.php#119122
 	 *
@@ -12155,12 +12143,24 @@ trait QuarkNetwork {
 			if (!$this->_blocking) stream_set_blocking($this->_socket, 0);
 			
 			if (!$secure)
-				$this->TriggerArgs(self::EVENT_ERROR_CRYPTOGRAM, array('QuarkNetwork cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
+				$this->TriggerArgs($this->_secureFailureEvent, array('QuarkNetwork cannot enable secure transport for ' . $this->_uri->URI() . ' (' . $this->_uri->Socket() . '). Error: ' . QuarkException::LastError()));
 			
 			$this->_secure = $flag;
 		}
 		
 		return $this->_secure;
+	}
+
+	/**
+	 * @param string $event = QuarkClient::EVENT_ERROR_CRYPTOGRAM
+	 *
+	 * @return string
+	 */
+	private function _secureFailure ($event = QuarkClient::EVENT_ERROR_CRYPTOGRAM) {
+		if (func_num_args() != 0)
+			$this->_secureFailureEvent = $event;
+
+		return $this->_secureFailureEvent;
 	}
 
 	/**
@@ -12228,6 +12228,11 @@ class QuarkClient implements IQuarkEventable {
 	private $_fromServer = false;
 
 	/**
+	 * @var bool $_autoSecure = true
+	 */
+	private $_autoSecure = true;
+
+	/**
 	 * @var QuarkKeyValuePair $_session
 	 */
 	private $_session;
@@ -12271,6 +12276,7 @@ class QuarkClient implements IQuarkEventable {
 		$this->Timeout($timeout);
 		$this->Blocking($block);
 		$this->Flags(STREAM_CLIENT_CONNECT);
+		$this->_secureFailure(self::EVENT_ERROR_CRYPTOGRAM);
 
 		$this->_timeoutConnect = $this->_timeout;
 
@@ -12324,7 +12330,7 @@ class QuarkClient implements IQuarkEventable {
 			return false;
 		}
 
-		if ($socket->Secure())
+		if ($socket->Secure() && $this->_autoSecure)
 			$this->Secure(true);
 
 		$this->Timeout($this->_timeout);
@@ -12349,6 +12355,18 @@ class QuarkClient implements IQuarkEventable {
 		return func_num_args() != 0
 			? $this->_secure($this->_fromServer ? STREAM_CRYPTO_METHOD_TLS_SERVER : STREAM_CRYPTO_METHOD_TLS_CLIENT, $flag, $timeout)
 			: $this->_secure();
+	}
+
+	/**
+	 * @param bool $auto = true
+	 *
+	 * @return bool
+	 */
+	public function AutoSecure ($auto = true) {
+		if (func_num_args() != 0)
+			$this->_autoSecure = $auto;
+
+		return $this->_autoSecure;
 	}
 
 	/**
@@ -12635,6 +12653,7 @@ class QuarkServer implements IQuarkEventable {
 		$this->Certificate($certificate);
 		$this->Timeout($timeout);
 		$this->Flags(STREAM_SERVER_LISTEN);
+		$this->_secureFailure(self::EVENT_ERROR_CRYPTOGRAM);
 	}
 
 	/**

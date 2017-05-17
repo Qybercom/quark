@@ -11,6 +11,9 @@ use Quark\QuarkCertificate;
  * @package Quark\Extensions\Mail
  */
 class MailConfig implements IQuarkExtensionConfig {
+	const TIMEOUT_CONNECT = 5;
+	const TIMEOUT_COMMAND = 100000;
+
 	/**
 	 * @var IQuarkMailProvider $_provider
 	 */
@@ -29,7 +32,7 @@ class MailConfig implements IQuarkExtensionConfig {
 	/**
 	 * @var string $_fullname
 	 */
-	private $_fullname = '';
+	private $_fullName = '';
 
 	/**
 	 * @var string $_name = ''
@@ -42,23 +45,33 @@ class MailConfig implements IQuarkExtensionConfig {
 	private $_certificate;
 
 	/**
+	 * @var int $_timeoutConnect = self::TIMEOUT_CONNECT (seconds)
+	 */
+	private $_timeoutConnect = self::TIMEOUT_CONNECT;
+
+	/**
+	 * @var int $_timeoutCommand = self::TIMEOUT_COMMAND (microseconds)
+	 */
+	private $_timeoutCommand = self::TIMEOUT_COMMAND;
+
+	/**
 	 * @param IQuarkMailProvider $provider
 	 * @param $username = ''
 	 * @param $password = ''
-	 * @param string $fullname = ''
+	 * @param string $fullName = ''
 	 */
-	public function __construct (IQuarkMailProvider $provider, $username = '', $password = '', $fullname = '') {
+	public function __construct (IQuarkMailProvider $provider, $username = '', $password = '', $fullName = '') {
 		$this->_provider = $provider;
 		$this->_username = $username;
 		$this->_password = $password;
-		$this->_fullname = $fullname;
+		$this->_fullName = $fullName;
 	}
 
 	/**
 	 * @return string
 	 */
 	public function From () {
-		return Mail::Sender($this->_fullname, $this->_username);
+		return Mail::Sender($this->_fullName, $this->_username);
 	}
 
 	/**
@@ -71,6 +84,54 @@ class MailConfig implements IQuarkExtensionConfig {
 			$this->_username = $username;
 
 		return $this->_username;
+	}
+
+	/**
+	 * @param string $password = ''
+	 *
+	 * @return string
+	 */
+	public function Password ($password = '') {
+		if (func_num_args() != 0)
+			$this->_password = $password;
+
+		return $this->_password;
+	}
+
+	/**
+	 * @param string $fullName = ''
+	 *
+	 * @return string
+	 */
+	public function FullName ($fullName = '') {
+		if (func_num_args() != 0)
+			$this->_fullName = $fullName;
+
+		return $this->_fullName;
+	}
+
+	/**
+	 * @param int $timeout = self::TIMEOUT_CONNECT (seconds)
+	 *
+	 * @return int
+	 */
+	public function TimeoutConnect ($timeout = self::TIMEOUT_CONNECT) {
+		if (func_num_args() != 0)
+			$this->_timeoutConnect = $timeout;
+
+		return $this->_timeoutConnect;
+	}
+
+	/**
+	 * @param int $timeout = self::TIMEOUT_COMMAND (microseconds)
+	 *
+	 * @return int
+	 */
+	public function TimeoutCommand ($timeout = self::TIMEOUT_COMMAND) {
+		if (func_num_args() != 0)
+			$this->_timeoutCommand = $timeout;
+
+		return $this->_timeoutCommand;
 	}
 
 	/**
@@ -121,13 +182,19 @@ class MailConfig implements IQuarkExtensionConfig {
 			$this->_password = $ini->Password;
 
 		if (isset($ini->FullName))
-			$this->_fullname = $ini->FullName;
+			$this->_fullName = $ini->FullName;
 		
 		if (isset($ini->CertificateLocation))
 			$this->_certificate = new QuarkCertificate($ini->CertificateLocation);
 		
 		if (isset($ini->CertificatePassphrase))
 			$this->_certificate->Passphrase($ini->CertificatePassphrase);
+
+		if (isset($ini->TimeoutConnect))
+			$this->_timeoutConnect = $ini->TimeoutConnect;
+
+		if (isset($ini->TimeoutCommand))
+			$this->_timeoutCommand = $ini->TimeoutCommand;
 
 		$this->_provider->MailINI($ini);
 	}
