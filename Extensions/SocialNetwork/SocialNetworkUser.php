@@ -1,14 +1,10 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
-use Quark\Quark;
 use Quark\QuarkCultureISO;
 use Quark\QuarkDate;
-use Quark\QuarkDTO;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
-use Quark\QuarkModel;
-use Quark\QuarkSession;
 
 /**
  * Class SocialNetworkUser
@@ -18,22 +14,22 @@ use Quark\QuarkSession;
 class SocialNetworkUser {
 	const GENDER_MALE = 'm';
 	const GENDER_FEMALE = 'f';
-	const GENDER_UNKNOWN = 'u';
+	const GENDER_UNKNOWN = '';
 
 	/**
-	 * @var string $_id
+	 * @var string $_id = ''
 	 */
 	private $_id = '';
 
 	/**
-	 * @var string $_name
+	 * @var string $_name = ''
 	 */
 	private $_name = '';
 
 	/**
-	 * @var string $_gender
+	 * @var string $_gender = self::GENDER_UNKNOWN
 	 */
-	private $_gender = '';
+	private $_gender = self::GENDER_UNKNOWN;
 
 	/**
 	 * @var QuarkDate $_birthday
@@ -46,23 +42,28 @@ class SocialNetworkUser {
 	private $_photo;
 
 	/**
-	 * @var string $_photoLink
+	 * @var string $_photoLink = ''
 	 */
-	private $_photoLink;
+	private $_photoLink = '';
 
 	/**
-	 * @var string $_page
+	 * @var string $_page = ''
 	 */
 	private $_page = '';
 
 	/**
-	 * @var string $_email
+	 * @var string $_email = ''
 	 */
 	private $_email = '';
 
 	/**
-	 * @param string $id
-	 * @param string $name
+	 * @var QuarkDate $_registeredAt
+	 */
+	private $_registeredAt;
+
+	/**
+	 * @param string $id = ''
+	 * @param string $name = ''
 	 */
 	public function __construct ($id = '', $name = '') {
 		$this->_id = $id;
@@ -70,7 +71,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $id
+	 * @param string $id = ''
 	 *
 	 * @return string
 	 */
@@ -82,7 +83,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $name
+	 * @param string $name = ''
 	 *
 	 * @return string
 	 */
@@ -94,11 +95,11 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $gender
+	 * @param string $gender = self::GENDER_UNKNOWN
 	 *
 	 * @return string
 	 */
-	public function Gender ($gender = '') {
+	public function Gender ($gender = self::GENDER_UNKNOWN) {
 		if (func_num_args() != 0)
 			$this->_gender = $gender;
 
@@ -106,7 +107,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param QuarkDate $birthday
+	 * @param QuarkDate $birthday = null
 	 *
 	 * @return QuarkDate
 	 */
@@ -118,9 +119,9 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $format
-	 * @param string $birthday
-	 * @param string $formatAlt
+	 * @param string $format = ''
+	 * @param string $birthday = ''
+	 * @param string $formatAlt = ''
 	 *
 	 * @return QuarkDate
 	 */
@@ -143,7 +144,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param QuarkFile $photo
+	 * @param QuarkFile $photo = null
 	 *
 	 * @return QuarkFile
 	 */
@@ -155,7 +156,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $link
+	 * @param string $link = ''
 	 * @param bool $download = true
 	 *
 	 * @return QuarkFile
@@ -179,7 +180,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $page
+	 * @param string $page = ''
 	 *
 	 * @return string
 	 */
@@ -191,7 +192,7 @@ class SocialNetworkUser {
 	}
 
 	/**
-	 * @param string $email
+	 * @param string $email = ''
 	 *
 	 * @return string
 	 */
@@ -201,71 +202,16 @@ class SocialNetworkUser {
 
 		return $this->_email;
 	}
-	
-	/**
-	 * @param SocialNetwork $network
-	 * @param IQuarkSocialNetworkUserModel $model
-	 * @param QuarkSession $session = null
-	 *
-	 * @return QuarkModel|IQuarkSocialNetworkUserModel
-	 */
-	public static function FromNetwork (SocialNetwork $network, IQuarkSocialNetworkUserModel $model, QuarkSession $session = null) {
-		$profile = $network->Init();
-		if ($profile == null) return null;
 
-		$name = $model->SocialKey($network);
-		if ($name === false) return null;
-		
-		/**
-		 * @var QuarkModel|IQuarkSocialNetworkUserModel|IQuarkSocialNetworkAuthorizableUserModel $user
-		 */
-		$user = $network->User($model, $name);
-		if ($user == null) return null;
-		
-		$login = $user->SocialLogin($network, $profile);
-		if ($login === false) return null;
-		
-		if ($model instanceof IQuarkSocialNetworkAuthorizableUserModel) {
-			if ($session == null) return null;
-			
-			$lifetime = $user->SocialLoginLifetime($network, $profile);
-			if ($lifetime === false) return null;
+	/**
+	 * @param QuarkDate $date = null
+	 *
+	 * @return QuarkDate
+	 */
+	public function RegisteredAt (QuarkDate $date = null) {
+		if (func_num_args() != 0)
+			$this->_registeredAt = $date;
 
-			if (!($network->IsNewUser() ? $user->Create() : $user->Save())) return null;
-	
-			return $session->ForUser($user, null, $lifetime) ? $session->User() : null;
-		}
-		
-		return $user;
-	}
-	
-	/**
-	 * @param string $config
-	 * @param IQuarkSocialNetworkUserModel $model
-	 * @param QuarkDTO $request
-	 * @param QuarkSession $session = null
-	 *
-	 * @return QuarkModel|IQuarkSocialNetworkUserModel
-	 */
-	public static function FromRedirect ($config, IQuarkSocialNetworkUserModel $model, QuarkDTO $request, QuarkSession $session = null) {
-		$social = new SocialNetwork($config);
-		$social->SessionFromRedirect(Quark::WebLocation($request->URI()->Resource()), $request->code);
-		
-		return self::FromNetwork($social, $model, $session);
-	}
-	
-	/**
-	 * @param string $config
-	 * @param IQuarkSocialNetworkUserModel $model
-	 * @param string $token = ''
-	 * @param QuarkSession $session = null
-	 *
-	 * @return QuarkModel|IQuarkSocialNetworkUserModel
-	 */
-	public static function FromToken ($config, IQuarkSocialNetworkUserModel $model, $token = '', QuarkSession $session = null) {
-		$social = new SocialNetwork($config);
-		$social->SessionFromToken($token);
-		
-		return self::FromNetwork($social, $model, $session);
+		return $this->_registeredAt;
 	}
 }

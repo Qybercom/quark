@@ -1,308 +1,133 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
-use Quark\IQuarkModel;
-use Quark\IQuarkLinkedModel;
-use Quark\IQuarkExtensionConfig;
-use Quark\IQuarkModelWithAfterFind;
-use Quark\IQuarkModelWithDataProvider;
-
 use Quark\Quark;
 use Quark\QuarkDTO;
-use Quark\QuarkField;
 use Quark\QuarkModel;
-use Quark\QuarkModelBehavior;
+use Quark\QuarkObject;
+
+use Quark\Extensions\OAuth\IQuarkOAuthProvider;
+use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
+
+use Quark\Extensions\OAuth\OAuthConfig;
+use Quark\Extensions\OAuth\OAuthToken;
 
 /**
  * Class SocialNetwork
  *
- * @property string $userId
- * @property string $accessToken
- * @property string $social
- *
  * @package Quark\Extensions\SocialNetwork
  */
-class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDataProvider, IQuarkModelWithAfterFind {
-	use QuarkModelBehavior;
-
+class SocialNetwork implements IQuarkOAuthConsumer {
 	/**
-	 * @var string $_config
+	 * @var OAuthConfig $_config
 	 */
 	private $_config;
 
 	/**
-	 * @var bool $_newUser = false
+	 * @var OAuthToken $_token
 	 */
-	private $_newUser = false;
+	private $_token;
 
 	/**
-	 * @param string $config
-	 * @param string $token = ''
-	 * @param string $id = ''
+	 * @var IQuarkOAuthProvider|IQuarkSocialNetworkProvider $_provider
 	 */
-	public function __construct ($config, $token = '', $id = '') {
-		$this->_config = $config;
-		$this->accessToken = (string)$token;
-		$this->userId = (string)$id;
+	private $_provider;
+
+	/**
+	 * @param string $config = ''
+	 */
+	public function __construct ($config = '') {
+		if ($config == '') return;
+
+		$this->_config = Quark::Config()->Extension($config);
+		$this->_provider = $this->_config->Provider();
 	}
 
 	/**
-	 * @return string
-	 */
-	public function __toString () {
-		return $this->userId;
-	}
-
-	/**
-	 * @return IQuarkExtensionConfig|SocialNetworkConfig
-	 */
-	private function _config () {
-		return Quark::Config()->Extension($this->_config);
-	}
-
-	/**
-	 * @return string
-	 */
-	public function DataProvider () {
-		return $this->_config()->DataProvider();
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function Fields () {
-		return array(
-			'social' => $this->Name(),
-			'userId' => '',
-			'accessToken' => '',
-		);
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function Rules () {
-		$this->userId = (string)$this->userId;
-		$this->accessToken = (string)$this->accessToken;
-
-		return array(
-			QuarkField::is($this->userId, QuarkField::TYPE_STRING),
-			QuarkField::is($this->accessToken, QuarkField::TYPE_STRING)
-		);
-	}
-
-	/**
-	 * @param $raw
+	 * @param OAuthToken $token
 	 *
 	 * @return mixed
 	 */
-	public function Link ($raw) {
-		return $raw == null ? null : QuarkModel::FindOneById(new SocialNetwork($this->_config), $raw);
+	public function OAuthToken (OAuthToken $token) {
+		$this->_token = $token;
 	}
 
 	/**
-	 * @return mixed
-	 */
-	public function Unlink () {
-		return $this->userId != '' && $this->accessToken != '' ? $this->Pk() : null;
-	}
-
-	/**
-	 * @param $raw
-	 * @param array $options
+	 * @param IQuarkOAuthProvider $provider
 	 *
 	 * @return mixed
 	 */
-	public function AfterFind ($raw, $options) {
-		$this->SessionFromToken($this->accessToken);
+	public function OAuthProvider (IQuarkOAuthProvider $provider) {
+		$this->_provider = $provider;
 	}
 
 	/**
-	 * @param IQuarkModel $model
-	 * @param string $key
-	 *
-	 * @return QuarkModel|IQuarkModel
-	 */
-	public function User (IQuarkModel $model, $key) {
-		/**
-		 * @var QuarkModel|SocialNetwork $profile
-		 */
-		$profile = QuarkModel::FindOne($this, array(
-			'social' => (string)$this->Name(),
-			'userId' => (string)$this->userId
-		));
-
-		if ($profile == null && $this->userId != '' && $this->accessToken != '') {
-			$profile = new QuarkModel($this);
-			$profile->Create();
-		}
-
-		if ($profile == null) return null;
-
-		$profile->accessToken = (string)$this->accessToken;
-		$profile->Save();
-
-		$user = QuarkModel::FindOne($model, array(
-			$key => $profile->Pk()
-		));
-
-		if ($user == null) {
-			$user = new QuarkModel($model, QuarkModel::StructureFromKey($key, $profile));
-			$this->_newUser = true;
-		}
-
-		return $user;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function IsNewUser () {
-		return $this->_newUser;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function IsConnected () {
-		return $this->userId != '' && $this->accessToken != '';
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Name () {
-		return $this->_config()->SocialNetwork()->Name();
-	}
-
-	/**
-	 * @param string $to
-	 * @param string[] $permissions
+	 * @param string $redirect
+	 * @param string[] $scope
 	 *
 	 * @return string
 	 */
-	public function LoginURL ($to = '', $permissions = []) {
-		return $this->_config()->SocialNetwork()->LoginURL($to, $permissions);
+	public function OAuthLoginURL ($redirect, $scope) {
+		return $this->_provider->OAuthLoginURL($redirect, $scope);
 	}
 
 	/**
-	 * @param string $to
+	 * @param string $redirect
 	 *
 	 * @return string
 	 */
-	public function LogoutURL ($to = '') {
-		return $this->_config()->SocialNetwork()->LogoutURL($to);
-	}
-
-	/**
-	 * @param string $method
-	 * @param string $description
-	 *
-	 * @return null
-	 */
-	private function _log ($method, $description) {
-		Quark::Log('SocialNetwork.' . $method . ' for ' . get_class($this->_config()->SocialNetwork()) . ' failed. ' . $description, Quark::LOG_WARN);
-		return null;
-	}
-
-	/**
-	 * @param string $method
-	 * @param array $args
-	 *
-	 * @return mixed
-	 */
-	private function _call ($method, $args = []) {
-		return call_user_func_array(array($this->_config()->SocialNetwork(), $method), $args);
-	}
-
-	/**
-	 * @param string $method
-	 *
-	 * @return SocialNetwork
-	 */
-	private function _session ($method) {
-		if (func_num_args() < 2)
-			return $this->_log($method, 'Not enough data for session start.');
-
-		$args = array_slice(func_get_args(), 1);
-		$token = $this->_call($method, $args);
-
-		if ($token == null)
-			return $this->_log($method, 'Invalid token ' . print_r($args[0], true));
-
-		$this->accessToken = $token;
-		$this->social = $this->Name();
-
-		return $this;
+	public function OAuthLogoutURL ($redirect) {
+		return $this->_provider->OAuthLogoutURL($redirect);
 	}
 
 	/**
 	 * @param QuarkDTO $request
-	 * @param string $to = ''
+	 * @param string $redirect
 	 *
-	 * @return SocialNetwork
+	 * @return QuarkModel|OAuthToken
 	 */
-	public function SessionFromRedirect (QuarkDTO $request, $to = '') {
-		return $this->_session('SessionFromRedirect', $request, $to);
+	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
+		return $this->_provider->OAuthToken($request, $redirect);
 	}
 
 	/**
-	 * @param $token
+	 * @param string $url = ''
+	 * @param QuarkDTO $request = null
+	 * @param QuarkDTO $response = null
 	 *
-	 * @return SocialNetwork
-	 */
-	public function SessionFromToken ($token) {
-		return $this->_session('SessionFromToken', $token);
-	}
-
-	/**
-	 * @return SocialNetworkUser
-	 */
-	public function Init () {
-		$profile = $this->Profile($this->_config()->SocialNetwork()->CurrentUser());
-
-		if (!$profile) return null;
-
-		$this->userId = $profile->ID();
-
-		return $profile;
-	}
-
-	/**
-	 * @param string $user
-	 *
-	 * @return string
-	 */
-	private function _user ($user) {
-		return $user === null ? $this->_config()->SocialNetwork()->CurrentUser() : $user;
-	}
-
-	/**
 	 * @return mixed
 	 */
-	public function API () {
-		return $this->_call('API', func_get_args());
+	public function API ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
+		try {
+			return $this->_provider->SocialNetworkAPI($url, $request, $response);
+		}
+		catch (SocialNetworkAPIException $e) {
+			Quark::Log('[SocialNetworks.' . QuarkObject::ClassOf($this->_provider) . '] API error:');
+
+			Quark::Trace($e->Request());
+			Quark::Trace($e->Response());
+
+			return null;
+		}
 	}
 
 	/**
-	 * @param string $user
-	 * @param string[] $fields
+	 * @param string $user = ''
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function Profile ($user = null, $fields = null) {
-		return $this->_config()->SocialNetwork()->Profile($this->_user($user), $fields);
+	public function User ($user = '') {
+		return $this->_provider->SocialNetworkUser($user);
 	}
 
 	/**
-	 * @param string $user
-	 * @param string[] $fields
-	 * @param int $count = 10
+	 * @param string $user = ''
+	 * @param int $count = 0
 	 * @param int $offset = 0
 	 *
 	 * @return SocialNetworkUser[]
 	 */
-	public function Friends ($user = null, $fields = null, $count = 10, $offset = 0) {
-		return $this->_config()->SocialNetwork()->Friends($this->_user($user), $fields, $count, $offset);
+	public function Friends ($user = '', $count = 0, $offset = 0) {
+		return $this->_provider->SocialNetworkFriends($user, $count, $offset);
 	}
 }

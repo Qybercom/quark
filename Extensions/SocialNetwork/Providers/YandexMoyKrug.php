@@ -6,7 +6,7 @@ use Quark\QuarkDTO;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
-use Quark\Extensions\OAuth\Providers\GoogleOAuth;
+use Quark\Extensions\OAuth\Providers\YandexOAuth;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
@@ -14,11 +14,11 @@ use Quark\Extensions\SocialNetwork\SocialNetworkAPIException;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
- * Class GooglePlus
+ * Class YandexMoyKrug
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+class YandexMoyKrug extends YandexOAuth implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param OAuthToken $token
 	 *

@@ -1,6 +1,11 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
+use Quark\Extensions\OAuth\IQuarkOAuthProvider;
+use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\SocialNetwork\SocialNetwork;
+use Quark\Extensions\SocialNetwork\SocialNetworkAPIException;
 use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
@@ -11,6 +16,8 @@ use Quark\QuarkKeyValuePair;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\QuarkModel;
+use Quark\QuarkURI;
 
 /**
  * Class Twitter
@@ -29,9 +36,9 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class Twitter implements IQuarkSocialNetworkProvider {
-	const BASE_DOMAIN = 'https://twitter.com/';
-	const BASE_URL = 'https://api.twitter.com';
+class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+	const URL_BASE = 'https://twitter.com/';
+	const URL_API = 'https://api.twitter.com';
 
 	/**
 	 * @var string $_appId
@@ -44,19 +51,110 @@ class Twitter implements IQuarkSocialNetworkProvider {
 	private $_appSecret = '';
 
 	/**
-	 * @var string $_token = ''
+	 * @var OAuthToken|string $_token = ''
 	 */
 	private $_token = '';
-
-	/**
-	 * @var string $_secret = ''
-	 */
-	private $_secret = '';
 
 	/**
 	 * @var string $_callback = ''
 	 */
 	private $_callback = '';
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return IQuarkOAuthConsumer
+	 */
+	public function OAuthConsumer (OAuthToken $token) {
+		return new SocialNetwork();
+	}
+
+	/**
+	 * @param string $appId
+	 * @param string $appSecret
+	 *
+	 * @return mixed
+	 */
+	public function OAuthApplication ($appId, $appSecret) {
+		$this->_appId = $appId;
+		$this->_appSecret = $appSecret;
+	}
+
+	/**
+	 * @param string $redirect
+	 * @param string[] $scope
+	 *
+	 * @return string
+	 */
+	public function OAuthLoginURL ($redirect, $scope) {
+		$this->_callback = $redirect;
+
+		$login = $this->OAuthAPI(QuarkDTO::METHOD_POST, '/oauth/request_token');
+
+		return self::URL_API . '/oauth/authenticate?oauth_token=' . $login->oauth_token;
+	}
+
+	/**
+	 * @param string $redirect
+	 *
+	 * @return string
+	 */
+	public function OAuthLogoutURL ($redirect) {
+		// TODO: Implement OAuthLogoutURL() method.
+	}
+
+	/**
+	 * @param QuarkDTO $request
+	 * @param string $redirect
+	 *
+	 * @return QuarkModel|OAuthToken
+	 */
+	public function OAuthToken (QuarkDTO $request, $redirect) {
+		// TODO: Implement OAuthToken() method.
+	}
+
+	/**
+	 * @param string $url = ''
+	 * @param QuarkDTO $request = null
+	 * @param QuarkDTO $response = null
+	 *
+	 * @return QuarkDTO|null
+	 *
+	 * @throws SocialNetworkAPIException
+	 */
+	public function SocialNetworkAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
+		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$request->Authorization($this->_authorization($request->Method(), self::URL_API . $url));
+
+		$api = QuarkHTTPClient::To(self::URL_API . $url, $request, $response);
+
+		if (isset($api->error))
+			throw new SocialNetworkAPIException($request, $response);
+
+		return $api;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkUser ($user) {
+		// TODO: Implement SocialNetworkUser() method.
+	}
+
+	/**
+	 * @param string $user
+	 * @param int $count
+	 * @param int $offset
+	 *
+	 * @return SocialNetworkUser[]
+	 */
+	public function SocialNetworkFriends ($user, $count, $offset) {
+		// TODO: Implement SocialNetworkFriends() method.
+	}
 
 	/**
 	 * @note if Twitter responds with error - type a placeholder into Callback URL field in the application settings
@@ -81,7 +179,7 @@ class Twitter implements IQuarkSocialNetworkProvider {
 			$params['oauth_callback'] = $this->_callback;
 
 		if ($this->_token)
-			$params['oauth_token'] = $this->_token;
+			$params['oauth_token'] = $this->_token->access_token;
 
         // Parameters are sorted by name, using lexicographical byte value ordering.
         // Ref: Spec: 9.1.1 (1)
@@ -94,7 +192,7 @@ class Twitter implements IQuarkSocialNetworkProvider {
 			$_sign[] = rawurlencode($key) . '=' . rawurlencode($value);
 		}
 
-		$key = rawurlencode($this->_appSecret) . '&' . rawurlencode($this->_secret);
+		$key = rawurlencode($this->_appSecret) . '&' . rawurlencode($this->_token->oauth_token_secret);
 		$data = rawurlencode($method) . '&' . rawurlencode($url) . '&' . rawurlencode(implode('&', $_sign));
 
 		$sign = base64_encode(hash_hmac('sha1', $data, $key, true));

@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SocialNetwork;
+namespace Quark\Extensions\OpenGraph;
 
 use Quark\IQuarkViewResource;
 use Quark\IQuarkInlineViewResource;
@@ -9,7 +9,7 @@ use Quark\Quark;
 /**
  * Class OpenGraphResource
  *
- * @package Quark\Extensions\SocialNetwork
+ * @package Quark\Extensions\OpenGraph
  */
 class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource {
 	const KEY_PROPERTY = 'property';

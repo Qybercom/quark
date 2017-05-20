@@ -10,73 +10,29 @@ use Quark\QuarkDTO;
  */
 interface IQuarkSocialNetworkProvider {
 	/**
-	 * @return string
-	 */
-	public function Name();
-
-	/**
-	 * @param string $appId
-	 * @param string $appSecret
-	 *
-	 * @return mixed
-	 */
-	public function SocialNetworkApplication($appId, $appSecret);
-
-	/**
-	 * @param string $to
-	 * @param string[] $permissions
-	 *
-	 * @return string
-	 */
-	public function LoginURL($to, $permissions = []);
-
-	/**
-	 * @param string $to
-	 *
-	 * @return string
-	 */
-	public function LogoutURL($to);
-
-	/**
+	 * @param string $url
 	 * @param QuarkDTO $request
-	 * @param string $to
+	 * @param QuarkDTO $response
 	 *
-	 * @return string
-	 */
-	public function SessionFromRedirect(QuarkDTO $request, $to);
-
-	/**
-	 * @param string $token
+	 * @return QuarkDTO|null
 	 *
-	 * @return string
+	 * @throws SocialNetworkAPIException
 	 */
-	public function SessionFromToken($token);
-
-	/**
-	 * @return string
-	 */
-	public function CurrentUser();
-
-	/**
-	 * @return \Quark\QuarkDTO
-	 */
-	public function API();
+	public function SocialNetworkAPI($url, QuarkDTO $request, QuarkDTO $response);
 
 	/**
 	 * @param string $user
-	 * @param string[] $fields
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function Profile($user, $fields);
+	public function SocialNetworkUser($user);
 
 	/**
 	 * @param string $user
-	 * @param string[] $fields
 	 * @param int $count
 	 * @param int $offset
 	 *
 	 * @return SocialNetworkUser[]
 	 */
-	public function Friends($user, $fields, $count, $offset);
+	public function SocialNetworkFriends($user, $count, $offset);
 }
