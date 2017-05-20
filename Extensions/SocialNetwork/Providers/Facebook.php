@@ -31,7 +31,14 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	const PERMISSION_LIKES = 'user_likes';
 	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
 
+	/**
+	 * @var string $_appId = ''
+	 */
 	private $_appId = '';
+
+	/**
+	 * @var string $_appSecret = ''
+	 */
 	private $_appSecret = '';
 
 	/**
@@ -85,17 +92,17 @@ class Facebook implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param QuarkDTO $request
 	 * @param string $to
-	 * @param string $code
 	 *
 	 * @return string
 	 */
-	public function SessionFromRedirect ($to, $code) {
+	public function SessionFromRedirect (QuarkDTO $request, $to) {
 		$response = $this->API('GET', '/oauth/access_token', array(
 			'client_id' => $this->_appId,
 			'client_secret' => $this->_appSecret,
 			'redirect_uri' => $to,
-			'code' => $code
+			'code' => $request->code
 		));
 
 		if ($response == null) return '';

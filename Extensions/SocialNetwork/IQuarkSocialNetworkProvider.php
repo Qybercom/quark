@@ -1,6 +1,8 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
+use Quark\QuarkDTO;
+
 /**
  * Interface IQuarkSocialNetworkProvider
  *
@@ -36,12 +38,12 @@ interface IQuarkSocialNetworkProvider {
 	public function LogoutURL($to);
 
 	/**
+	 * @param QuarkDTO $request
 	 * @param string $to
-	 * @param string $code
 	 *
 	 * @return string
 	 */
-	public function SessionFromRedirect($to, $code);
+	public function SessionFromRedirect(QuarkDTO $request, $to);
 
 	/**
 	 * @param string $token

@@ -8,6 +8,7 @@ use Quark\IQuarkModelWithAfterFind;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkDTO;
 use Quark\QuarkField;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
@@ -223,10 +224,11 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 		if (func_num_args() < 2)
 			return $this->_log($method, 'Not enough data for session start.');
 
-		$token = $this->_call($method, array_slice(func_get_args(), 1));
+		$args = array_slice(func_get_args(), 1);
+		$token = $this->_call($method, $args);
 
 		if ($token == null)
-			return $this->_log($method, 'Invalid token ' . $token);
+			return $this->_log($method, 'Invalid token ' . print_r($args[0], true));
 
 		$this->accessToken = $token;
 		$this->social = $this->Name();
@@ -235,13 +237,13 @@ class SocialNetwork implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithDa
 	}
 
 	/**
-	 * @param string $to
-	 * @param string $code
+	 * @param QuarkDTO $request
+	 * @param string $to = ''
 	 *
 	 * @return SocialNetwork
 	 */
-	public function SessionFromRedirect ($to, $code) {
-		return $this->_session('SessionFromRedirect', $to, $code);
+	public function SessionFromRedirect (QuarkDTO $request, $to = '') {
+		return $this->_session('SessionFromRedirect', $request, $to);
 	}
 
 	/**

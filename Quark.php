@@ -12308,8 +12308,9 @@ class QuarkClient implements IQuarkEventable {
 		}
 		
 		$socket = $this->_uri->SocketURI();
+		$secure = $socket->Secure();
 		
-		if ($socket->Secure())
+		if ($secure)
 			$socket->scheme = QuarkURI::WRAPPER_TCP;
 		
 		$this->_socket = @stream_socket_client(
@@ -12330,7 +12331,7 @@ class QuarkClient implements IQuarkEventable {
 			return false;
 		}
 
-		if ($socket->Secure() && $this->_autoSecure)
+		if ($secure && $this->_autoSecure)
 			$this->Secure(true);
 
 		$this->Timeout($this->_timeout);

@@ -50,7 +50,14 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	const PERMISSION_OFFLINE = 'offline';
 	const PERMISSION_NOHTTPS = 'nohttps';
 
+	/**
+	 * @var string $_appId = ''
+	 */
 	private $_appId = '';
+
+	/**
+	 * @var string $_appSecret = ''
+	 */
 	private $_appSecret = '';
 
 	/**
@@ -112,17 +119,17 @@ class VKontakte implements IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param QuarkDTO $request
 	 * @param string $to
-	 * @param string $code
 	 *
 	 * @return string
 	 */
-	public function SessionFromRedirect ($to, $code) {
+	public function SessionFromRedirect (QuarkDTO $request, $to) {
 		$response = $this->API('GET', '/access_token', array(
 			'client_id' => $this->_appId,
 			'client_secret' => $this->_appSecret,
 			'redirect_uri' => $to,
-			'code' => $code), 'https://oauth.vk.com/');
+			'code' => $request->code), 'https://oauth.vk.com/');
 
 		if ($response == null) return '';
 
