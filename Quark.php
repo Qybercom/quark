@@ -3302,6 +3302,15 @@ trait QuarkServiceBehavior {
 
 		return $output;
 	}
+
+	/**
+	 * @param IQuarkService $service = null
+	 *
+	 * @return string
+	 */
+	public function WebLocation (IQuarkService $service = null) {
+		return Quark::WebLocation($this->URL($service));
+	}
 }
 
 /**
@@ -4792,6 +4801,10 @@ class QuarkView implements IQuarkContainer {
 	const SIGNED_ACTION_FORM_STYLE = 'display: inline-block; margin: 0; padding: 0; border: none;';
 	const DEFAULT_THEME = 'Default';
 	const GENERIC_LOCALIZATION = '_any';
+	const LII_PARAS = 'paras';
+	const LII_WORDS = 'words';
+	const LII_BYTES = 'bytes';
+	const LII_LISTS = 'lists';
 	
 	/**
 	 * @var IQuarkViewModel|IQuarkViewModelWithResources|IQuarkViewModelWithVariableDiscovering $_view = null
@@ -5233,6 +5246,53 @@ class QuarkView implements IQuarkContainer {
 		$sign = QuarkSession::Current() ? QuarkSession::Current()->Signature() : '';
 
 		return $field ? '<input type="hidden" name="' . QuarkDTO::KEY_SIGNATURE . '" value="' . $sign . '" />' : $sign;
+	}
+
+	/**
+	 * https://github.com/traviskaufman/node-lipsum
+	 *
+	 * @param int $amount = 5
+	 * @param string $item = self::LII_PARAS
+	 * @param bool $start = true
+	 *
+	 * @return bool|QuarkDTO
+	 */
+	public function LoremIpsumRaw ($amount = 5, $item = self::LII_PARAS, $start = true) {
+		return QuarkHTTPClient::To(
+			'http://lipsum.com/feed/json?amount=' . $amount . '&start=' . QuarkObject::Stringify($start) . '&what=' . $item,
+			QuarkDTO::ForGET(new QuarkJSONIOProcessor()),
+			new QuarkDTO(new QuarkJSONIOProcessor())
+		);
+	}
+
+	/**
+	 * @param int $amount = 5
+	 * @param string $item = self::LII_PARAS
+	 * @param bool $start = true
+	 *
+	 * @return string|null
+	 */
+	public function LoremIpsum ($amount = 5, $item = self::LII_PARAS, $start = true) {
+		$json = $this->LoremIpsumRaw($amount, $item, $start);
+
+		/** @noinspection PhpUndefinedFieldInspection */
+		if (!isset($json->feed->lipsum)) return null;
+		/** @noinspection PhpUndefinedFieldInspection */
+		$lipsum = $json->feed->lipsum;
+
+		if ($item == self::LII_WORDS || $item == self::LII_BYTES) return $lipsum;
+
+		$replacement = '<p class="quark-paragraph">$1</p>';
+
+		if ($item == self::LII_LISTS)
+			$replacement = '<li>$1</li>';
+
+		$out = trim(preg_replace('#(.*)\n#Uis', $replacement, $lipsum . "\n"));
+
+		if ($item == self::LII_LISTS)
+			$out = '<ul class="quark-list">' . $out . '</ul>';
+
+		return $out;
 	}
 
 	/**

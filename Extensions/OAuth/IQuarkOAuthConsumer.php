@@ -8,6 +8,13 @@ namespace Quark\Extensions\OAuth;
  */
 interface IQuarkOAuthConsumer {
 	/**
+	 * @param IQuarkOAuthProvider $provider
+	 *
+	 * @return mixed
+	 */
+	public function OAuthProvider(IQuarkOAuthProvider $provider);
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return mixed
@@ -15,9 +22,17 @@ interface IQuarkOAuthConsumer {
 	public function OAuthToken(OAuthToken $token);
 
 	/**
-	 * @param IQuarkOAuthProvider $provider
+	 * @param string $redirect
+	 * @param string[] $scope
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function OAuthProvider(IQuarkOAuthProvider $provider);
+	public function OAuthLoginURL($redirect, $scope);
+
+	/**
+	 * @param string $redirect
+	 *
+	 * @return string
+	 */
+	public function OAuthLogoutURL($redirect);
 }

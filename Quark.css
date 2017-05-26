@@ -258,22 +258,30 @@ button.quark-button {
     background: rgb(59, 89, 152);
 }
 
-.quark-button.social.fa.fa-vk {
-    background: rgb(69, 102, 142);
-}
-
-.quark-button.social.fa.fa-google-plus {
-    background: rgb(221, 75, 57);
-}
-
 .quark-button.social.fa.fa-facebook:hover {
     background: rgba(59, 89, 152, 0.75);
+}
+
+.quark-button.social.fa.fa-vk {
+    background: rgb(69, 102, 142);
 }
 
 .quark-button.social.fa.fa-vk:hover {
     background: rgba(69, 102, 142, 0.75);
 }
 
+.quark-button.social.fa.fa-google-plus {
+    background: rgb(221, 75, 57);
+}
+
 .quark-button.social.fa.fa-google-plus:hover {
     background: rgba(221, 75, 57, 0.75);
+}
+
+.quark-button.social.fa.fa-twitter {
+    background: rgb(85, 172, 238);
+}
+
+.quark-button.social.fa.fa-twitter:hover {
+    background: rgba(85, 172, 238, 0.75);
 }

@@ -53,7 +53,7 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 *
 	 * @return IQuarkOAuthConsumer
 	 */
-	public function Consumer(OAuthToken $token) {
+	public function Consumer (OAuthToken $token) {
 		$this->_provider->OAuthApplication($this->_appId, $this->_appSecret);
 
 		$consumer = $this->_provider->OAuthConsumer($token);

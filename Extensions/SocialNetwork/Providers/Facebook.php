@@ -112,7 +112,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public function OAuthToken (QuarkDTO $request, $redirect) {
+	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
 		$req = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
 		$req->URI()->Params(array(
 			'client_id' => $this->_appId,
