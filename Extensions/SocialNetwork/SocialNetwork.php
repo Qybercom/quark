@@ -2,15 +2,14 @@
 namespace Quark\Extensions\SocialNetwork;
 
 use Quark\Quark;
-use Quark\QuarkDTO;
-use Quark\QuarkModel;
 use Quark\QuarkObject;
+use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 
-use Quark\Extensions\OAuth\OAuthConfig;
-use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\OAuth\OAuthConsumerBehavior;
+use Quark\Extensions\OAuth\OAuthAPIException;
 
 /**
  * Class SocialNetwork
@@ -18,87 +17,38 @@ use Quark\Extensions\OAuth\OAuthToken;
  * @package Quark\Extensions\SocialNetwork
  */
 class SocialNetwork implements IQuarkOAuthConsumer {
-	/**
-	 * @var OAuthConfig $_config
-	 */
-	private $_config;
-
-	/**
-	 * @var IQuarkOAuthProvider|IQuarkSocialNetworkProvider $_provider
-	 */
-	private $_provider;
-
-	/**
-	 * @var OAuthToken $_token
-	 */
-	private $_token;
+	use OAuthConsumerBehavior;
 
 	/**
 	 * @param string $config = ''
 	 */
 	public function __construct ($config = '') {
-		if (func_num_args() == 0) return;
-
-		$this->_config = Quark::Config()->Extension($config);
-		$this->_provider = $this->_config->Provider();
+		if (func_num_args() != 0)
+			$this->OAuthConfig($config);
 	}
 
 	/**
-	 * @param IQuarkOAuthProvider $provider
+	 * @return IQuarkOAuthProvider|IQuarkSocialNetworkProvider
+	 */
+	private function &_provider () {
+		return $this->_provider;
+	}
+
+	/**
+	 * @param OAuthAPIException $e
+	 * @param string $action = ''
+	 * @param string $message = ''
+	 * @param $out = null
 	 *
 	 * @return mixed
 	 */
-	public function OAuthProvider (IQuarkOAuthProvider $provider) {
-		$this->_provider = $provider;
-	}
+	private function _error (OAuthAPIException $e, $action = '', $message = '', $out = null) {
+		Quark::Log('[SocialNetwork::' . $action . ' ' . QuarkObject::ClassOf($this->_provider) . '] ' . $message . '. API error:', Quark::LOG_WARN);
 
-	/**
-	 * @param OAuthToken $token
-	 *
-	 * @return mixed
-	 */
-	public function OAuthToken (OAuthToken $token) {
-		$this->_token = $token;
-	}
+		Quark::Trace($e->Request());
+		Quark::Trace($e->Response());
 
-	/**
-	 * @param string $redirect
-	 * @param string[] $scope = []
-	 *
-	 * @return string
-	 */
-	public function OAuthLoginURL ($redirect, $scope = []) {
-		return $this->_provider->OAuthLoginURL($redirect, $scope);
-	}
-
-	/**
-	 * @param string $redirect
-	 *
-	 * @return string
-	 */
-	public function OAuthLogoutURL ($redirect) {
-		return $this->_provider->OAuthLogoutURL($redirect);
-	}
-
-	/**
-	 * @param string $url = ''
-	 * @param QuarkDTO $request = null
-	 * @param QuarkDTO $response = null
-	 *
-	 * @return mixed
-	 */
-	public function API ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
-		try {
-			return $this->_provider->SocialNetworkAPI($url, $request, $response);
-		}
-		catch (SocialNetworkAPIException $e) {
-			Quark::Log('[SocialNetwork.' . QuarkObject::ClassOf($this->_provider) . '] API error:');
-
-			Quark::Trace($e->Request());
-			Quark::Trace($e->Response());
-
-			return null;
-		}
+		return $out;
 	}
 
 	/**
@@ -121,7 +71,12 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	 * @return SocialNetworkUser
 	 */
 	public function User ($user = '') {
-		return $this->_provider->SocialNetworkUser($user);
+		try {
+			return $this->_provider()->SocialNetworkUser($user);
+		}
+		catch (OAuthAPIException $e) {
+			return $this->_error($e, 'User', 'Can not get user', null);
+		}
 	}
 
 	/**
@@ -132,6 +87,11 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	 * @return SocialNetworkUser[]
 	 */
 	public function Friends ($user = '', $count = 0, $offset = 0) {
-		return $this->_provider->SocialNetworkFriends($user, $count, $offset);
+		try {
+			return $this->_provider()->SocialNetworkFriends($user, $count, $offset);
+		}
+		catch (OAuthAPIException $e) {
+			return $this->_error($e, 'Friends', 'Can not get friends', array());
+		}
 	}
 }

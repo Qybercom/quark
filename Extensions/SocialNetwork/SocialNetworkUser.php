@@ -22,6 +22,11 @@ class SocialNetworkUser {
 	private $_id = '';
 
 	/**
+	 * @var string $_username = ''
+	 */
+	private $_username = '';
+
+	/**
 	 * @var string $_name = ''
 	 */
 	private $_name = '';
@@ -62,6 +67,16 @@ class SocialNetworkUser {
 	private $_registeredAt;
 
 	/**
+	 * @var string $_location = ''
+	 */
+	private $_location = '';
+
+	/**
+	 * @var string $_bio = ''
+	 */
+	private $_bio = '';
+
+	/**
 	 * @param string $id = ''
 	 * @param string $name = ''
 	 */
@@ -80,6 +95,18 @@ class SocialNetworkUser {
 			$this->_id = $id;
 
 		return $this->_id;
+	}
+
+	/**
+	 * @param string $username = ''
+	 *
+	 * @return string
+	 */
+	public function Username ($username = '') {
+		if (func_num_args() != 0)
+			$this->_username = $username;
+
+		return $this->_username;
 	}
 
 	/**
@@ -157,11 +184,11 @@ class SocialNetworkUser {
 
 	/**
 	 * @param string $link = ''
-	 * @param bool $download = true
+	 * @param bool $download = false
 	 *
 	 * @return QuarkFile
 	 */
-	public function PhotoFromLink ($link = '', $download = true) {
+	public function PhotoFromLink ($link = '', $download = false) {
 		if (func_num_args() != 0) {
 			$this->_photoLink = $link;
 
@@ -213,5 +240,29 @@ class SocialNetworkUser {
 			$this->_registeredAt = $date;
 
 		return $this->_registeredAt;
+	}
+
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return string
+	 */
+	public function Location ($location = '') {
+		if (func_num_args() != 0)
+			$this->_location = $location;
+
+		return $this->_location;
+	}
+
+	/**
+	 * @param string $bio = ''
+	 *
+	 * @return string
+	 */
+	public function Bio ($bio = '') {
+		if (func_num_args() != 0)
+			$this->_bio = $bio;
+
+		return $this->_bio;
 	}
 }

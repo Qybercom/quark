@@ -11,10 +11,10 @@ use Quark\QuarkModel;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\OAuth\OAuthAPIException;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
-use Quark\Extensions\SocialNetwork\SocialNetworkAPIException;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
@@ -27,7 +27,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_OAUTH_LOGOUT = 'https://www.facebook.com/logout.php';
 	const URL_API = 'https://graph.facebook.com/v2.9';
 
-	const CURRENT_USER = '/me';
+	const CURRENT_USER = 'me';
 
 	const PERMISSION_ID = 'id';
 	const PERMISSION_NAME = 'name';
@@ -113,15 +113,17 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return QuarkModel|OAuthToken
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
+		if (!isset($request->code)) return null;
+
 		$req = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
-		$req->URI()->Params(array(
+		$req->URIParams(array(
 			'client_id' => $this->_appId,
 			'client_secret' => $this->_appSecret,
 			'redirect_uri' => $redirect,
 			'code' => $request->code
 		));
 
-		$api = $this->SocialNetworkAPI('/oauth/access_token', $req);
+		$api = $this->OAuthAPI('/oauth/access_token', $req);
 
 		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
 	}
@@ -134,19 +136,19 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 *
 	 * @return QuarkDTO|null
 	 *
-	 * @throws SocialNetworkAPIException
+	 * @throws OAuthAPIException
 	 */
-	public function SocialNetworkAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		if ($this->_token != null)
-			$url = QuarkURI::BuildQuery($url, array('access_token' => $this->_token->access_token));
+			$request->URIInit(array('access_token' => $this->_token->access_token));
 
 		$api = QuarkHTTPClient::To(self::URL_API . $url, $request, $response);
 
 		if (isset($api->error))
-			throw new SocialNetworkAPIException($request, $response);
+			throw new OAuthAPIException($request, $response);
 
 		return $api;
 	}
@@ -157,7 +159,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	private static function _fields ($fields) {
-		return implode(',', $fields !== null ? $fields : array(
+		return implode(',', $fields != null ? $fields : array(
 			self::PERMISSION_ID,
 			self::PERMISSION_NAME,
 			self::PERMISSION_LINK,
@@ -177,7 +179,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private static function _user ($item, $photo = true) {
 		$user = new SocialNetworkUser($item->id, $item->name);
 
-		$user->PhotoFromLink($item->picture->data->url, $photo);
+		$user->PhotoFromLink(isset($item->picture->data->url) ? $item->picture->data->url : '', $photo);
 		$user->Gender($item->gender[0]);
 		$user->Page($item->link);
 
@@ -198,11 +200,11 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function SocialNetworkUser ($user, $fields = []) {
 		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
-		$request->URI()->Params(array(
+		$request->URIParams(array(
 			'fields' => self::_fields($fields)
 		));
 
-		$response = $this->SocialNetworkAPI('/' . $user, $request);
+		$response = $this->OAuthAPI('/' . ($user ? $user : self::CURRENT_USER), $request);
 
 		if ($response == null) return null;
 
@@ -219,13 +221,13 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset, $fields = []) {
 		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
-		$request->URI()->Params(array(
+		$request->URIParams(array(
 			'fields' => self::_fields($fields)
 		));
 
-		$response = $this->SocialNetworkAPI('/' . $user . '/friends', $request);
+		$response = $this->OAuthAPI('/' . ($user ? $user : self::CURRENT_USER) . '/friends', $request);
 
-		if ($response == null) return array();
+		if ($response == null || !isset($response->data) || !is_array($response->data)) return array();
 
 		$friends = array();
 

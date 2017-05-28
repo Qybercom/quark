@@ -2,66 +2,34 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
+use Quark\QuarkDate;
+use Quark\QuarkFormIOProcessor;
+use Quark\QuarkHTTPClient;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
-use Quark\QuarkHTTPClient;
-use Quark\QuarkFormIOProcessor;
-use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkModel;
-use Quark\QuarkDate;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
-use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
+use Quark\Extensions\OAuth\OAuthToken;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
- * Class VKontakte
+ * Class GitHub
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
-	const URL_BASE = 'http://vk.com/id';
-	const URL_OAUTH = 'https://oauth.vk.com';
-	const URL_API = 'https://api.vk.com/method';
-
-	const API_VERSION = '5.29';
+class GitHub implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+	const URL_BASE = 'https://github.com/';
+	const URL_OAUTH = 'https://github.com/login/oauth';
+	const URL_API = 'https://api.github.com';
 
 	const CURRENT_USER = '';
-
-	const PERMISSION_ID = 'uid';
-	const PERMISSION_NAME = '';
-	const PERMISSION_PICTURE = 'photo_max_orig';
-	const PERMISSION_GENDER = 'sex';
-	const PERMISSION_LINK = 'link';
-
-	const PERMISSION_EMAIL = 'email';
-	const PERMISSION_BIRTHDAY = 'bdate';
-
-	const PERMISSION_NOTIFY = 'notify';
-	const PERMISSION_FRIENDS = 'friends';
-	const PERMISSION_PHOTOS = 'photos';
-	const PERMISSION_AUDIO = 'audio';
-	const PERMISSION_VIDEO = 'video';
-	const PERMISSION_DOCS = 'docs';
-	const PERMISSION_NOTES = 'notes';
-	const PERMISSION_PAGES = 'pages';
-	const PERMISSION_STATUS = 'status';
-	const PERMISSION_OFFERS = 'offers';
-	const PERMISSION_QUESTIONS = 'questions';
-	const PERMISSION_WALL = 'wall';
-	const PERMISSION_GROUPS = 'groups';
-	const PERMISSION_MESSAGES = 'messages';
-	const PERMISSION_NOTIFICATIONS = 'notifications';
-	const PERMISSION_STATS = 'stats';
-	const PERMISSION_ADS = 'ads';
-
-	const PERMISSION_OFFLINE = 'offline';
-	const PERMISSION_NOHTTPS = 'nohttps';
 
 	/**
 	 * @var string $_appId = ''
@@ -77,14 +45,6 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @var OAuthToken $_token
 	 */
 	private $_token;
-
-	/**
-	 * @var string[] $_gender
-	 */
-	private static $_gender = array(
-		SocialNetworkUser::GENDER_FEMALE,
-		SocialNetworkUser::GENDER_MALE
-	);
 
 	/**
 	 * @param OAuthToken $token
@@ -118,10 +78,7 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		return QuarkURI::Build(self::URL_OAUTH . '/authorize', array(
 			'client_id' => $this->_appId,
 			'redirect_uri' => $redirect,
-			'state' => Quark::GuID(),
-			'scope' => implode(',', (array)$scope),
-			'v' => self::API_VERSION,
-			'response_type' => 'code'
+			'scope' => implode(' ', (array)$scope)
 		));
 	}
 
@@ -172,6 +129,8 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
+		$request->UserAgentQuark();
+
 		if ($this->_token != null)
 			$request->URIInit(array('access_token' => $this->_token->access_token));
 
@@ -184,20 +143,6 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param string[] $fields
-	 *
-	 * @return string
-	 */
-	private static function _fields ($fields = []) {
-		return implode(',', $fields != null ? $fields : array(
-			self::PERMISSION_GENDER,
-			self::PERMISSION_PICTURE,
-			self::PERMISSION_BIRTHDAY,
-			self::PERMISSION_EMAIL
-		));
-	}
-
-	/**
 	 * @param $item
 	 * @param bool $photo = true
 	 *
@@ -206,77 +151,52 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private static function _user ($item, $photo = true) {
 		if (!$item) return null;
 
-		$user = new SocialNetworkUser($item->uid, $item->first_name . ' ' . $item->last_name);
+		$user = new SocialNetworkUser($item->id);
 
-		$user->PhotoFromLink($item->photo_max_orig, $photo);
-		$user->Gender(isset(self::$_gender[$item->sex]) ? self::$_gender[$item->sex] : SocialNetworkUser::GENDER_UNKNOWN);
-		$user->Page(self::URL_BASE . $item->uid);
+		$user->Username($item->login);
+		$user->PhotoFromLink($item->avatar_url, $photo);
+		$user->Page($item->html_url);
 
-		if (isset($item->email))
-			$user->Email($item->email);
-
-		if (isset($item->bdate)) {
-			$date = explode('.', $item->bdate);
-			$out = array();
-
-			foreach ($date as $component)
-				$out[] = (strlen($component == 1) ? '0' : '') . $component;
-
-			if (sizeof($out) == 2)
-				$out[] = QuarkDate::UNKNOWN_YEAR;
-
-			$user->BirthdayByDate('d.m.Y', implode('.', $out), 'd.m');
-		}
+		if (isset($item->name)) $user->Name($item->name);
+		if (isset($item->email)) $user->Email($item->email);
+		if (isset($item->created_at)) $user->RegisteredAt(QuarkDate::GMTOf($item->created_at));
+		if (isset($item->location)) $user->Location($item->location);
+		if (isset($item->bio)) $user->Bio($item->bio);
 
 		return $user;
 	}
 
 	/**
 	 * @param string $user
-	 * @param string[] $fields = []
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function SocialNetworkUser ($user, $fields = []) {
+	public function SocialNetworkUser ($user) {
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
-		$request->URIParams(array(
-			'fields' => self::_fields($fields),
-			'user_ids' => $user,
-			'scope' => 'email'
-		));
 
-		$response = $this->OAuthAPI('/users.get', $request);
+		$response = $this->OAuthAPI('/user' . ($user ? 's/' . $user : self::CURRENT_USER), $request);
 
-		if ($response == null || !isset($response->response) || !is_array($response->response)) return null;
-
-		return self::_user(isset($response->response[0]) ? $response->response[0] : null);
+		return self::_user($response);
 	}
 
 	/**
 	 * @param string $user
 	 * @param int $count
 	 * @param int $offset
-	 * @param string[] $fields = []
 	 *
 	 * @return SocialNetworkUser[]
 	 */
-	public function SocialNetworkFriends ($user, $count, $offset, $fields = []) {
+	public function SocialNetworkFriends ($user, $count, $offset) {
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
-		$request->URIParams(array(
-			'user_id' => $user,
-			'scope' => 'email',
-			'fields' => self::_fields($fields),
-			'count' => $count,
-			'offset' => $offset
-		));
 
-		$response = $this->OAuthAPI('/friends.get', $request);
+		$response = $this->OAuthAPI('/users/' . $user . '/followers', $request);
 
-		if ($response == null || !is_array($response->response)) return array();
+		if ($response == null || !is_array($response->Data())) return array();
 
 		$friends = array();
+		$followers = $response->Data();
 
-		foreach ($response->response as $item)
+		foreach ($followers as $item)
 			$friends[] = self::_user($item);
 
 		return $friends;

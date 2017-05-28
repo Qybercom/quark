@@ -1,17 +1,16 @@
 <?php
-namespace Quark\Extensions\SocialNetwork;
+namespace Quark\Extensions\OAuth;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 
 /**
- * Class SocialNetworkAPIException
-
+ * Class OAuthAPIException
  *
-*@package Quark\Extensions\SocialNetwork
+ * @package Quark\Extensions\OAuth
  */
-class SocialNetworkAPIException extends QuarkArchException {
+class OAuthAPIException extends QuarkArchException {
 	/**
 	 * @var QuarkDTO $_request
 	 */

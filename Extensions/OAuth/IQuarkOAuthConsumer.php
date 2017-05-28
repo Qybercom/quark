@@ -8,6 +8,13 @@ namespace Quark\Extensions\OAuth;
  */
 interface IQuarkOAuthConsumer {
 	/**
+	 * @param string $config
+	 *
+	 * @return mixed
+	 */
+	public function OAuthConfig($config);
+
+	/**
 	 * @param IQuarkOAuthProvider $provider
 	 *
 	 * @return mixed

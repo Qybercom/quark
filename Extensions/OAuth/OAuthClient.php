@@ -7,31 +7,13 @@ namespace Quark\Extensions\OAuth;
  * @package Quark\Extensions\OAuth
  */
 class OAuthClient implements IQuarkOAuthConsumer {
-	/**
-	 * @var OAuthToken $_token
-	 */
-	private $_token;
+	use OAuthConsumerBehavior;
 
 	/**
-	 * @var IQuarkOAuthProvider $_provider
+	 * @param string $config = ''
 	 */
-	private $_provider;
-
-	/**
-	 * @param OAuthToken $token
-	 *
-	 * @return mixed
-	 */
-	public function OAuthToken (OAuthToken $token) {
-		$this->_token = $token;
-	}
-
-	/**
-	 * @param IQuarkOAuthProvider $provider
-	 *
-	 * @return mixed
-	 */
-	public function OAuthProvider (IQuarkOAuthProvider $provider) {
-		$this->_provider = $provider;
+	public function __construct ($config = '') {
+		if (func_num_args() != 0)
+			$this->OAuthConfig($config);
 	}
 }

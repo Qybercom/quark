@@ -11,6 +11,7 @@ use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
+use Quark\QuarkObject;
 
 /**
  * Class OAuthToken
@@ -35,7 +36,8 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @param string $config
 	 */
 	public function __construct ($config = '') {
-		$this->OAuthConfig($config);
+		if (func_num_args() != 0)
+			$this->OAuthConfig($config);
 	}
 
 	/**
@@ -144,7 +146,28 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return QuarkModel|OAuthToken
 	 */
 	public function FromRequest (QuarkDTO $request = null, $redirect = '') {
-		return $request == null ? null : $this->Provider()->OAuthTokenFromRequest($request, $redirect);
+		if ($request == null) return null;
+
+		try {
+			$token = $this->Provider()->OAuthTokenFromRequest($request, $redirect);
+			$token->OAuthConfig($this->_config);
+
+			/**
+			 * @var OAuthToken $model
+			 */
+			$model = $token->Model();
+			$this->Provider()->OAuthConsumer($model);
+
+			return $token;
+		}
+		catch (OAuthAPIException $e) {
+			Quark::Log('[OAuthToken::FromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] API error:');
+
+			Quark::Trace($e->Request());
+			Quark::Trace($e->Response());
+
+			return null;
+		}
 	}
 
 	/**

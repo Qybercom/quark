@@ -10,7 +10,7 @@ use Quark\Extensions\OAuth\Providers\YandexOAuth;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
-use Quark\Extensions\SocialNetwork\SocialNetworkAPIException;
+use Quark\Extensions\SocialNetwork\OAuthAPIException;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
@@ -32,9 +32,10 @@ class YandexMoyKrug extends YandexOAuth implements IQuarkOAuthProvider, IQuarkSo
 	 * @param string $url
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
+
 	 *
-	 * @return QuarkDTO|null
-	 * @throws SocialNetworkAPIException
+*@return QuarkDTO|null
+	 * @throws OAuthAPIException
 	 */
 	public function SocialNetworkAPI ($url, QuarkDTO $request, QuarkDTO $response) {
 		// TODO: Implement SocialNetworkAPI() method.

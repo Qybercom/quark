@@ -1,25 +1,12 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
-use Quark\QuarkDTO;
-
 /**
  * Interface IQuarkSocialNetworkProvider
  *
  * @package Quark\Extensions\SocialNetwork
  */
 interface IQuarkSocialNetworkProvider {
-	/**
-	 * @param string $url
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
-	 *
-	 * @return QuarkDTO|null
-	 *
-	 * @throws SocialNetworkAPIException
-	 */
-	public function SocialNetworkAPI($url, QuarkDTO $request, QuarkDTO $response);
-
 	/**
 	 * @param string $user
 	 *

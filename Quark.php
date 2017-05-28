@@ -3259,10 +3259,12 @@ trait QuarkServiceBehavior {
 
 	/**
 	 * @param IQuarkService $service = null
+	 * @param bool $query = true
+	 * @param bool $fragment = true
 	 *
 	 * @return string
 	 */
-	public function URL (IQuarkService $service = null) {
+	public function URL (IQuarkService $service = null, $query = true, $fragment = true) {
 		return $this->__call('URL', func_get_args());
 	}
 
@@ -3305,11 +3307,22 @@ trait QuarkServiceBehavior {
 
 	/**
 	 * @param IQuarkService $service = null
+	 * @param bool $query = true
+	 * @param bool $fragment = true
 	 *
 	 * @return string
 	 */
-	public function WebLocation (IQuarkService $service = null) {
-		return Quark::WebLocation($this->URL($service));
+	public function WebLocation (IQuarkService $service = null, $query = true, $fragment = true) {
+		return Quark::WebLocation($this->URL($service, $query, $fragment));
+	}
+
+	/**
+	 * @param IQuarkService $service = null
+	 *
+	 * @return string
+	 */
+	public function WebPath (IQuarkService $service = null) {
+		return Quark::WebLocation($this->URL($service, false, false));
 	}
 }
 
@@ -3850,11 +3863,13 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkService $service = null
+	 * @param bool $query = true
+	 * @param bool $fragment = true
 	 *
 	 * @return string
 	 */
-	public function URL (IQuarkService $service = null) {
-		return $service ? self::URLOf($service) : $this->_input->URI()->Query();
+	public function URL (IQuarkService $service = null, $query = true, $fragment = true) {
+		return $service ? self::URLOf($service) : $this->_input->URI()->Query($query, $fragment);
 	}
 
 	/**
@@ -5246,6 +5261,15 @@ class QuarkView implements IQuarkContainer {
 		$sign = QuarkSession::Current() ? QuarkSession::Current()->Signature() : '';
 
 		return $field ? '<input type="hidden" name="' . QuarkDTO::KEY_SIGNATURE . '" value="' . $sign . '" />' : $sign;
+	}
+
+	/**
+	 * @param string $path = ''
+	 *
+	 * @return string
+	 */
+	public function WebLocation ($path = '') {
+		return Quark::WebLocation($path);
 	}
 
 	/**
@@ -14705,10 +14729,15 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $query = true
+	 * @param bool $fragment = true
+	 *
 	 * @return string
 	 */
-	public function Query () {
-		return Quark::NormalizePath($this->path . (strlen(trim($this->query)) == 0 ? '' : '?' . $this->query) . $this->fragment, false);
+	public function Query ($query = true, $fragment = true) {
+		$empty = strlen(trim($this->query)) == 0;
+
+		return Quark::NormalizePath($this->path . (!$query || $empty ? '' : (($empty || strpos($this->query, '?') !== false ? '' : '?') . $this->query)) . ($fragment ? $this->fragment : ''), false);
 	}
 
 	/**
@@ -14787,6 +14816,29 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param string $url
+	 * @param $params = []
+	 *
+	 * @return QuarkURI
+	 */
+	public function Compose ($url = '', $params = []) {
+		$uri = self::FromURI($url);
+
+		$this->scheme = $uri->scheme;
+		$this->user = $uri->user;
+		$this->pass = $uri->pass;
+		$this->host = $uri->host;
+		$this->port = $uri->port;
+		$this->path = $uri->path;
+		$this->query = $uri->query;
+		$this->fragment = $uri->fragment;
+
+		$this->ParamsMerge((object)$params);
+
+		return $this;
+	}
+
+	/**
 	 * @param $query = []
 	 * 
 	 * @return object
@@ -14796,6 +14848,18 @@ class QuarkURI {
 			$this->query = http_build_query((array)$query);
 		
 		return QuarkObject::Merge($this->Options());
+	}
+
+	/**
+	 * @param $params = []
+	 *
+	 * @return QuarkURI
+	 */
+	public function ParamsMerge ($params = []) {
+		if (func_num_args() != 0)
+			$this->Params(QuarkObject::Merge($this->Options(), $params));
+
+		return $this;
 	}
 
 	/**
@@ -15030,6 +15094,8 @@ class QuarkDTO {
 
 	const RESPONSE_BUFFER = 4096;
 
+	const USER_AGENT_QUARK = 'QuarkHTTPClient';
+
 	/**
 	 * @var string $_raw = ''
 	 */
@@ -15204,7 +15270,7 @@ class QuarkDTO {
 
 	/**
 	 * @param IQuarkIOProcessor $processor
-	 * @param QuarkURI  $uri
+	 * @param QuarkURI $uri
 	 * @param string $method
 	 * @param string $boundary
 	 */
@@ -15396,6 +15462,30 @@ class QuarkDTO {
 			$this->_uri = $uri;
 
 		return $this->_uri;
+	}
+
+	/**
+	 * @param $params = []
+	 *
+	 * @return object
+	 */
+	public function URIParams ($params = []) {
+		if ($this->_uri == null)
+			$this->_uri = new QuarkURI();
+
+		return func_num_args() == 0 ? $this->_uri->Params() : $this->_uri->Params($params);
+	}
+
+	/**
+	 * @param $params = []
+	 *
+	 * @return QuarkURI
+	 */
+	public function URIInit ($params = []) {
+		if ($this->_uri == null)
+			$this->_uri = new QuarkURI();
+
+		return func_num_args() != 0 ? $this->_uri->ParamsMerge($params) : $this->_uri;
 	}
 
 	/**
@@ -15710,6 +15800,13 @@ class QuarkDTO {
 			$this->_agent = $agent;
 
 		return $this->_agent;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function UserAgentQuark () {
+		return $this->Header(self::HEADER_USER_AGENT, self::USER_AGENT_QUARK);
 	}
 
 	/**
@@ -16398,11 +16495,13 @@ class QuarkHTTPClient {
 		$http = new self($request, $response);
 		$client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, $sync);
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$http) {
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http) {
 			if ($http->_request == null) return false;
 
 			if ($http->_response == null)
 				$http->_response = new QuarkDTO();
+
+			$client->URI()->Compose($uri, $http->_request->URI() ? $http->_request->URI()->Options() : array());
 
 			$http->_request->URI($client->URI());
 			$http->_response->URI($client->URI());
