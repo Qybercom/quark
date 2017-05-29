@@ -144,11 +144,11 @@ class GitHub implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param $item
-	 * @param bool $photo = true
+	 * @param bool $photo = false
 	 *
 	 * @return SocialNetworkUser
 	 */
-	private static function _user ($item, $photo = true) {
+	private static function _user ($item, $photo = false) {
 		if (!$item) return null;
 
 		$user = new SocialNetworkUser($item->id);

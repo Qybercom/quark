@@ -180,11 +180,11 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param $item
-	 * @param bool $photo = true
+	 * @param bool $photo = false
 	 *
 	 * @return SocialNetworkUser
 	 */
-	private static function _user ($item, $photo = true) {
+	private static function _user ($item, $photo = false) {
 		$user = new SocialNetworkUser($item->id, $item->name);
 
 		$user->PhotoFromLink(isset($item->profile_image_url_https) ? $item->profile_image_url_https : '', $photo);
@@ -247,7 +247,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$friends = array();
 
 		foreach ($response->users as $item)
-			$friends[] = self::_user($item, false);
+			$friends[] = self::_user($item);
 
 		return $friends;
 	}

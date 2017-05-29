@@ -2,6 +2,7 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\QuarkDTO;
+use Quark\QuarkFormIOProcessor;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
@@ -10,7 +11,6 @@ use Quark\Extensions\OAuth\Providers\GoogleOAuth;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
-use Quark\Extensions\SocialNetwork\OAuthAPIException;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
@@ -19,26 +19,90 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
  * @package Quark\Extensions\SocialNetwork\Providers
  */
 class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+	const URL_API_PEOPLE = 'https://people.googleapis.com/v1/';
+
+	const SCOPE_CONTACTS = 'contacts';
+	const SCOPE_CONTACTS_READONLY = 'contacts.readonly';
+
+	const GENDER_MALE = 'mmale';
+	const GENDER_FEMALE = 'female';
+
+	const CURRENT_USER = 'me';
+
+	const AGGREGATE_COUNT = 100;
+	const AGGREGATE_CURSOR = '';
+
+	/**
+	 * @var string[] $_defaultScope
+	 */
+	protected $_defaultScope = array(
+		self::SCOPE_PLUS_LOGIN
+	);
+
+	/**
+	 * @var string $_cursor = self::AGGREGATE_CURSOR
+	 */
+	private $_cursor = self::AGGREGATE_CURSOR;
+
+	/**
+	 * @return string
+	 */
+	public function &Cursor () {
+		return $this->_cursor;
+	}
+
 	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return IQuarkOAuthConsumer
 	 */
 	public function OAuthConsumer (OAuthToken $token) {
+		$this->_token = $token;
+
 		return new SocialNetwork();
 	}
 
 	/**
-	 * @param string $url
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
-
+	 * @param $item
+	 * @param bool $photo = false
 	 *
-*@return QuarkDTO|null
-	 * @throws OAuthAPIException
+	 * @return SocialNetworkUser
 	 */
-	public function SocialNetworkAPI ($url, QuarkDTO $request, QuarkDTO $response) {
-		// TODO: Implement SocialNetworkAPI() method.
+	private static function _user ($item, $photo = false) {
+		if (!$item) return null;
+
+		$user = new SocialNetworkUser($item->id, $item->displayName);
+
+		$user->PhotoFromLink($item->image->url, $photo);
+		$user->Page($item->url);
+		$user->Bio($item->aboutMe);
+
+		if (isset($item->email)) $user->Email($item->email);
+		if ($item->gender == self::GENDER_MALE) $user->Gender(SocialNetworkUser::GENDER_MALE);
+		if ($item->gender == self::GENDER_FEMALE) $user->Gender(SocialNetworkUser::GENDER_FEMALE);
+
+		return $user;
+	}
+
+	/**
+	 * @param $item
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	private static function _people ($item, $photo = false) {
+		if (!$item) return null;
+
+		$user = new SocialNetworkUser(str_replace('people/', '', $item->resourceName));
+
+		if (isset($item->names[0]->displayName)) $user->Name($item->names[0]->displayName);
+		if (isset($item->photos[0]->url)) $user->PhotoFromLink($item->photos[0]->url, $photo);
+		if (isset($item->email)) $user->Email($item->email);
+
+		if ($item->gender == self::GENDER_MALE) $user->Gender(SocialNetworkUser::GENDER_MALE);
+		if ($item->gender == self::GENDER_FEMALE) $user->Gender(SocialNetworkUser::GENDER_FEMALE);
+
+		return $user;
 	}
 
 	/**
@@ -47,10 +111,16 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
-		// TODO: Implement SocialNetworkUser() method.
+		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+
+		$response = $this->OAuthAPI('/plus/v1/people/' . ($user ? $user : self::CURRENT_USER), $request);
+
+		return self::_user($response);
 	}
 
 	/**
+	 * @note requires application approving
+	 *
 	 * @param string $user
 	 * @param int $count
 	 * @param int $offset
@@ -58,6 +128,23 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
-		// TODO: Implement SocialNetworkFriends() method.
+		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		$request->URIParams(array(
+			'pageSize' => $count,
+			'pageToken' => $offset
+		));
+
+		$response = $this->OAuthAPI('people/' . ($user ? $user : self::CURRENT_USER) . '/connections', $request, null, self::URL_API_PEOPLE);
+
+		if ($response == null || !isset($response->connections) || !is_array($response->connections)) return array();
+
+		$this->_cursor = $response->nextPageToken;
+
+		$friends = array();
+
+		foreach ($response->connections as $item)
+			$friends[] = self::_people($item);
+
+		return $friends;
 	}
 }

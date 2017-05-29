@@ -145,7 +145,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($this->_token != null)
 			$request->URIInit(array('access_token' => $this->_token->access_token));
 
-		$api = QuarkHTTPClient::To(self::URL_API . $url, $request, $response);
+		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
 		if (isset($api->error))
 			throw new OAuthAPIException($request, $response);
@@ -172,11 +172,11 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param $item
-	 * @param bool $photo = true
+	 * @param bool $photo = false
 	 *
 	 * @return SocialNetworkUser
 	 */
-	private static function _user ($item, $photo = true) {
+	private static function _user ($item, $photo = false) {
 		$user = new SocialNetworkUser($item->id, $item->name);
 
 		$user->PhotoFromLink(isset($item->picture->data->url) ? $item->picture->data->url : '', $photo);
@@ -232,7 +232,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$friends = array();
 
 		foreach ($response->data as $item)
-			$friends[] = self::_user($item, false);
+			$friends[] = self::_user($item);
 
 		return $friends;
 	}

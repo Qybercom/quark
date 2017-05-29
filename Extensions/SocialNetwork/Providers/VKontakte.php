@@ -199,11 +199,11 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param $item
-	 * @param bool $photo = true
+	 * @param bool $photo = false
 	 *
 	 * @return SocialNetworkUser
 	 */
-	private static function _user ($item, $photo = true) {
+	private static function _user ($item, $photo = false) {
 		if (!$item) return null;
 
 		$user = new SocialNetworkUser($item->uid, $item->first_name . ' ' . $item->last_name);

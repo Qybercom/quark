@@ -10,6 +10,13 @@ use Quark\IQuarkExtensionConfig;
  * @package Quark\Extensions\OAuth
  */
 class OAuthConfig implements IQuarkExtensionConfig {
+	const RESPONSE_CODE = 'code';
+	const RESPONSE_TOKEN = 'token';
+
+	const GRANT_AUTHORIZATION_CODE = 'authorization_code';
+	const GRANT_PASSWORD = 'password';
+	const GRANT_CLIENT_CREDENTIALS = 'client_credentials';
+
 	/**
 	 * @var IQuarkOAuthProvider $_provider
 	 */
