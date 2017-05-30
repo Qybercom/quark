@@ -12,10 +12,10 @@ use Quark\QuarkModel;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\OAuth\OAuthAPIException;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
-use Quark\Extensions\SocialNetwork\OAuthAPIException;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
@@ -38,11 +38,18 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private $_appSecret = '';
 
 	/**
+	 * @var OAuthToken $_token
+	 */
+	private $_token;
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return IQuarkOAuthConsumer
 	 */
 	public function OAuthConsumer (OAuthToken $token) {
+		$this->_token = $token;
+
 		return new SocialNetwork();
 	}
 
@@ -65,7 +72,7 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function OAuthLoginURL ($redirect, $scope) {
 		return QuarkURI::Build(self::URL_OAUTH . '/oauth/authorize?', array(
-			'client_id=' => $this->_appId,
+			'client_id' => $this->_appId,
    			'redirect_uri' => $redirect,
    			'response_type' => 'code',
 		));
@@ -86,21 +93,33 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public function OAuthToken (QuarkDTO $request, $redirect) {
+	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
 		// TODO: Implement OAuthToken() method.
 	}
 
 	/**
-	 * @param string $url
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
-
+	 * @param string $url = ''
+	 * @param QuarkDTO $request = null
+	 * @param QuarkDTO $response = null
+	 * @param string $base = self::URL_API
 	 *
-*@return QuarkDTO|null
+	 * @return QuarkDTO|null
+	 *
 	 * @throws OAuthAPIException
 	 */
-	public function SocialNetworkAPI ($url, QuarkDTO $request, QuarkDTO $response) {
-		// TODO: Implement SocialNetworkAPI() method.
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
+		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		if ($this->_token != null)
+			$request->URIInit(array('access_token' => $this->_token->access_token));
+
+		$api = QuarkHTTPClient::To($base . $url, $request, $response);
+
+		if (isset($api->error))
+			throw new OAuthAPIException($request, $response);
+
+		return $api;
 	}
 
 	/**

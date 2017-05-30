@@ -24,7 +24,7 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 	const SCOPE_CONTACTS = 'contacts';
 	const SCOPE_CONTACTS_READONLY = 'contacts.readonly';
 
-	const GENDER_MALE = 'mmale';
+	const GENDER_MALE = 'male';
 	const GENDER_FEMALE = 'female';
 
 	const CURRENT_USER = 'me';
