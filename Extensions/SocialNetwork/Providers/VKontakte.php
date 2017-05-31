@@ -13,6 +13,7 @@ use Quark\QuarkDate;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthAPIException;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
@@ -121,7 +122,7 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			'state' => Quark::GuID(),
 			'scope' => implode(',', (array)$scope),
 			'v' => self::API_VERSION,
-			'response_type' => 'code'
+			'response_type' => OAuthConfig::RESPONSE_CODE
 		));
 	}
 

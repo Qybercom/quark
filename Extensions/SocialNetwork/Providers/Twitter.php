@@ -231,13 +231,15 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
 		// TODO:
+		//
+		// NEED INVESTIGATING - TWITTER RETURN ERROR ON WELL-FORMED REQUEST
+		//
 		// screen_name=twitterapi
 		// skip_status=true
 		// include_user_entities=false
 
 		$response = $this->OAuthAPI(
-			//'/1.1/friends/list.json?count=' . ($count ? $count : self::AGGREGATE_COUNT) . '&cursor=' . ($offset ? $offset : $this->_cursor) . '&user_id=' . $user . '',
-			'/1.1/friends/list.json?cursor=-1&screen_name=twitterapi&skip_status=true&include_user_entities=false',
+			'/1.1/friends/list.json?count=' . ($count ? $count : self::AGGREGATE_COUNT) . '&cursor=' . ($offset ? $offset : $this->_cursor) . '&user_id=' . $user . '',
 			QuarkDTO::ForGET(new QuarkFormIOProcessor()),
 			new QuarkDTO(new QuarkJSONIOProcessor())
 		);

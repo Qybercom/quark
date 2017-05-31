@@ -2,6 +2,7 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -11,6 +12,7 @@ use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
 
@@ -27,6 +29,9 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_OAUTH = 'https://connect.mail.ru';
 	const URL_API = 'http://www.appsmail.ru/platform/api';
 
+	const GENDER_MALE = '0';
+	const GENDER_FEMALE = '1';
+
 	/**
 	 * @var string $_appId
 	 */
@@ -41,6 +46,11 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @var OAuthToken $_token
 	 */
 	private $_token;
+
+	/**
+	 * @var string $_vid = ''
+	 */
+	private $_vid = '';
 
 	/**
 	 * @param OAuthToken $token
@@ -94,7 +104,24 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return QuarkModel|OAuthToken
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
-		// TODO: Implement OAuthToken() method.
+		if (!isset($request->code)) return null;
+
+		$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$req->Data(array(
+			'client_id' => $this->_appId,
+			'client_secret' => $this->_appSecret,
+			'redirect_uri' => $redirect,
+			'code' => $request->code,
+			'grant_type' => OAuthConfig::GRANT_AUTHORIZATION_CODE
+		));
+
+		$api = $this->OAuthAPI('/oauth/token', $req, null, self::URL_OAUTH);
+
+		if ($api == null) return null;
+
+		$this->_vid = isset($api->x_mailru_vid) ? $api->x_mailru_vid : '';
+
+		return new QuarkModel(new OAuthToken(), $api->Data());
 	}
 
 	/**
@@ -112,7 +139,7 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		if ($this->_token != null)
-			$request->URIInit(array('access_token' => $this->_token->access_token));
+			$request->URIInit(array('session_key' => $this->_token->access_token));
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
@@ -123,12 +150,43 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param $item
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	private static function _user ($item, $photo = false) {
+		if (!$item) return null;
+
+		$user = new SocialNetworkUser($item->uid, $item->first_name . ' ' . $item->last_name);
+
+		$user->Username($item->nick);
+		$user->PhotoFromLink($item->pic, $photo);
+		$user->Page($item->link);
+		$user->Location(''
+			. (isset($item->location->country->name) ? $item->location->country->name  . ' ' : '')
+			. (isset($item->location->city->name) ? $item->location->city->name  . ' ' : '')
+			. (isset($item->location->region->name) ? $item->location->region->name  . ' ' : '')
+		);
+
+		if (isset($item->birthday)) $user->BirthdayByDate('d.m.Y', $item->birthday);
+		if (isset($item->email)) $user->Email($item->email);
+		if ($item->sex == self::GENDER_MALE) $user->Gender(SocialNetworkUser::GENDER_MALE);
+		if ($item->sex == self::GENDER_FEMALE) $user->Gender(SocialNetworkUser::GENDER_FEMALE);
+
+		return $user;
+	}
+
+	/**
 	 * @param string $user
 	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
-		// TODO: Implement SocialNetworkUser() method.
+		$api = $this->MailRUAPI('users.getInfo');
+		$users = $api->Data();
+
+		return self::_user(isset($users[0]) ? $users[0] : null);
 	}
 
 	/**
@@ -139,92 +197,65 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
-		// TODO: Implement SocialNetworkFriends() method.
+		$req = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		$req->URIInit(array(
+			'ext' => 1
+		));
+
+		$api = $this->MailRUAPI('friends.get', $req);
+
+		if (!$api) return array();
+
+		$users = $api->Data();
+		$friends = array();
+
+		foreach ($users as $item)
+			$friends[] = self::_user($item);
+
+		return $friends;
 	}
 
 	/**
-	 * @var string $_session = ''
-	 */
-	private $_session = '';
-
-	/**
-	 * @var string $_vid = ''
-	 */
-	private $_vid = '';
-
-	/**
-	 * @param QuarkDTO $request
-	 * @param string $to
+	 * @param string $user = ''
+	 * @param array $params = []
 	 *
 	 * @return string
 	 */
-	public function SessionFromRedirect (QuarkDTO $request, $to) {
-		$response = $this->API('GET', '/oauth/token', array(
-			'client_id' => $this->_appId,
-			'client_secret' => $this->_appSecret,
-			'redirect_uri' => $to,
-			'code' => $request->code,
-			'grant_type' => 'authorization_code'
-		), self::URL_OAUTH);
+	public function MailRUSign ($user = '', $params = []) {
+		ksort($params);
+		$out = '';
 
-		if ($response == null) return '';
+		foreach ($params as $key => $value)
+			$out .= $key . '=' . $value;
 
-		$this->_vid = $response->x_mailru_vid;
-
-		return $this->_session = $response->access_token;
+		return md5($user . $out . $this->_appSecret);
 	}
 
 	/**
-	 * @param string $token
+	 * @param string $method = ''
+	 * @param QuarkDTO $request = null
+	 * @param string $user = ''
 	 *
-	 * @return string
-	 */
-	public function SessionFromToken ($token) {
-		return $this->_session = $token;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function CurrentUser () {
-		return $this->_vid;
-	}
-
-	/**
-	 * @param string $method
-	 * @param string $url
-	 * @param array  $data
-	 * @param string $base = self::URL_API
+	 * @return QuarkDTO|null
 	 *
-	 * @return QuarkDTO|\stdClass
+	 * @throws OAuthAPIException
 	 */
-	public function API ($method = '', $url = '', $data = [], $base = self::URL_API) {
-		$request = new QuarkDTO(new QuarkFormIOProcessor());
-		$request->Method($method);
+	public function MailRUAPI ($method = '', QuarkDTO $request = null, $user = '') {
+		if ($request == null) $request = QuarkDTO::ForGET();
 
-		$get = $method == 'GET';
+		$params = QuarkObject::Merge($request->URI() ? $request->URI()->Params() : (object)array(), (object)array(
+			'method' => $method,
+			'app_id' => $this->_appId,
+			'secure' => 1
+		));
 
-		if (!$get)
-			$request->Data($data);
+		if ($this->_token) $params->session_key = $this->_token->access_token;
+		else $params->uid = func_num_args() == 3 ? $user : $this->_vid;
 
-		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+		$params->sig = $this->MailRUSign(func_num_args() == 3 ? $user : '', (array)$params);
 
-		$out = QuarkHTTPClient::To($base . $url . '?' . http_build_query(array_merge_recursive($get ? $data : array()) + array(
-			'access_token' => $this->_session
-		)), $request, $response);
+		$request->URIInit($params);
 
-		if (isset($out->error)) {
-			Quark::Log('MyMailRU.Exception: '
-				. (isset($out->error->error_code) ? $out->error->error_code : '')
-				. ': '
-				. (isset($out->error->error_msg) ? $out->error->error_msg : ''),
-				Quark::LOG_WARN);
-
-			Quark::Trace($out);
-
-			return null;
-		}
-
-		return $out;
+		return $this->OAuthAPI('', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
 	}
 }

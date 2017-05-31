@@ -2,13 +2,17 @@
 namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
+use Quark\IQuarkGuIDSynchronizer;
 use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomPrimaryKey;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkCollection;
+use Quark\QuarkDTO;
 use Quark\QuarkFile;
+use Quark\QuarkHTTPClient;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkObject;
@@ -19,8 +23,10 @@ use Quark\QuarkURI;
  *
  * @package Quark\DataProviders
  */
-class QuarkDNA implements IQuarkDataProvider {
+class QuarkDNA implements IQuarkDataProvider, IQuarkGuIDSynchronizer {
 	const OPTION_FORCE_ID = '___dna_force_id___';
+
+	const CONNECTION_EXTERNAL = 'external';
 
 	/**
 	 * @var QuarkFile $_storage
@@ -31,6 +37,11 @@ class QuarkDNA implements IQuarkDataProvider {
 	 * @var \stdClass $_db
 	 */
 	private $_db;
+
+	/**
+	 * @var QuarkURI $_uri
+	 */
+	private $_uri;
 
 	/**
 	 * @param IQuarkModel $model
@@ -64,7 +75,16 @@ class QuarkDNA implements IQuarkDataProvider {
 			
 		$this->_storage->Content(json_encode($db));
 
-		return $this->_storage->SaveContent();
+		if ($this->_uri->fragment != self::CONNECTION_EXTERNAL)
+			return $this->_storage->SaveContent();
+
+		$req = new QuarkDTO();
+		$req->Method(QuarkDTO::METHOD_PUT);
+		$req->Data($this->_storage);
+
+		$res = QuarkHTTPClient::To($this->_uri, $req, new QuarkDTO(new QuarkJSONIOProcessor()));
+
+		return $res && $res->Status() == QuarkDTO::STATUS_200_OK;
 	}
 
 	/**
@@ -78,13 +98,28 @@ class QuarkDNA implements IQuarkDataProvider {
 		if ($uri->path == null)
 			throw new QuarkArchException('QuarkDNA: Database path cannot be empty');
 
-		$this->_storage = new QuarkFile($uri->path);
+		if ($uri->fragment == self::CONNECTION_EXTERNAL) {
+			$this->_storage = QuarkHTTPClient::Download($uri, QuarkDTO::ForGET());
 
-		if ($this->_storage->Exists()) $this->_storage->Load();
-		else {
-			$this->_storage->Content('{}');
-			$this->_storage->SaveContent();
+			if ($this->_storage == null)
+				throw new QuarkArchException('QuarkDNA: Database does not exists. This usually means that you requested an external database and it was not found');
 		}
+		else {
+			$this->_storage = new QuarkFile($uri->path);
+
+			if ($this->_storage->Exists()) {
+				if (!Quark::MemoryAvailable())
+					throw new QuarkArchException('QuarkDNA: Database cannot be loaded because of reaching memory limit of ' . Quark::Config()->Alloc() . 'MB set in QuarkConfig::Alloc().');
+
+				$this->_storage->Load();
+			}
+			else {
+				$this->_storage->Content('{}');
+				$this->_storage->SaveContent();
+			}
+		}
+
+		$this->_uri = $uri;
 
 		$db = json_decode($this->_storage->Content());
 		
@@ -278,5 +313,12 @@ class QuarkDNA implements IQuarkDataProvider {
 		$collection = $this->_collection($model, $options);
 		
 		return $this->_db->{$collection}->Count($criteria, $options);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function GuIDRequest () {
+		return Quark::GuID();
 	}
 }

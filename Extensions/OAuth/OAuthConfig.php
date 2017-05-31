@@ -33,6 +33,11 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	private $_appSecret = '';
 
 	/**
+	 * @var object $_options
+	 */
+	private $_options;
+
+	/**
 	 * @var string $_name
 	 */
 	private $_name = '';
@@ -41,11 +46,13 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 * @param IQuarkOAuthProvider $provider
 	 * @param string $appId = ''
 	 * @param string $appSecret = ''
+	 * @param object $options = null
 	 */
-	public function __construct (IQuarkOAuthProvider $provider, $appId = '', $appSecret = '') {
+	public function __construct (IQuarkOAuthProvider $provider, $appId = '', $appSecret = '', $options = null) {
 		$this->_provider = $provider;
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
+		$this->_options = (object)$options;
 	}
 
 	/**
@@ -61,7 +68,8 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 * @return IQuarkOAuthConsumer
 	 */
 	public function Consumer (OAuthToken $token) {
-		$this->_provider->OAuthApplication($this->_appId, $this->_appSecret);
+		/** @noinspection PhpMethodParametersCountMismatchInspection */
+		$this->_provider->OAuthApplication($this->_appId, $this->_appSecret, $this->_options);
 
 		$consumer = $this->_provider->OAuthConsumer($token);
 
@@ -83,6 +91,13 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 */
 	public function &AppSecret () {
 		return $this->_appSecret;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function &Options () {
+		return $this->_options;
 	}
 
 	/**
@@ -111,7 +126,10 @@ class OAuthConfig implements IQuarkExtensionConfig {
 		if (isset($ini->AppSecret))
 			$this->_appSecret = $ini->AppSecret;
 
-		$this->_provider->OAuthApplication($this->_appId, $this->_appSecret);
+		$this->_options = $ini;
+
+		/** @noinspection PhpMethodParametersCountMismatchInspection */
+		$this->_provider->OAuthApplication($this->_appId, $this->_appSecret, $this->_options);
 	}
 
 	/**

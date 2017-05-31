@@ -284,7 +284,10 @@ class Quark {
 		$route = explode('/', str_replace('\\', '/', $path));
 
 		foreach ($route as $part) {
-			if ('.'  == $part) continue;
+			if ('.'  == $part) {
+				$absolutes[] = '';
+				continue;
+			}
 			if ('..' == $part) array_pop($absolutes);
 			else $absolutes[] = $part;
 		}
@@ -7499,6 +7502,13 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return QuarkGuID
+	 */
+	public function GuID () {
+		return new QuarkGuID($this instanceof IQuarkModelWithDataProvider ? $this->DataProvider() : null);
+	}
+
+	/**
 	 * @param array $options
 	 *
 	 * @return mixed
@@ -7719,7 +7729,7 @@ class QuarkModelSource implements IQuarkStackable {
 	 */
 	public function &Connect () {
 		if ($this->_uri == null)
-			throw new QuarkArchException('[QuarkModelSource::Connect] Unable to connect ' . $this->_name . ': connection URI is null');
+			throw new QuarkArchException('[QuarkModelSource::Connect] Unable to connect data source "' . $this->_name . '": connection URI is null');
 
 		$this->_connection = $this->_provider->Connect($this->_uri);
 		$this->_connected = true;
@@ -10659,12 +10669,12 @@ class QuarkDateInterval {
 	const ROUND_CEIL = 'ceil';
 	const ROUND_FLOOR = 'floor';
 	
-	const UNIT_YEAR = 'years';
-	const UNIT_MONTH = 'months';
-	const UNIT_DAY = 'days';
-	const UNIT_HOUR = 'hours';
-	const UNIT_MINUTE = 'minutes';
-	const UNIT_SECOND = 'seconds';
+	const UNIT_YEAR = 'year';
+	const UNIT_MONTH = 'month';
+	const UNIT_DAY = 'day';
+	const UNIT_HOUR = 'hour';
+	const UNIT_MINUTE = 'minute';
+	const UNIT_SECOND = 'second';
 	
 	const SECONDS_IN_YEAR = 31536000;
 	const SECONDS_IN_MONTH = 2678400;
@@ -10742,6 +10752,18 @@ class QuarkDateInterval {
 		self::UNIT_HOUR => 3,
 		self::UNIT_MINUTE => 4,
 		self::UNIT_SECOND => 5,
+	);
+
+	/**
+	 * @var array $_units
+	 */
+	private static $_units = array(
+		self::UNIT_YEAR,
+		self::UNIT_MONTH,
+		self::UNIT_DAY,
+		self::UNIT_HOUR,
+		self::UNIT_MINUTE,
+		self::UNIT_SECOND,
 	);
 	
 	/**
@@ -10910,13 +10932,64 @@ class QuarkDateInterval {
 	 * @return string
 	 */
 	public function Modifier () {
-		return ''
-			. $this->years . ' years '
-			. $this->months . ' months '
-			. $this->days . ' days '
-			. $this->hours . ' hours '
-			. $this->minutes . ' minutes '
-			. $this->seconds . ' seconds ';
+		$out = '';
+
+		foreach (self::$_units as $unit)
+			$out .= $this->{$unit . 's'} . ' ' . $unit . 's ';
+
+		return $out;
+	}
+
+	/**
+	 * @param QuarkDateInterval|string $offset = ''
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public function Offset ($offset = '') {
+		$value = $offset instanceof QuarkDateInterval ? $offset->Modifier() : $offset;
+		$units = implode('|', self::$_units);
+
+		if (preg_match_all('#(\-|\+)?(\d+)\s*(' . $units . ')s?#Uis', $value, $modifiers, PREG_SET_ORDER) == 0) return $this;
+
+		$seconds = 0;
+		$interval = null;
+
+		foreach ($modifiers as $i => &$modifier) {
+			$interval = null;
+
+			if ($modifier[3] == self::UNIT_YEAR) $interval = self::FromYears($modifier[2]);
+			if ($modifier[3] == self::UNIT_MONTH) $interval = self::FromMonths($modifier[2]);
+			if ($modifier[3] == self::UNIT_DAY) $interval = self::FromDays($modifier[2]);
+			if ($modifier[3] == self::UNIT_HOUR) $interval = self::FromHours($modifier[2]);
+			if ($modifier[3] == self::UNIT_MINUTE) $interval = self::FromMinutes($modifier[2]);
+			if ($modifier[3] == self::UNIT_SECOND) $interval = self::FromSeconds($modifier[2]);
+
+			if ($interval == null) continue;
+
+			$seconds += ($modifier[1] != '-' ? 1 : -1) * $interval->Seconds();
+		}
+
+		if ($seconds == 0) return $this;
+
+		$out = self::FromSeconds($this->Seconds() + $seconds);
+
+		$this->years = $out->years;
+		$this->months = $out->months;
+		$this->days = $out->days;
+		$this->hours = $out->hours;
+		$this->minutes = $out->minutes;
+		$this->seconds = $out->seconds;
+
+		return $this;
+	}
+
+	/**
+	 * @param int $rate = 1
+	 *
+	 * @return QuarkDateInterval
+	 */
+	public function Rate ($rate = 1) {
+		return self::FromSeconds($this->Seconds() * $rate);
 	}
 	
 	/**
@@ -11036,6 +11109,126 @@ class QuarkDateInterval {
 				($args > 8 && isset(self::$_dividers[$target][self::UNIT_MINUTE]) ? $minutes * self::$_dividers[$target][self::UNIT_MINUTE] : 0) +
 			0);
 	}
+}
+
+/**
+ * Class QuarkGuID
+ *
+ * @package Quark
+ */
+class QuarkGuID implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel, IQuarkPolymorphicModel {
+	/**
+	 * @var string $_provider
+	 */
+	private $_provider;
+
+	/**
+	 * @var string|mixed $_value
+	 */
+	private $_value;
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return (string)$this->_value;
+	}
+
+	/**
+	 * @param string $provider = null
+	 * @param string|mixed $value = null
+	 */
+	public function __construct ($provider = null, $value = null) {
+		$this->Provider($provider);
+		$this->Value(func_num_args() != 2 ? $this->Request() : $value);
+	}
+
+	/**
+	 * @param string $provider = null
+	 *
+	 * @return string
+	 */
+	public function Provider ($provider = null) {
+		if (func_num_args() != 0)
+			$this->_provider = $provider;
+
+		return $this->_provider;
+	}
+
+	/**
+	 * @param string|mixed $value = null
+	 *
+	 * @return string|mixed|null
+	 */
+	public function Value ($value = null) {
+		if (func_num_args() != 0)
+			$this->_value = $value;
+
+		return $this->_value;
+	}
+
+	/**
+	 * @return string|mixed|null
+	 */
+	public function Request () {
+		$value = null;
+
+		if ($this->_provider == null) $value = Quark::GuID();
+		else {
+			$source = Quark::Config()->DataProvider($this->_provider);
+			$provider = $source->Provider();
+
+			if ($provider instanceof IQuarkGuIDSynchronizer)
+				$value = $provider->GuIDRequest();
+		}
+
+		return $value;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Fields () { }
+
+	/**
+	 * @return mixed
+	 */
+	public function Rules () { }
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function Link ($raw) {
+		return new QuarkModel(new QuarkGuID($this->_provider, $raw));
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Unlink () {
+		return $this->_value;
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function PolymorphicExtract () {
+		return $this->_value;
+	}
+}
+
+/**
+ * Interface IQuarkGuIDSynchronizer
+ *
+ * @package Quark
+ */
+interface IQuarkGuIDSynchronizer {
+	/**
+	 * @return mixed
+	 */
+	public function GuIDRequest();
 }
 
 /**
@@ -14737,7 +14930,12 @@ class QuarkURI {
 	public function Query ($query = true, $fragment = true) {
 		$empty = strlen(trim($this->query)) == 0;
 
-		return Quark::NormalizePath($this->path . (!$query || $empty ? '' : (($empty || strpos($this->query, '?') !== false ? '' : '?') . $this->query)) . ($fragment ? $this->fragment : ''), false);
+		return Quark::NormalizePath(''
+			. $this->path
+			. (!$query || $empty ? '' : (($empty || strpos($this->query, '?') !== false ? '' : '?') . $this->query))
+			. ($fragment && $this->fragment ? ('#' . $this->fragment) : '')
+			, false
+		);
 	}
 
 	/**
@@ -16512,6 +16710,7 @@ class QuarkHTTPClient {
 			$http->_response->Method($http->_request->Method());
 
 			$request = $http->_request->SerializeRequest();
+			Quark::Trace($request);
 
 			return $client->Send($request);
 		});
@@ -17366,7 +17565,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (Quark::MemoryAvailable()) {
+		if (!Quark::MemoryAvailable())
+			Quark::Log('[QuarkFile::Load] Insufficient memory available for loading file "' . $this->location . '". Current memory limit in QuarkConfig::Alloc(): ' . Quark::Config()->Alloc() . 'MB.');
+		else {
 			$this->Content(file_get_contents($this->location));
 			$this->type = self::MimeOf($this->_content);
 			$this->extension = self::ExtensionByMime($this->type);
