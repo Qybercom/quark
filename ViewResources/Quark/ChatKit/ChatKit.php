@@ -37,7 +37,8 @@ class ChatKit implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 			$this->_stream != null
 				? new QuarkProxyJSViewResource('_chat', array(
 					'host' => $this->_stream->host,
-					'port' => $this->_stream->port
+					'port' => $this->_stream->port,
+					'secure' => $this->_stream->Secure()
 				))
 				: null,
 			new QuarkPresence(),

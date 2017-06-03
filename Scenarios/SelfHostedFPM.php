@@ -5,6 +5,7 @@ use Quark\IQuarkTask;
 
 use Quark\Quark;
 use Quark\QuarkArchException;
+use Quark\QuarkCertificate;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkFile;
@@ -32,6 +33,7 @@ class SelfHostedFPM implements IQuarkTask {
 		'/ViewModels',
 		'/Views',
 		'/runtime',
+		'/loader.php',
 		'.htaccess',
 	);
 	
@@ -61,7 +63,7 @@ class SelfHostedFPM implements IQuarkTask {
 		if ($fpm == null)
 			throw new QuarkArchException('Attempt to start a not configured self-hosted FPM instance');
 
-		$http = self::Instance($fpm, $this->_secure);
+		$http = self::Instance($fpm, $this->_secure, Quark::Config()->SelfHostedFPMLog(), Quark::Config()->SelfHostedFPMCertificate());
 
 		if (!$http->Bind())
 			throw new QuarkArchException('Can not bind self-hosted FPM instance on ' . $fpm);
@@ -72,19 +74,22 @@ class SelfHostedFPM implements IQuarkTask {
 	}
 	
 	/**
-	 * @param string $uri = QuarkFPMEnvironment::SELF_HOSTED
+	 * @param QuarkURI|string $uri = QuarkFPMEnvironment::SELF_HOSTED
 	 * @param string[] $secure = []
 	 * @param bool $log = true
+	 * @param QuarkCertificate $certificate = null
 	 *
 	 * @return QuarkHTTPServer
 	 */
-	public static function Instance ($uri = QuarkFPMEnvironment::SELF_HOSTED, $secure = [], $log = true) {
+	public static function Instance ($uri = QuarkFPMEnvironment::SELF_HOSTED, $secure = [], $log = true, QuarkCertificate $certificate = null) {
 		return new QuarkHTTPServer($uri, function (QuarkDTO $request) use ($secure, $log) {
-			$file = new QuarkFile(Quark::Host() . $request->URI()->path);
-			$query = $request->URI() instanceof QuarkURI ? $request->URI()->Query() : self::UNKNOWN_URI;
+			$uri = $request->URI();
+
+			$file = isset($uri->path) ? new QuarkFile(Quark::Host() . $uri->path) : null;
+			$query = $uri instanceof QuarkURI ? $uri->Query() : self::UNKNOWN_URI;
 
 			try {
-				if ($file->Exists()) {
+				if ($file != null && $file->Exists()) {
 					/**
 					 * http://stackoverflow.com/a/684005/2097055
 					 */
@@ -156,6 +161,6 @@ class SelfHostedFPM implements IQuarkTask {
 			unset($file, $response, $request);
 
 			return $out;
-		});
+		}, $certificate);
 	}
 }
