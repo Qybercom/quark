@@ -28,6 +28,8 @@ class SelfHostedFPM implements IQuarkTask {
 	 * @var string[] $_secure
 	 */
 	private $_secure = array(
+		'/.git',
+		'/.idea',
 		'/Services',
 		'/Models',
 		'/ViewModels',
