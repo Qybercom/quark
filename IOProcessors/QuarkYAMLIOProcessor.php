@@ -4,19 +4,17 @@ namespace Quark\IOProcessors;
 use Quark\IQuarkIOProcessor;
 
 /**
- * Class YAMLIOProcessor
+ * Class QuarkYAMLIOProcessor
  *
  * @package Quark\IOProcessors
  */
-class YAMLIOProcessor implements IQuarkIOProcessor {
+class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 	const MIME = 'text/yaml';
 
 	/**
 	 * @return string
 	 */
-	public function MimeType () {
-		return self::MIME;
-	}
+	public function MimeType () { return self::MIME; }
 
 	/**
 	 * @param $data

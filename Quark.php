@@ -408,6 +408,29 @@ class Quark {
 	}
 
 	/**
+	 * @param int|float $min = null
+	 * @param int|float $max = null
+	 *
+	 * @return float
+	 */
+	public static function RandomFloat ($min = null, $max = null) {
+		if ($min === null) $min = mt_rand();
+		if ($max === null) $max = mt_rand();
+		if ($min > $max) $max = $min;
+
+		$min_int = (int)$min;
+		$min_float = $min == 0 ? 0 : (int)substr(1 / $min_int, 2);
+
+		$max_int = (int)$max;
+		$max_float = $max == 0 ? 0 : (int)substr(1 / $max_int, 2);
+
+		if ($max_float != 0) $max_int -= 1;
+		if ($min_int > $max_int) $max_int = $min_int;
+
+		return (float)(mt_rand($min_int, $max_int) . '.' . mt_rand($min_float, $max_float));
+	}
+
+	/**
 	 * @param string $regEx = ''
 	 *
 	 * @return mixed
@@ -3376,6 +3399,27 @@ trait QuarkServiceBehavior {
 		unset($service);
 
 		return $output;
+	}
+
+	/**
+	 * @param string $name = ''
+	 * @param string $content = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public function Download ($name = '', $content = '') {
+		return QuarkFile::ForDownload($name, $content)->Download();
+	}
+
+	/**
+	 * @param IQuarkIOProcessor $processor
+	 * @param string $name = ''
+	 * @param $data = []
+	 *
+	 * @return QuarkFile
+	 */
+	public function EncodeAndDownload (IQuarkIOProcessor $processor, $name = '', $data = []) {
+		return QuarkFile::ForDownload($name . '.' . QuarkFile::ExtensionByMime($processor->MimeType()), $processor->Encode($data))->Download();
 	}
 
 	/**
@@ -7592,6 +7636,17 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @param IQuarkLinkedModel $model = null
+	 * @param $value = null
+	 * @param bool $linked = false
+	 *
+	 * @return QuarkLazyLink
+	 */
+	public function LazyLink (IQuarkLinkedModel $model, $value = null, $linked = false) {
+		return new QuarkLazyLink($model, func_num_args() > 1 ? $value : '', $linked);
+	}
+
+	/**
 	 * @return QuarkGuID
 	 */
 	public function GuID () {
@@ -8415,6 +8470,8 @@ class QuarkModel implements IQuarkContainer {
 			else $valid[$key] = $value->ValidationRules();
 		}
 
+		if ($output instanceof IQuarkModelWithAfterValidate && $output->AfterValidate() === false) return false;
+
 		return $valid;
 	}
 
@@ -9200,6 +9257,18 @@ interface IQuarkModelWithBeforeValidate {
 	 * @return mixed
 	 */
 	public function BeforeValidate();
+}
+
+/**
+ * Interface IQuarkModelWithAfterValidate
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithAfterValidate {
+	/**
+	 * @return mixed
+	 */
+	public function AfterValidate();
 }
 
 /**
@@ -19926,6 +19995,10 @@ class QuarkOpenSSLCipher implements IQuarkEncryptionProtocol {
  * @package Quark
  */
 class QuarkCipherKeyPair extends QuarkFile {
+	const KEY_PRIVATE_ENCRYPTED = '#-----BEGIN ENCRYPTED PRIVATE KEY-----(.*)-----END ENCRYPTED PRIVATE KEY-----#Uis';
+	const KEY_PRIVATE = '#-----BEGIN PRIVATE KEY-----(.*)-----END PRIVATE KEY-----#Uis';
+	const KEY_PUBLIC = '#-----BEGIN PUBLIC KEY-----(.*)-----END PUBLIC KEY-----#Uis';
+
 	/**
 	 * @var array $_config
 	 */
@@ -19955,6 +20028,11 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @var bool $_located = true
 	 */
 	private $_located = true;
+
+	/**
+	 * @var bool $_init = false
+	 */
+	private $_init = false;
 
 	/**
 	 * @param string $location = ''
@@ -19997,14 +20075,21 @@ class QuarkCipherKeyPair extends QuarkFile {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function Init () {
+		return $this->_init;
+	}
+
+	/**
 	 * @param string $message = ''
 	 * @param bool $openssl = true
 	 *
-	 * @return null
+	 * @return bool
 	 */
 	private static function _error ($message = '', $openssl = true) {
 		Quark::Log('[QuarkCipherKeyPair] ' . $message . ($openssl ? '. OpenSSL error: "' . openssl_error_string() . '".' : ''), Quark::LOG_WARN);
-		return null;
+		return false;
 	}
 
 	/**
@@ -20015,34 +20100,32 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 *
 	 * @return QuarkCipherKeyPair
 	 */
-	public static function Generate ($passphrase = null, $algo = QuarkCertificate::ALGO_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+	public static function GenerateNew ($passphrase = null, $algo = QuarkCertificate::ALGO_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
 		$config = QuarkCertificate::OpenSSLConfig($algo, $length, $type);
 
-		$key = openssl_pkey_new($config);
-
-		if (!$key)
-			return self::_error('Generate: Cannot generate new private key');
-
-		$out = new self('', null, false, $config);
-		$out->_key = $key;
-		$out->_passphrase = $passphrase;
+		$out = new self('', false, null, $config);
+		$out->Generate($passphrase);
 
 		return $out;
 	}
 
 	/**
 	 * @param string $content = ''
+	 * @param string $passphrase = null
 	 *
 	 * @return QuarkCipherKeyPair
 	 */
-	public static function FromContent ($content = '') {
+	public static function FromContent ($content = '', $passphrase = null) {
 		$key = new self();
 		$key->_located = false;
+		$key->_passphrase = $passphrase;
 
 		if (func_num_args() != 0) {
 			$key->_content = $content;
 			$key->_loaded = true;
-			$key->_load();
+
+			if (func_num_args() == 2 || !preg_match(self::KEY_PRIVATE_ENCRYPTED, $key->_content))
+				$key->_load();
 		}
 
 		return $key;
@@ -20085,7 +20168,7 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return string
 	 */
 	public function PublicEncrypt ($data = '') {
-		return $this->_cipherPublic->Encrypt($this->PublicKey(), $data);
+		return $this->_cipherPublic->Encrypt($this->PublicKey(false), $data);
 	}
 
 	/**
@@ -20094,7 +20177,7 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return string
 	 */
 	public function PublicDecrypt ($data = '') {
-		return $this->_cipherPublic->Decrypt($this->PublicKey(), $data);
+		return $this->_cipherPublic->Decrypt($this->PublicKey(false), $data);
 	}
 
 	/**
@@ -20128,7 +20211,7 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return string
 	 */
 	public function PrivateEncrypt ($data = '') {
-		return $this->_cipherPrivate->Encrypt($this->PrivateKey(), $data);
+		return $this->_cipherPrivate->Encrypt($this->PrivateKey(false), $data);
 	}
 
 	/**
@@ -20137,7 +20220,54 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return string
 	 */
 	public function PrivateDecrypt ($data = '') {
-		return $this->_cipherPrivate->Decrypt($this->PrivateKey(), $data);
+		return $this->_cipherPrivate->Decrypt($this->PrivateKey(false), $data);
+	}
+
+	/**
+	 * @param string $passphrase = null
+	 * @param string $algo = QuarkCertificate::ALGO_SHA512
+	 * @param int $length = QuarkCertificate::DEFAULT_BITS
+	 * @param int $type = OPENSSL_KEYTYPE_RSA
+	 *
+	 * @return bool
+	 */
+	public function Generate ($passphrase = null, $algo = QuarkCertificate::ALGO_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		if (func_num_args() > 1)
+			$this->_config = QuarkCertificate::OpenSSLConfig($algo, $length, $type);
+
+		$key = openssl_pkey_new($this->_config);
+
+		if (!$key)
+			return self::_error('Generate: Cannot generate new private key');
+
+		$this->_key = $key;
+		$this->_passphrase = $passphrase;
+
+		return true;
+	}
+
+	/**
+	 * @param string $parent = ''
+	 * @param string $name = ''
+	 *
+	 * @return bool
+	 */
+	public function SaveKeyPair ($parent = '', $name = '') {
+		$location = $this->location;
+		$content = $this->_content;
+
+		$this->Location($parent . '/' . $name . '.public.key');
+		$this->Content($this->PublicKey());
+		if (!$this->SaveContent()) return false;
+
+		$this->Location($parent . '/' . $name . '.private.key');
+		$this->Content($this->PrivateKey());
+		if (!$this->SaveContent()) return false;
+
+		$this->Location($location);
+		$this->Content($content);
+
+		return true;
 	}
 
 	/**
@@ -20157,7 +20287,19 @@ class QuarkCipherKeyPair extends QuarkFile {
 	}
 
 	/**
-	 * @return null
+	 * @param string $passphrase = null
+	 *
+	 * @return bool
+	 */
+	public function Reload ($passphrase = null) {
+		if (func_num_args() != 0)
+			$this->_passphrase = $passphrase;
+
+		return $this->_load();
+	}
+
+	/**
+	 * @return bool
 	 */
 	private function _load () {
 		$key = openssl_pkey_get_private($this->_content, $this->_passphrase);
@@ -20166,7 +20308,9 @@ class QuarkCipherKeyPair extends QuarkFile {
 			return self::_error('Load: Cannot get private key from specified content');
 
 		$this->_key = $key;
-		return null;
+		$this->_init = true;
+
+		return true;
 	}
 
 	/**
