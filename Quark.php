@@ -4879,6 +4879,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $resource = ''
+	 * @param bool $localized = false
+	 *
+	 * @return string
+	 */
+	public function ThemeResourceURL ($resource = '', $localized = false) {
+		return $this->__call('ThemeResourceURL', func_get_args());
+	}
+
+	/**
 	 * @param string $uri
 	 * @param bool $signed = false
 	 *
@@ -5346,6 +5356,16 @@ class QuarkView implements IQuarkContainer {
 	 */
 	public function ThemeResource ($resource = '', $localized = false) {
 		return $this->Theme($localized) . '/' . $resource;
+	}
+
+	/**
+	 * @param string $resource = ''
+	 * @param bool $localized = false
+	 *
+	 * @return string
+	 */
+	public function ThemeResourceURL ($resource = '', $localized = false) {
+		return $this->ThemeURL($localized) . '/' . $resource;
 	}
 
 	/**
