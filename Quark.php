@@ -9841,7 +9841,7 @@ class QuarkField {
 		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
-		return preg_match('#(.*)\@(.*)#Uis', $key);
+		return preg_match('#(.+)\@(.+)#Uis', $key);
 	}
 
 	/**
