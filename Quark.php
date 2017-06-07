@@ -20903,6 +20903,8 @@ class QuarkSource extends QuarkFile {
 			$source = str_replace($rule . ' ', $rule, $source);
 		}
 
+		$source = str_replace('and(', 'and (', $source);
+
 		return $source;
 	}
 }
