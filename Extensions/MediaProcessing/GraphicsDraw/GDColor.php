@@ -5,6 +5,7 @@ use Quark\IQuarkLinkedModel;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
+use Quark\Quark;
 use Quark\QuarkModel;
 
 /**
@@ -149,6 +150,20 @@ class GDColor implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function HEXToCSS ($short = false) {
 		return '#' . $this->ToHEX($short);
+	}
+
+	/**
+	 * @param float $alpha = 1.0
+	 *
+	 * @return GDColor
+	 */
+	public static function RandomColor ($alpha = 1.0) {
+		return new self(
+			mt_rand(0, 255),
+			mt_rand(0, 255),
+			mt_rand(0, 255),
+			func_num_args() != 0 ? $alpha : Quark::RandomFloat(0.0, 1.0)
+		);
 	}
 
 	/**
