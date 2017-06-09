@@ -10404,6 +10404,13 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const CURRENT = '';
 	const UNKNOWN_YEAR = '0000';
 
+	const PRECISE_YEARS = 'Y-01-01 00:00:00';
+	const PRECISE_MONTHS = 'Y-m-01 00:00:00';
+	const PRECISE_DAYS = 'Y-m-d 00:00:00';
+	const PRECISE_HOURS = 'Y-m-d H:00:00';
+	const PRECISE_MINUTES = 'Y-m-d H:i:00';
+	const PRECISE_SECONDS = 'Y-m-d H:i:s';
+
 	/**
 	 * @var IQuarkCulture|QuarkCultureISO $_culture
 	 */
@@ -10603,6 +10610,18 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public function Format ($format = '') {
 		return $this->_date->format($format);
+	}
+
+	/**
+	 * @param string $level = self::PRECISE_SECONDS
+	 *
+	 * @return QuarkDate
+	 */
+	public function Precise ($level = self::PRECISE_SECONDS) {
+		$out = clone $this;
+		$out->Value($out->Format($level));
+
+		return $out;
 	}
 
 	/**
@@ -20388,7 +20407,12 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return $this->_located ? $this->Location() : $this->PrivateKey();
+		return $this->_located
+			? $this->Location()
+			: ($this->_init
+				? $this->PrivateKey()
+				: $this->_content
+			);
 	}
 }
 
