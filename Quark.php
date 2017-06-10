@@ -777,6 +777,7 @@ class Quark {
  */
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
+	const INI_ROUTES = 'Routes';
 	const INI_LOCALIZATION_DETAILS = 'LocalizationDetails';
 	const INI_LOCAL_SETTINGS = 'LocalSettings';
 	const INI_DATA_PROVIDERS = 'DataProviders';
@@ -960,6 +961,11 @@ class QuarkConfig {
 	 * @var bool $_allowIndexFallback = false
 	 */
 	private $_allowIndexFallback = false;
+
+	/**
+	 * @var array $_routes = []
+	 */
+	private $_routes = array();
 
 	/**
 	 * @param string $ini = ''
@@ -1401,6 +1407,21 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $original = ''
+	 * @param string $target = ''
+	 *
+	 * @return string|null
+	 */
+	public function Route ($original = '', $target = '') {
+		$original = strtolower($original);
+
+		if (func_num_args() == 2)
+			$this->_routes[$original] = $target;
+
+		return isset($this->_routes[$original]) ? $this->_routes[$original] : null;
+	}
+
+	/**
 	 * @param string $file
 	 *
 	 * @return string
@@ -1652,8 +1673,12 @@ class QuarkConfig {
 		$ini = (array)$ini;
 
 		if (isset($ini[self::INI_QUARK]))
-			foreach ($ini[self::INI_QUARK] as $key => $value)
+			foreach ($ini[self::INI_QUARK] as $key => &$value)
 				self::_iniOption($this, $key, $value);
+
+		if (isset($ini[self::INI_ROUTES]))
+			foreach ($ini[self::INI_ROUTES] as $key => &$value)
+				$this->Route($key, $value);
 
 		if (isset($ini[self::INI_DATA_PROVIDERS]))
 			foreach ($ini[self::INI_DATA_PROVIDERS] as $key => &$connection) {
@@ -1677,7 +1702,7 @@ class QuarkConfig {
 			if ($this->_settingsLocal == null)
 				$this->_settingsLocal = new \stdClass();
 			
-			foreach ($ini[self::INI_LOCAL_SETTINGS] as $key => $value)
+			foreach ($ini[self::INI_LOCAL_SETTINGS] as $key => &$value)
 				$this->_settingsLocal->$key = $value;
 		}
 
@@ -1685,7 +1710,7 @@ class QuarkConfig {
 			if ($this->_localizationDetails == null)
 				$this->_localizationDetails = new \stdClass();
 			
-			foreach ($ini[self::INI_LOCALIZATION_DETAILS] as $key => $value)
+			foreach ($ini[self::INI_LOCALIZATION_DETAILS] as $key => &$value)
 				$this->_localizationDetails->$key = $value;
 		}
 
@@ -1701,7 +1726,7 @@ class QuarkConfig {
 					$ready = $item->ConfigurationReady($key, $options);
 
 					if ($ready == true || $ready === null)
-						foreach ($options as $name => $value)
+						foreach ($options as $name => &$value)
 							self::_iniOption($item, $name, $value);
 				}
 			}
@@ -1736,6 +1761,7 @@ class QuarkConfig {
 		unset($environment, $environments);
 		unset($extension, $extensions);
 		unset($options, $callback, $ini);
+		unset($key, $value);
 	}
 
 	/**
@@ -2304,12 +2330,12 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 				if (!isset($argv[2]))
 					throw new QuarkArchException('Predefined scenario not selected');
 
-				$class = '\\Quark\\Scenarios\\' . str_replace('/', '\\', $argv[2]);
-
-				if (!class_exists($class))
-					throw new QuarkArchException('Unknown predefined scenario ' . $class);
-
-				$service = new $class();
+				try {
+					$service = QuarkService::Custom('/' . $argv[2], __DIR__ . '/Scenarios', 'Quark/Scenarios', QuarkService::POSTFIX_PREDEFINED_SCENARIO, false)->Service();
+				}
+				catch (QuarkHTTPException $e) {
+					throw new QuarkArchException('Unknown predefined scenario ' . $e->class);
+				}
 			}
 			else $service = (new QuarkService('/' . $argv[1]))->Service();
 
@@ -3728,6 +3754,9 @@ trait QuarkCLIBehavior {
  * @package Quark
  */
 class QuarkService implements IQuarkContainer {
+	const POSTFIX_SERVICE = 'Service';
+	const POSTFIX_PREDEFINED_SCENARIO = '';
+
 	/**
 	 * @var IQuarkService|IQuarkAuthorizableService|IQuarkServiceWithAccessControl|IQuarkPolymorphicService $_service
 	 */
@@ -3760,22 +3789,27 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param string $service
+	 * @param string $base = ''
+	 * @param string $postfix = self::POSTFIX_SERVICE
 	 *
 	 * @return string
 	 */
-	private static function _bundle ($service) {
-		return Quark::NormalizePath(Quark::Host() . '/' . Quark::Config()->Location(QuarkConfig::SERVICES) . '/' . $service . 'Service.php', false);
+	private static function _bundle ($service, $base = '', $postfix = self::POSTFIX_SERVICE) {
+		return Quark::NormalizePath($base . '/' . $service . $postfix . '.php', false);
 	}
 
 	/**
 	 * @param string $uri = ''
+	 * @param string $base = ''
+	 * @param string $namespace = ''
+	 * @param string $postfix = self::POSTFIX_SERVICE
 	 *
 	 * @return IQuarkService
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
 	 */
-	public static function Resolve ($uri = '') {
+	public static function Resolve ($uri = '', $base = '', $namespace = '', $postfix = self::POSTFIX_SERVICE) {
 		if ($uri == 'index.php') $uri = '';
 
 		$route = QuarkURI::FromURI(Quark::NormalizePath($uri), false);
@@ -3783,20 +3817,28 @@ class QuarkService implements IQuarkContainer {
 
 		$buffer = array();
 
-		foreach ($path as $item)
-			if (strlen(trim($item)) != 0)
-				$buffer[] = ucfirst(trim($item));
+		foreach ($path as $item) {
+			if (strlen(trim($item)) == 0) continue;
+
+			$section = explode('-', trim($item));
+			$out = array();
+
+			foreach ($section as $elem)
+				$out[] = ucfirst($elem);
+
+			$buffer[] = implode('', $out);
+		}
 
 		$route = $buffer;
 		unset($buffer);
 		$length = sizeof($route);
 		$service = $length == 0 ? 'Index' : implode('/', $route);
-		$path = self::_bundle($service);
+		$path = self::_bundle($service, $base, $postfix);
 
 		while ($length > 0) {
 			if (is_file($path)) break;
 
-			$index = self::_bundle($service . '\\Index');
+			$index = self::_bundle($service . '\\Index', $base, $postfix);
 
 			if (is_file($index)) {
 				$service .= '\\Index';
@@ -3807,18 +3849,19 @@ class QuarkService implements IQuarkContainer {
 
 			$length--;
 			$service = preg_replace('#\/' . preg_quote(ucfirst(trim($route[$length]))) . '$#Uis', '', $service);
-			$path = self::_bundle($service);
+			$path = self::_bundle($service, $base, $postfix);
 		}
 
 		if (Quark::Config()->AllowIndexFallback() && !file_exists($path)) {
 			$service = 'Index';
-			$path = self::_bundle($service);
+			$path = self::_bundle($service, $base, $postfix);
 		}
 
-		if (!file_exists($path))
-			throw QuarkHTTPException::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND, 'Unknown service file ' . $path);
+		$class = str_replace('/', '\\', ($namespace ? '/' . $namespace : '') . '/' . $service . $postfix);
 
-		$class = str_replace('/', '\\', '/Services/' . $service . 'Service');
+		if (!file_exists($path))
+			throw QuarkHTTPException::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND, 'Unknown service file ' . $path, $class);
+
 		$bundle = new $class();
 
 		if (!($bundle instanceof IQuarkService))
@@ -3831,19 +3874,49 @@ class QuarkService implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkService|string $uri
+	 * @param string $base = null
+	 * @param string $namespace = ''
+	 * @param string $postfix = ''
+	 * @param bool $routes = true
+	 *
+	 * @return QuarkService
+	 */
+	public static function Custom ($uri, $base = null, $namespace = '', $postfix = '', $routes = true) {
+		return new self($uri, null, null, $base, $namespace, $postfix, $routes);
+	}
+
+	/**
+	 * @param IQuarkService|string $uri
 	 * @param IQuarkIOProcessor $input = null
 	 * @param IQuarkIOProcessor $output = null
+	 * @param string $base = null
+	 * @param string $namespace = null
+	 * @param string $postfix = self::POSTFIX_SERVICE
+	 * @param bool $routes = true
 	 *
 	 * @throws QuarkArchException
 	 * @throws QuarkHTTPException
 	 */
-	public function __construct ($uri, IQuarkIOProcessor $input = null, IQuarkIOProcessor $output = null) {
+	public function __construct ($uri, IQuarkIOProcessor $input = null, IQuarkIOProcessor $output = null, $base = null, $namespace = null, $postfix = self::POSTFIX_SERVICE, $routes = true) {
 		if ($uri instanceof IQuarkService) {
 			$this->_service = $uri;
 			$class = get_class($this->_service);
 			$uri = substr(substr($class, 8), 0, -7);
 		}
-		else $this->_service = self::Resolve($uri);
+		else {
+			$namespace = $namespace !== null ? $namespace : Quark::Config()->Location(QuarkConfig::SERVICES);
+			$base = $base !== null ? $base : Quark::Host() . '/' . $namespace;
+
+			if ($routes) {
+				$query = strpos($uri, '?');
+				$route = Quark::Config()->Route($query ? substr($uri, 0, $query) :  substr($uri, 0));
+
+				if ($route !== null)
+					$uri = $route;
+			}
+
+			$this->_service = self::Resolve($uri, $base, $namespace, $postfix);
+		}
 
 		$this->_input = new QuarkDTO();
 		$this->_input->Processor($input ? $input : new QuarkFormIOProcessor());
@@ -18511,6 +18584,11 @@ class QuarkHTTPException extends QuarkException {
 	public $log = '';
 
 	/**
+	 * @var string $class = ''
+	 */
+	public $class = '';
+
+	/**
 	 * @param int $status = 500
 	 * @param string $message
 	 * @param string $log = ''
@@ -18533,13 +18611,15 @@ class QuarkHTTPException extends QuarkException {
 	/**
 	 * @param string $status
 	 * @param string $log = ''
+	 * @param string $class = ''
 	 *
 	 * @return QuarkHTTPException
 	 */
-	public static function ForStatus ($status, $log = '') {
+	public static function ForStatus ($status, $log = '', $class = '') {
 		$exception = new self();
 		$exception->status = $status;
 		$exception->log = $log;
+		$exception->class = $class;
 
 		return $exception;
 	}
