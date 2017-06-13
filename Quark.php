@@ -20831,6 +20831,7 @@ class QuarkCipherKeyPair extends QuarkFile {
 		$this->_key = $key;
 		$this->_passphrase = $passphrase;
 		$this->_loaded = true;
+		$this->_init = true;
 
 		return true;
 	}

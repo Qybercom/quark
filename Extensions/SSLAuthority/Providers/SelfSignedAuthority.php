@@ -46,6 +46,12 @@ class SelfSignedAuthority implements IQuarkSSLAuthorityProvider {
 	}
 
 	/**
+	 * Options:
+	 *  - CertificateValidityPeriod int    365    - Certificate validity period interval in days
+	 *  - SigningAlgo               string sha512 - Certificate signing algorithm
+	 *  - KeyLength                 int    4096   - Certificate private key default length in bits
+	 *  - KeyType                   string RSA    - Certificate private key default type
+	 *
 	 * @param object $options
 	 *
 	 * @return mixed

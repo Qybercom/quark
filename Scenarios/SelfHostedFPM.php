@@ -11,6 +11,7 @@ use Quark\QuarkHTTPServerHost;
 use Quark\QuarkHTTPException;
 use Quark\QuarkArchException;
 use Quark\QuarkThreadSet;
+use Quark\QuarkURI;
 
 /**
  * Class SelfHostedFPM
@@ -67,6 +68,11 @@ class SelfHostedFPM implements IQuarkTask {
 		$http->Deny($this->_secure);
 
 		$http->On(QuarkHTTPServerHost::EVENT_HTTP_ERROR, function (QuarkDTO $request, QuarkDTO $response, $e = null) {
+			if (!($request->URI() instanceof QuarkURI)) {
+				Quark::Log('[SelfHostedFPM] Can not parse query', Quark::LOG_FATAL);
+				return;
+			}
+
 			$query = $request->URI()->Query();
 			$msg = '[SelfHostedFPM] ' . $response->Status();
 			$lvl = Quark::LOG_FATAL;
