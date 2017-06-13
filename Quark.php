@@ -5040,6 +5040,40 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $location
+	 * @param IQuarkViewResourceType $type
+	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource
+	 */
+	public function Resource ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = []) {
+		return new QuarkGenericViewResource($location, $type, $minimize, $dependencies);
+	}
+
+	/**
+	 * @param IQuarkViewResource|string $location
+	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
+	 */
+	public function ResourceCSS ($location, $minimize = true, $dependencies = []) {
+		return QuarkGenericViewResource::CSS($location, $minimize, $dependencies);
+	}
+
+	/**
+	 * @param IQuarkViewResource|string $location
+	 * @param bool $minimize = true
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
+	 */
+	public function ResourceJS ($location, $minimize = true, $dependencies = []) {
+		return QuarkGenericViewResource::JS($location, $minimize, $dependencies);
+	}
+
+	/**
 	 * @param string $uri
 	 * @param bool $signed = false
 	 *
@@ -20106,10 +20140,11 @@ class QuarkCertificate extends QuarkFile {
 	 * @param string $algo = self::ALGO_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
+	 * @param bool $text = false
 	 *
 	 * @return string|null
 	 */
-	public function SigningRequest ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+	public function SigningRequest ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA, $text = false) {
 		$config = self::OpenSSLConfig($algo, $length, $type, $this->subjectAltName);
 
 		if (!($this->_key instanceof QuarkCipherKeyPair))
@@ -20125,9 +20160,20 @@ class QuarkCertificate extends QuarkFile {
 			return self::_error('SigningRequest: Cannot generate CSR');
 
 		$out = '';
-		$ok = openssl_csr_export($csr, $out, false); // TODO: notext
+		$ok = openssl_csr_export($csr, $out, $text); // TODO: no text
 
 		return $ok ? $out : null;
+	}
+
+	/**
+	 * @param string $algo = self::ALGO_SHA512
+	 * @param int $length = self::DEFAULT_BITS
+	 * @param int $type = OPENSSL_KEYTYPE_RSA
+	 *
+	 * @return string|null
+	 */
+	public function SigningRequestWithText ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		return $this->SigningRequest($algo, $length, $type, true);
 	}
 
 	/**
