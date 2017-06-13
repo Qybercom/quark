@@ -49,6 +49,31 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	private $_key;
 
 	/**
+	 * @var string $_accountPassphrase = null
+	 */
+	private $_accountPassphrase = null;
+
+	/**
+	 * @var bool $_accountMultiple = true
+	 */
+	private $_accountMultiple = true;
+
+	/**
+	 * @var string $_keyAlgo = QuarkCertificate::ALGO_SHA512
+	 */
+	private $_accountAlgo = QuarkCertificate::ALGO_SHA512;
+
+	/**
+	 * @var int $_accountLength = QuarkCertificate::DEFAULT_BITS
+	 */
+	private $_accountLength = QuarkCertificate::DEFAULT_BITS;
+
+	/**
+	 * @var int $_accountType = OPENSSL_KEYTYPE_RSA
+	 */
+	private $_accountType = OPENSSL_KEYTYPE_RSA;
+
+	/**
 	 * @var string $_nonce = ''
 	 */
 	private $_nonce = '';
@@ -102,35 +127,31 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		if (isset($options->AccountKey))
 			$this->_key = new QuarkCipherKeyPair($options->AccountKey);
 
-		if (isset($options->AccountPassphrase) && $this->_key instanceof QuarkCipherKeyPair)
-			$this->_key->Passphrase($options->AccountPassphrase);
+		if (isset($options->AccountPassphrase)) {
+			$this->_accountPassphrase = $options->AccountPassphrase;
+
+			if ($this->_key instanceof QuarkCipherKeyPair)
+				$this->_key->Passphrase($options->AccountPassphrase);
+		}
 
 		if (isset($options->Contact))
 			$this->_contact = $options->Contact;
 
-		$multiple = isset($options->MultipleUse) && $options->MultipleUse;
-		$keyAlgo = isset($options->AccountKeyAlgo) ? $options->AccountKeyAlgo : QuarkCertificate::ALGO_SHA512;
-		$keyLength = isset($options->AccountKeyLength) ? (int)$options->AccountKeyLength : QuarkCertificate::DEFAULT_BITS;
-		$keyType = QuarkObject::ConstValue('OPENSSL_KEYTYPE_' . (isset($options->AccountKeyType) ? $options->AccountKeyType : 'RSA'));
+		if (isset($options->MultipleUse))
+			$this->_accountMultiple = $options->MultipleUse;
+
+		if (isset($options->AccountKeyAlgo))
+			$this->_accountAlgo = $options->AccountKeyAlgo;
+
+		if (isset($options->AccountKeyLength))
+			$this->_accountLength = (int)$options->AccountKeyLength;
+
+		if (isset($options->AccountKeyType))
+			$this->_accountType = QuarkObject::ConstValue('OPENSSL_KEYTYPE_' . $options->AccountKeyType);
 
 		$this->_challenge = isset($options->WellKnown)
 			? $options->WellKnown
 			: Quark::Host() . self::CHALLENGE;
-
-		if ($multiple && $this->_key instanceof QuarkCipherKeyPair && !$this->_key->Exists() && !$this->_key->SaveContent())
-			self::_error('Cannot init account private key');
-
-		$this->_key = $this->_key instanceof QuarkCipherKeyPair && $this->_key->Exists()
-			? $this->_key->Load()
-			: QuarkCipherKeyPair::GenerateNew(isset($options->AccountPassphrase) ? $options->AccountPassphrase : null, $keyAlgo, $keyLength, $keyType);
-
-		$init = $this->_key->Init();
-
-		if (!$init)
-			$this->_key->Generate($this->_key->Passphrase(), $keyAlgo, $keyLength, $keyType);
-
-		if ($multiple && !$init && !$this->_key->SaveContent())
-			self::_error('Cannot export account private key');
 	}
 
 	/**
@@ -156,6 +177,8 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	 * @return QuarkCertificate
 	 */
 	public function SSLAuthorityCertificateRequestRaw ($csr, $key, $altName, $passphrase) {
+		if (!$this->AccountConfig()) return null;
+
 		$this->AccountCreate($this->_contact ? array('mailto:' . $this->_contact) : array());
 
 		$sans = QuarkCertificateSAN::FromAltName($altName);
@@ -202,6 +225,28 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		return preg_match('#REQUEST-----(.*)-----END#s', $csr, $matches)
 			? trim(QuarkURI::Base64Encode(base64_decode($matches[1])))
 			: '';
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function AccountConfig () {
+		if ($this->_accountMultiple && $this->_key instanceof QuarkCipherKeyPair && !$this->_key->Exists() && !$this->_key->SaveContent())
+			return self::_error('Cannot init account private key');
+
+		$this->_key = $this->_key instanceof QuarkCipherKeyPair && $this->_key->Exists()
+			? $this->_key->Load()
+			: QuarkCipherKeyPair::GenerateNew($this->_accountPassphrase, $this->_accountAlgo, $this->_accountLength, $this->_accountType);
+
+		$init = $this->_key->Init();
+
+		if (!$init)
+			$this->_key->Generate($this->_key->Passphrase(), $this->_accountAlgo, $this->_accountLength, $this->_accountType);
+
+		if ($this->_accountMultiple && !$init && !$this->_key->SaveContent())
+			return self::_error('Cannot export account private key');
+
+		return true;
 	}
 
 	/**

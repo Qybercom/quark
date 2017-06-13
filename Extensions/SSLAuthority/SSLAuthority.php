@@ -5,6 +5,7 @@ use Quark\IQuarkExtension;
 
 use Quark\Quark;
 use Quark\QuarkCertificate;
+use Quark\QuarkCertificateSAN;
 
 /**
  * Class SSLAuthority
@@ -62,5 +63,23 @@ class SSLAuthority implements IQuarkExtension {
 		$out = $this->_config->Provider()->SSLAuthorityCertificateRenew($certificate);
 
 		return $out;
+	}
+
+	/**
+	 * @param string[] $domains = []
+	 * @param string $passphrase = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function SignDomains ($domains = [], $passphrase = null) {
+		if (sizeof($domains) == 0) return null;
+
+		$certificate = QuarkCertificate::ForDomainCSR($domains[0], $passphrase);
+		$domains = array_slice($domains, 1);
+
+		foreach ($domains as $domain)
+			$certificate->AltName(new QuarkCertificateSAN($domain));
+
+		return $this->CertificateRequest($certificate);
 	}
 }

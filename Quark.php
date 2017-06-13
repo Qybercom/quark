@@ -20160,7 +20160,7 @@ class QuarkCertificate extends QuarkFile {
 			return self::_error('SigningRequest: Cannot generate CSR');
 
 		$out = '';
-		$ok = openssl_csr_export($csr, $out, $text); // TODO: no text
+		$ok = openssl_csr_export($csr, $out, $text);
 
 		return $ok ? $out : null;
 	}
