@@ -72,7 +72,7 @@ class SelfSignedAuthority implements IQuarkSSLAuthorityProvider {
 	public function SSLAuthorityCertificateRequest (QuarkCertificate $certificate) {
 		return $this->SSLAuthorityCertificateRequestRaw(
 			$certificate->SigningRequest(),
-			$certificate->KeyPrivate(),
+			$certificate->Key()->PrivateKey(false),
 			$certificate->subjectAltName,
 			$certificate->Passphrase()
 		);
