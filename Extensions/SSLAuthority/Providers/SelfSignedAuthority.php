@@ -4,6 +4,7 @@ namespace Quark\Extensions\SSLAuthority\Providers;
 use Quark\Quark;
 use Quark\QuarkDateInterval;
 use Quark\QuarkCertificate;
+use Quark\QuarkCipherKeyPair;
 use Quark\QuarkObject;
 
 use Quark\Extensions\SSLAuthority\IQuarkSSLAuthorityProvider;
@@ -111,6 +112,7 @@ class SelfSignedAuthority implements IQuarkSSLAuthorityProvider {
 
 		$certificate->Passphrase($passphrase);
 		$certificate->Content($x509 . $out);
+		$certificate->Key(QuarkCipherKeyPair::FromContent($out, $passphrase));
 
 		return $certificate;
 	}

@@ -20177,6 +20177,24 @@ class QuarkCertificate extends QuarkFile {
 	}
 
 	/**
+	 * @param string $cert = ''
+	 * @param string $key = ''
+	 *
+	 * @return bool
+	 */
+	public function SaveCertificatePair ($cert = '', $key = '') {
+		$content_cert = $this->Content();
+		$content_key = $this->_key->Content();
+		$ok = true;
+
+		$this->Content(str_replace($content_key, '', $content_cert));
+		$ok &= $this->SaveTo($cert);
+		$this->Content($content_cert);
+
+		return $ok && $this->_key->SaveTo($key);
+	}
+
+	/**
 	 * @param string $message = ''
 	 * @param bool $openssl = true
 	 *
@@ -20883,27 +20901,27 @@ class QuarkCipherKeyPair extends QuarkFile {
 	}
 
 	/**
-	 * @param string $parent = ''
-	 * @param string $name = ''
+	 * @param string $location = ''
 	 *
 	 * @return bool
 	 */
-	public function SaveKeyPair ($parent = '', $name = '') {
+	public function SaveKeyPair ($location = '') {
 		$location = $this->location;
 		$content = $this->_content;
+		$ok = true;
 
-		$this->Location($parent . '/' . $name . '.public.key');
+		$this->Location($location . '.public.key');
 		$this->Content($this->PublicKey());
-		if (!$this->SaveContent()) return false;
+		$ok &= $this->SaveContent();
 
-		$this->Location($parent . '/' . $name . '.private.key');
+		$this->Location($location . '.private.key');
 		$this->Content($this->PrivateKey());
-		if (!$this->SaveContent()) return false;
+		$ok &= $this->SaveContent();
 
 		$this->Location($location);
 		$this->Content($content);
 
-		return true;
+		return $ok;
 	}
 
 	/**

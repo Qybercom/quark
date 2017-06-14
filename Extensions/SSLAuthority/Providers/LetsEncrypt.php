@@ -54,9 +54,9 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	private $_accountPassphrase = null;
 
 	/**
-	 * @var bool $_accountMultiple = true
+	 * @var bool $_accountMultiple = false
 	 */
-	private $_accountMultiple = true;
+	private $_accountMultiple = false;
 
 	/**
 	 * @var string $_keyAlgo = QuarkCertificate::ALGO_SHA512
@@ -203,6 +203,7 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 			return self::_error('Cannot export private key');
 
 		$certificate->Content($certificate->Content() . "\r\n" . $out);
+		$certificate->Key(QuarkCipherKeyPair::FromContent($out, $passphrase));
 
 		return $certificate;
 	}
