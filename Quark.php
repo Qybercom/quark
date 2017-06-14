@@ -1828,7 +1828,7 @@ class QuarkConfig {
 			if ($component instanceof IQuarkExtensionConfig) {
 				$options = self::_ini($ini, self::INI_EXTENSION, $component->ExtensionName());
 
-				if ($options !== null)
+				if ($component instanceof IQuarkExtensionConfigWithForcedOptions || $options !== null)
 					$component->ExtensionOptions($options);
 			}
 		}
@@ -2554,6 +2554,13 @@ interface IQuarkExtensionConfig extends IQuarkStackable {
 	 */
 	public function ExtensionInstance();
 }
+
+/**
+ * Interface IQuarkExtensionConfigWithForcedOptions
+ *
+ * @package Quark
+ */
+interface IQuarkExtensionConfigWithForcedOptions extends IQuarkExtensionConfig { }
 
 /**
  * Interface IQuarkAuthorizableService
@@ -3506,6 +3513,24 @@ trait QuarkServiceBehavior {
 	}
 
 	/**
+	 * @param string $internal = ''
+	 * @param string $external = ''
+	 *
+	 * @return IQuarkService
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ListenURL ($internal = '', $external = '') {
+		if (!($this instanceof IQuarkService))
+			throw new QuarkArchException('[QuarkServiceBehavior::ListenURL] Class "' . $this->ClassName() . '" is not IQuarkService');
+
+		if (func_num_args() == 2)
+			Quark::Config()->Route($external, ':' . $internal);
+
+		return QuarkService::Internal(':' . $internal, $this);
+	}
+
+	/**
 	 * @param string $name = ''
 	 * @param string $content = ''
 	 *
@@ -3524,6 +3549,15 @@ trait QuarkServiceBehavior {
 	 */
 	public function EncodeAndDownload (IQuarkIOProcessor $processor, $name = '', $data = []) {
 		return QuarkFile::ForDownload($name . '.' . QuarkFile::ExtensionByMime($processor->MimeType()), $processor->Encode($data))->Download();
+	}
+
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public function Render ($content = '') {
+		return QuarkFile::ForRender($content)->Render();
 	}
 
 	/**
@@ -3989,11 +4023,19 @@ class QuarkService implements IQuarkContainer {
 				$query = strpos($uri, '?');
 				$route = $query ? substr($uri, 0, $query) :  substr($uri, 0);
 
-				if (isset($routes[$route]))
-					$uri = $routes[$route];
+				foreach ($routes as $original => &$target) {
+					if (strlen($target) == 0 || !preg_match('#' . $original . '#Uis', $route)) continue;
+
+					$uri = $target;
+
+					if ($target[0] == ':')
+						$this->_service = QuarkService::Internal($target);
+				}
+
+				unset($target, $original, $routes, $route, $query);
 			}
 
-			$this->_service = self::Resolve($uri, $base, $namespace, $postfix);
+			$this->_service = $this->_service ? $this->_service : self::Resolve($uri, $base, $namespace, $postfix);
 		}
 
 		$this->_input = new QuarkDTO();
@@ -4295,6 +4337,24 @@ class QuarkService implements IQuarkContainer {
 		unset($this->_filterInput);
 		unset($this->_filterOutput);
 	}
+
+	/**
+	 * @var array $_internal = []
+	 */
+	private static $_internal = array();
+
+	/**
+	 * @param string $uri = ''
+	 * @param IQuarkService $service = null
+	 *
+	 * @return IQuarkService
+	 */
+	public static function Internal ($uri = '', IQuarkService $service = null) {
+		if (func_num_args() == 2 && $service != null)
+			self::$_internal[$uri] = $service;
+
+		return isset(self::$_internal[$uri]) ? self::$_internal[$uri] : null;
+	}
 }
 
 /**
@@ -4481,6 +4541,13 @@ trait QuarkContainerBehavior {
 	 */
 	public static function ClassConstants () {
 		return QuarkObject::ClassConstants(get_called_class());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ClassName () {
+		return QuarkObject::ClassOf($this);
 	}
 
 	/**
@@ -12949,6 +13016,18 @@ class QuarkClient implements IQuarkEventable {
 	private $_channels = array();
 
 	/**
+	 * @return int
+	 */
+	public static function Crypto () {
+		$out = STREAM_CRYPTO_METHOD_TLS_CLIENT;
+
+		if (defined('STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT')) $out |= STREAM_CRYPTO_METHOD_TLSv1_1_CLIENT;
+		if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT')) $out |= STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT;
+
+		return $out;
+	}
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkNetworkTransport $transport
 	 * @param QuarkCertificate $certificate
@@ -13040,7 +13119,7 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function Secure ($flag = false, $timeout = 30) {
 		return func_num_args() != 0
-			? $this->_secure($this->_fromServer ? STREAM_CRYPTO_METHOD_TLS_SERVER : STREAM_CRYPTO_METHOD_TLS_CLIENT, $flag, $timeout)
+			? $this->_secure($this->_fromServer ? QuarkServer::Crypto() : QuarkClient::Crypto(), $flag, $timeout)
 			: $this->_secure();
 	}
 
@@ -13329,6 +13408,18 @@ class QuarkServer implements IQuarkEventable {
 	private $_clients = array();
 
 	/**
+	 * @return int
+	 */
+	public static function Crypto () {
+		$out = STREAM_CRYPTO_METHOD_TLS_SERVER;
+
+		if (defined('STREAM_CRYPTO_METHOD_TLSv1_1_SERVER')) $out |= STREAM_CRYPTO_METHOD_TLSv1_1_SERVER;
+		if (defined('STREAM_CRYPTO_METHOD_TLSv1_2_SERVER')) $out |= STREAM_CRYPTO_METHOD_TLSv1_2_SERVER;
+
+		return $out;
+	}
+
+	/**
 	 * @param QuarkURI|string $uri
 	 * @param IQuarkNetworkTransport $transport
 	 * @param QuarkCertificate $certificate
@@ -13408,7 +13499,7 @@ class QuarkServer implements IQuarkEventable {
 	 */
 	public function Secure ($flag = false, $timeout = 30) {
 		return func_num_args() != 0
-			? $this->_secure(STREAM_CRYPTO_METHOD_TLS_SERVER, $flag, $timeout)
+			? $this->_secure(QuarkServer::Crypto(), $flag, $timeout)
 			: $this->_secure();
 	}
 
@@ -18653,6 +18744,22 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		return $response;
 	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function Render () {
+		$response = new QuarkDTO(new QuarkPlainIOProcessor());
+
+		$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $this->type);
+
+		if (!$this->_loaded)
+			$this->Content(file_get_contents($this->location));
+
+		$response->Data($this->_content);
+
+		return $response;
+	}
 	
 	/**
 	 * @param IQuarkIOProcessor $processor
@@ -18774,6 +18881,20 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		$file->name = $name;
 		$file->Content($content);
 		
+		return $file;
+	}
+
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public static function ForRender ($content = '') {
+		$file = new self();
+
+		$file->_loaded = true;
+		$file->Content($content);
+
 		return $file;
 	}
 
@@ -20906,8 +21027,8 @@ class QuarkCipherKeyPair extends QuarkFile {
 	 * @return bool
 	 */
 	public function SaveKeyPair ($location = '') {
-		$location = $this->location;
-		$content = $this->_content;
+		$_location = $this->location;
+		$_content = $this->_content;
 		$ok = true;
 
 		$this->Location($location . '.public.key');
@@ -20918,8 +21039,8 @@ class QuarkCipherKeyPair extends QuarkFile {
 		$this->Content($this->PrivateKey());
 		$ok &= $this->SaveContent();
 
-		$this->Location($location);
-		$this->Content($content);
+		$this->Location($_location);
+		$this->Content($_content);
 
 		return $ok;
 	}

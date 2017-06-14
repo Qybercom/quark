@@ -2,14 +2,14 @@
 namespace Quark\Extensions\SSLAuthority;
 
 use Quark\IQuarkExtension;
-use Quark\IQuarkExtensionConfig;
+use Quark\IQuarkExtensionConfigWithForcedOptions;
 
 /**
  * Class SSLAuthorityConfig
  *
  * @package Quark\Extensions\SSLAuthority
  */
-class SSLAuthorityConfig implements IQuarkExtensionConfig {
+class SSLAuthorityConfig implements IQuarkExtensionConfigWithForcedOptions {
 	/**
 	 * @var string $_name
 	 */

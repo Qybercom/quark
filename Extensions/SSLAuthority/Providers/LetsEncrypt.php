@@ -1,10 +1,13 @@
 <?php
 namespace Quark\Extensions\SSLAuthority\Providers;
 
+use Quark\IQuarkGetService;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
 use Quark\Quark;
+use Quark\QuarkServiceBehavior;
+use Quark\QuarkSession;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -79,9 +82,14 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	private $_nonce = '';
 
 	/**
-	 * @var string $_challenge = ''
+	 * @var string $_wellKnownChallenge = null
 	 */
-	private $_challenge = '';
+	private $_wellKnownChallenge = null;
+
+	/**
+	 * @var bool $_wellKnownServe = true
+	 */
+	private $_wellKnownServe = true;
 
 	/**
 	 * @var string $_check = ''
@@ -149,9 +157,17 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		if (isset($options->AccountKeyType))
 			$this->_accountType = QuarkObject::ConstValue('OPENSSL_KEYTYPE_' . $options->AccountKeyType);
 
-		$this->_challenge = isset($options->WellKnown)
+		if (isset($options->WellKnownServe))
+			$this->_wellKnownServe = $options->WellKnownServe;
+
+		$this->_wellKnownChallenge = isset($options->WellKnown)
 			? $options->WellKnown
 			: Quark::Host() . self::CHALLENGE;
+
+		if ($this->_wellKnownServe) {
+			$acme = new LetsEncryptWellKnown();
+			$acme->ListenURL('/acme', self::CHALLENGE);
+		}
 	}
 
 	/**
@@ -196,6 +212,8 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		}
 
 		$certificate = $this->Sign($this->CSR($csr));
+		if (!$certificate) return null;
+
 		$certificate->Passphrase($passphrase);
 
 		$out = '';
@@ -320,7 +338,7 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		if ($challenge == null)
 			return self::_error('ChallengeAccept: Challenge must not be null', false);
 
-		$acme = new QuarkFile($this->_challenge . $challenge->token);
+		$acme = new QuarkFile($this->_wellKnownChallenge . $challenge->token);
 		$acme->Content($challenge->Payload($this->AccountHeader()));
 
 		if (!$acme->SaveContent())
@@ -546,5 +564,29 @@ class LetEncryptChallenge implements IQuarkModel, IQuarkStrongModel {
 	 */
 	public function Payload ($header) {
 		return $this->token . '.' . QuarkURI::Base64Encode(hash('sha256', json_encode($header), true));
+	}
+}
+
+/**
+ * Class LetsEncryptWellKnown
+ *
+ * @package Quark\Extensions\SSLAuthority\Providers
+ */
+class LetsEncryptWellKnown implements IQuarkGetService {
+	use QuarkServiceBehavior;
+
+	/**
+	 * @param QuarkDTO $request
+	 * @param QuarkSession $session
+	 *
+	 * @return mixed
+	 */
+	public function Get (QuarkDTO $request, QuarkSession $session) {
+		$challenge = new QuarkFile(Quark::Host() . LetsEncrypt::CHALLENGE . $request->URI()->Route(2));
+
+		if (!$challenge->Exists())
+			return QuarkDTO::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND);
+
+		return $challenge->Render();
 	}
 }
