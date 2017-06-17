@@ -1,0 +1,204 @@
+/**
+ * http://www.socicon.com/chart.php
+ */
+.socicon-mailru:before {
+	content: ' ';
+	background-color: rgb(255,255,255);
+	/*
+	 * https://stackoverflow.com/a/43340423/2097055
+	 * https://codepen.io/noahblon/post/coloring-svgs-in-css-background-images
+	 */
+	mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) no-repeat center center;
+	-webkit-mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) no-repeat center center;
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+}
+
+.quark-button.social[class*=" socicon-"] {
+	font-family: 'Socicon', 'Open Sans', sans-serif;
+}
+
+.quark-button.social[class*=" socicon-facebook"] {
+	background: rgb(62, 91, 152);
+}
+
+.quark-button.social[class*=" socicon-facebook"]:hover {
+	background: rgba(62, 91, 152, 0.75);
+}
+
+.quark-button.social[class*=" socicon-vkontakte"] {
+	background: rgb(90, 127, 166);
+}
+
+.quark-button.social[class*=" socicon-vkontakte"]:hover {
+	background: rgba(90, 127, 166, 0.75);
+}
+
+.quark-button.social[class*=" socicon-googleplus"] {
+	background: rgb(221, 75, 57);
+}
+
+.quark-button.social[class*=" socicon-googleplus"]:hover {
+	background: rgba(221, 75, 57, 0.75);
+}
+
+.quark-button.social[class*=" socicon-twitter"] {
+	background: rgb(77, 167, 222);
+}
+
+.quark-button.social[class*=" socicon-twitter"]:hover {
+	background: rgba(77, 167, 222, 0.75);
+}
+
+.quark-button.social[class*=" socicon-odnoklassniki"] {
+	background: rgb(244, 132, 32);
+}
+
+.quark-button.social[class*=" socicon-odnoklassniki"]:hover {
+	background: rgba(244, 132, 32, 0.75);
+}
+
+.quark-button.social[class*=" socicon-yandex"] {
+	background: rgb(255, 0, 0);
+}
+
+.quark-button.social[class*=" socicon-yandex"]:hover {
+	background: rgba(255, 0, 0, 0.75);
+}
+
+.quark-button.social[class*=" socicon-mailru"] {
+	background: rgb(22, 141, 226);
+}
+
+.quark-button.social[class*=" socicon-mailru"]:hover {
+	background: rgba(22, 141, 226, 0.75);
+}
+
+.quark-button.social[class*=" socicon-linkedin"] {
+	background: rgb(51, 113, 183);
+}
+
+.quark-button.social[class*=" socicon-linkedin"]:hover {
+	background: rgba(51, 113, 183, 0.75);
+}
+
+.quark-button.social[class*=" socicon-xing"] {
+	background: rgb(0, 90, 96);
+}
+
+.quark-button.social[class*=" socicon-xing"]:hover {
+	background: rgba(0, 90, 96, 0.75);
+}
+
+.quark-button.social[class*=" socicon-stackoverflow"] {
+	background: rgb(253, 152, 39);
+}
+
+.quark-button.social[class*=" socicon-stackoverflow"]:hover {
+	background: rgba(253, 152, 39, 0.75);
+}
+
+.quark-button.social[class*=" socicon-github"] {
+	background: rgb(34, 30, 27);
+}
+
+.quark-button.social[class*=" socicon-github"]:hover {
+	background: rgba(34, 30, 27, 0.75);
+}
+
+.quark-button.social[class*=" socicon-windows"] {
+	background: rgb(0, 189, 246);
+}
+
+.quark-button.social[class*=" socicon-windows"]:hover {
+	background: rgba(0, 189, 246, 0.75);
+}
+
+.quark-button.social[class*=" socicon-android"] {
+	background: rgb(142, 192, 71);
+}
+
+.quark-button.social[class*=" socicon-android"]:hover {
+	background: rgba(142, 192, 71, 0.75);
+}
+
+.quark-button.social[class*=" socicon-apple"] {
+	background: rgb(185, 191, 193);
+}
+
+.quark-button.social[class*=" socicon-apple"]:hover {
+	background: rgba(185, 191, 193, 0.75);
+}
+
+.quark-button.social[class*=" socicon-macos"] {
+	background: rgb(0, 0, 0);
+}
+
+.quark-button.social[class*=" socicon-macos"]:hover {
+	background: rgba(0, 0, 0, 0.75);
+}
+
+.quark-button.social[class*=" socicon-play"] {
+	background: rgb(0, 0, 0);
+}
+
+.quark-button.social[class*=" socicon-play"]:hover {
+	background: rgba(0, 0, 0, 0.75);
+}
+
+.quark-button.social[class*=" socicon-xbox"] {
+	background: rgb(146, 200, 62);
+}
+
+.quark-button.social[class*=" socicon-xbox"]:hover {
+	background: rgba(146, 200, 62, 0.75);
+}
+
+.quark-button.social[class*=" socicon-playstation"] {
+	background: rgb(0, 0, 0);
+}
+
+.quark-button.social[class*=" socicon-playstation"]:hover {
+	background: rgba(0, 0, 0, 0.75);
+}
+
+.quark-button.social[class*=" socicon-nintendo"] {
+	background: rgb(245, 138, 51);
+}
+
+.quark-button.social[class*=" socicon-nintendo"]:hover {
+	background: rgba(245, 138, 51, 0.75);
+}
+
+.quark-button.social[class*=" socicon-battlenet"] {
+	background: rgb(0, 150, 205);
+}
+
+.quark-button.social[class*=" socicon-battlenet"]:hover {
+	background: rgba(0, 150, 205, 0.75);
+}
+
+.quark-button.social[class*=" socicon-steam"] {
+	background: rgb(23, 26, 33);
+}
+
+.quark-button.social[class*=" socicon-steam"]:hover {
+	background: rgba(23, 26, 33, 0.75);
+}
+
+.quark-button.social[class*=" socicon-paypal"] {
+	background: rgb(0, 156, 222);
+}
+
+.quark-button.social[class*=" socicon-paypal"]:hover {
+	background: rgba(0, 156, 222, 0.75);
+}
+
+.quark-button.social[class*=" socicon-amazon"] {
+	background: rgb(255, 153, 0);
+}
+
+.quark-button.social[class*=" socicon-amazon"]:hover {
+	background: rgba(255, 153, 0, 0.75);
+}

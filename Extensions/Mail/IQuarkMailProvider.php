@@ -23,4 +23,9 @@ interface IQuarkMailProvider {
 	 * @return QuarkURI
 	 */
 	public function MailSMTP($username, $password);
+
+	/**
+	 * @return bool
+	 */
+	public function MailStartTLS();
 }

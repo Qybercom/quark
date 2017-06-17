@@ -54,6 +54,7 @@ var ChatKit = function (opt) {
 	 * @type {Quark.Network.Client} Connection
 	 */
 	that.Connection = new Quark.Network.Client(opt.uri.host, opt.uri.port);
+	that.Connection.secure = opt.uri.secure;
 	that.Connection.on.open = opt.open;
 	that.Connection.on.error = opt.error;
 	that.Connection.on.close = !opt.reconnect ? opt.close : function (e) {

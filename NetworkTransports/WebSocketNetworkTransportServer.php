@@ -36,7 +36,7 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	const FRAME_MIN_SIZE = 2;
 	
 	/**
-	 * @var string $_buffer
+	 * @var string $_buffer = ''
 	 */
 	private $_buffer = '';
 
@@ -46,9 +46,9 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	private $_connected = false;
 
 	/**
-	 * @var string $_subprotocol
+	 * @var string $_subProtocol = ''
 	 */
-	private $_subprotocol = '';
+	private $_subProtocol = '';
 
 	/**
 	 * @param QuarkClient &$client
@@ -84,15 +84,15 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 
 			$response = new QuarkDTO(new QuarkHTMLIOProcessor());
 			$response->Protocol(QuarkDTO::HTTP_VERSION_1_1);
-			$response->Status(101, 'Switching Protocols');
+			$response->Status(QuarkDTO::STATUS_101_SWITCHING_PROTOCOLS);
 			$response->Headers(array(
 				QuarkDTO::HEADER_CONNECTION => QuarkDTO::CONNECTION_UPGRADE,
 				QuarkDTO::HEADER_UPGRADE => QuarkDTO::UPGRADE_WEBSOCKET,
 				QuarkDTO::HEADER_SEC_WEBSOCKET_ACCEPT => base64_encode(sha1($request->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_KEY) . self::GuID, true)),
 			));
 
-			if (strlen($this->_subprotocol) != 0)
-				$response->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_PROTOCOL, $this->_subprotocol);
+			if (strlen($this->_subProtocol) != 0)
+				$response->Header(QuarkDTO::HEADER_SEC_WEBSOCKET_PROTOCOL, $this->_subProtocol);
 
 			$client->Send($response->SerializeResponse());
 

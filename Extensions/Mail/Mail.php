@@ -60,11 +60,6 @@ class Mail implements IQuarkExtension {
 	private $_log = '';
 
 	/**
-	 * @var int $_timeout = 100000 (microseconds)
-	 */
-	private $_timeout = 100000;
-
-	/**
 	 * @param $name
 	 * @param $email
 	 *
@@ -181,10 +176,12 @@ class Mail implements IQuarkExtension {
 					'files' => $this->_files
 				));
 
-		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), $this->_config->MailCertificate(), 5, false);
-		
+		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), $this->_config->MailCertificate(), $this->_config->TimeoutConnect(), false);
+
+		$client->AutoSecure(false);
+
 		$client->On(QuarkClient::EVENT_ERROR_CRYPTOGRAM, function ($error) {
-			$this->_log .= '[Mail] Cryptogram enabling error. ' . $error . '<br>';
+			$this->_log('[Mail] Cryptogram enabling error. ' . $error);
 		});
 		
 		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) {
@@ -196,6 +193,13 @@ class Mail implements IQuarkExtension {
 
 			$this->_cmd($client);
 			$this->_cmd($client, 'HELO Quark');
+
+			if ($this->_config->MailProvider()->MailStartTLS()) {
+				$this->_cmd($client, 'STARTTLS');
+				$client->Secure(true);
+				$this->_cmd($client, 'HELO Quark');
+			}
+
 			$this->_cmd($client, 'AUTH LOGIN');
 			$this->_cmd($client, base64_encode($smtp->user));
 			$this->_cmd($client, base64_encode($smtp->pass));
@@ -231,10 +235,22 @@ class Mail implements IQuarkExtension {
 		if ($callback != null)
 			$callback($client);
 
-		usleep($this->_timeout);
+		usleep($this->_config->TimeoutCommand());
 
-		$response = $client->Receive(15151515);
+		$response = $client->Receive();
 
-		$this->_log .= $cmd . ': ' . $response . '<br>';
+		$this->_log($cmd . ': ' . $response);
+	}
+
+	/**
+	 * @param string $message = ''
+	 *
+	 * @return string
+	 */
+	private function _log ($message = '') {
+		if (func_num_args() != 0)
+			$this->_log .= $message;
+
+		return $this->_log;
 	}
 }

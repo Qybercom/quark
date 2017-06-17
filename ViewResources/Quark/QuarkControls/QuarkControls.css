@@ -82,6 +82,9 @@
 .quark-input.range {
 	padding: 0;
     line-height: 0;
+	text-align: left;
+	max-width: 150px;
+	width: 100%;
 }
 
 .quark-range-slider {
@@ -92,10 +95,40 @@
 	padding: 5px;
 	cursor: pointer;
 	position: absolute;
+	z-index: 10;
 }
 
 .quark-range-slider:hover {
 	background: rgb(245,245,245);
+}
+
+.quark-range-progress {
+    display: inline-block;
+	position: absolute;
+	float: left;
+    height: 2px;
+	border-radius: inherit;
+}
+
+.quark-range-regress {
+    display: inline-block;
+	position: absolute;
+	float: right;
+    height: 2px;
+	border-radius: inherit;
+}
+
+.quark-range-value {
+	display: inline-block;
+    margin: 10px 0 0 0;
+}
+
+.quark-range-value.min {
+    float: left;
+}
+
+.quark-range-value.max {
+    float: right;
 }
 
 
@@ -110,6 +143,29 @@
     margin: 7px 0 0 1px;
     padding: 0 0 0 7px !important;
     height: 20px !important;
+}
+
+
+
+/**
+ * .quark-progress component
+ */
+.quark-progress {
+	background: rgb(230,230,230);
+	display: inline-block;
+	padding: 0;
+	height: 14px;
+	width: 150px;
+	line-height: 0;
+}
+
+.quark-progress-mark {
+	background: rgb(200,200,200);
+	display: inline-block;
+	height: 100%;
+	padding: 0;
+	margin: 0;
+	border-radius: inherit;
 }
 
 

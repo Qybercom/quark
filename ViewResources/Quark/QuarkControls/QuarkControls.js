@@ -21,12 +21,12 @@ Quark.Controls = {};
 Quark.Controls._toForm = function (data, append) {
 	append = append || '';
 
-	var out = '', end = '';
+	var out = '', end = '', key = '';
 
 	for (key in data) {
-		end = append == '' ? key : (append + '[' + key + ']');
+		end = append === '' ? key : (append + '[' + key + ']');
 
-		if (data[key] != undefined && (data[key].constructor == Object || data[key].constructor == Array))
+		if (data[key] !== undefined && (data[key].constructor === Object || data[key].constructor === Array))
 			out += Quark.Controls._toForm(data[key], end);
 		else out += Quark.Controls._field(end, data[key] !== undefined ? data[key] : '');
 	}
@@ -73,7 +73,7 @@ Quark.Controls.Form = function (selector) {
 			data: form.serialize(),
 
 			success: function (data) {
-				that._message(form, data.status != undefined && data.status == 200 ? '.ok' : '.warn');
+				that._message(form, data.status !== undefined && data.status === 200 ? '.ok' : '.warn');
 			},
 
 			error: function () {
@@ -91,12 +91,12 @@ Quark.Controls.Form = function (selector) {
  */
 Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
-		opt.box = opt.box == undefined ? '#quark-dialog-box' : opt.box;
-		opt.reset = opt.reset != undefined ? opt.reset : true;
-		opt.type = opt.type != undefined ? opt.type : 'GET';
+		opt.box = opt.box === undefined ? '#quark-dialog-box' : opt.box;
+		opt.reset = opt.reset !== undefined ? opt.reset : true;
+		opt.type = opt.type !== undefined ? opt.type : 'GET';
 		opt.successCriteria = opt.successCriteria instanceof Function
 			? opt.successCriteria
-			: function (data) { return data.status != undefined && data.status == 200; };
+			: function (data) { return data.status !== undefined && data.status === 200; };
 
 	var that = this;
 
@@ -120,7 +120,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Error = function (trigger, dialog, data) {
-		if (data != undefined && data.errors instanceof Array) {
+		if (data !== undefined && data.errors instanceof Array) {
 			var i = 0;
 			var errors = '';
 
@@ -168,7 +168,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$.ajax({
 			url: action.attr('href'),
 			dataType: 'json',
-			type: opt.type,
+			type: opt.type || dialog.attr('method'),
 			data: dialog.serialize(),
 
 			beforeSend: function () {
@@ -189,7 +189,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 	that._id = Quark.GuID();
 
 	$(function () {
-		if ($(opt.box).length == 0)
+		if ($(opt.box).length === 0)
 			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
 
 		$(opt.box).hide(0);
@@ -219,7 +219,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		var action = $(this),
 			dialog = action.parent('.quark-dialog');
 
-		if (dialog.data('quark-dialog-id') != that._id) return;
+		if (dialog.data('quark-dialog-id') !== that._id) return;
 
 		dialog.data('quark-dialog-object').Submit(dialog, action);
 	});
@@ -230,7 +230,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		var action = $(this),
 			dialog = action.parent('.quark-dialog');
 
-		if (dialog.data('quark-dialog-id') != that._id) return;
+		if (dialog.data('quark-dialog-id') !== that._id) return;
 
 		dialog.data('quark-dialog-object').Close(dialog, action);
 	});
@@ -264,7 +264,7 @@ Quark.Controls.Select = function (selector, opt) {
 		var i = 0, html = '', selected = '', key = '';
 
 		for (key in opt.values) {
-			if (i == 0)
+			if (i === 0)
 				selected = key;
 
 			html +='<a class="quark-button block"><span style="display:none;">' + opt.values[key] + '</span>' + key + '</a>';
@@ -335,7 +335,7 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 	var key = '-upload-' + Quark.GuID(),
 		target = '#target' + key;
 
-	if ($(target).length == 0)
+	if ($(target).length === 0)
 		$('body').append(
 			'<iframe id="target' + key + '" name="target' + key + '" style="display: none;"></iframe>' +
 			'<form id="form' + key + '" action="' + url + '" target="target' + key + '" method="POST" enctype="multipart/form-data" style="display: none;">' +
@@ -371,7 +371,7 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 		.on('change', function (e) {
 			opt.beforeSubmit($(this));
 
-			if ($(this).val().length != 0)
+			if ($(this).val().length !== 0)
 				form.submit();
 		})
 		.click();
@@ -385,11 +385,11 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
  */
 Quark.Controls.DynamicList = function (selector, opt) {
 	opt = opt || {};
-		opt.name = opt.name == undefined ? 'list' : opt.name;
-		opt.placeholder = opt.placeholder == undefined ? '' : opt.placeholder;
-		opt.prepend = opt.prepend == undefined ? false : opt.prepend;
-		opt.preventDefault = opt.preventDefault == undefined ? false : opt.preventDefault;
-		opt.item = opt.item == undefined
+		opt.name = opt.name === undefined ? 'list' : opt.name;
+		opt.placeholder = opt.placeholder === undefined ? '' : opt.placeholder;
+		opt.prepend = opt.prepend === undefined ? false : opt.prepend;
+		opt.preventDefault = opt.preventDefault === undefined ? false : opt.preventDefault;
+		opt.item = opt.item === undefined
 			? (
 				'<div class="quark-list-item">' +
 					'<input class="quark-input item-value" name="' + opt.name + '[]" placeholder="' + opt.placeholder + '" />' +
@@ -428,7 +428,7 @@ Quark.Controls.DynamicList = function (selector, opt) {
  */
 Quark.Controls.Toggle = function (selector, opt) {
 	opt = opt || {};
-		opt.autoState = opt.autoState == undefined ? true : opt.autoState;
+		opt.autoState = opt.autoState === undefined ? true : opt.autoState;
 		opt.enabled = opt.enabled || {};
 			opt.enabled.title = opt.enabled.title || '';
 			opt.enabled.html = opt.enabled.html || '';
@@ -456,18 +456,18 @@ Quark.Controls.Toggle = function (selector, opt) {
 		elem.addClass(enabled ? 'fa-toggle-on on' : 'fa-toggle-off off');
 		elem.attr('quark-enabled', enabled ? 'true' : 'false');
 
-		if (elem.attr('disabled') == 'disabled')
+		if (elem.attr('disabled') === 'disabled')
 			that.Available(elem, false);
 
-		var name = opt.name == undefined
+		var name = opt.name === undefined
 			? (elem.attr('name') || '')
 			: opt.name;
 
-		if (name == '') return;
+		if (name === '') return;
 
 		var input = elem.find('input[type="hidden"]');
 
-		if (input.length == 0)
+		if (input.length === 0)
 			input = elem
 				.append('<input type="hidden" name="' + name + '" value="' + (enabled ? 'on' : 'off') + '" />')
 				.find('input[type="hidden"]');
@@ -475,20 +475,20 @@ Quark.Controls.Toggle = function (selector, opt) {
 		input.val(enabled ? 'on' : 'off');
 	};
 
-	if (opt.enable != undefined)
+	if (opt.enable !== undefined)
 		that._attr(enabled, that.Elem);
 
 	$(document).on('click', selector, function (e) {
 		e.preventDefault();
 
-		if ($(this).attr('disabled') != 'disabled')
+		if ($(this).attr('disabled') !== 'disabled')
 			that.Toggle($(this));
 	});
 
 	that.Elem.each(function () {
 		var elem = $(this),
 			val = elem.attr('quark-enabled'),
-			enabled = val == 'true' || val == '1';
+			enabled = val === 'true' || val === '1';
 
 		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
 		that._attr(enabled, elem);
@@ -498,7 +498,7 @@ Quark.Controls.Toggle = function (selector, opt) {
 	 * @param elem
 	 */
 	that.Toggle = function (elem) {
-		if (elem.attr('quark-enabled') == 'true') opt.enabled.action(that, elem);
+		if (elem.attr('quark-enabled') === 'true') opt.enabled.action(that, elem);
 		else opt.disabled.action(that, elem);
 
 		if (opt.autoState) that.State(elem);
@@ -508,7 +508,7 @@ Quark.Controls.Toggle = function (selector, opt) {
 	 * @param elem
 	 */
 	that.State = function (elem) {
-		var enabled = elem.attr('quark-enabled') != 'true';
+		var enabled = elem.attr('quark-enabled') !== 'true';
 
 		elem.attr('title', enabled ? opt.enabled.title : opt.disabled.title);
 		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
@@ -525,12 +525,12 @@ Quark.Controls.Toggle = function (selector, opt) {
  */
 Quark.Controls.Gallery = function (selector, opt) {
 	opt = opt || {};
-		opt.box = opt.box == undefined ? '#quark-gallery-box' : opt.box;
+		opt.box = opt.box === undefined ? '#quark-gallery-box' : opt.box;
 
 	var that = this;
 
 	$(function () {
-		if ($(opt.box).length == 0)
+		if ($(opt.box).length === 0)
 			$('body').prepend('<div id="' + opt.box.replace('#', '') + '"></div>');
 
 		$(opt.box).hide(0);
@@ -576,16 +576,19 @@ Quark.Controls.Range = function (selector, opt) {
 	var that = this;
 
 	opt = opt || {};
-		opt.asDefined = opt.asDefined != undefined ? opt.asDefined : true;
-		opt.change = opt.change != undefined ? opt.change : function () {};
+		opt.asDefined = opt.asDefined !== undefined ? opt.asDefined : true;
+		opt.ready = opt.ready || false;
+		opt.change = opt.change !== undefined ? opt.change : function () {};
+		opt.offset = opt.offset || 0;
+		opt.rounder = opt.rounder instanceof Function ? opt.rounder : function (val) { return val; };
 
 	that.Elem = $(selector);
 	that.Elem.attr('type', 'hidden');
 
 	that.Name = that.Elem.attr('name');
-	that.Value = that.Elem.attr('value');
-	that.Min = parseFloat(that.Elem.attr('min'));
-	that.Max = parseFloat(that.Elem.attr('max'));
+	that.Value = that.Elem.attr('value') === undefined ? 0 : parseFloat(that.Elem.attr('value'));
+	that.Min = that.Elem.attr('min') === undefined ? 0 : parseFloat(that.Elem.attr('min'));
+	that.Max = that.Elem.attr('max') === undefined ? 0 : parseFloat(that.Elem.attr('max'));
 
 	that.Sliders = [];
 
@@ -598,11 +601,11 @@ Quark.Controls.Range = function (selector, opt) {
 	_m.remove();
 
 	that.Elem.each(function () {
-		var elem = $(this);
-
-		var sliders = elem.attr()
+		var elem = $(this),
+			range = that.Max - that.Min,
+			sliders = elem.attr()
 			.map(function (item) {
-				if (item.name.indexOf('quark-slider-') == -1) return;
+				if (item.name.indexOf('quark-slider-') === -1) return;
 
 				return {
 					name: item.name.replace('quark-slider-', ''),
@@ -610,10 +613,10 @@ Quark.Controls.Range = function (selector, opt) {
 				};
 			})
 			.filter(function (item) {
-				return item != undefined;
+				return item !== undefined;
 			});
 
-		if (sliders.length == 0 && opt.asDefined == true)
+		if (sliders.length === 0 && opt.asDefined === true)
 			sliders.push({
 				name: that.Name,
 				value: that.Value
@@ -622,19 +625,36 @@ Quark.Controls.Range = function (selector, opt) {
 		elem = that.Elem.wrap('<div class="quark-input range"></div>').parent();
 		elem.html('');
 
-		var width = parseFloat(elem.width()) - sliderWidth;
-		var i = 0;
+		var width = parseFloat(elem.width()) - sliderWidth, i = 0, margin = 0;
 		while (i < sliders.length) {
-			var margin = (sliders[i].value / 100) * width;
+			margin = ((sliders[i].value - that.Min) * width / range) + opt.offset;
 
 			elem.append(
+				'<div class="quark-range-progress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (margin + sliderWidth) + 'px;"></div>' +
+				'<div class="quark-range-regress" quark-slider-name="' + sliders[i].name + '" style="width: ' + (width - (margin)) + 'px; margin-left: ' + (margin + sliderWidth) + 'px;"></div>' +
 				'<div class="quark-range-slider" quark-slider-name="' + sliders[i].name + '" style="margin-left: ' + margin + 'px;">' +
-				'<input type="hidden" name="' + sliders[i].name + '" value="' + sliders[i].value + '" />' +
-				'</div>'
+					'<input type="hidden" name="' + sliders[i].name + '" value="' + opt.rounder(sliders[i].value) + '" />' +
+				'</div>' +
+				'<br />'
 			);
+
+			if (opt.ready instanceof Function)
+				opt.ready({
+					name: sliders[i].name,
+					range: elem,
+					slider: elem.find('.quark-range-slider'),
+					progress: ((margin - opt.offset) / width) * 100,
+					value: opt.rounder(((margin - opt.offset) * range / width) + that.Min),
+					val: margin - opt.offset
+				});
 
 			i++;
 		}
+
+		elem.append(
+			'<div class="quark-range-value min">' + that.Min + '</div>' +
+			'<div class="quark-range-value max">' + that.Max + '</div>'
+		);
 
 		var slide = new Quark.UX(elem.find('.quark-range-slider'));
 		slide.Drag({
@@ -642,7 +662,9 @@ Quark.Controls.Range = function (selector, opt) {
 			delegateParent: false,
 			defaultCss: false,
 			drag: function (e) {
-				var val = e.target.data('_slide') == undefined
+				if (!e.target.is('.quark-range-slider')) return;
+
+				var val = e.target.data('_slide') === undefined
 					? parseInt(e.target.css('margin-left').replace('px'))
 					: (e.current.x - parseInt(e.target.data('_slide')));
 
@@ -652,14 +674,23 @@ Quark.Controls.Range = function (selector, opt) {
 					name: e.target.attr('quark-slider-name'),
 					range: elem,
 					slider: e.target,
-					value: (val / width) * 100
+					progress: (val / width) * 100,
+					value: opt.rounder((val * range / width) + that.Min),
+					val: val
 				};
 
 				opt.change(frame);
 
-				e.target.css('margin-left', val + 'px');
+				var offset = val + e.target.width() / 2 + 1;
+
+				e.target.css('margin-left', (val + opt.offset) + 'px');
 				e.target.data('_slide', e.current.x - val);
-				e.target.find('input[type="hidden"]').val(frame.value);
+				e.target.find('input[type="hidden"]').val(opt.rounder(frame.value));
+				e.target.parent().find('.quark-range-progress').css('width', offset + 'px');
+				e.target.parent().find('.quark-range-regress').css({
+					'margin-left': offset + 'px',
+					width: (width + Math.ceil(sliderWidth / 2) - val + 1) + 'px'
+				});
 			}
 		});
 	});
@@ -683,8 +714,8 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		};
 
 	opt = opt || {};
-		opt.localize = opt.localize != undefined ? opt.localize : false;
-		opt.labels = opt.labels != undefined ? opt.labels : {'*': 'Any'};
+		opt.localize = opt.localize !== undefined ? opt.localize : false;
+		opt.labels = opt.labels !== undefined ? opt.labels : {'*': 'Any'};
 
 	/**
 	 * @param {string} name
@@ -698,7 +729,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		postfix = postfix || '';
 		var i = name.lastIndexOf(']');
 
-		return i == -1
+		return i === -1
 			? (name + postfix)
 			: name.substr(0, i) + postfix + ']';
 	};
@@ -740,14 +771,14 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			json = _decode(val),
 			i = 0;
 
-		languages = languages == undefined ? [] : languages.split(',');
+		languages = languages === undefined ? [] : languages.split(',');
 
-		if (languages.indexOf('*') == -1)
+		if (languages.indexOf('*') === -1)
 			languages.unshift('*');
 
 		while (i < languages.length) {
-			select += '<option value="' + languages[i] + '"' + (json[selected] != undefined && languages[i] == selected ? ' selected="selected"' : '') + '>'
-					+ (opt.labels[languages[i]] != undefined ? opt.labels[languages[i]] : languages[i])
+			select += '<option value="' + languages[i] + '"' + (json[selected] !== undefined && languages[i] === selected ? ' selected="selected"' : '') + '>'
+					+ (opt.labels[languages[i]] !== undefined ? opt.labels[languages[i]] : languages[i])
 					+ '</option>';
 
 			i++;
@@ -758,7 +789,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		var copy = elem.clone();
 		copy
 			.attr('name', that._name(copy.attr('name'), '_localized'))
-			.val(json != null && json[selected] != undefined ? json[selected] : (json['*'] != undefined ? json['*'] : ''));
+			.val(json !== null && json[selected] !== undefined ? json[selected] : (json['*'] !== undefined ? json['*'] : ''));
 
 		elem
 			.css('display', 'none')
@@ -795,7 +826,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			display = that._field(lang, orig.attr('name'), '_localized'),
 			json = _decode(orig.val()),
 			selected = lang.val(),
-			val = json != null && json[selected] != undefined ? json[selected] : '';
+			val = json !== null && json[selected] !== undefined ? json[selected] : '';
 
 		if (opt.localize instanceof Function)
 			opt.localize(selected, val);
@@ -813,12 +844,12 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 			language = language || lang.val();
 
-			if (value != undefined) {
+			if (value !== undefined) {
 				json[language] = value;
 				elem.val(_encode(json));
 			}
 
-			var val = json != null && json[language] != undefined ? json[language] : '';
+			var val = json !== null && json[language] !== undefined ? json[language] : '';
 
 			if (opt.localize instanceof Function && opt.localizeSelf)
 				opt.localize(language, val);
@@ -829,11 +860,32 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 	};
 };
 
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.Controls.Progress = function (selector, opt) {
+	opt = opt || {};
+
+	var that = this;
+
+	that.Elem = $(selector);
+
+	that.Elem.each(function () {
+		var elem = $(this),
+			value = elem.attr('quark-progress');
+
+		elem.append('<div class="quark-progress-mark" style="width: ' + (value.indexOf('%') != -1 ? value : value + '%') + '"></div>');
+	});
+};
+
 Quark.Controls.Scrollable = function (selector, opt) {
 	var that = this;
 
 	opt = opt || {};
-		opt.scroll = opt.scroll != undefined ? opt.scroll : function () {};
+		opt.scroll = opt.scroll !== undefined ? opt.scroll : function () {};
 
 	that.Elem = $(selector);
 
@@ -852,7 +904,7 @@ Quark.Controls.Scrollable = function (selector, opt) {
 			delegateParent: false,
 			defaultCss: false,
 			drag: function (e) {
-				var val = e.target.data('_scroll') == undefined
+				var val = e.target.data('_scroll') === undefined
 					? parseInt(e.target.css('margin-top').replace('px'))
 					: (e.current.y - parseInt(e.target.data('_scroll')));
 

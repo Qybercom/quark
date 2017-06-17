@@ -237,10 +237,8 @@ button.quark-button {
 
 /**
  * Social network buttons
- * http://designpieces.com/2012/12/social-media-colours-hex-and-rgb/
  */
 .quark-button.social {
-    font-family: FontAwesome, 'Open Sans', sans-serif;
     font-size: 20px;
     line-height: 20px;
     padding: 10px;
@@ -252,28 +250,4 @@ button.quark-button {
 
 .quark-button.social:hover {
     color: rgb(255,255,255);
-}
-
-.quark-button.social.fa.fa-facebook {
-    background: rgb(59, 89, 152);
-}
-
-.quark-button.social.fa.fa-vk {
-    background: rgb(69, 102, 142);
-}
-
-.quark-button.social.fa.fa-google-plus {
-    background: rgb(221, 75, 57);
-}
-
-.quark-button.social.fa.fa-facebook:hover {
-    background: rgba(59, 89, 152, 0.75);
-}
-
-.quark-button.social.fa.fa-vk:hover {
-    background: rgba(69, 102, 142, 0.75);
-}
-
-.quark-button.social.fa.fa-google-plus:hover {
-    background: rgba(221, 75, 57, 0.75);
 }

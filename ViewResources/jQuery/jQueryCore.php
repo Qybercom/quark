@@ -22,10 +22,17 @@ class jQueryCore implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 	private $_version = self::CURRENT_VERSION;
 
 	/**
-	 * @param string $version = self::CURRENT_VERSION
+	 * @var bool $_cdnJS = true
 	 */
-	public function __construct ($version = self::CURRENT_VERSION) {
+	private $_cdnJS = true;
+
+	/**
+	 * @param string $version = self::CURRENT_VERSION
+	 * @param bool $cdnJS = true
+	 */
+	public function __construct ($version = self::CURRENT_VERSION, $cdnJS = true) {
 		$this->_version = $version;
+		$this->_cdnJS = $cdnJS;
 	}
 
 	/**
@@ -39,7 +46,9 @@ class jQueryCore implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://code.jquery.com/jquery-' . $this->_version . '.min.js';
+		return $this->_cdnJS
+			? ('//cdnjs.cloudflare.com/ajax/libs/jquery/' . $this->_version . '/jquery.min.js')
+			: ('https://code.jquery.com/jquery-' . $this->_version . '.min.js');
 	}
 
 	/**

@@ -4,14 +4,12 @@ namespace Quark\Scenarios;
 use Quark\IQuarkTask;
 
 use Quark\Quark;
-use Quark\QuarkArchException;
+use Quark\QuarkConfig;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
-use Quark\QuarkFile;
-use Quark\QuarkFPMEnvironment;
+use Quark\QuarkHTTPServerHost;
 use Quark\QuarkHTTPException;
-use Quark\QuarkHTTPServer;
-use Quark\QuarkService;
+use Quark\QuarkArchException;
 use Quark\QuarkThreadSet;
 use Quark\QuarkURI;
 
@@ -21,20 +19,21 @@ use Quark\QuarkURI;
  * @package Quark\Scenarios
  */
 class SelfHostedFPM implements IQuarkTask {
-	const UNKNOWN_URI = '<uri_unknown>';
-
 	/**
 	 * @var string[] $_secure
 	 */
 	private $_secure = array(
+		'/.git',
+		'/.idea',
 		'/Services',
 		'/Models',
 		'/ViewModels',
 		'/Views',
 		'/runtime',
+		'/loader.php',
 		'.htaccess',
 	);
-	
+
 	/**
 	 * @param string[] $secure = []
 	 *
@@ -43,7 +42,7 @@ class SelfHostedFPM implements IQuarkTask {
 	public function Secure ($secure = []) {
 		if (func_num_args() != 0)
 			$this->_secure = $secure;
-		
+
 		return $this->_secure;
 	}
 
@@ -61,101 +60,44 @@ class SelfHostedFPM implements IQuarkTask {
 		if ($fpm == null)
 			throw new QuarkArchException('Attempt to start a not configured self-hosted FPM instance');
 
-		$http = self::Instance($fpm, $this->_secure);
+		$namespace = Quark::Config()->Location(QuarkConfig::SERVICES);
+		$base = Quark::Host() . '/' . $namespace;
+
+		$http = new QuarkHTTPServerHost($fpm, Quark::Host(), $base, $namespace, Quark::Config()->SelfHostedFPMCertificate());
+
+		$http->Deny($this->_secure);
+
+		$http->On(QuarkHTTPServerHost::EVENT_HTTP_ERROR, function (QuarkDTO $request, QuarkDTO $response, $e = null) {
+			if (!($request->URI() instanceof QuarkURI)) {
+				Quark::Log('[SelfHostedFPM] Can not parse query', Quark::LOG_FATAL);
+				return;
+			}
+
+			$query = $request->URI()->Query();
+			$msg = '[SelfHostedFPM] ' . $response->Status();
+			$lvl = Quark::LOG_FATAL;
+
+			if (isset($e)) {
+				if ($e instanceof \Exception)
+					$msg = $e->getMessage();
+
+				if ($e instanceof QuarkHTTPException) {
+					$msg = $e->log;
+					$lvl = $e->lvl;
+				}
+			}
+
+			Quark::Log('[' . $query . '] ' . $msg, $lvl);
+
+			if (Quark::Config()->SelfHostedFPMLog())
+				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $query, ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
+		});
 
 		if (!$http->Bind())
 			throw new QuarkArchException('Can not bind self-hosted FPM instance on ' . $fpm);
 
 		QuarkThreadSet::Queue(function () use (&$http) {
 			$http->Pipe();
-		});
-	}
-	
-	/**
-	 * @param string $uri = QuarkFPMEnvironment::SELF_HOSTED
-	 * @param string[] $secure = []
-	 * @param bool $log = true
-	 *
-	 * @return QuarkHTTPServer
-	 */
-	public static function Instance ($uri = QuarkFPMEnvironment::SELF_HOSTED, $secure = [], $log = true) {
-		return new QuarkHTTPServer($uri, function (QuarkDTO $request) use ($secure, $log) {
-			$file = new QuarkFile(Quark::Host() . $request->URI()->path);
-			$query = $request->URI() instanceof QuarkURI ? $request->URI()->Query() : self::UNKNOWN_URI;
-
-			try {
-				if ($file->Exists()) {
-					/**
-					 * http://stackoverflow.com/a/684005/2097055
-					 */
-					if (preg_match('#' . implode('|', $secure) . '#Uis', $query)) {
-						$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_403_FORBIDDEN);
-
-						$out = $response->SerializeResponse();
-					}
-					else {
-						$file->Load();
-
-						$response = new QuarkDTO();
-						$response->Data($file);
-
-						$out = $response->SerializeResponse();
-					}
-				}
-				else {
-					$env = Quark::Environment();
-					$provider = null;
-					foreach ($env as $i => $provider)
-						if ($provider instanceof QuarkFPMEnvironment) break;
-
-					$service = new QuarkService(
-						$query,
-						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_REQUEST) : null,
-						$provider instanceof QuarkFPMEnvironment ? $provider->Processor(QuarkFPMEnvironment::DIRECTION_RESPONSE) : null
-					);
-
-					unset($i, $provider, $env);
-
-					$request->Processor($service->Input()->Processor());
-					$service->Input()->Merge($request->UnserializeRequest($request->Raw()));
-					$service->Input()->Signature($request->Signature());
-					$service->InitProcessors();
-
-					$body = QuarkHTTPServer::ServicePipeline($service);
-
-					if ($service->Output()->Header(QuarkDTO::HEADER_LOCATION)) {
-						$response = QuarkDTO::ForRedirect($service->Output()->Header(QuarkDTO::HEADER_LOCATION));
-						$response->Merge($service->Session()->Output(), true, false);
-
-						$out = $response->SerializeResponse();
-					}
-					else {
-						$out = $service->Output()->SerializeResponseHeaders() . "\r\n\r\n" . $body;
-						$response = $service->Output();
-					}
-
-					unset($body, $service);
-				}
-			}
-			catch (QuarkHTTPException $e) {
-				Quark::Log('[' . $query . '] ' . $e->log, $e->lvl);
-
-				$response = QuarkDTO::ForStatus($e->Status());
-				$out = $response->SerializeResponse();
-			}
-			catch (\Exception $e) {
-				Quark::Log($e, Quark::LOG_FATAL);
-
-				$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_500_SERVER_ERROR);
-				$out = $response->SerializeResponse();
-			}
-			
-			if ($log)
-				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $query, ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
-			
-			unset($file, $response, $request);
-
-			return $out;
 		});
 	}
 }

@@ -27,6 +27,13 @@ class YandexMail implements IQuarkMailProvider {
 	 * @return QuarkURI
 	 */
 	public function MailSMTP ($username, $password) {
-		return QuarkURI::FromURI('ssl://smtp.yandex.ru:465')->User($username, $password);
+		return QuarkURI::FromURI('ssl://smtp.yandex.ru:587')->User($username, $password);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function MailStartTLS () {
+		return true;
 	}
 }

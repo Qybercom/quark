@@ -25,10 +25,10 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 	 * @var string[] $_sizes
 	 */
 	private $_sizes = array(
-		GoogleFont::N300,
-		GoogleFont::N600,
-		GoogleFont::I300,
-		GoogleFont::I600
+		GoogleFont::WEIGHT_LIGHT_300,
+		GoogleFont::WEIGHT_LIGHT_300_ITALIC,
+		GoogleFont::WEIGHT_SEMI_BOLD_600,
+		GoogleFont::WEIGHT_SEMI_BOLD_600_ITALIC
 	);
 
 	/**
@@ -49,9 +49,7 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 	public function Dependencies () {
 		return array(
 			new FontAwesome(),
-			new GoogleFont('Open Sans', array(
-				GoogleFont::OPTION_SIZES => $this->_sizes
-			)),
+			new GoogleFont(GoogleFont::FAMILY_OPEN_SANS, $this->_sizes),
 			new QuarkLocalCoreCSSViewResource(),
 			$this->_js
 		);

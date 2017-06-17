@@ -1,19 +1,23 @@
 <?php
 namespace Quark\ViewResources\Trumbowyg;
 
-use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkSpecifiedViewResource;
+use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkViewResourceWithDependencies;
+use Quark\IQuarkForeignViewResource;
 
 use Quark\QuarkDTO;
 use Quark\QuarkJSViewResourceType;
+
+use Quark\ViewResources\jQuery\jQueryCore;
 
 /**
  * Class TrumbowygJS
  *
  * @package Quark\ViewResources\Trumbowyg
  */
-class TrumbowygJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
+class TrumbowygJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @var string $_version = Trumbowyg::CURRENT_VERSION
 	 */
@@ -38,6 +42,15 @@ class TrumbowygJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResou
 	 */
 	public function Location () {
 		return 'https://cdnjs.cloudflare.com/ajax/libs/Trumbowyg/' . $this->_version . '/trumbowyg.min.js';
+	}
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function Dependencies () {
+		return array(
+			new jQueryCore()
+		);
 	}
 
 	/**

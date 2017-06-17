@@ -3,17 +3,20 @@ namespace Quark\ViewResources\FontAwesome;
 
 use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
+use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
+use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkDTO;
 use Quark\QuarkCSSViewResourceType;
+use Quark\QuarkGenericViewResource;
 
 /**
  * Class FontAwesome
  *
  * @package Quark\ViewResources\FontAwesome
  */
-class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
+class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
 	const CURRENT_VERSION = '4.7.0';
 
 	/**
@@ -47,5 +50,14 @@ class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResou
 	 */
 	public function RequestDTO () {
 		// TODO: Implement RequestDTO() method.
+	}
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function Dependencies () {
+		return array(
+			QuarkGenericViewResource::CSS(__DIR__ . '/FontAwesomeSocial.css')
+		);
 	}
 }

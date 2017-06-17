@@ -2,6 +2,7 @@
 namespace Quark\ViewResources\Quark\QuarkControls\ViewFragments;
 
 use Quark\IQuarkViewFragment;
+use Quark\QuarkDTO;
 
 /**
  * Class QuarkViewDialogFragment
@@ -56,6 +57,11 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	private $_actionClose = self::ACTION_CLOSE;
 
 	/**
+	 * @var string $_method = QuarkDTO::METHOD_GET
+	 */
+	private $_method = QuarkDTO::METHOD_GET;
+
+	/**
 	 * @param string $id
 	 * @param string $header
 	 * @param string $content
@@ -64,8 +70,9 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	 * @param string $messageError = self::MESSAGE_ERROR
 	 * @param string $actionConfirm = self::ACTION_CONFIRM
 	 * @param string $actionClose = self::ACTION_CLOSE
+	 * @param string $method = QuarkDTO::METHOD_GET
 	 */
-	public function __construct ($id, $header, $content, $messageWait = self::MESSAGE_WAIT, $messageSuccess = self::MESSAGE_SUCCESS, $messageError = self::MESSAGE_ERROR, $actionConfirm = self::ACTION_CONFIRM, $actionClose = self::ACTION_CLOSE) {
+	public function __construct ($id, $header, $content, $messageWait = self::MESSAGE_WAIT, $messageSuccess = self::MESSAGE_SUCCESS, $messageError = self::MESSAGE_ERROR, $actionConfirm = self::ACTION_CONFIRM, $actionClose = self::ACTION_CLOSE, $method = QuarkDTO::METHOD_GET) {
 		$this->_id = $id;
 		$this->_header = $header;
 		$this->_content = $content;
@@ -74,6 +81,7 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 		$this->_messageError = $messageError;
 		$this->_actionConfirm = $actionConfirm;
 		$this->_actionClose = $actionClose;
+		$this->_method = $method;
 	}
 
 	/**
@@ -117,7 +125,7 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	 */
 	public function CompileFragment () {
 		return '
-			<form class="quark-dialog" id="' . $this->_id . '">
+			<form class="quark-dialog" id="' . $this->_id . '" method="' . $this->_method . '">
 				<h3>' . $this->_header . '</h3>
 				' . $this->_content . '<br />
 				<br />

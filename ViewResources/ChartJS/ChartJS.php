@@ -20,6 +20,7 @@ use Quark\ViewResources\jQuery\jQueryCore;
  */
 class ChartJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
 	const CURRENT_VERSION = '1.0.2';
+	//const CURRENT_VERSION = '2.6.0';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
@@ -44,7 +45,7 @@ class ChartJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/' . $this->_version . '/Chart.min.js';
+		return '//cdnjs.cloudflare.com/ajax/libs/Chart.js/' . $this->_version . '/Chart.min.js';
 	}
 
 	/**

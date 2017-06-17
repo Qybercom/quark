@@ -17,6 +17,11 @@ class QuarkGenericMailer implements IQuarkMailProvider {
 	private $_uri;
 
 	/**
+	 * @var bool $_startTLS = false
+	 */
+	private $_startTLS = false;
+
+	/**
 	 * @param QuarkURI $uri = null
 	 */
 	public function __construct (QuarkURI $uri = null) {
@@ -42,7 +47,7 @@ class QuarkGenericMailer implements IQuarkMailProvider {
 	 */
 	public function MailINI ($ini) {
 		if ($this->_uri == null)
-			$this->_uri = new QuarkURI('tcp');
+			$this->_uri = new QuarkURI(QuarkURI::WRAPPER_TCP);
 
 		if (isset($ini->Protocol))
 			$this->_uri->scheme = $ini->Protocol;
@@ -52,6 +57,9 @@ class QuarkGenericMailer implements IQuarkMailProvider {
 
 		if (isset($ini->Port))
 			$this->_uri->port = $ini->Port;
+
+		if (isset($ini->StartTLS))
+			$this->_startTLS = $ini->StartTLS;
 	}
 
 	/**
@@ -68,5 +76,12 @@ class QuarkGenericMailer implements IQuarkMailProvider {
 			$this->_uri->pass = $password;
 
 		return $this->_uri;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function MailStartTLS () {
+		return $this->_startTLS;
 	}
 }
