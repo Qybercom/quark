@@ -167,11 +167,30 @@ Quark.Cookie.Remove = function (name) {
  * https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/String/Trim
  */
 if (!String.prototype.trim) {
-    (function() {
-        String.prototype.trim = function() {
+    (function () {
+        String.prototype.trim = function () {
             return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
         };
     })();
+}
+
+/**
+ * http://javascript.ru/blog/ixth/minmax-dlya-massivov
+ */
+if (!Array.prototype.max) {
+	(function () {
+		Array.prototype.max = function () {
+			return Math.max.apply(Math, this);
+		}
+	})();
+}
+
+if (!Array.prototype.min) {
+	(function () {
+		Array.prototype.min = function () {
+			return Math.min.apply(Math, this);
+		}
+	})();
 }
 
 /**
@@ -356,4 +375,56 @@ Quark.ObjectURL = function (obj) {
  */
 Quark.DataURL = function (data, type) {
 	return 'data:' + type + ';base64,' + Quark.Base64.Encode(data);
+};
+
+/**
+ * @param {ArrayBuffer} buffer
+ *
+ * @constructor
+ */
+Quark.DataView = function (buffer) {
+	var that = this;
+	
+	/**
+	 * @type {ArrayBuffer}
+	 */
+	that.Buffer = new DataView(buffer);
+	
+	/**
+	 * @param offset
+	 * @param str
+	 */
+	that.WriteString = function (offset, str) {
+		var i = 0;
+		
+		while (i < str.length) {
+			that.Buffer.setUint8(offset + i, str.charCodeAt(i));
+			i++;
+		}
+	};
+	
+	/**
+	 * @param offset
+	 * @param input
+	 */
+	that.PCM16Bit = function (offset, input) {
+		var i = 0, s = 0;
+		
+		while (i < input.length) {
+			s = Math.max(-1, Math.min(1, input[i]));
+			that.Buffer.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+			
+			i++;
+			offset += 2;
+		}
+	};
+};
+
+/**
+ * @param size
+ *
+ * @return {Quark.DataView}
+ */
+Quark.DataView.WithBuffer = function (size) {
+	return new Quark.DataView(new ArrayBuffer(size));
 };
