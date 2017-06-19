@@ -61,9 +61,18 @@
 /**
  * .quark-list component
  */
+.quark-list {
+	padding: 5px;
+}
+
+.quark-list-item {
+	list-style: none;
+}
+
 .quark-list-item:before {
 	content: '\f111';
 	vertical-align: middle;
+	margin: 0 10px 0 0;
 }
 
 .quark-list-item .quark-input.item-value {
