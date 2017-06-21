@@ -102,8 +102,8 @@ class TARArchive implements IQuarkArchive {
 		$prefix = '';
 		$other = '';
 		
-		$first = pack("a100a8a8a8a12a12", $item->location, $perms, $user_id, $group_id, $size, $time);
-		$last = pack("a1a100a6a2a32a32a8a8a155a12", $flag, $link, $magic, $version, $user_name, $group_name, $device_major, $device_minor, $prefix, $other);
+		$first = pack('a100a8a8a8a12a12', $item->location, $perms, $user_id, $group_id, $size, $time);
+		$last = pack('a1a100a6a2a32a32a8a8a155a12', $flag, $link, $magic, $version, $user_name, $group_name, $device_major, $device_minor, $prefix, $other);
 		
 		$checksum = 0;
 		

@@ -7584,12 +7584,162 @@ trait QuarkCollectionBehavior {
 }
 
 /**
+ * Interface IQuarkCollectionWithArrayAccess
+ *
+ * @package Quark
+ */
+interface IQuarkCollectionWithArrayAccess extends \Iterator, \ArrayAccess, \Countable { }
+
+/**
+ * Trait QuarkCollectionBehaviorWithArrayAccess
+ *
+ * @package Quark
+ */
+trait QuarkCollectionBehaviorWithArrayAccess {
+	use QuarkCollectionBehavior;
+	
+	/**
+	 * @var int $_index = 0
+	 */
+	private $_index = 0;
+	
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Return the current element
+	 *
+	 * @link http://php.net/manual/en/iterator.current.php
+	 * @return mixed Can return any type.
+	 */
+	public function current () {
+		return $this->_collection[$this->_index];
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Move forward to next element
+	 *
+	 * @link http://php.net/manual/en/iterator.next.php
+	 * @return void Any returned value is ignored.
+	 */
+	public function next () {
+		$this->_index++;
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Return the key of the current element
+	 *
+	 * @link http://php.net/manual/en/iterator.key.php
+	 * @return mixed scalar on success, or null on failure.
+	 */
+	public function key () {
+		return $this->_index;
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Checks if current position is valid
+	 *
+	 * @link http://php.net/manual/en/iterator.valid.php
+	 * @return boolean The return value will be casted to boolean and then evaluated.
+	 *       Returns true on success or false on failure.
+	 */
+	public function valid () {
+		return isset($this->_collection[$this->_index]);
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Rewind the Iterator to the first element
+	 *
+	 * @link http://php.net/manual/en/iterator.rewind.php
+	 * @return void Any returned value is ignored.
+	 */
+	public function rewind () {
+		$this->_index = 0;
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Whether a offset exists
+	 *
+	 * @link http://php.net/manual/en/arrayaccess.offsetexists.php
+	 *
+	 * @param mixed $offset <p>
+	 *                      An offset to check for.
+	 *                      </p>
+	 *
+	 * @return boolean true on success or false on failure.
+	 * </p>
+	 * <p>
+	 * The return value will be casted to boolean if non-boolean was returned.
+	 */
+	public function offsetExists ($offset) {
+		return isset($this->_collection[$offset]);
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Offset to retrieve
+	 *
+	 * @link http://php.net/manual/en/arrayaccess.offsetget.php
+	 *
+	 * @param mixed $offset <p>
+	 *                      The offset to retrieve.
+	 *                      </p>
+	 *
+	 * @return mixed Can return all value types.
+	 */
+	public function offsetGet ($offset) {
+		return isset($this->_collection[$offset]) ? $this->_collection[$offset] : null;
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Offset to set
+	 *
+	 * @link http://php.net/manual/en/arrayaccess.offsetset.php
+	 *
+	 * @param mixed $offset <p>
+	 *                      The offset to assign the value to.
+	 *                      </p>
+	 * @param mixed $value  <p>
+	 *                      The value to set.
+	 *                      </p>
+	 *
+	 * @return void
+	 */
+	public function offsetSet ($offset, $value) {
+		if (!$this->TypeIs($value)) return;
+
+		if ($offset === null) $this->_collection[] = $value;
+		else $this->_collection[(int)$offset] = $value;
+	}
+
+	/**
+	 * (PHP 5 &gt;= 5.0.0)<br/>
+	 * Offset to unset
+	 *
+	 * @link http://php.net/manual/en/arrayaccess.offsetunset.php
+	 *
+	 * @param mixed $offset <p>
+	 *                      The offset to unset.
+	 *                      </p>
+	 *
+	 * @return void
+	 */
+	public function offsetUnset ($offset) {
+		unset($this->_collection[(int)$offset]);
+	}
+}
+
+/**
  * Class QuarkCollection
  *
  * @package Quark
  */
-class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
-	use QuarkCollectionBehavior {
+class QuarkCollection implements IQuarkCollectionWithArrayAccess {
+	use QuarkCollectionBehaviorWithArrayAccess {
 		Select as private _select;
 		Aggregate as private _aggregate;
 	}
@@ -7604,11 +7754,6 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	private $_model = true;
 
-	/**
-	 * @var int $_index = 0
-	 */
-	private $_index = 0;
-	
 	/**
 	 * @var int $_page = 0
 	 */
@@ -7877,135 +8022,6 @@ class QuarkCollection implements \Iterator, \ArrayAccess, \Countable {
 	 */
 	public static function Lazy (IQuarkLinkedModel $model, $value = null) {
 		return new self(new QuarkLazyLink($model, $value));
-	}
-	
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Return the current element
-	 *
-	 * @link http://php.net/manual/en/iterator.current.php
-	 * @return mixed Can return any type.
-	 */
-	public function current () {
-		return $this->_collection[$this->_index];
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Move forward to next element
-	 *
-	 * @link http://php.net/manual/en/iterator.next.php
-	 * @return void Any returned value is ignored.
-	 */
-	public function next () {
-		$this->_index++;
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Return the key of the current element
-	 *
-	 * @link http://php.net/manual/en/iterator.key.php
-	 * @return mixed scalar on success, or null on failure.
-	 */
-	public function key () {
-		return $this->_index;
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Checks if current position is valid
-	 *
-	 * @link http://php.net/manual/en/iterator.valid.php
-	 * @return boolean The return value will be casted to boolean and then evaluated.
-	 *       Returns true on success or false on failure.
-	 */
-	public function valid () {
-		return isset($this->_collection[$this->_index]);
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Rewind the Iterator to the first element
-	 *
-	 * @link http://php.net/manual/en/iterator.rewind.php
-	 * @return void Any returned value is ignored.
-	 */
-	public function rewind () {
-		$this->_index = 0;
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Whether a offset exists
-	 *
-	 * @link http://php.net/manual/en/arrayaccess.offsetexists.php
-	 *
-	 * @param mixed $offset <p>
-	 *                      An offset to check for.
-	 *                      </p>
-	 *
-	 * @return boolean true on success or false on failure.
-	 * </p>
-	 * <p>
-	 * The return value will be casted to boolean if non-boolean was returned.
-	 */
-	public function offsetExists ($offset) {
-		return isset($this->_collection[$offset]);
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Offset to retrieve
-	 *
-	 * @link http://php.net/manual/en/arrayaccess.offsetget.php
-	 *
-	 * @param mixed $offset <p>
-	 *                      The offset to retrieve.
-	 *                      </p>
-	 *
-	 * @return mixed Can return all value types.
-	 */
-	public function offsetGet ($offset) {
-		return isset($this->_collection[$offset]) ? $this->_collection[$offset] : null;
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Offset to set
-	 *
-	 * @link http://php.net/manual/en/arrayaccess.offsetset.php
-	 *
-	 * @param mixed $offset <p>
-	 *                      The offset to assign the value to.
-	 *                      </p>
-	 * @param mixed $value  <p>
-	 *                      The value to set.
-	 *                      </p>
-	 *
-	 * @return void
-	 */
-	public function offsetSet ($offset, $value) {
-		if (!$this->TypeIs($value)) return;
-
-		if ($offset === null) $this->_collection[] = $value;
-		else $this->_collection[(int)$offset] = $value;
-	}
-
-	/**
-	 * (PHP 5 &gt;= 5.0.0)<br/>
-	 * Offset to unset
-	 *
-	 * @link http://php.net/manual/en/arrayaccess.offsetunset.php
-	 *
-	 * @param mixed $offset <p>
-	 *                      The offset to unset.
-	 *                      </p>
-	 *
-	 * @return void
-	 */
-	public function offsetUnset ($offset) {
-		unset($this->_collection[(int)$offset]);
 	}
 }
 
@@ -18694,8 +18710,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public function Location ($location = '', $name = '') {
 		if (func_num_args() != 0) {
 			$this->location = str_replace('\\', '/', $location);
+			
+			$delimiter = strrpos($this->location, '/');
+			
 			$this->name = $name ? $name : array_reverse(explode('/', (string)$this->location))[0];
-			$this->parent = str_replace($this->name, '', $this->location);
+			$this->parent = $delimiter !== false ? substr($this->location, 0, $delimiter) : '';
 		}
 
 		return $this->location;
@@ -21388,16 +21407,13 @@ class QuarkCipherKeyPair extends QuarkFile {
  *
  * @package Quark
  */
-class QuarkArchive extends QuarkFile {
+class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess {
+	use QuarkCollectionBehaviorWithArrayAccess;
+	
 	/**
 	 * @var IQuarkArchive $_archive
 	 */
 	private $_archive;
-	
-	/**
-	 * @var QuarkArchiveItem[] $_items = []
-	 */
-	private $_items = array();
 	
 	/**
 	 * @var bool $_unpacked = false
@@ -21416,14 +21432,37 @@ class QuarkArchive extends QuarkFile {
 	/**
 	 * @param QuarkArchiveItem[] $items = []
 	 *
+	 * @return QuarkArchiveItem[]
+	 */
+	public function Items ($items = []) {
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($items, 'Quark\\QuarkArchiveItem'))
+			$this->_collection = $items;
+		
+		return $this->_collection;
+	}
+	
+	/**
+	 * @param QuarkArchiveItem[] $items = []
+	 *
 	 * @return QuarkArchive
 	 */
 	public function Pack ($items = []) {
-		$this->_items = $items;
-		$this->_content = $this->_archive->Pack($this->_items);
+		if (func_num_args() != 0)
+			$this->_collection = $items;
+		
+		$this->_content = $this->_archive->Pack($this->_collection);
 		$this->_unpacked = true;
 		
 		return $this;
+	}
+	
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return bool
+	 */
+	public function PackTo ($location = '') {
+		return $this->Pack()->SaveTo($location);
 	}
 	
 	/**
@@ -21433,7 +21472,7 @@ class QuarkArchive extends QuarkFile {
 		if (!$this->_loaded)
 			$this->Load();
 		
-		$this->_items = $this->_archive->Unpack($this->_content);
+		$this->_collection = $this->_archive->Unpack($this->_content);
 		$this->_unpacked = true;
 		
 		return $this;
@@ -21450,9 +21489,14 @@ class QuarkArchive extends QuarkFile {
 		
 		$ok = true;
 		
-		foreach ($this->_items as $i => &$item)
-			if ($item->name != '')
-				$ok &= $item->SaveTo($location . '/' . $item->location);
+		foreach ($this->_collection as $i => &$item) {
+			/**
+			 * @var QuarkArchiveItem $item
+			 */
+			if ($item->name == '') continue;
+		
+			$ok &= $item->SaveTo($location . '/' . $item->location);
+		}
 		
 		return $ok;
 	}
