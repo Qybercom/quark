@@ -7,58 +7,24 @@ use Quark\QuarkObject;
 /**
  * Class PackageManagerPackage
  *
+ * @property string $packageName = ''
+ * @property string $packageVersion = ''
+ * @property string $packageMaintainer = ''
+ * @property string $packageArchitecture = ''
+ * @property string[] $packageCategories = []
+ * @property string $packageDescription = ''
+ * @property string $packageDescriptionLong = ''
+ * @property string[] $packageDependencies = []
+ * @property string $packageOrigin = ''
+ * @property string $packagePriority = ''
+ *
  * @package Quark\Extensions\PackageManager
  */
 class PackageManagerPackage extends QuarkFile {
 	/**
-	 * @var string $_packageName = ''
-	 */
-	private $_packageName = '';
-	
-	/**
-	 * @var string $_packageVersion = ''
-	 */
-	private $_packageVersion = '';
-	
-	/**
-	 * @var string $_packageMaintainer = ''
-	 */
-	private $_packageMaintainer = '';
-	
-	/**
-	 * @var string $_packageArchitecture = ''
-	 */
-	private $_packageArchitecture = '';
-	
-	/**
-	 * @var array $_packageCategories = ''
-	 */
-	private $_packageCategories = array();
-	
-	/**
-	 * @var string $_packageDescription = ''
-	 */
-	private $_packageDescription = '';
-	
-	/**
-	 * @var string[] $_packageDependencies = []
-	 */
-	private $_packageDependencies = array();
-	
-	/**
-	 * @var string $_packageOrigin = ''
-	 */
-	private $_packageOrigin = '';
-	
-	/**
-	 * @var string $_packagePriority = ''
-	 */
-	private $_packagePriority = '';
-	
-	/**
 	 * @var QuarkFile[] $_files = []
 	 */
-	private $_files;
+	private $_files = array();
 	
 	/**
 	 * @param string $location = ''
@@ -74,9 +40,29 @@ class PackageManagerPackage extends QuarkFile {
 	 * @return QuarkFile[]
 	 */
 	public function &Files ($files = []) {
-		if (func_num_args() != 0 && QuarkObject::IsArrayOf($files, 'Quark\\QuarkFile'))
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($files, new QuarkFile()))
 			$this->_files = $files;
 		
 		return $this->_files;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function Fields () {
+		$fields = parent::Fields();
+		
+		$fields['packageName'] = '';
+		$fields['packageVersion'] = '';
+		$fields['packageMaintainer'] = '';
+		$fields['packageArchitecture'] = '';
+		$fields['packageCategories'] = array();
+		$fields['packageDescription'] = '';
+		$fields['packageDescriptionLong'] = '';
+		$fields['packageDependencies'] = array();
+		$fields['packageOrigin'] = '';
+		$fields['packagePriority'] = '';
+		
+		return $fields;
 	}
 }

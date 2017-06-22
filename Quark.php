@@ -3551,7 +3551,7 @@ trait QuarkServiceBehavior {
 	 * @return QuarkDTO
 	 */
 	public function Download ($name = '', $content = '') {
-		return QuarkFile::ForDownload($name, $content)->Download();
+		return QuarkFile::ForTransfer($name, $content)->Download();
 	}
 
 	/**
@@ -3562,7 +3562,7 @@ trait QuarkServiceBehavior {
 	 * @return QuarkDTO
 	 */
 	public function EncodeAndDownload (IQuarkIOProcessor $processor, $name = '', $data = []) {
-		return QuarkFile::ForDownload($name . '.' . QuarkFile::ExtensionByMime($processor->MimeType()), $processor->Encode($data))->Download();
+		return QuarkFile::ForTransfer($name . '.' . QuarkFile::ExtensionByMime($processor->MimeType()), $processor->Encode($data))->Download();
 	}
 
 	/**
@@ -3571,7 +3571,7 @@ trait QuarkServiceBehavior {
 	 * @return QuarkDTO
 	 */
 	public function Render ($content = '') {
-		return QuarkFile::ForRender($content)->Render();
+		return QuarkFile::ForTransfer($content)->Render();
 	}
 
 	/**
@@ -7710,8 +7710,6 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @return void
 	 */
 	public function offsetSet ($offset, $value) {
-		if (!$this->TypeIs($value)) return;
-
 		if ($offset === null) $this->_collection[] = $value;
 		else $this->_collection[(int)$offset] = $value;
 	}
@@ -7742,6 +7740,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	use QuarkCollectionBehaviorWithArrayAccess {
 		Select as private _select;
 		Aggregate as private _aggregate;
+		offsetSet as private _offsetSet;
 	}
 	
 	/**
@@ -7979,6 +7978,16 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 */
 	public function Aggregate ($options = []) {
 		return new self($this->_type, $this->_aggregate($options));
+	}
+	
+	/**
+	 * @param mixed $offset
+	 * @param mixed $value
+	 */
+	public function offsetSet ($offset, $value) {
+		if (!$this->TypeIs($value)) return;
+		
+		$this->_offsetSet($offset, $value);
 	}
 
 	/**
@@ -17363,7 +17372,7 @@ class QuarkDTO {
 					if (isset($head[self::HEADER_CONTENT_TRANSFER_ENCODING]) && $head[self::HEADER_CONTENT_TRANSFER_ENCODING] == self::TRANSFER_ENCODING_BASE64)
 						$found[2] = base64_decode($found[2]);
 					
-					$fs = new QuarkModel(QuarkFile::ForDownload(trim($file, '"'), $found[2]));
+					$fs = new QuarkModel(QuarkFile::ForTransfer(trim($file, '"'), $found[2]));
 					$this->_files[] = $fs;
 				}
 
@@ -18687,6 +18696,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @param bool $load = false
 	 */
 	public function __construct ($location = '', $load = false) {
+		$now = QuarkDate::GMTNow();
+		
+		$this->_dateCreated = clone $now;
+		$this->_dateModified = clone $now;
+		
 		if (func_num_args() != 0 && $location)
 			$this->Location($location);
 
@@ -19119,32 +19133,17 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 	
 	/**
-	 * @param string $name = ''
+	 * @param string $location = ''
 	 * @param string $content = ''
 	 *
 	 * @return QuarkFile
 	 */
-	public static function ForDownload ($name = '', $content = '') {
-		$file = new self();
+	public static function ForTransfer ($location = '', $content = '') {
+		$file = new self($location);
 		
 		$file->_loaded = true;
-		$file->name = $name;
 		$file->Content($content);
 		
-		return $file;
-	}
-
-	/**
-	 * @param string $content = ''
-	 *
-	 * @return QuarkFile
-	 */
-	public static function ForRender ($content = '') {
-		$file = new self();
-
-		$file->_loaded = true;
-		$file->Content($content);
-
 		return $file;
 	}
 
@@ -21435,7 +21434,7 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 	 * @return QuarkArchiveItem[]
 	 */
 	public function Items ($items = []) {
-		if (func_num_args() != 0 && QuarkObject::IsArrayOf($items, 'Quark\\QuarkArchiveItem'))
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($items, new QuarkArchiveItem()))
 			$this->_collection = $items;
 		
 		return $this->_collection;
@@ -21450,7 +21449,7 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 		if (func_num_args() != 0)
 			$this->_collection = $items;
 		
-		$this->_content = $this->_archive->Pack($this->_collection);
+		$this->Content($this->_archive->Pack($this->_collection));
 		$this->_unpacked = true;
 		
 		return $this;
@@ -21524,10 +21523,12 @@ class QuarkArchiveItem extends QuarkFile {
 		parent::__construct($location, false);
 		
 		$this->location = $location;
-		$this->size = $size;
-		$this->isDir = $dir;
-		$this->_content = $content;
-		$this->_dateModified = $date;
+		$this->Content($content);
+		
+		$args = func_num_args();
+		if ($args > 2) $this->_dateModified = $date;
+		if ($args > 3) $this->size = $size;
+		if ($args > 4) $this->isDir = $dir;
 	}
 	
 	/**
