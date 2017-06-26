@@ -3490,6 +3490,13 @@ trait QuarkServiceBehavior {
 	}
 
 	/**
+	 * @return string|bool
+	 */
+	public function URLOffset () {
+		return $this->__call('URLOffset', func_get_args());
+	}
+
+	/**
 	 * @return QuarkDTO
 	 */
 	public function Input () {
@@ -4356,6 +4363,25 @@ class QuarkService implements IQuarkContainer {
 	 */
 	public function URL (IQuarkService $service = null, $query = true, $fragment = true) {
 		return $service ? self::URLOf($service) : $this->_input->URI()->Query($query, $fragment);
+	}
+	
+	/**
+	 * @return string|bool
+	 */
+	public function URLOffset () {
+		$url = $this->URL();
+		$service = strtolower($this->URL($this->_service));
+		
+		if (substr($service, -6) == '/index')
+			$service = substr($service, 0, -6);
+		
+		$length = strlen($service);
+		$offset = strtolower(substr($url, 0, $length));
+		
+		if ($service != $offset) return false;
+		$out = substr($url, $length);
+		
+		return $out === '' ? '/' : $out;
 	}
 
 	/**
