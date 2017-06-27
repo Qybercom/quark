@@ -3,6 +3,7 @@ namespace Quark\IOProcessors;
 
 use Quark\IQuarkIOProcessor;
 
+use Quark\IQuarkModel;
 use Quark\QuarkCollection;
 use Quark\QuarkObject;
 
@@ -21,6 +22,11 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	const SEPARATOR_VALUE_SEMICOLON = ';';
 	const SEPARATOR_BIT_DOT = '.';
 	const SEPARATOR_BIT_COMMA = ',';
+
+	/**
+	 * @var object $_sample
+	 */
+	private $_sample;
 
 	/**
 	 * @var string $_separatorValue = self::SEPARATOR_VALUE_COMMA
@@ -43,16 +49,30 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	private $_separatorBit = self::SEPARATOR_BIT_DOT;
 
 	/**
+	 * @param object $sample = null
 	 * @param string $separatorValue = self::SEPARATOR_VALUE_COMMA
 	 * @param bool $header = false
 	 * @param string[] $force = []
 	 * @param string $separatorBit = self::SEPARATOR_BIT_DOT
 	 */
-	public function __construct ($separatorValue = self::SEPARATOR_VALUE_COMMA, $header = false, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT) {
+	public function __construct ($sample = null, $separatorValue = self::SEPARATOR_VALUE_COMMA, $header = false, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT) {
+		$this->Sample($sample ? $sample : new \stdClass());
 		$this->SeparatorValue($separatorValue);
 		$this->Header($header);
 		$this->Force($force);
 		$this->SeparatorBit($separatorBit);
+	}
+
+	/**
+	 * @param object $sample = null
+	 *
+	 * @return object
+	 */
+	public function Sample ($sample = null) {
+		if (is_object($sample))
+			$this->_sample = $sample;
+
+		return $this->_sample;
 	}
 
 	/**
@@ -147,7 +167,62 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		// TODO: Implement Decode() method.
+		$rows = explode("\n", $raw);
+		if (sizeof($rows) == 0) return array();
+
+		$out = array();
+		$header = null;
+		$data = explode($this->_separatorValue, trim($rows[0]));
+
+		if ($this->_sample instanceof IQuarkModel) {
+			$header = array_keys((array)$this->_sample->Fields());
+
+			if ($this->Header()) {
+				$header = array_intersect($header, $data);
+				$rows = array_slice($rows, 1);
+			}
+		}
+
+		if (!$header && $this->_sample instanceof \stdClass && $this->Header()) {
+			foreach ($data as $j => &$field)
+				$header[] = $field;
+
+			$rows = array_slice($rows, 1);
+		}
+
+		$header = array_values($header);
+
+		foreach ($rows as $i => &$row) {
+			$row = trim($row);
+			if (strlen($row) == 0) continue;
+
+			$line = $header ? clone $this->_sample : array();
+			$data = explode($this->_separatorValue, $row);
+
+			foreach ($data as $j => &$field) {
+				$strict = strlen($field) != 0 && $field[0] == '=';
+				$field = preg_replace('#(\=)?"(.*)"|(.*)#Uis', '$2', $field);
+
+				if (!$header) $line[] = $field;
+				else {
+					if (!isset($header[$j])) continue;
+
+					$key = $header[$j];
+					$line->$key = $field;
+
+					if (!$strict) {
+						if (preg_match('#^[0-9]+$#', $field)) $line->$key = (int)$line->$key;
+						if (preg_match('#^[0-9\\' . $this->_separatorBit . ']+$#', $field)) $line->$key = (float)$line->$key;
+						if ($field == 'true' || $field == 'false') $line->$key = (bool)$line->$key;
+						if ($field == 'null') $line->$key = null;
+					}
+				}
+			}
+
+			$out[] = $line;
+		}
+
+		return $out;
 	}
 
 	/**
@@ -160,12 +235,13 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @param object $sample = null
 	 * @param string[] $force = []
 	 * @param string $separatorBit = self::SEPARATOR_BIT_DOT
 	 *
 	 * @return QuarkCSVIOProcessor
 	 */
-	public static function ForExcel ($force = [], $separatorBit = self::SEPARATOR_BIT_DOT) {
-		return new self(self::SEPARATOR_VALUE_SEMICOLON, true, $force, $separatorBit);
+	public static function ForExcel ($sample = null, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT) {
+		return new self($sample, self::SEPARATOR_VALUE_SEMICOLON, true, $force, $separatorBit);
 	}
 }
