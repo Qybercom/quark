@@ -111,7 +111,16 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 		Quark::Log('[SSLAuthority.LetsEncrypt] ' . $message . ($openssl ? '. OpenSSL error: "' . openssl_error_string() . '".' : ''), Quark::LOG_WARN);
 		return false;
 	}
-
+	
+	/**
+	 * @param bool $staging
+	 * @param string $contact
+	 */
+	public function __construct ($staging = false, $contact = '') {
+		$this->_api = $staging ? self::URL_STAGING : self::URL_PRODUCTION;
+		$this->_contact = $contact;
+	}
+	
 	/**
 	 * Options:
 	 *  - Staging           bool   false  - Indicates using of staging/production API
@@ -126,7 +135,7 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	 *
 	 * @param object $options
 	 *
-	 * @return mixed
+	 * @return void
 	 */
 	public function SSLAuthorityOptions ($options) {
 		if (isset($options->Staging))
@@ -337,7 +346,7 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 	public function ChallengeAccept (QuarkModel $challenge = null) {
 		if ($challenge == null)
 			return self::_error('ChallengeAccept: Challenge must not be null', false);
-
+		
 		$acme = new QuarkFile($this->_wellKnownChallenge . $challenge->token);
 		$acme->Content($challenge->Payload($this->AccountHeader()));
 
@@ -401,11 +410,11 @@ class LetsEncrypt implements IQuarkSSLAuthorityProvider {
 
 			return $res->Status() == QuarkDTO::STATUS_200_OK;
 		});
-		if (!$ok) return true;
+		if (!$ok) return null;
 		$out[] = $this->PEMFromRaw($result->RawData());
 
 		$cert = $this->APIRaw(preg_replace('#<(.*)>;rel="up"#Uis', '$1', $result->Header('Link')));
-		if (!$cert) return false;
+		if (!$cert) return null;
 		$out[] = $this->PEMFromRaw($cert->RawData());
 
 		$certificate = new QuarkCertificate();
