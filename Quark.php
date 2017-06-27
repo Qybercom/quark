@@ -6959,12 +6959,29 @@ trait QuarkCollectionBehavior {
 	 * @var array $_collection = []
 	 */
 	private $_collection = array();
+
+	/**
+	 * @var bool $_secure = true
+	 */
+	private $_secure = true;
 	
 	/**
 	 * @return array
 	 */
 	public function Collection () {
 		return $this->_collection;
+	}
+
+	/**
+	 * @param bool $secure = true
+	 *
+	 * @return bool
+	 */
+	public function Secure ($secure = true) {
+		if (func_num_args() != 0)
+			$this->_secure = $secure;
+
+		return $this->_secure;
 	}
 	
 	/**
@@ -7520,15 +7537,45 @@ trait QuarkCollectionBehavior {
 	 */
 	private function _change ($i, $update) {
 		if (!QuarkObject::isTraversable($update)) return;
+
+		$modified = false;
+		$_val = function ($key, $value) use (&$i, &$modified) {
+			$this->_collection[$i]->$key = $value;
+			$modified = true;
+		};
 		
 		foreach ($update as $key => &$value) {
 			$val = QuarkObject::isAssociative($value) ? (array)$value : $value;
+			$modified = false;
 			
 			if (isset($this->_collection[$i]->$key) && is_numeric($this->_collection[$i]->$key)) {
-				if (isset($val['$inc'])) $this->_collection[$i]->$key += $val['$inc'];
-				elseif (isset($val['$dec'])) $this->_collection[$i]->$key -= $val['$dec'];
+				if (isset($val['$inc'])) $_val($key, $this->_collection[$i]->$key + $val['$inc']);
+				if (isset($val['$mul'])) $_val($key, $this->_collection[$i]->$key * $val['$mul']);
+				if (isset($val['$min']) && $val['$min'] > $this->_collection[$i]->$key) $_val($key, $val['$min']);
+				if (isset($val['$max']) && $val['$min'] < $this->_collection[$i]->$key) $_val($key, $val['$max']);
 			}
-			else $this->_collection[$i]->$key = $value;
+
+			if (isset($val['$currentDate'])) $_val($key, QuarkDate::GMTNow()->Format(QuarkCultureISO::DATETIME));
+
+			if (!$this->_secure) {
+				if (isset($val['$set'])) $_val($key, $val['$set']);
+
+				if (isset($val['$unset'])) {
+					unset($this->_collection[$i]->$key);
+					$modified = true;
+				}
+
+				if (isset($val['$rename'])) {
+					$name = $val['$rename'];
+					$this->_collection[$i]->$name = $this->_collection[$i]->$key;
+
+					unset($this->_collection[$i]->$key);
+					$modified = true;
+				}
+			}
+
+			if (!$modified)
+				$this->_collection[$i]->$key = $value;
 		}
 	}
 	
