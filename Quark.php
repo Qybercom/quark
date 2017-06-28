@@ -7029,7 +7029,12 @@ trait QuarkCollectionBehavior {
 				
 				continue;
 			}
-			
+
+			/**
+			 * @note This matcher behaves different from MongoDB
+			 *       In case of not existing $property it will return false, insteadof MongoDB behavior which expects true
+			 */
+			// TODO: $this->_matchTarget() signature which will serve non-existing keys if $this->MongoDBCompatible() is true
 			if (isset($document->$key))
 				$this->_matchOut($out, $outChanged, $this->_matchTarget($document->$key, $rule));
 		}
@@ -7172,6 +7177,28 @@ trait QuarkCollectionBehavior {
 			$state &= !$this->Match($document, $item);
 					
 		return $state;
+	}
+
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_in ($property, $expected) {
+		return is_array($expected) ? sizeof(array_intersect($property, $expected)) != 0 : false;
+	}
+
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_nin ($property, $expected) {
+		return is_array($expected) ? sizeof(array_intersect($property, $expected)) == 0 : false;
 	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
@@ -7627,6 +7654,16 @@ trait QuarkCollectionBehavior {
 			? $this->_collection
 			: $this->Select($query, $options)
 		);
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return bool
+	 */
+	public function Exists ($query = [], $options = []) {
+		return $this->Count($query, $options) != 0;
 	}
 
 	/**
@@ -9514,6 +9551,19 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public static function Count (IQuarkModel $model, $criteria = [], $limit = 0, $skip = 0, $options = []) {
 		return (int)self::_provider($model)->Count($model, $criteria, $limit, $skip, $options);
+	}
+
+	/**
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param $criteria = []
+	 * @param int $limit = 0
+	 * @param int $skip = 0
+	 * @param array $options = []
+	 *
+	 * @return bool
+	 */
+	public static function Exists (IQuarkModel $model, $criteria = [], $limit = 0, $skip = 0, $options = []) {
+		return self::Count($model, $criteria, $limit, $skip, $options) != 0;
 	}
 
 	/**
