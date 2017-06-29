@@ -5343,6 +5343,26 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $code = ''
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkInlineCSSViewResource
+	 */
+	public function InlineCSS ($code = '', $minimize = true) {
+		return new QuarkInlineCSSViewResource($code, $minimize);
+	}
+
+	/**
+	 * @param string $code = ''
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkInlineJSViewResource
+	 */
+	public function InlineJS ($code = '', $minimize = true) {
+		return new QuarkInlineJSViewResource($code, $minimize);
+	}
+
+	/**
 	 * @param string $uri
 	 * @param bool $signed = false
 	 *
@@ -5569,53 +5589,48 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param bool $obfuscate = true
+	 * @param bool $minimize = true
 	 *
 	 * @return string
 	 */
-	public function Resources ($obfuscate = true) {
+	public function Resources ($minimize = true) {
 		$out = '';
 		$type = null;
-		$res = null;
-		$location = null;
-		$content = null;
+		$source = new QuarkSource();
 
 		$this->ResourceList();
 
-		/**
-		 * @var IQuarkViewResource|IQuarkSpecifiedViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource|IQuarkViewResourceWithLocationControl $resource
-		 */
-		foreach ($this->_resources as $resource) {
+		foreach ($this->_resources as $i => &$resource) {
+			$source->Unload();
+			$min = $minimize && $resource instanceof IQuarkMinimizableViewResource && $resource->Minimize();
+
 			if ($resource instanceof IQuarkInlineViewResource) {
-				$out .= $obfuscate && $resource instanceof IQuarkLocalViewResource && $resource->CacheControl()
-					? QuarkSource::ObfuscateString($resource->HTML())
-					: $resource->HTML();
+				if ($min)
+					$source->Minimize();
 
-				continue;
+				$out .= $resource->HTML($min);
 			}
 
-			if (!($resource instanceof IQuarkSpecifiedViewResource)) continue;
+			if ($resource instanceof IQuarkSpecifiedViewResource) {
+				$type = $resource->Type();
 
-			$type = $resource->Type();
-			if (!($type instanceof IQuarkViewResourceType)) continue;
+				if ($type instanceof IQuarkViewResourceType) {
+					$source->Location($resource->Location());
 
-			$location = $resource->Location();
-			$content = '';
-			
-			if ($resource instanceof IQuarkForeignViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(false))) { }
+					if ($resource instanceof IQuarkForeignViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(false))) { }
 
-			if ($resource instanceof IQuarkLocalViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(true))) {
-				$res = new QuarkSource($location, true);
+					if ($resource instanceof IQuarkLocalViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(true))) {
+						$source->Load();
+						$source->Location('');
+					}
 
-				if ($obfuscate && $resource->CacheControl())
-					$res->Obfuscate();
+					// TODO: add list of trimming characters to IQuarkViewResourceType
+					if ($min)
+						$source->Minimize();
 
-				$content = $res->Content();
-
-				$location = '';
+					$out .= $type->Container($source->Location(), $type->AfterMinimize($source->Content()));
+				}
 			}
-
-			$out .= $type->Container($location, $content);
 		}
 
 		return $out;
@@ -6393,7 +6408,6 @@ interface IQuarkSpecifiedViewResource extends IQuarkViewResource {
 	 * @return string
 	 */
 	public function Location();
-
 }
 
 /**
@@ -6421,16 +6435,23 @@ interface IQuarkViewResourceWithBackwardDependencies extends IQuarkViewResource 
 }
 
 /**
+ * Interface IQuarkMinimizableViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkMinimizableViewResource {
+	/**
+	 * @return bool
+	 */
+	public function Minimize();
+}
+
+/**
  * Interface IQuarkLocalViewResource
  *
  * @package Quark
  */
-interface IQuarkLocalViewResource extends IQuarkViewResource {
-	/**
-	 * @return bool
-	 */
-	public function CacheControl();
-}
+interface IQuarkLocalViewResource extends IQuarkViewResource, IQuarkMinimizableViewResource { }
 
 /**
  * Interface IQuarkForeignViewResource
@@ -6449,7 +6470,7 @@ interface IQuarkForeignViewResource extends IQuarkViewResource {
  *
  * @package Quark
  */
-interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResource {
+interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResource, IQuarkMinimizableViewResource {
 	/**
 	 * @param bool $local
 	 *
@@ -6463,25 +6484,13 @@ interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResou
  *
  * @package Quark
  */
-interface IQuarkInlineViewResource extends IQuarkViewResource {
+interface IQuarkInlineViewResource extends IQuarkViewResource, IQuarkMinimizableViewResource {
 	/**
-	 * @return string
-	 */
-	public function HTML();
-}
-
-/**
- * Interface IQuarkViewResourceWithAfterObfuscate
- *
- * @package Quark
- */
-interface IQuarkViewResourceWithAfterObfuscate extends IQuarkViewResource {
-	/**
-	 * @param string $source
+	 * @param bool $minimize
 	 *
 	 * @return string
 	 */
-	public function AfterObfuscate($source);
+	public function HTML($minimize);
 }
 
 /**
@@ -6509,11 +6518,37 @@ interface IQuarkCombinedViewResource extends IQuarkViewResource {
 }
 
 /**
+ * Trait QuarkMinimizableViewResourceBehavior
+ *
+ * @package Quark
+ */
+trait QuarkMinimizableViewResourceBehavior {
+	/**
+	 * @var bool $_minimize = true
+	 */
+	private $_minimize = true;
+
+	/**
+	 * @param bool $minimize = true
+	 *
+	 * @return bool
+	 */
+	public function Minimize ($minimize = true) {
+		if (func_num_args() != 0)
+			$this->_minimize = $minimize;
+
+		return $this->_minimize;
+	}
+}
+
+/**
  * Class QuarkGenericViewResource
  *
  * @package Quark
  */
-class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithAfterObfuscate, IQuarkViewResourceWithLocationControl, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithLocationControl, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var IQuarkViewResourceType $_type = null
 	 */
@@ -6523,11 +6558,6 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @var string $_location = ''
 	 */
 	private $_location = '';
-
-	/**
-	 * @var bool $_minimize = true
-	 */
-	private $_minimize = true;
 
 	/**
 	 * @var IQuarkViewResource[] $_dependencies = []
@@ -6576,32 +6606,6 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 */
 	public function Location () {
 		return $this->_location;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return $this->_minimize;
-	}
-
-	/**
-	 * @return void
-	 */
-	public function RequestDTO () {
-		// TODO: Implement RequestDTO() method.
-	}
-
-	/**
-	 * @param string $source
-	 *
-	 * @return string
-	 */
-	public function AfterObfuscate ($source) {
-		if ($this->_type instanceof QuarkCSSViewResourceType)
-			$source = str_replace('and(', ' and (', $source);
-
-		return $source;
 	}
 
 	/**
@@ -6654,39 +6658,13 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 }
 
 /**
- * Class QuarkLocalCoreJSViewResource
- *
- * @package Quark
- */
-class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
-	/**
-	 * @return IQuarkViewResourceType
-	 */
-	public function Type () {
-		return new QuarkJSViewResourceType();
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Location () {
-		return __DIR__ . '/Quark.js';
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
-	}
-}
-
-/**
  * Class QuarkLocalCoreCSSViewResource
  *
  * @package Quark
  */
 class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -6700,31 +6678,51 @@ class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQua
 	public function Location () {
 		return __DIR__ . '/Quark.css';
 	}
+}
+
+/**
+ * Class QuarkLocalCoreJSViewResource
+ *
+ * @package Quark
+ */
+class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
+	use QuarkMinimizableViewResourceBehavior;
 
 	/**
-	 * @return bool
+	 * @return IQuarkViewResourceType
 	 */
-	public function CacheControl () {
-		return true;
+	public function Type () {
+		return new QuarkJSViewResourceType();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return __DIR__ . '/Quark.js';
 	}
 }
 
 /**
- * Trait QuarkInlineViewResource
+ * Trait QuarkInlineViewResourceBehavior
  *
  * @package Quark
  */
-trait QuarkInlineViewResource {
+trait QuarkInlineViewResourceBehavior {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
-	 * @var string $_code
+	 * @var string $_code = ''
 	 */
 	private $_code = '';
 
 	/**
-	 * @param string $code
+	 * @param string $code = ''
+	 * @param bool $minimize = true
 	 */
-	public function __construct ($code = '') {
+	public function __construct ($code = '', $minimize = true) {
 		$this->_code = $code;
+		$this->_minimize = $minimize;
 	}
 
 	/**
@@ -6736,13 +6734,6 @@ trait QuarkInlineViewResource {
 	 * @return void
 	 */
 	public function Type () { }
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
-	}
 }
 
 /**
@@ -6751,12 +6742,14 @@ trait QuarkInlineViewResource {
  * @package Quark
  */
 class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return '<style type="text/css">' . $this->_code . '</style>';
 	}
 }
@@ -6767,14 +6760,15 @@ class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewR
  * @package Quark
  */
 class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
-	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
-		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;' . $this->_code . '</script>';
+	public function HTML ($minimize) {
+		return /** @lang text */'<script type="text/javascript">' . $this->_code . '</script>';
 	}
 }
 
@@ -6786,7 +6780,7 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
 class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
 	const PROXY_SESSION_VAR = 'session_user';
 
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
 	 * @param $var
@@ -6797,11 +6791,12 @@ class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	}
 
 	/**
-	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
-		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;' . $this->_code . '</script>';
+	public function HTML ($minimize) {
+		return /** @lang text */'<script type="text/javascript">' . $this->_code . '</script>';
 	}
 
 	/**
@@ -6858,7 +6853,7 @@ trait QuarkLexingViewResourceBehavior {
 }
 
 /**
- * Trait QuarkCombinedViewResource
+ * Trait QuarkCombinedViewResourceBehavior
  *
  * @package Quark
  */
@@ -6899,6 +6894,13 @@ interface IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container($location, $content);
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize($content);
 }
 
 /**
@@ -6918,6 +6920,19 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 			? '<link rel="stylesheet" type="text/css" href="' . $location . '" />'
 			: '<style type="text/css">' . $content . '</style>';
 	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize ($content) {
+		$content = str_replace('and(', ' and (', $content);
+		$content = str_replace('or(', ' or (', $content);
+		$content = preg_replace('#\-([0-9]+)#Uis', ' -$1', $content);
+
+		return $content;
+	}
 }
 
 /**
@@ -6934,6 +6949,15 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	 */
 	public function Container ($location, $content) {
 		return /** @lang text */'<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
+	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize ($content) {
+		return $content;
 	}
 }
 
@@ -7450,6 +7474,24 @@ trait QuarkCollectionBehavior {
 
 		return sizeof($out) == 0 ? null : $out[0];
 	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return array
+	 */
+	public function SelectRandom ($query = [], $options = []) {
+		$count = $this->Count($query);
+
+		if (!isset($options[QuarkModel::OPTION_SKIP]))
+			$options[QuarkModel::OPTION_SKIP] = mt_rand(0, $count == 0 ? 0 : $count - 1);
+
+		if (!isset($options[QuarkModel::OPTION_LIMIT]))
+			$options[QuarkModel::OPTION_LIMIT] = QuarkModel::LIMIT_RANDOM;
+
+		return $this->Select($query, $options);
+	}
 	
 	/**
 	 * @param array $list = []
@@ -7849,12 +7891,13 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	use QuarkCollectionBehaviorWithArrayAccess {
 		Select as private _select;
+		SelectRandom as private _selectRandom;
 		Aggregate as private _aggregate;
 		offsetSet as private _offsetSet;
 	}
-	
+
 	/**
-	 * @var IQuarkModel|mixed $_type  = null
+	 * @var IQuarkModel|QuarkModelBehavior|mixed $_type  = null
 	 */
 	private $_type = null;
 	
@@ -7874,7 +7917,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	private $_pages = 0;
 
 	/**
-	 * @param object $type
+	 * @param IQuarkModel|QuarkModelBehavior|mixed $type
 	 * @param array $source = []
 	 */
 	public function __construct ($type, $source = []) {
@@ -8079,6 +8122,51 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 */
 	public function Select ($query = [], $options = []) {
 		return new self($this->_type, $this->_select($query, $options));
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function SelectRandom ($query = [], $options = []) {
+		return new self($this->_type, $this->_selectRandom($query, $options));
+	}
+
+	/**
+	 * @param int $page = 1
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function SelectByPage ($page = 1, $query = [], $options = []) {
+		if (!isset($options[QuarkModel::OPTION_LIMIT]))
+			$options[QuarkModel::OPTION_LIMIT] = QuarkModel::LIMIT_PAGED;
+
+		$pages = 1;
+		$page = (int)$page;
+		if ($page < 1) $page = 1;
+
+		if ($options[QuarkModel::OPTION_LIMIT] != QuarkModel::LIMIT_NO) {
+			$options[QuarkModel::OPTION_LIMIT] = (int)$options[QuarkModel::OPTION_LIMIT];
+
+			if ($options[QuarkModel::OPTION_LIMIT] < 1)
+				$options[QuarkModel::OPTION_LIMIT] = 1;
+
+			$pages = (int)ceil($this->Count($query) / $options[QuarkModel::OPTION_LIMIT]);
+		}
+
+		if (!isset($options[QuarkModel::OPTION_SKIP]))
+			$options[QuarkModel::OPTION_SKIP] = ($page - 1) * $options[QuarkModel::OPTION_LIMIT];
+
+		$out = $this->Select($query, $options);
+
+		$out->Page($page);
+		$out->Pages($pages);
+
+		return $out;
 	}
 
 	/**
@@ -18902,6 +18990,21 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param bool $unloadLocation = true
+	 *
+	 * @return QuarkFile
+	 */
+	public function Unload ($unloadLocation = true) {
+		$this->_loaded = false;
+		$this->_content = '';
+
+		if ($unloadLocation)
+			$this->Location('');
+
+		return $this;
+	}
+
+	/**
 	 * @param int $mode = self::MODE_DEFAULT
 	 *
 	 * @return bool
@@ -22158,22 +22261,21 @@ interface IQuarkSQLDataProvider {
  * @package Quark
  */
 class QuarkSource extends QuarkFile {
+	const TRIM = ', ; ? : ( ) { } [ ] + - * / += -= *= /= > < >= <= != == !== === = => -> && || & | << >>';
+
 	/**
 	 * @var string[] $_trim = []
 	 */
 	private $_trim = array();
 
 	/**
-	 * @var string[] $__trim
+	 * @param string $location = ''
+	 * @param bool $load = false
 	 */
-	private static $__trim = array(
-		',',';','?',':',
-		'(',')','{','}','[',']',
-		'+','*','/',
-		'>','<','>=','<=','!=','==',
-		'=','=>','->',
-		'&&', '||'
-	);
+	public function __construct ($location = '', $load = false) {
+		parent::__construct($location, $load);
+		$this->_trim = explode(' ', self::TRIM);
+	}
 
 	/**
 	 * @param string[] $trim = []
@@ -22192,8 +22294,8 @@ class QuarkSource extends QuarkFile {
 	 *
 	 * @return QuarkSource
 	 */
-	public function Obfuscate (callable $after = null) {
-		$this->_content = self::ObfuscateString($this->_content, $this->_trim, $after);
+	public function Minimize (callable $after = null) {
+		$this->_content = self::MinimizeString($this->_content, $this->_trim, $after);
 
 		return $this;
 	}
@@ -22205,8 +22307,8 @@ class QuarkSource extends QuarkFile {
 	 *
 	 * @return string
 	 */
-	public static function ObfuscateString ($source = '', $trim = [], callable $after = null) {
-		$trim = func_num_args() == 3 ? $trim : self::$__trim;
+	public static function MinimizeString ($source = '', $trim = [], callable $after = null) {
+		$trim = func_num_args() > 1 ? $trim : explode(' ', self::TRIM);
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';
 
 		$source = str_replace('://', $slash, $source);
@@ -22214,8 +22316,9 @@ class QuarkSource extends QuarkFile {
 		$source = str_replace($slash, '://', $source);
 		$source = preg_replace('#\/\*(.*)\*\/#Uis', '', $source);
 		$source = str_replace("\r\n", '', $source);
+		$source = str_replace("\n", '', $source);
 		$source = preg_replace('/\s+/', ' ', $source);
-		$source = trim(str_replace('<?phpn', '<?php n', $source));
+		$source = str_replace('<?php', '<?php ', $source);
 
 		foreach ($trim as $rule) {
 			$source = str_replace(' ' . $rule . ' ', $rule, $source);
@@ -22226,7 +22329,7 @@ class QuarkSource extends QuarkFile {
 		if ($after)
 			$source = $after($source);
 
-		return $source;
+		return trim($source);
 	}
 }
 

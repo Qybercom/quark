@@ -36,7 +36,7 @@ class QuarkUX implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, I
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 

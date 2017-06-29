@@ -36,16 +36,18 @@ class QuarkResponsiveUI implements IQuarkViewResource, IQuarkLocalViewResource, 
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return '<meta name="viewport" content="width=' . $this->_width . ', initial-scale=' . $this->_scale . '" />';
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 }

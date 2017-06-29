@@ -4,12 +4,16 @@ namespace Quark\ViewResources\Quark;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
 
+use Quark\QuarkMinimizableViewResourceBehavior;
+
 /**
  * Class QuarkMainMeta
  *
  * @package Quark\ViewResources\Quark
  */
 class QuarkMainMeta implements IQuarkViewResource, IQuarkInlineViewResource {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var string $_description
 	 */
@@ -30,9 +34,11 @@ class QuarkMainMeta implements IQuarkViewResource, IQuarkInlineViewResource {
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return '<meta name="description" content="' . $this->_description . '" /><meta name="keywords" content="' . implode(', ', $this->_keywords) . '" />';
 	}
 }

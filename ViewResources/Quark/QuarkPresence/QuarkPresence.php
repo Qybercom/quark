@@ -34,7 +34,7 @@ class QuarkPresence implements IQuarkSpecifiedViewResource, IQuarkLocalViewResou
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 

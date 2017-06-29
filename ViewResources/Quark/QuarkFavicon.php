@@ -6,12 +6,16 @@ use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 
+use Quark\QuarkMinimizableViewResourceBehavior;
+
 /**
  * Class QuarkFavicon
  *
  * @package Quark\ViewResources\Quark
  */
 class QuarkFavicon implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource {
+	use QuarkMinimizableViewResourceBehavior;
+
 	public function __construct ($location) {
 
 	}
@@ -31,16 +35,11 @@ class QuarkFavicon implements IQuarkViewResource, IQuarkLocalViewResource, IQuar
 	}
 
 	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
-	}
-
-	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		// TODO: Implement HTML() method.
 	}
 }

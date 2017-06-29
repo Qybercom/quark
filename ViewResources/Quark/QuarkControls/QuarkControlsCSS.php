@@ -30,7 +30,7 @@ class QuarkControlsCSS implements IQuarkSpecifiedViewResource, IQuarkLocalViewRe
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 }

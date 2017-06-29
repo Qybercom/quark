@@ -30,7 +30,7 @@ class QuarkNetwork implements IQuarkSpecifiedViewResource, IQuarkLocalViewResour
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 }

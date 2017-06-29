@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\OpenGraph;
 
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkInlineViewResource;
 
@@ -85,7 +86,7 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	public function App ($config) {
 		$extension = Quark::Config()->Extension($config);
 
-		return $extension instanceof SocialNetworkConfig ? $this->Property(self::PROPERTY_FB_APP_ID, $extension->appId) : null;
+		return $extension instanceof OAuthConfig ? $this->Property(self::PROPERTY_FB_APP_ID, $extension->AppID()) : null;
 	}
 
 	/**
@@ -101,9 +102,11 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return $this->_html;
 	}
 

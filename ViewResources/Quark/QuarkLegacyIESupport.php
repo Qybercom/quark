@@ -4,6 +4,8 @@ namespace Quark\ViewResources\Quark;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
 
+use Quark\QuarkMinimizableViewResourceBehavior;
+
 /**
  * Class QuarkLegacyIESupport
  *
@@ -12,6 +14,8 @@ use Quark\IQuarkViewResource;
 class QuarkLegacyIESupport implements IQuarkViewResource, IQuarkInlineViewResource {
 	const VERSION_HTML5SHIV = '3.7.3';
 	const VERSION_RESPONDJS = '1.4.2';
+
+	use QuarkMinimizableViewResourceBehavior;
 
 	/**
 	 * @var string $_html5shiv = self::VERSION_HTML5SHIV
@@ -33,9 +37,11 @@ class QuarkLegacyIESupport implements IQuarkViewResource, IQuarkInlineViewResour
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return
 			'<!--[if lt IE 9]>' .
 			'<script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/' . $this->_html5shiv . '/html5shiv.min.js"></script>' .
