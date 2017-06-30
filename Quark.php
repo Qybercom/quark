@@ -5624,9 +5624,10 @@ class QuarkView implements IQuarkContainer {
 						$source->Location('');
 					}
 
-					// TODO: add list of trimming characters to IQuarkViewResourceType
-					if ($min)
+					if ($min) {
+						$source->Trim($type->Trim());
 						$source->Minimize();
+					}
 
 					$out .= $type->Container($source->Location(), $type->AfterMinimize($source->Content()));
 				}
@@ -6896,6 +6897,11 @@ interface IQuarkViewResourceType {
 	public function Container($location, $content);
 
 	/**
+	 * @return string[]
+	 */
+	public function Trim();
+
+	/**
 	 * @param string $content
 	 *
 	 * @return string
@@ -6909,6 +6915,32 @@ interface IQuarkViewResourceType {
  * @package Quark
  */
 class QuarkCSSViewResourceType implements IQuarkViewResourceType {
+	const MEDIA = 'all|braille|handheld|print|screen|speech|projection|tty|tv';
+
+	/**
+	 * @var string[] $_media = []
+	 */
+	private $_media = array();
+
+	/**
+	 * @param string[] $media = null
+	 */
+	public function __construct ($media = null) {
+		$this->Media($media);
+	}
+
+	/**
+	 * @param string[] $media = null
+	 *
+	 * @return string[]
+	 */
+	public function Media ($media = null) {
+		if (func_num_args() != 0)
+			$this->_media = $media;
+
+		return $this->_media;
+	}
+
 	/**
 	 * @param $location
 	 * @param $content
@@ -6916,9 +6948,18 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container ($location, $content) {
+		$media = $this->_media === null || !is_array($this->_media) ? '' : ' ' . implode('|', $this->_media);
+
 		return strlen($location) != 0
-			? '<link rel="stylesheet" type="text/css" href="' . $location . '" />'
-			: '<style type="text/css">' . $content . '</style>';
+			? '<link rel="stylesheet" type="text/css" href="' . $location . '"' . $media . ' />'
+			: '<style type="text/css"' . $media . '>' . $content . '</style>';
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Trim () {
+		return QuarkSource::TrimChars(array('.', '-', ']', '['));
 	}
 
 	/**
@@ -6929,7 +6970,6 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	public function AfterMinimize ($content) {
 		$content = str_replace('and(', ' and (', $content);
 		$content = str_replace('or(', ' or (', $content);
-		$content = preg_replace('#\-([0-9]+)#Uis', ' -$1', $content);
 
 		return $content;
 	}
@@ -6942,13 +6982,67 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
  */
 class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	/**
+	 * @var bool $_defer = false
+	 */
+	private $_defer = false;
+
+	/**
+	 * @var bool $_async = false
+	 */
+	private $_async = false;
+
+	/**
+	 * @param bool $defer = false
+	 * @param bool $async = false
+	 */
+	public function __construct ($defer = false, $async = false) {
+		$this->Defer($defer);
+		$this->Async($async);
+	}
+
+	/**
+	 * @param bool $defer = false
+	 *
+	 * @return bool
+	 */
+	public function Defer ($defer = false) {
+		if (func_num_args() != 0)
+			$this->_defer = $defer;
+
+		return $this->_defer;
+	}
+
+	/**
+	 * @param bool $async = false
+	 *
+	 * @return bool
+	 */
+	public function Async ($async = false) {
+		if (func_num_args() != 0)
+			$this->_async = $async;
+
+		return $this->_async;
+	}
+
+	/**
 	 * @param $location
 	 * @param $content
 	 *
 	 * @return string
 	 */
 	public function Container ($location, $content) {
-		return /** @lang text */'<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
+		return /** @lang text */'<script type="text/javascript"'
+			. (strlen($location) != 0 ? ' src="' . $location . '"' : '')
+			. ($this->_defer ? ' defer="defer"' : '')
+			. ($this->_async ? ' async="async"' : '')
+			. '>' . $content . '</script>';
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Trim () {
+		return QuarkSource::TrimChars(array('.', '-', ']', '['));
 	}
 
 	/**
@@ -22261,7 +22355,7 @@ interface IQuarkSQLDataProvider {
  * @package Quark
  */
 class QuarkSource extends QuarkFile {
-	const TRIM = ', ; ? : ( ) { } [ ] + - * / += -= *= /= > < >= <= != == !== === = => -> && || & | << >>';
+	const TRIM = '. , ; ? : ( ) { } [ ] + - * / += -= *= /= > < >= <= != == !== === = => -> && || & | << >>';
 
 	/**
 	 * @var string[] $_trim = []
@@ -22290,12 +22384,10 @@ class QuarkSource extends QuarkFile {
 	}
 
 	/**
-	 * @param callable $after = null
-	 *
 	 * @return QuarkSource
 	 */
-	public function Minimize (callable $after = null) {
-		$this->_content = self::MinimizeString($this->_content, $this->_trim, $after);
+	public function Minimize () {
+		$this->_content = self::MinimizeString($this->_content, $this->_trim);
 
 		return $this;
 	}
@@ -22303,11 +22395,10 @@ class QuarkSource extends QuarkFile {
 	/**
 	 * @param string $source = ''
 	 * @param string[] $trim = []
-	 * @param callable $after = null
 	 *
 	 * @return string
 	 */
-	public static function MinimizeString ($source = '', $trim = [], callable $after = null) {
+	public static function MinimizeString ($source = '', $trim = []) {
 		$trim = func_num_args() > 1 ? $trim : explode(' ', self::TRIM);
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';
 
@@ -22326,10 +22417,21 @@ class QuarkSource extends QuarkFile {
 			$source = str_replace($rule . ' ', $rule, $source);
 		}
 
-		if ($after)
-			$source = $after($source);
-
 		return trim($source);
+	}
+
+	/**
+	 * @param string[] $exclude = []
+	 *
+	 * @return string[]
+	 */
+	public static function TrimChars ($exclude = []) {
+		$trim = self::TRIM . ' ';
+
+		foreach ($exclude as $i => &$char)
+			$trim = str_replace($char . ' ', '', $trim);
+
+		return explode(' ', trim($trim));
 	}
 }
 
