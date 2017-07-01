@@ -238,19 +238,33 @@ class Quark {
 	}
 
 	/**
+	 * @param bool $computed = true
+	 *
 	 * @return string
 	 */
-	public static function WebHost () {
-		return self::$_config->WebHost()->URI(false);
+	public static function WebHost ($computed = true) {
+		return self::$_config->WebHost()->URI(false, $computed);
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function WebOffset () {
+		return substr(self::WebHost(), strlen(self::WebHost(false)));
 	}
 
 	/**
 	 * @param string $path
+	 * @param bool $full = true
 	 *
 	 * @return string
 	 */
-	public static function WebLocation ($path) {
-		$uri = Quark::WebHost() . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+	public static function WebLocation ($path, $full = true) {
+		if (!$full && strlen($path) != 0 && $path[0] == '/')
+			$path = Quark::Host() . self::WebOffset() . $path;
+
+		$uri = ($full ? Quark::WebHost() : '') . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+
 		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', $uri)));
 	}
 
@@ -886,7 +900,7 @@ class QuarkConfig {
 	private $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL;
 
 	/**
-	 * @var array $_queues = []
+	 * @var array|QuarkKeyValuePair[] $_queues = []
 	 */
 	private $_queues = array();
 
@@ -1142,7 +1156,7 @@ class QuarkConfig {
 	 * @return QuarkKeyValuePair
 	 */
 	public function AsyncQueue ($name, QuarkURI $uri = null, IQuarkNetworkProtocol $protocol = null) {
-		if (!isset($this->_queues[$name]) || func_num_args() == 2)
+		if (!isset($this->_queues[$name]) || func_num_args() > 1)
 			$this->_queues[$name] = new QuarkKeyValuePair($uri, $protocol);
 
 		return $this->_queues[$name];
@@ -2986,11 +3000,10 @@ class QuarkTask {
 
 	/**
 	 * @param string $queue = self::QUEUE
-	 * @param int $tick = QuarkThreadSet::TICK (microseconds)
 	 *
-	 * @return bool
+	 * @return QuarkServer
 	 */
-	public static function AsyncQueue ($queue = self::QUEUE, $tick = QuarkThreadSet::TICK) {
+	public static function AsyncQueue ($queue = self::QUEUE) {
 		$uri = Quark::Config()->AsyncQueue($queue);
 
 		if (!($uri->Key() instanceof QuarkURI)) return false;
@@ -3017,13 +3030,7 @@ class QuarkTask {
 			unset($service, $class, $args, $json, $task);
 		});
 
-		if (!$server->Bind()) return false;
-
-		QuarkThreadSet::Queue(function () use ($server) {
-			return $server->Pipe();
-		}, $tick);
-
-		return true;
+		return $server;
 	}
 
 	/**
@@ -3779,46 +3786,54 @@ trait QuarkCLIBehavior {
 	public function ShellLine ($data = '', QuarkCLIColor $color = null, $reset = true) {
 		return ($color ? $color->Display() : '') . $data . ($color && $reset ? QuarkCLIColor::Reset()->Display() : '');
 	}
-	
+
 	/**
 	 * @param string $data = ''
-	 * @param bool $newLine = true
-	 *
+	 * @param bool $newLine = false
 	 *
 	 * @return string
 	 */
-	public function ShellLineSuccess ($data = '', $newLine = true) {
+	public function ShellLineInfo ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::CYAN)) . ($newLine ? "\r\n" : '');
+	}
+	
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineSuccess ($data = '', $newLine = false) {
 		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::GREEN)) . ($newLine ? "\r\n" : '');
 	}
 	
 	/**
 	 * @param string $data = ''
-	 * @param bool $newLine = true
-	 *
+	 * @param bool $newLine = false
 	 *
 	 * @return string
 	 */
-	public function ShellLineWarning ($data = '', $newLine = true) {
+	public function ShellLineWarning ($data = '', $newLine = false) {
 		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::YELLOW)) . ($newLine ? "\r\n" : '');
 	}
 	
 	/**
 	 * @param string $data = ''
-	 * @param bool $newLine = true
+	 * @param bool $newLine = false
 	 *
 	 * @return string
 	 */
-	public function ShellLineError ($data = '', $newLine = true) {
+	public function ShellLineError ($data = '', $newLine = false) {
 		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::RED)) . ($newLine ? "\r\n" : '');
 	}
 	
 	/**
 	 * @param string $message = ''
-	 * @param string $lvl = Quark::LOG_INFO
+	 * @param string $lvl = null
 	 * @param bool $space = true
 	 */
-	public function ShellLog ($message = '', $lvl = Quark::LOG_INFO, $space = true) {
-		echo ($space ? ' ' : '') . $this->ShellLine($message, QuarkCLIColor::ForLog($lvl));
+	public function ShellLog ($message = '', $lvl = null, $space = true) {
+		echo ($space ? ' ' : '') . $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
 	}
 	
 	/**
@@ -3831,12 +3846,22 @@ trait QuarkCLIBehavior {
 			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
 				QuarkCLIColor::BLACK,
 				QuarkCLIColor::WHITE
-			)),
+			), true),
 			($content ? "\r\n " . $content : '');
 		
 		if ($process) $process();
 		
-		echo "\r\n ";
+		echo "\r\n";
+	}
+
+	/**
+	 * @param string $message = ''
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ShellArchException ($message = '') {
+		$this->ShellLog($message, Quark::LOG_FATAL); echo "\r\n";
+		throw new QuarkArchException($message);
 	}
 
 	/**
@@ -5373,6 +5398,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function FullLink ($uri, $signed = false) {
+		return $this->__call('FullLink', func_get_args());
+	}
+
+	/**
 	 * @param bool $field = true
 	 *
 	 * @return mixed
@@ -5860,10 +5895,30 @@ class QuarkView implements IQuarkContainer {
 	 *
 	 * @return string
 	 */
-	public function Link ($uri, $signed = false) {
-		return Quark::WebLocation($uri . ($signed ? QuarkURI::BuildQuery($uri, array(
+	private function _link ($uri, $signed = false) {
+		return $uri . ($signed ? QuarkURI::BuildQuery($uri, array(
 				QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
-			)) : ''));
+			)) : '');
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function Link ($uri, $signed = false) {
+		return Quark::WebLocation($this->_link($uri, $signed), false);
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function FullLink ($uri, $signed = false) {
+		return Quark::WebLocation($this->_link($uri, $signed), true);
 	}
 
 	/**
@@ -5875,7 +5930,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function SignedAction ($uri, $button, $method = QuarkDTO::METHOD_POST, $formStyle = self::SIGNED_ACTION_FORM_STYLE) {
-		return /** @lang text */'<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
+		/** @lang text */
+		return '<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
 	}
 
 	/**
@@ -14893,7 +14949,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	private function _errorCryptogram ($action, $error) {
 		$this->_log($action, $error, array(
-			'This usually happens when mistyping certificate options for stream environment. Check your configuration.'
+			'This usually happens when mistyping certificate options for stream environment or client requested a non-supported SSL/TLS protocol version. Check your configuration.'
 		));
 	}
 
@@ -15966,13 +16022,14 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param bool $full
+	 * @param bool $full = false
+	 * @param bool $path = true
 	 *
 	 * @return string
 	 */
-	public function URI ($full = false) {
+	public function URI ($full = false, $path = true) {
 		return $this->Hostname()
-			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+			. ($path && $this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
 			. ($full ? '/?' . $this->query : '');
 	}
 
@@ -19484,7 +19541,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param array &$source
+	 * @param array|QuarkModel[] &$source
 	 * @param string|int $key
 	 * @param string|int $name
 	 * @param string|int $value

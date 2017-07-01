@@ -144,11 +144,11 @@ trait QuarkPresenceControlComponent {
 	 * @param string $photo = 'http://placehold.it/45x45'
 	 * @param string $logoutTitle = 'Exit'
 	 * @param string $logoutAddr = '/user/logout'
-	 * @param bool $logoutSigned = false
+	 * @param bool $logoutSigned = true
 	 *
 	 * @return string
 	 */
-	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutTitle = 'Exit', $logoutAddr = '/user/logout', $logoutSigned = false) {
+	public function UserWidget ($name = 'FooBar', $photo = 'http://placehold.it/45x45', $logoutTitle = 'Exit', $logoutAddr = '/user/logout', $logoutSigned = true) {
 		return '
 			<div class="quark-presence-column left-inverse" id="presence-user-info">
 				<div class="quark-presence-container">
