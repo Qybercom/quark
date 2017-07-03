@@ -28,31 +28,30 @@ class Certificate implements IQuarkTask {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		Quark::Config()->Extension(self::EXTENSION, new SSLAuthorityConfig(new LetsEncrypt(true)));
+		Quark::Config()->Extension(self::EXTENSION, new SSLAuthorityConfig(new LetsEncrypt($this->HasFlag('staging', 's'))));
 		Quark::Config()->ExtensionOptions(self::EXTENSION);
 		
-		$domains = $this->ServiceArg();
+		$domains = $this->ServiceArg(0);
 		$target = $this->ServiceArg(1);
 		
 		$this->ShellView('Generate/Certificate');
 		
 		if (!$domains)
-			return $this->ShellLog('You must select at least 1 domain for signing');
-		
-		echo 'Generating certificate...';
-		
-		$ssl = new SSLAuthority(self::EXTENSION);
-		$certificate = $ssl->SignDomains(explode(',', $domains));
-		
+			return $this->ShellLog('You must select at least 1 domain for signing' . "\r\n", Quark::LOG_WARN);
+
 		if (!$target)
 			$target = self::TARGET . '/' . $domains . '.pem';
-		
-		if ($certificate == null || !$certificate->SaveTo($target))
-			return $this->ShellLog('FAIL', Quark::LOG_FATAL)
-				 . ' See application log for details.';
-		
-		//echo 'OK. ;
-		$this->ShellLog('OK', Quark::LOG_OK); echo '.', "\r\n",
-		'Saved to ' . $target . '.';
+
+		return $this->ShellProcess(
+			' Generating certificate...',
+			$this->ShellProcessStatus(Quark::LOG_OK, 'Saved to ' . $target . ".\r\n"),
+			$this->ShellProcessStatus(Quark::LOG_FATAL, 'See application log for details.' . "\r\n"),
+			function () use (&$domains, &$target) {
+				$ssl = new SSLAuthority(self::EXTENSION);
+				$certificate = $ssl->SignDomains(explode(',', $domains));
+
+				return $certificate != null && $certificate->SaveTo($target);
+			}
+		);
 	}
 }

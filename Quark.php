@@ -3831,9 +3831,13 @@ trait QuarkCLIBehavior {
 	 * @param string $message = ''
 	 * @param string $lvl = null
 	 * @param bool $space = true
+	 *
+	 * @return bool
 	 */
 	public function ShellLog ($message = '', $lvl = null, $space = true) {
-		echo ($space ? ' ' : '') . $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
+		echo ($space ? ' ' : ''), $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
+
+		return true;
 	}
 	
 	/**
@@ -3846,12 +3850,55 @@ trait QuarkCLIBehavior {
 			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
 				QuarkCLIColor::BLACK,
 				QuarkCLIColor::WHITE
-			), true),
+			), true), ' ',
 			($content ? "\r\n " . $content : '');
 		
 		if ($process) $process();
 		
 		echo "\r\n";
+	}
+
+	/**
+	 * @param string $title = ''
+	 * @param string $ok = ''
+	 * @param string $fail = ''
+	 * @param callable $process = null
+	 *
+	 * @return bool
+	 */
+	public function ShellProcess ($title = '', $ok = '', $fail = '', callable $process = null) {
+		if (!$process)
+			new QuarkArchException('ShellProcess requires a callable value for $process argument');
+
+		echo $title;
+
+		if ($process()) echo $ok;
+		else echo $fail;
+
+		return true;
+	}
+
+	/**
+	 * @var array $_statuses
+	 */
+	private static $_statuses = array(
+		Quark::LOG_INFO => 'INFO',
+		Quark::LOG_OK => 'OK',
+		Quark::LOG_WARN => 'WARN',
+		Quark::LOG_FATAL => 'FAIL',
+	);
+
+	/**
+	 * @param string $lvl = Quark::LOG_INFO
+	 * @param string $append = ''
+	 * @param bool $space = true
+	 *
+	 * @return string
+	 */
+	public function ShellProcessStatus ($lvl = Quark::LOG_INFO, $append = '', $space = true) {
+		return
+			($space ? ' ' : '') . $this->ShellLine(isset(self::$_statuses[$lvl]) ? self::$_statuses[$lvl] : '...', QuarkCLIColor::ForLog($lvl)) . "\r\n" .
+			($append ? (($space ? ' ' : '') . $append . "\r\n") : '');
 	}
 
 	/**
@@ -3874,9 +3921,11 @@ trait QuarkCLIBehavior {
 	}
 
 	/**
-	 * @return array
+	 * @param bool $flags = false
+	 *
+	 * @return string[]
 	 */
-	public function ServiceArgs () {
+	public function ServiceArgs ($flags = false) {
 		if (!isset($this->_shellInput[0]))
 			return $this->_shellInput;
 
@@ -3887,16 +3936,22 @@ trait QuarkCLIBehavior {
 
 		$args = array_slice($args, 1);
 
-		return $args;
+		if (!$flags)
+			foreach ($args as $i => &$arg)
+				if (strlen($arg) != 0 && $arg[0] == '-')
+					unset($args[$i]);
+
+		return array_values($args);
 	}
 
 	/**
 	 * @param int $id = 0
+	 * @param bool $flags = false
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function ServiceArg ($id = 0) {
-		$args = $this->ServiceArgs();
+	public function ServiceArg ($id = 0, $flags = false) {
+		$args = $this->ServiceArgs($flags);
 
 		return isset($args[$id]) ? $args[$id] : null;
 	}
@@ -3926,7 +3981,7 @@ trait QuarkCLIBehavior {
 	 * @return bool
 	 */
 	public function HasFlag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
-		foreach ($this->_shellInput as $arg)
+		foreach ($this->_shellInput as $i => &$arg)
 			if ($this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)) return true;
 		
 		return false;
