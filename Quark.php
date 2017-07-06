@@ -7539,9 +7539,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_in ($property, $expected) {
-		return is_array($expected) ? in_array($property, $expected) : false;
+		return is_array($expected) && is_scalar($property) && in_array($property, $expected);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7550,9 +7550,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_nin ($property, $expected) {
-		return is_array($expected) ? !in_array($property, $expected) : false;
+		return is_array($expected) && is_scalar($property) && !in_array($property, $expected);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7561,9 +7561,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_in_s ($property, $expected) {
-		return is_array($expected) ? in_array($property, $expected, true) : false;
+		return is_array($expected) && in_array($property, $expected, true);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7572,7 +7572,7 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_nin_s ($property, $expected) {
-		return is_array($expected) ? !in_array($property, $expected, true) : false;
+		return is_array($expected) && !in_array($property, $expected, true);
 	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
@@ -7831,6 +7831,10 @@ trait QuarkCollectionBehavior {
 
 			if (isset($val['$currentDate'])) $_val($key, QuarkDate::GMTNow()->Format(QuarkCultureISO::DATETIME));
 
+			/**
+			 * @note This operators behaves different from MongoDB
+			 *       They are used as VALUES for selected fields, not as top-level modifiers
+			 */
 			if (!$this->_secure) {
 				if (isset($val['$set'])) $_val($key, $val['$set']);
 
@@ -10681,6 +10685,7 @@ class QuarkField {
 	 */
 	private static function _dateTime ($type, $key, $nullable = false, IQuarkCulture $culture = null) {
 		if ($nullable && $key == null) return true;
+		if (!is_string($key)) return false;
 
 		if ($culture == null)
 			$culture = Quark::Config()->Culture();
