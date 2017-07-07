@@ -22,22 +22,26 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 	private $_js = null;
 
 	/**
-	 * @var string[] $_sizes
+	 * @var string[] $_weights
 	 */
-	private $_sizes = array(
+	private $_weights = array(
+		GoogleFont::WEIGHT_THIN_100,
+		GoogleFont::WEIGHT_THIN_100_ITALIC,
 		GoogleFont::WEIGHT_LIGHT_300,
 		GoogleFont::WEIGHT_LIGHT_300_ITALIC,
+		GoogleFont::WEIGHT_REGULAR_400,
+		GoogleFont::WEIGHT_REGULAR_400_ITALIC,
 		GoogleFont::WEIGHT_SEMI_BOLD_600,
 		GoogleFont::WEIGHT_SEMI_BOLD_600_ITALIC
 	);
 
 	/**
-	 * @param array $sizes
-	 * @param bool  $js
+	 * @param string[] $weights = []
+	 * @param bool $js = true
 	 */
-	public function __construct ($sizes = [], $js = true) {
+	public function __construct ($weights = [], $js = true) {
 		if (func_num_args() != 0)
-			$this->_sizes = $sizes;
+			$this->_weights = $weights;
 
 		if ($js)
 			$this->_js = new QuarkLocalCoreJSViewResource();
@@ -49,7 +53,7 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 	public function Dependencies () {
 		return array(
 			new FontAwesome(),
-			new GoogleFont(GoogleFont::FAMILY_OPEN_SANS, $this->_sizes),
+			new GoogleFont(GoogleFont::FAMILY_OPEN_SANS, $this->_weights),
 			new QuarkLocalCoreCSSViewResource(),
 			$this->_js
 		);

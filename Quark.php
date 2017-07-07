@@ -5490,6 +5490,13 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function Languages () {
+		return $this->__call('Languages', func_get_args());
+	}
+
+	/**
 	 * @param string $language = QuarkLanguage::ANY
 	 * @param string[] $languages = []
 	 *
@@ -5901,11 +5908,12 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param bool $localized = true
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeURL ($localized = true) {
-		return Quark::WebLocation($this->Theme($localized));
+	public function ThemeURL ($localized = true, $full = false) {
+		return Quark::WebLocation($this->Theme($localized), $full);
 	}
 
 	/**
@@ -5921,11 +5929,12 @@ class QuarkView implements IQuarkContainer {
 	/**
 	 * @param string $resource = ''
 	 * @param bool $localized = false
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeResourceURL ($resource = '', $localized = false) {
-		return $this->ThemeURL($localized) . '/' . $resource;
+	public function ThemeResourceURL ($resource = '', $localized = false, $full = false) {
+		return $this->ThemeURL($localized, $full) . '/' . $resource;
 	}
 
 	/**
@@ -6002,11 +6011,12 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param string $path = ''
+	 * @param bool $full = true
 	 *
 	 * @return string
 	 */
-	public function WebLocation ($path = '') {
-		return Quark::WebLocation($path);
+	public function WebLocation ($path = '', $full = true) {
+		return Quark::WebLocation($path, $full);
 	}
 
 	/**
@@ -6216,6 +6226,13 @@ class QuarkView implements IQuarkContainer {
 			$this->_language = $language;
 
 		return $this->_language;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Languages () {
+		return Quark::Config()->Languages();
 	}
 
 	/**

@@ -91,6 +91,38 @@
 	background: rgba(0, 90, 96, 0.75);
 }
 
+.quark-button.social[class*=" socicon-instagram"] {
+	background: rgb(81, 127, 164);
+}
+
+.quark-button.social[class*=" socicon-instagram"]:hover {
+	background: rgba(81, 127, 164, 0.75);
+}
+
+.quark-button.social[class*=" socicon-tumblr"] {
+	background: rgb(9, 85, 108);
+}
+
+.quark-button.social[class*=" socicon-tumblr"]:hover {
+	background: rgba(9, 85, 108, 0.75);
+}
+
+.quark-button.social[class*=" socicon-blogger"] {
+	background: rgb(236, 102, 28);
+}
+
+.quark-button.social[class*=" socicon-blogger"]:hover {
+	background: rgba(236, 102, 28, 0.75);
+}
+
+.quark-button.social[class*=" socicon-wordpress"] {
+	background: rgb(70, 70, 70);
+}
+
+.quark-button.social[class*=" socicon-wodpress"]:hover {
+	background: rgba(70, 70, 70, 0.75);
+}
+
 .quark-button.social[class*=" socicon-stackoverflow"] {
 	background: rgb(253, 152, 39);
 }
