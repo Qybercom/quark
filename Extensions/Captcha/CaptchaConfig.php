@@ -1,19 +1,29 @@
 <?php
-namespace Quark\Extensions\CDN;
+namespace Quark\Extensions\Captcha;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
 
 /**
- * Class CDNConfig
+ * Class CaptchaConfig
  *
- * @package Quark\Extensions\CDN
+ * @package Quark\Extensions\Captcha
  */
-class CDNConfig implements IQuarkExtensionConfig {
+class CaptchaConfig implements IQuarkExtensionConfig {
 	/**
-	 * @var IQuarkCDNProvider $_provider
+	 * @var IQuarkCaptchaProvider $_provider
 	 */
 	private $_provider;
+
+	/**
+	 * @var string $_appId = ''
+	 */
+	private $_appId = '';
+
+	/**
+	 * @var string $_appSecret = ''
+	 */
+	private $_appSecret = '';
 
 	/**
 	 * @var string $_name = ''
@@ -21,26 +31,16 @@ class CDNConfig implements IQuarkExtensionConfig {
 	private $_name = '';
 
 	/**
-	 * @var string $_appId
-	 */
-	private $_appId = '';
-
-	/**
-	 * @var string $_appSecret
-	 */
-	private $_appSecret = '';
-
-	/**
-	 * @param IQuarkCDNProvider $provider
+	 * @param IQuarkCaptchaProvider $provider
 	 * @param string $appId = ''
 	 * @param string $appSecret = ''
 	 */
-	public function __construct (IQuarkCDNProvider $provider, $appId = '', $appSecret = '') {
+	public function __construct (IQuarkCaptchaProvider $provider, $appId = '', $appSecret = '') {
 		$this->_provider = $provider;
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
 
-		$this->_provider->CDNApplication($this->_appId, $this->_appSecret, null);
+		$this->_provider->CaptchaApplication($this->_appId, $this->_appSecret, null);
 	}
 
 	/**
@@ -58,9 +58,9 @@ class CDNConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
-	 * @return IQuarkCDNProvider
+	 * @return IQuarkCaptchaProvider
 	 */
-	public function &CDNProvider () {
+	public function &CaptchaProvider () {
 		return $this->_provider;
 	}
 
@@ -81,7 +81,7 @@ class CDNConfig implements IQuarkExtensionConfig {
 	/**
 	 * @param object $ini
 	 *
-	 * @return void
+	 * @return mixed
 	 */
 	public function ExtensionOptions ($ini) {
 		if (isset($ini->AppID))
@@ -90,13 +90,13 @@ class CDNConfig implements IQuarkExtensionConfig {
 		if (isset($ini->AppSecret))
 			$this->_appSecret = $ini->AppSecret;
 
-		$this->_provider->CDNApplication($this->_appId, $this->_appSecret, $ini);
+		$this->_provider->CaptchaApplication($this->_appId, $this->_appSecret, $ini);
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		return new CDNResource($this->_name);
+		return new Captcha($this->_name);
 	}
 }

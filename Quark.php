@@ -5831,13 +5831,10 @@ class QuarkView implements IQuarkContainer {
 		/**
 		 * @var IQuarkViewResource $dependency
 		 */
-		foreach ($resources as $dependency) {
+		foreach ($resources as $i => &$dependency) {
 			if ($dependency == null) continue;
 
-			if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
-			if ($this->_resource_loaded($dependency)) continue;
-
-			$this->_resources[] = $dependency;
+			$this->_resource($dependency);
 		}
 	}
 
@@ -5854,7 +5851,7 @@ class QuarkView implements IQuarkContainer {
 		/**
 		 * @var IQuarkViewResource $resource
 		 */
-		foreach ($this->_resources as $resource)
+		foreach ($this->_resources as $i => &$resource)
 			if (get_class($resource) == $class) return true;
 
 		return false;
@@ -6668,6 +6665,16 @@ trait QuarkMinimizableViewResourceBehavior {
 
 		return $this->_minimize;
 	}
+
+	/**
+	 * @param string $source = ''
+	 * @param string[] $trim = []
+	 *
+	 * @return string
+	 */
+	public function MinimizeString ($source = '', $trim = []) {
+		return QuarkSource::MinimizeString($source, func_num_args() == 2 ? $trim : explode(' ', QuarkSource::TRIM));
+	}
 }
 
 /**
@@ -6703,12 +6710,14 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 */
-	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = []) {
+	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = [], $local = true) {
 		$this->_location = $location;
 		$this->_type = $type;
 		$this->_minimize = $minimize;
 		$this->_dependencies = $dependencies;
+		$this->_local = $local;
 	}
 
 	/**
@@ -6724,9 +6733,9 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	}
 
 	/**
-	 * @return IQuarkViewResourceType
+	 * @return IQuarkViewResourceType|QuarkJSViewResourceType|QuarkCSSViewResourceType
 	 */
-	public function Type () {
+	public function &Type () {
 		return $this->_type;
 	}
 
@@ -6757,15 +6766,16 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResource|string $location
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 *
 	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public static function CSS ($location, $minimize = true, $dependencies = []) {
+	public static function CSS ($location, $minimize = true, $dependencies = [], $local = true) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkCSSViewResourceType(), $minimize, $dependencies)
+				: new self($location, new QuarkCSSViewResourceType(), $minimize, $dependencies, $local)
 			);
 	}
 
@@ -6773,16 +6783,37 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResource|string $location
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 *
 	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public static function JS ($location, $minimize = true, $dependencies = []) {
+	public static function JS ($location, $minimize = true, $dependencies = [], $local = true) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkJSViewResourceType(), $minimize, $dependencies)
+				: new self($location, new QuarkJSViewResourceType(), $minimize, $dependencies, $local)
 			);
+	}
+
+	/**
+	 * @param IQuarkViewResource|string $location = ''
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
+	 */
+	public static function ForeignCSS ($location = '', $dependencies = []) {
+		return self::CSS($location, false, $dependencies, false);
+	}
+
+	/**
+	 * @param IQuarkViewResource|string $location = ''
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
+	 */
+	public static function ForeignJS ($location = '', $dependencies = []) {
+		return self::JS($location, false, $dependencies, false);
 	}
 }
 

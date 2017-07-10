@@ -63,16 +63,26 @@
  */
 .quark-list {
 	padding: 5px;
+	text-align: left;
 }
 
 .quark-list-item {
 	list-style: none;
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	width: 100%;
 }
 
 .quark-list-item:before {
-	content: '\f111';
+	/*content: '\f111';*/
 	vertical-align: middle;
 	margin: 0 10px 0 0;
+}
+
+.quark-list-item .content {
+	display: inline-block;
+	width: 80%;
+	vertical-align: top;
+	margin: 0;
 }
 
 .quark-list-item .quark-input.item-value {

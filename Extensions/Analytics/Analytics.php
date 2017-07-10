@@ -4,17 +4,19 @@ namespace Quark\Extensions\Analytics;
 use Quark\IQuarkExtension;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
-use Quark\IQuarkViewResourceType;
+use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\Quark;
-use Quark\QuarkSource;
+use Quark\QuarkMinimizableViewResourceBehavior;
 
 /**
  * Class Analytics
  *
  * @package Quark\Extensions\Analytics
  */
-class Analytics implements IQuarkExtension, IQuarkViewResource, IQuarkInlineViewResource {
+class Analytics implements IQuarkExtension, IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var AnalyticsConfig $_config
 	 */
@@ -28,29 +30,30 @@ class Analytics implements IQuarkExtension, IQuarkViewResource, IQuarkInlineView
 	}
 
 	/**
-	 * @return IQuarkViewResourceType
+	 * @return IQuarkViewResource[]
 	 */
-	public function Type () {
-		// TODO: Implement Type() method.
+	public function Dependencies () {
+		$out = array();
+		$providers = $this->_config->Providers();
+
+		foreach ($providers as $i => &$provider)
+			$out = array_merge($out, $provider->AnalyticsProviderViewDependencies());
+
+		return $out;
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function Location () {
-		// TODO: Implement Location() method.
-	}
-
-	/**
-	 * @return string
-	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		$out = '';
 		$providers = $this->_config->Providers();
 
-		foreach ($providers as $provider)
+		foreach ($providers as $i => &$provider)
 			$out .= $provider->AnalyticsProviderViewFragment();
 
-		return QuarkSource::ObfuscateString($out);
+		return $this->MinimizeString($out);
 	}
 }

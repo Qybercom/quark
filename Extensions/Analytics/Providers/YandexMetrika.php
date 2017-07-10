@@ -1,6 +1,9 @@
 <?php
 namespace Quark\Extensions\Analytics\Providers;
 
+use Quark\IQuarkViewResource;
+use Quark\QuarkGenericViewResource;
+
 use Quark\Extensions\Analytics\IQuarkAnalyticsProvider;
 
 /**
@@ -66,36 +69,30 @@ class YandexMetrika implements IQuarkAnalyticsProvider {
 	}
 
 	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function AnalyticsProviderViewDependencies () {
+		$js = QuarkGenericViewResource::ForeignJS('https://mc.yandex.ru/metrika/watch.js');
+		$js->Type()->Async(true);
+
+		return array($js);
+	}
+
+	/**
 	 * @return string
 	 */
 	public function AnalyticsProviderViewFragment () {
 		return '
 			<script type="text/javascript">
-				(function (d, w, c) {
-					(w[c] = w[c] || []).push(function() {
-						try {
-							w.yaCounter' . $this->_id . ' = new Ya.Metrika({
-								id:' . $this->_id . ',
-								clickmap:true,
-								trackLinks:true,
-								accurateTrackBounce:true,
-								webvisor:' . ($this->_webvisor ? 'true' : 'false') . '
-							});
-						} catch(e) { }
+				window[\'yandex_metrika_callbacks\'].push(function() {
+					window.yaCounter' . $this->_id . ' = new Ya.Metrika({
+						id:' . $this->_id . ',
+						clickmap:true,
+						trackLinks:true,
+						accurateTrackBounce:true,
+						webvisor:' . ($this->_webvisor ? 'true' : 'false') . '
 					});
-					
-					var n = d.getElementsByTagName("script")[0],
-						s = d.createElement("script"),
-						f = function () { n.parentNode.insertBefore(s, n); };
-						
-					s.type = "text/javascript";
-					s.async = true;
-					s.src = "https://mc.yandex.ru/metrika/watch.js";
-					
-					if (w.opera == "[object Opera]") {
-						d.addEventListener("DOMContentLoaded", f, false);
-					} else { f(); }
-				})(document, window, "yandex_metrika_callbacks");
+				});
 			</script>
 		';
 	}
