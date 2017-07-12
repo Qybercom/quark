@@ -93,7 +93,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
 		opt.box = opt.box === undefined ? '#quark-dialog-box' : opt.box;
 		opt.reset = opt.reset !== undefined ? opt.reset : true;
-		opt.type = opt.type !== undefined ? opt.type : 'GET';
+		//opt.type = opt.type !== undefined ? opt.type : 'GET';
 		opt.successCriteria = opt.successCriteria instanceof Function
 			? opt.successCriteria
 			: function (data) { return data.status !== undefined && data.status === 200; };
@@ -154,7 +154,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$(opt.box).fadeIn(500);
 	};
 
-	that.Close = function (dialog, action) {
+	that.Close = function (dialog, action, callback) {
 		dialog = dialog || $($(selector).attr('quark-dialog'));
 
 		if (opt.close instanceof Function && opt.close(dialog, action) === false) return;
@@ -162,6 +162,9 @@ Quark.Controls.Dialog = function (selector, opt) {
 		dialog.fadeOut(500);
 		dialog.find('.quark-dialog-state').slideUp();
 		$(opt.box).fadeOut(500);
+
+		if (callback instanceof Function)
+			callback(dialog, action);
 	};
 
 	that.Submit = function (dialog, action) {
@@ -238,10 +241,17 @@ Quark.Controls.Dialog = function (selector, opt) {
 	$(document).on('click', selector, function (e) {
 		e.preventDefault();
 
-		var button = $(this);
-		var dialog = $(button.attr('quark-dialog'));
+		var button = $(this),
+			dialog = $(button.attr('quark-dialog')),
+			action = function () { that.Open(dialog, button.attr('href'), button); };
 
-		that.Open(dialog, button.attr('href'), button);
+		if (button.attr('quark-dialog-exclusive') != 'true') action();
+		else that.Close($('.quark-dialog'), null, function () {
+			var timer = setTimeout(function () {
+				action();
+				clearTimeout(timer);
+			}, 500);
+		});
 	});
 };
 

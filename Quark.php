@@ -1771,10 +1771,15 @@ class QuarkConfig {
 
 		if (isset($ini[self::INI_DATA_PROVIDERS]))
 			foreach ($ini[self::INI_DATA_PROVIDERS] as $key => &$connection) {
-				$component = Quark::Component(QuarkObject::ConstValue($key));
-				
-				if ($component instanceof QuarkModelSource)
-					$component->URI(QuarkURI::FromURI($connection));
+				try {
+					$component = Quark::Component(QuarkObject::ConstValue($key));
+
+					if ($component instanceof QuarkModelSource)
+						$component->URI(QuarkURI::FromURI($connection));
+				}
+				catch (QuarkArchException $e) {
+					Quark::Log('Attempting of configuring unspecified data provider ' . $key . ', by value "' . $connection . '". Possible mistyping of data provider\'s key in INI configuration.', Quark::LOG_WARN);
+				}
 			}
 
 		if (isset($ini[self::INI_ASYNC_QUEUES]))
@@ -5381,10 +5386,11 @@ trait QuarkViewBehavior {
 	/**
 	 * @param string $resource = ''
 	 * @param bool $localized = false
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeResourceURL ($resource = '', $localized = false) {
+	public function ThemeResourceURL ($resource = '', $localized = false, $full = false) {
 		return $this->__call('ThemeResourceURL', func_get_args());
 	}
 
@@ -6064,6 +6070,23 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @param string $name = 'timezone'
+	 * @param string $selected = null
+	 * @param string $format = QuarkCultureISO::TIME
+	 *
+	 * @return string
+	 */
+	public function TimezoneSelector ($name = 'timezone', $selected = null, $format = QuarkCultureISO::TIME) {
+		$zones = QuarkDate::TimezoneList();
+		$out = '<select class="quark-input" name=' . $name . '>';
+
+		foreach ($zones as $zone => &$offset)
+			$out .= '<option value="' . $zone . '"' . ($selected === $zone ? ' selected="selected"' : '') . '>(UTC ' . $offset->Format($format, true) . ') ' . $zone . '</option>';
+
+		return $out . '</select>';
+	}
+
+	/**
 	 * @return QuarkConfig
 	 */
 	public function Config () {
@@ -6313,27 +6336,7 @@ class QuarkView implements IQuarkContainer {
 		ob_start();
 		/** @noinspection PhpIncludeInspection */
 		include $this->_file;
-		$out = ob_get_clean();
-
-		if ($this->_inline) {
-			if (preg_match_all('#id="(.*)"#Uis', $out, $ids, PREG_SET_ORDER)) {
-				foreach ($ids as $id) {
-					$css = '';
-
-					if (preg_match_all('#\#' . $id[1] . '{(.*)}#Uis', $out, $id_css, PREG_SET_ORDER)) {
-
-						foreach ($id_css as $id_c) {
-							$css .= $id_c[1];
-							$out = str_replace('#' . $id[1] . '{' . $id_c[1] . '}', '', $out);
-						}
-					}
-
-					$out = str_replace('id="' . $id[1] . '"', 'id="' . $id[1] . '" style="' . $css . '"', $out);
-				}
-			}
-		}
-
-		return $out;
+		return ob_get_clean();
 	}
 
 	/**
@@ -11730,6 +11733,19 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		}
 
 		return (new \DateTimeZone($timezone))->getOffset(self::GMTNow()->Value());
+	}
+
+	/**
+	 * @return QuarkDateInterval[]
+	 */
+	public static function TimezoneList () {
+		$zones = \DateTimeZone::listIdentifiers();
+		$out = array();
+
+		foreach ($zones as $i => &$zone)
+			$out[$zone] = QuarkDateInterval::FromSeconds(self::TimezoneOffset($zone));
+
+		return $out;
 	}
 
 	/**

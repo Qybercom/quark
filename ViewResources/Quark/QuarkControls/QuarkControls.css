@@ -26,6 +26,7 @@
 	display: inline-block;
 	margin: 0;
 	padding: 0 0 0 15px;
+	vertical-align: middle;
 }
 
 #quark-dialog-box, #quark-gallery-box {
