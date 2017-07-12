@@ -8321,6 +8321,21 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
+	 * @param callable $iterator = null
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Filter (callable $iterator = null) {
+		$output = new self($this->_type);
+
+		foreach ($this->_collection as $key => &$item)
+			if ($iterator == null || $iterator($item, $key))
+				$output[] = $item;
+
+		return $output;
+	}
+
+	/**
 	 * @param array $fields = null
 	 * @param bool $weak = false
 	 *

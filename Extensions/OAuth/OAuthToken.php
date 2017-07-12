@@ -16,6 +16,7 @@ use Quark\QuarkObject;
 /**
  * Class OAuthToken
  *
+ * @property string $config
  * @property string $access_token
  * @property string $refresh_token
  * @property QuarkDate $refreshed
@@ -26,11 +27,6 @@ use Quark\QuarkObject;
  */
 class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	use QuarkModelBehavior;
-
-	/**
-	 * @var string $_config = ''
-	 */
-	private $_config = '';
 
 	/**
 	 * @param string $config
@@ -49,14 +45,14 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function OAuthConfig ($config = '') {
 		if (func_num_args() != 0)
-			$this->_config = $config;
+			$this->config = $config;
 
-		$out = Quark::Config()->Extension($this->_config);
-
-		if (!($out instanceof OAuthConfig))
-			throw new QuarkArchException('[OAuthToken] There is no OAuthConfig registered with provided key ' . $this->_config);
-
-		return $out;
+		try {
+			return Quark::Config()->Extension($this->config);
+		}
+		catch (QuarkArchException $e) {
+			throw new QuarkArchException('[OAuthToken] There is no OAuthConfig registered with provided key "' . $this->config . '"');
+		}
 	}
 
 	/**
@@ -82,6 +78,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Fields () {
 		return array(
+			'config' => '',
 			'access_token' => '',
 			'refresh_token' => '',
 			'refreshed' => QuarkDate::GMTNow(),
@@ -150,7 +147,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		try {
 			$token = $this->Provider()->OAuthTokenFromRequest($request, $redirect);
-			$token->OAuthConfig($this->_config);
+			$token->OAuthConfig($this->config);
 
 			/**
 			 * @var OAuthToken $model

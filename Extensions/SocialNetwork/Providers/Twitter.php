@@ -191,6 +191,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$user->Location($item->location);
 		$user->Page(self::URL_BASE . $item->screen_name);
 		$user->RegisteredAt(QuarkDate::GMTOf($item->created_at));
+		$user->Username($item->screen_name);
 		$user->Bio($item->description);
 
 		if (isset($item->email))
