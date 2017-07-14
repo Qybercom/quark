@@ -263,7 +263,7 @@ class Quark {
 		if (!$full && strlen($path) != 0 && $path[0] == '/')
 			$path = Quark::Host() . self::WebOffset() . $path;
 
-		$uri = ($full ? Quark::WebHost() : '') . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+		$uri = ($full ? Quark::WebHost() : '') . Quark::NormalizePath(str_replace(Quark::Host(), '/', $path), false);
 
 		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', $uri)));
 	}
