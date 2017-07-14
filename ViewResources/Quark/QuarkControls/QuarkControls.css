@@ -209,9 +209,9 @@
 
 .quark-scroll-bar {
 	display: inline-block;
-	height: 100%;
+	/*height: 100%;*/
 	vertical-align: top;
-	margin: 3px;
+	margin: 3px -10px 3px -3px;
 	cursor: pointer;
 }
 

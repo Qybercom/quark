@@ -906,28 +906,50 @@ Quark.Controls.Scrollable = function (selector, opt) {
 		elem = elem.wrap('<div class="quark-scrollable"></div>').addClass('quark-scrollable-content').parent();
 		elem.append('<div class="quark-scroll-bar"><div class="quark-scroll-trigger"></div></div>');
 
-		var height = 100;
+		var scroll_content = elem.find('.quark-scrollable-content'),
+			scroll_bar = elem.find('.quark-scroll-bar'),
+			scroll_trigger = elem.find('.quark-scroll-trigger'),
+			height_content = scroll_content.height(),
+			height_content_full = elem.find('.quark-scrollable-content >').height(),
+			height_bar = (elem.height() / height_content_full) * 100;
 
-		var scroll = new Quark.UX(elem.find('.quark-scroll-trigger'));
+		scroll_bar.css('height', height_content + 'px');
+		scroll_trigger.css('height', height_bar + '%');
+
+		elem.on('mousewheel', function (e) {
+			var delta = parseInt(e.originalEvent.wheelDelta),
+				dir = delta / Math.abs(delta),
+				val = scroll_content.scrollTop() + dir * 40;
+
+			scroll_content.scrollTop(val);
+			scroll_bar.css('margin-top', val / 3 + 'px');
+		});
+
+		var scroll = new Quark.UX(scroll_trigger);
 		scroll.Drag({
-			axis: {x:false},
+			//axis: {x:false},
 			delegateParent: false,
 			defaultCss: false,
+			preventDefault: false,
 			drag: function (e) {
+				if (!e.target.is('.quark-scroll-trigger')) return;
+
 				var val = e.target.data('_scroll') === undefined
 					? parseInt(e.target.css('margin-top').replace('px'))
 					: (e.current.y - parseInt(e.target.data('_scroll')));
 
-				if (val < 0 || val > height) return;
+				if (val < 0 || (val + scroll_trigger.height() - 25) > height_content) return;
 
 				var frame = {
 					name: e.target.attr('quark-slider-name'),
 					range: elem,
 					slider: e.target,
-					value: (val / height) * 100
+					value: (val / height_content) * 100
 				};
 
 				opt.scroll(frame);
+
+				scroll_content.scrollTop(val);
 
 				e.target.css('margin-top', val + 'px');
 				e.target.data('_scroll', e.current.y - val);
