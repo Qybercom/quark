@@ -903,7 +903,7 @@ Quark.Controls.Scrollable = function (selector, opt) {
 		var elem = $(this);
 
 		elem.css('overflow', 'hidden');
-		elem = elem.wrap('<div class="quark-scrollable"></div>').addClass('quark-scrollable-content').parent();
+		elem = elem.wrap('<div class="quark-scrollable' + (opt.class !== undefined ? ' ' + opt.class : '') + '"' + (opt.id !== undefined ? ' id="' + opt.id + '"' : '') + '></div>').addClass('quark-scrollable-content').parent();
 		elem.append('<div class="quark-scroll-bar"><div class="quark-scroll-trigger"></div></div>');
 
 		var scroll_content = elem.find('.quark-scrollable-content'),
@@ -918,16 +918,31 @@ Quark.Controls.Scrollable = function (selector, opt) {
 
 		elem.on('mousewheel', function (e) {
 			var delta = parseInt(e.originalEvent.wheelDelta),
-				dir = delta / Math.abs(delta),
+				dir = delta / Math.abs(delta) * -1,
 				val = scroll_content.scrollTop() + dir * 40;
 
 			scroll_content.scrollTop(val);
-			scroll_bar.css('margin-top', val / 3 + 'px');
+			scroll_bar.css('margin-top', scroll_content.scrollTop() / 2 + 'px');
+		});
+
+		var initial = 0;
+		elem.on('touchstart', function (e) {
+			e.preventDefault();
+
+			initial = e.originalEvent.touches[0].pageY;
+		});
+
+		elem.on('touchmove', function (e) {
+			e.preventDefault();
+
+			scroll_content.scrollTop(initial - e.originalEvent.touches[0].pageY);
+			scroll_bar.css('margin-top', scroll_content.scrollTop() / 2 + 'px');
 		});
 
 		var scroll = new Quark.UX(scroll_trigger);
 		scroll.Drag({
 			//axis: {x:false},
+			//handle: selector,
 			delegateParent: false,
 			defaultCss: false,
 			preventDefault: false,
@@ -951,7 +966,7 @@ Quark.Controls.Scrollable = function (selector, opt) {
 
 				scroll_content.scrollTop(val);
 
-				e.target.css('margin-top', val + 'px');
+				e.target.css('margin-top', scroll_content.scrollTop() / 1.15 + 'px');
 				e.target.data('_scroll', e.current.y - val);
 			}
 		});
