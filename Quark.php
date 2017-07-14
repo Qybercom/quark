@@ -3011,7 +3011,7 @@ class QuarkTask {
 	public static function AsyncQueue ($queue = self::QUEUE) {
 		$uri = Quark::Config()->AsyncQueue($queue);
 
-		if (!($uri->Key() instanceof QuarkURI)) return false;
+		if (!($uri->Key() instanceof QuarkURI)) return null;
 
 		$protocol = $uri->Value();
 

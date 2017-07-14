@@ -42,7 +42,7 @@ class AsyncQueue implements IQuarkTask {
 			'Starting AsyncQueue instance...'
 		);
 
-		if (!$queue->Bind())
+		if ($queue == null || !$queue->Bind())
 			$this->ShellArchException('Can not bind async queue on [' . $queue->URI() . ']');
 
 		$this->ShellLog('Started on ' . $queue->URI(), Quark::LOG_OK);
