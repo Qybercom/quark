@@ -1,38 +1,33 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Quark;
 use Quark\QuarkDTO;
+use Quark\QuarkFormIOProcessor;
+use Quark\QuarkHTTPClient;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\OAuth\OAuthToken;
+use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
- * Class Xing
+ * Class Flickr
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
-	/**
-	 * @var string $_appId = ''
-	 */
-	private $_appId = '';
+class Flickr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+	const URL_OAUTH = 'https://www.flickr.com/services/oauth';
+	const URL_API = 'https://api.flickr.com/services/rest';
 
-	/**
-	 * @var string $_appSecret = ''
-	 */
-	private $_appSecret = '';
-
-	/**
-	 * @var OAuthToken $_token
-	 */
-	private $_token;
+	use OAuthProviderBehavior;
 
 	/**
 	 * @param OAuthToken $token
@@ -63,7 +58,11 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	public function OAuthLoginURL ($redirect, $scope) {
-		// TODO: Implement OAuthLoginURL() method.
+		$login = $this->OAuth1_0a_RequestToken($redirect, '/oauth/request_token', self::URL_OAUTH);
+
+		Quark::Trace($login);
+
+		return isset($login->oauth_token) ? self::URL_OAUTH . '/oauth/authorize?oauth_token=' . $login->oauth_token : null;
 	}
 
 	/**
@@ -86,17 +85,27 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param string $url
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
-	 * @param string $base = null
+	 * @param string $url = ''
+	 * @param QuarkDTO $request = null
+	 * @param QuarkDTO $response = null
+	 * @param string $base = self::URL_API
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url, QuarkDTO $request, QuarkDTO $response, $base = null) {
-		// TODO: Implement OAuthAPI() method.
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
+		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url));
+
+		$api = QuarkHTTPClient::To($base . $url, $request, $response);
+
+		if (isset($api->errors))
+			throw new OAuthAPIException($request, $response);
+
+		return $api;
 	}
 
 	/**

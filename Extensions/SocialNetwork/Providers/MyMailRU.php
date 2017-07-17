@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;

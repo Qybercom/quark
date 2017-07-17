@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;

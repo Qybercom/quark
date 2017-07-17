@@ -1,19 +1,18 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
+use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
@@ -43,25 +42,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const AGGREGATE_COUNT = 42;
 	const AGGREGATE_CURSOR = '-1';
 
-	/**
-	 * @var string $_appId
-	 */
-	private $_appId = '';
-
-	/**
-	 * @var string $_appSecret = ''
-	 */
-	private $_appSecret = '';
-
-	/**
-	 * @var OAuthToken $_token = ''
-	 */
-	private $_token = '';
-
-	/**
-	 * @var string $_callback = ''
-	 */
-	private $_callback = '';
+	use OAuthProviderBehavior;
 
 	/**
 	 * @var string $_cursor = self::AGGREGATE_CURSOR
@@ -104,13 +85,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	public function OAuthLoginURL ($redirect, $scope) {
-		$this->_callback = $redirect;
-
-		$login = $this->OAuthAPI(
-			'/oauth/request_token',
-			QuarkDTO::ForPOST(new QuarkFormIOProcessor()),
-			new QuarkDTO(new QuarkFormIOProcessor())
-		);
+		$login = $this->OAuth1_0a_RequestToken($redirect, '/oauth/request_token', self::URL_API);
 
 		return isset($login->oauth_token) ? self::URL_API . '/oauth/authenticate?oauth_token=' . $login->oauth_token : null;
 	}
@@ -131,46 +106,26 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return QuarkModel|OAuthToken
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
-		if (!isset($request->oauth_token)) return null;
-		if (!isset($request->oauth_verifier)) return null;
-
-		$this->_token = new OAuthToken();
-		$this->_token->access_token = $request->oauth_token;
-
-		$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$req->Data(array('oauth_verifier' => $request->oauth_verifier));
-
-		$token = $this->OAuthAPI('/oauth/access_token', $req, new QuarkDTO(new QuarkFormIOProcessor()));
-
-		if (!isset($token->oauth_token)) return null;
-		if (!isset($token->oauth_token_secret)) return null;
-
-		$out = new QuarkModel(new OAuthToken(), array(
-			'access_token' => $token->oauth_token,
-			'oauth_token_secret' => $token->oauth_token_secret
-		));
-
-		$this->_token = $out->Model();
-
-		return $out;
+		return $this->OAuth1_0a_TokenFromRequest($request, '/oauth/access_token', self::URL_API);
 	}
 
 	/**
 	 * @param string $url = ''
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
+	 * @param string $base = self::URL_API
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$request->Authorization($this->_authorization($request->Method(), self::URL_API . $url));
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url));
 
-		$api = QuarkHTTPClient::To(self::URL_API . $url, $request, $response);
+		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
 		if (isset($api->errors))
 			throw new OAuthAPIException($request, $response);
@@ -253,50 +208,5 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$friends[] = self::_user($item);
 
 		return $friends;
-	}
-
-	/**
-	 * @note if Twitter responds with error - type a placeholder into Callback URL field in the application settings
-	 *
-	 * @param string $method = ''
-	 * @param string $url = ''
-	 * @param array $params = []
-	 *
-	 * @return QuarkKeyValuePair
-	 */
-	private function _authorization ($method = '', $url = '', $params = []) {
-		$header = array();
-		$now = QuarkDate::Now();
-
-		$params['oauth_signature_method'] = 'HMAC-SHA1';
-		$params['oauth_version'] = '1.0';
-		$params['oauth_timestamp'] = $now->Timestamp();
-		$params['oauth_nonce'] = Quark::GuID();
-		$params['oauth_consumer_key'] = $this->_appId;
-
-		if ($this->_callback)
-			$params['oauth_callback'] = $this->_callback;
-
-		if (isset($this->_token->access_token))
-			$params['oauth_token'] = $this->_token->access_token;
-
-		// Parameters are sorted by name, using lexicographical byte value ordering.
-		// Ref: Spec: 9.1.1 (1)
-		uksort($params, 'strcmp');
-
-		$_sign = array();
-
-		foreach ($params as $key => $value) {
-			$header[] = rawurlencode($key) . '="' . rawurlencode($value) .'"';
-			$_sign[] = rawurlencode($key) . '=' . rawurlencode($value);
-		}
-
-		$key = rawurlencode($this->_appSecret) . '&' . rawurlencode(isset($this->_token->oauth_token_secret) ? $this->_token->oauth_token_secret : '');
-		$data = rawurlencode($method) . '&' . rawurlencode($url) . '&' . rawurlencode(implode('&', $_sign));
-
-		$sign = base64_encode(hash_hmac('sha1', $data, $key, true));
-		$header[] = 'oauth_signature="' . rawurlencode($sign) . '"';
-
-		return new QuarkKeyValuePair('OAuth', implode(',', $header));
 	}
 }

@@ -99,6 +99,14 @@
 	background: rgba(81, 127, 164, 0.75);
 }
 
+.quark-button.social[class*=" socicon-flickr"] {
+	background: rgb(30, 30, 27);
+}
+
+.quark-button.social[class*=" socicon-flickr"]:hover {
+	background: rgba(30, 30, 27, 0.75);
+}
+
 .quark-button.social[class*=" socicon-tumblr"] {
 	background: rgb(9, 85, 108);
 }

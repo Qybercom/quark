@@ -141,12 +141,18 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @param string $redirect = ''
 	 *
 	 * @return QuarkModel|OAuthToken
+	 *
+	 * @throws QuarkArchException
 	 */
 	public function FromRequest (QuarkDTO $request = null, $redirect = '') {
 		if ($request == null) return null;
 
 		try {
 			$token = $this->Provider()->OAuthTokenFromRequest($request, $redirect);
+
+			if ($token == null)
+				throw new QuarkArchException('[OAuthToken::FromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] Can not create OAuthToken from request: OAuth provider returned invalid OAuthToken object');
+
 			$token->OAuthConfig($this->config);
 
 			/**
