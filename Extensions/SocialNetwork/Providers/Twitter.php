@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
@@ -33,11 +34,15 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
  * https://dev.twitter.com/rest/reference/get/account/verify_credentials
  * https://dev.twitter.com/rest/reference/get/users/lookup
  *
+ * http://kagan.mactane.org/blog/2009/09/22/what-characters-are-allowed-in-twitter-usernames/comment-page-1/
+ * https://support.twitter.com/articles/101299
+ *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
 class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_BASE = 'https://twitter.com/';
 	const URL_API = 'https://api.twitter.com';
+	const URL_STREAM_PUBLIC = 'https://stream.twitter.com/1.1/statuses';
 
 	const AGGREGATE_COUNT = 42;
 	const AGGREGATE_CURSOR = '-1';
@@ -208,5 +213,30 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$friends[] = self::_user($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param array|object $filter
+	 * @param callable $incoming
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public function TwitterStreaming ($filter = [], callable $incoming) {
+		$url = self::URL_STREAM_PUBLIC . '/filter.json';
+
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $url, $filter));
+		$request->Data($filter);
+
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+
+		$stream = QuarkHTTPClient::AsyncTo($url, $request, $response);
+
+		$stream->On(QuarkHTTPClient::EVENT_ASYNC_ERROR, function ($request, $response) {
+			throw new QuarkArchException('[SocialNetwork.Twitter] StreamingAPI error. Details: ' . print_r($request, true) . print_r($response, true));
+		});
+
+		return $stream ? $stream->AsyncData($incoming) : null;
 	}
 }

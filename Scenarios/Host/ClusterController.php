@@ -30,6 +30,7 @@ class ClusterController implements IQuarkTask {
 	public function Task ($argc, $argv) {
 		$internal = Quark::Config()->ClusterControllerListen();
 		$external = Quark::Config()->ClusterMonitor();
+		$key      = Quark::Config()->ClusterKey();
 
 		$this->ShellView(
 			'Host/ClusterController',
@@ -37,10 +38,13 @@ class ClusterController implements IQuarkTask {
 		);
 
 		if ($internal == null)
-			$this->ShellArchException('Attempt to start a not configured cluster controller: Internal addr null');
+			$this->ShellArchException('Attempt to start a not configured cluster controller: Internal address is null');
 
 		if ($external == null)
-			$this->ShellArchException('Attempt to start a not configured cluster controller: External addr null');
+			$this->ShellArchException('Attempt to start a not configured cluster controller: External address is null');
+
+		if ($key == null)
+			$this->ShellArchException('Attempt to start a not configured cluster controller: Cluster key is null');
 
 		$stream = QuarkStreamEnvironment::ClusterController(new WebSocketNetworkTransportServer(), $external, $internal);
 

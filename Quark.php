@@ -2485,6 +2485,18 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	public function ExceptionHandler (\Exception $exception) {
 		return QuarkException::ExceptionHandler($exception);
 	}
+
+	/**
+	 * @param string $uri = ''
+	 *
+	 * @return QuarkCLIEnvironment
+	 */
+	public static function WithApplicationStart ($uri = '') {
+		$cli = new self();
+		$cli->ApplicationStart($uri);
+
+		return $cli;
+	}
 }
 
 /**
@@ -11597,6 +11609,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public function InTimezone ($timezone = self::CURRENT, $copy = false) {
 		$this->_timezone = $timezone;
+
 		return $this->Offset('+' . self::TimezoneOffset($timezone) . ' seconds', $copy);
 	}
 
@@ -11692,11 +11705,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 
 	/**
 	 * @param string $date
+	 * @param bool $ignoreTimezone = false
 	 *
 	 * @return QuarkDate
 	 */
-	public static function GMTOf ($date) {
-		return self::Of($date, self::GMT);
+	public static function GMTOf ($date, $ignoreTimezone = false) {
+		$out = self::Of($date, self::GMT);
+
+		return $ignoreTimezone && $out != null ? self::GMTOf($out->Format('Y-m-d H:i:s')) : $out;
 	}
 
 	/**
@@ -11854,6 +11870,7 @@ class QuarkDateInterval {
 	
 	const SECONDS_IN_YEAR = 31536000;
 	const SECONDS_IN_MONTH = 2678400;
+	const SECONDS_IN_WEEK = 604800;
 	const SECONDS_IN_DAY = 86400;
 	const SECONDS_IN_HOUR = 3600;
 	const SECONDS_IN_MINUTE = 60;
@@ -11861,18 +11878,25 @@ class QuarkDateInterval {
 	
 	const MINUTES_IN_YEAR = 525600;
 	const MINUTES_IN_MONTH = 44640;
+	const MINUTES_IN_WEEK = 10080;
 	const MINUTES_IN_DAY = 1440;
 	const MINUTES_IN_HOUR = 60;
 	const MINUTES_IN_MINUTE = 1;
 	
 	const HOURS_IN_YEAR = 8760;
 	const HOURS_IN_MONTH = 744;
+	const HOURS_IN_WEEK = 168;
 	const HOURS_IN_DAY = 24;
 	const HOURS_IN_HOUR = 1;
 	
 	const DAYS_IN_YEAR = 365;
 	const DAYS_IN_MONTH = 31;
+	const DAYS_IN_WEEK = 7;
 	const DAYS_IN_DAY = 1;
+
+	const WEEKS_IN_YEAR = 52;
+	const WEEKS_IN_MONTH = 4;
+	const WEEKS_IN_WEEK = 1;
 	
 	const MONTHS_IN_YEAR = 12;
 	const MONTHS_IN_MONTH = 1;
@@ -12166,6 +12190,36 @@ class QuarkDateInterval {
 	 */
 	public function Rate ($rate = 1) {
 		return self::FromSeconds($this->Seconds() * $rate);
+	}
+
+	/**
+	 * @param string $elapsed
+	 * @param array $mappings
+	 * @param string $unit
+	 *
+	 * @return string
+	 */
+	private function _elapsed ($elapsed, $mappings, $unit) {
+		return $this->{$unit . 's'} . ' ' . (isset($mappings[$unit]) ? $mappings[$unit] : $unit . 's') . ',' . $elapsed;
+	}
+
+	/**
+	 * @param array $mappings = []
+	 * @param int $units = 1
+	 *
+	 * @return string
+	 */
+	public function Elapsed ($mappings = [], $units = 1) {
+		$elapsed = '';
+
+		if ($this->seconds != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_SECOND);
+		if ($this->minutes != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_MINUTE);
+		if ($this->hours != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_HOUR);
+		if ($this->days != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_DAY);
+		if ($this->months != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_MONTH);
+		if ($this->years != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_YEAR);
+
+		return implode(', ', array_slice(explode(',', trim($elapsed, ',')), 0, $units));
 	}
 	
 	/**
@@ -14998,7 +15052,7 @@ interface IQuarkCluster extends IQuarkPeer {
 class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	const URI_NODE_INTERNAL = QuarkServer::TCP_ALL_INTERFACES_RANDOM_PORT;
 	const URI_NODE_EXTERNAL = 'ws://0.0.0.0:25000';
-	const URI_CONTROLLER_INTERNAL = 'tcp://0.0..0:25800';
+	const URI_CONTROLLER_INTERNAL = 'tcp://0.0.0.0:25800';
 	const URI_CONTROLLER_EXTERNAL = 'ws://0.0.0.0:25900';
 
 	const PACKAGE_REQUEST = 'url';
@@ -17418,6 +17472,13 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function RawHeaders () {
+		return substr($this->_raw, 0, strpos($this->_raw, "\r\n\r\n"));
+	}
+
+	/**
 	 * @param string $raw
 	 *
 	 * @return string
@@ -17427,6 +17488,15 @@ class QuarkDTO {
 			$this->_rawData = $raw;
 
 		return $this->_rawData;
+	}
+
+	/**
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function Masquerade ($data = '') {
+		return $this->RawHeaders() . "\r\n\r\n" . $data;
 	}
 
 	/**
@@ -17993,7 +18063,17 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
  *
  * @package Quark
  */
-class QuarkHTTPClient {
+class QuarkHTTPClient implements IQuarkEventable {
+	const EVENT_ASYNC_DATA = 'client.async.data';
+	const EVENT_ASYNC_ERROR = 'client.async.error';
+
+	use QuarkEvent;
+
+	/**
+	 * @var QuarkClient $_client
+	 */
+	private $_client;
+
 	/**
 	 * @var QuarkDTO $_request
 	 */
@@ -18005,6 +18085,11 @@ class QuarkHTTPClient {
 	private $_response;
 
 	/**
+	 * @var bool $_asyncInit = false
+	 */
+	private $_asyncInit = false;
+
+	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
 	 */
@@ -18014,6 +18099,13 @@ class QuarkHTTPClient {
 
 		if ($this->_response != null)
 			$this->_request->Header(QuarkDTO::HEADER_ACCEPT, $this->_response->Processor()->MimeType());
+	}
+
+	/**
+	 * @return QuarkClient
+	 */
+	public function &Client () {
+		return $this->_client;
 	}
 
 	/**
@@ -18038,6 +18130,33 @@ class QuarkHTTPClient {
 			$this->_response = $response;
 
 		return $this->_response;
+	}
+
+	/**
+	 * @param callable $callback
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public function AsyncData (callable $callback) {
+		$this->On(self::EVENT_ASYNC_DATA, $callback);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $max = -1
+	 *
+	 * @return bool
+	 */
+	public function AsyncPipe ($max = -1) {
+		return $this->_client->Pipe($max);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Connected () {
+		return $this->_client->Connected();
 	}
 
 	/**
@@ -18125,6 +18244,64 @@ class QuarkHTTPClient {
 		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
 
 		return $file;
+	}
+
+	/**
+	 * @param QuarkURI|string $uri
+	 * @param QuarkDTO $request
+	 * @param QuarkDTO $response
+	 * @param QuarkCertificate $certificate
+	 * @param int $timeout = 10
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public static function AsyncTo ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+		$http = new self($request, $response);
+		$http->_client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, false);
+
+		$http->_client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http) {
+			if ($http->_request == null) return false;
+
+			if ($http->_response == null)
+				$http->_response = new QuarkDTO();
+
+			$client->URI()->Compose($uri, $http->_request->URI() ? $http->_request->URI()->Options() : array());
+
+			$http->_request->URI($client->URI());
+			$http->_response->URI($client->URI());
+
+			$http->_request->Remote($client->ConnectionURI(true));
+			$http->_response->Remote($client->ConnectionURI(true));
+
+			$http->_response->Method($http->_request->Method());
+
+			$request = $http->_request->SerializeRequest();
+
+			return $client->Send($request);
+		});
+
+		/** @noinspection PhpUnusedParameterInspection */
+		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
+			if ($http->_asyncInit) $data = $http->_response->Masquerade($data);
+			else $http->_asyncInit = true;
+
+			$http->_response->UnserializeResponse($data);
+
+			if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
+				$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array($http->_request, $http->_response));
+
+			$http->TriggerArgs(self::EVENT_ASYNC_DATA, array($http->_response));
+		});
+
+		$http->_client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+		});
+
+		$http->_client->On(QuarkServer::EVENT_ERROR_CRYPTOGRAM, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+		});
+
+		return $http->_client->Connect() ? $http : null;
 	}
 }
 

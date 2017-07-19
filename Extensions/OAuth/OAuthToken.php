@@ -70,6 +70,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @throws QuarkArchException
 	 */
 	public function Provider () {
+		$this->OAuthConfig()->Consumer($this);
 		return $this->OAuthConfig()->Provider();
 	}
 
