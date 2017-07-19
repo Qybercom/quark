@@ -3330,12 +3330,14 @@ class QuarkTimer {
 	}
 
 	/**
-	 * Destroy timer
+	 * @return QuarkTimer
 	 */
 	public function Destroy () {
 		foreach (self::$_timers as $i => &$timer)
 			if ($timer->_id == $this->_id)
 				unset(self::$_timers[$i]);
+
+		return $this;
 	}
 
 	/**
@@ -13946,7 +13948,11 @@ class QuarkClient implements IQuarkEventable {
 		$this->_remote = null;
 		$this->_transport = null;
 		$this->_rps = 0;
-		$this->_rpsTimer = null;
+
+		if ($this->_rpsTimer != null) {
+			$this->_rpsTimer->Destroy();
+			$this->_rpsTimer = null;
+		}
 
 		return self::SocketClose($this->_socket);
 	}
@@ -15155,7 +15161,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public static function ControllerCommand ($name = '', $data = []) {
 		$client = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$name, &$data) {
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) use (&$name, &$data) {
 			$client->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
 			$client->Close();
 		});
@@ -18288,9 +18294,9 @@ class QuarkHTTPClient implements IQuarkEventable {
 			$http->_response->UnserializeResponse($data);
 
 			if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
-				$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array($http->_request, $http->_response));
+				$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array(&$http->_request, &$http->_response));
 
-			$http->TriggerArgs(self::EVENT_ASYNC_DATA, array($http->_response));
+			$http->TriggerArgs(self::EVENT_ASYNC_DATA, array(&$http->_response));
 		});
 
 		$http->_client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
