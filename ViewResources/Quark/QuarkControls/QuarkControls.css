@@ -226,3 +226,33 @@
 .quark-scroll-trigger:hover {
 	background: rgb(200,200,200);
 }
+
+
+
+/**
+ * .quark-flip-counter component
+ */
+.quark-flip-counter {
+
+}
+
+.quark-flip-counter .quark-flip-counter-digit {
+	display: inline-block;
+	margin: 0 4px 0 0;
+	font-family: 'Lato','Open Sans',sans-serif;
+	font-size: 20px;
+	line-height: 20px;
+	padding: 10px 5px;
+	background: rgb(200,200,200);
+	color: rgb(50,50,50);
+	border-radius: 5px;
+}
+
+.quark-flip-counter .quark-flip-counter-digit:last-child {
+	margin: 0;
+}
+
+.quark-flip-counter .quark-flip-counter-delimiter {
+	display: inline-block;
+	margin: 0 3px 0 0;
+}
