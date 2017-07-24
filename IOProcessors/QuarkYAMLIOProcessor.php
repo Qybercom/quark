@@ -36,10 +36,11 @@ class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) {
-		// TODO: Implement Batch() method.
+	public function Batch ($raw, $fallback) {
+		return array($raw);
 	}
 }
