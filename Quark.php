@@ -10959,15 +10959,17 @@ class QuarkField {
 
 	/**
 	 * @param $key
+	 * @param int $minLevel = 1
+	 * @param int $maxLevel = -1
 	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
-	public static function Email ($key, $nullable = false) {
+	public static function Email ($key, $minLevel = 1, $maxLevel = -1, $nullable = false) {
 		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
-		return preg_match('#(.+)\@(.+)#Uis', $key);
+		return preg_match('#^(\S+)\@([^@.]+\.){' . ($minLevel < 0 ? 0 : $minLevel) . ',' . ($maxLevel < 0 ? '' : $maxLevel) . '}$#', $key . '.');
 	}
 
 	/**
