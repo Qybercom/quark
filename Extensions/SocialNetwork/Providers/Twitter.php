@@ -216,20 +216,24 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param array|object $filter
-	 * @param callable $incoming
+	 * @param array|object $params = []
+	 * @param callable $incoming = null
+	 * @param bool $filter = true
 	 *
 	 * @return QuarkHTTPClient
 	 */
-	public function TwitterStreaming ($filter = [], callable $incoming) {
+	public function TwitterStreaming ($params = [], callable $incoming = null, $filter = true) {
 		$url = self::URL_STREAM_PUBLIC . '/filter.json';
 
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
-		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $url, $filter));
-		$request->Data($filter);
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $url, (array)$params));
+		$request->Data((array)$params);
 
 		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+		$response->RawProcessor(function ($data) {
+			return preg_replace('#\r\n[a-zA-Z0-9]{1,5}\r\n#Uis', '', "\r\n" . $data);
+		});
 
 		$stream = QuarkHTTPClient::AsyncTo($url, $request, $response);
 
@@ -237,6 +241,15 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			throw new QuarkArchException('[SocialNetwork.Twitter] StreamingAPI error. Details: ' . print_r($request, true) . print_r($response, true));
 		});
 
-		return $stream ? $stream->AsyncData($incoming) : null;
+		$last = '';
+
+		return !$stream ? null : $stream->AsyncData(!$filter || !$incoming ? $incoming : function (QuarkDTO $data) use (&$last, &$incoming) {
+			if (!isset($data->text) || !isset($data->user->name)) return;
+			if (!isset($data->id) || !isset($data->created_at)) return;
+			if ($last == $data->id) return;
+
+			$last = $data->id;
+			$incoming($data);
+		});
 	}
 }

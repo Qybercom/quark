@@ -891,6 +891,12 @@ Quark.Controls.Progress = function (selector, opt) {
 	});
 };
 
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
 Quark.Controls.Scrollable = function (selector, opt) {
 	var that = this;
 

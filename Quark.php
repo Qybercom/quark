@@ -155,7 +155,7 @@ class Quark {
 			self::ContainerFree();
 		});
 
-		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke();
+		if (!self::CLI() || !self::$_environment[0]->EnvironmentQueued()) $threads->Invoke();
 		else $threads->Pipeline(self::$_config->Tick());
 	}
 
@@ -475,8 +475,11 @@ class Quark {
 	public static function &Environment (IQuarkEnvironment $provider = null) {
 		if ($provider) {
 			if (!$provider->EnvironmentMultiple())
-				foreach (self::$_environment as $environment)
-					if ($environment instanceof $provider) return self::$_environment;
+				foreach (self::$_environment as $i => &$environment)
+					if ($environment instanceof $provider) {
+						self::$_environment[$i] = $provider;
+						return self::$_environment;
+					}
 
 			self::$_environment[] = $provider;
 		}
@@ -1206,6 +1209,8 @@ class QuarkConfig {
 	 * @return string
 	 */
 	public function OpenSSLConfig ($location = '') {
+		// TODO: maybe deprecated
+
 		if (func_num_args() != 0)
 			$this->_openSSLConfig = $location;
 		
@@ -1943,6 +1948,11 @@ interface IQuarkEnvironment extends IQuarkThread {
 	public function EnvironmentMultiple();
 
 	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued();
+
+	/**
 	 * @return string
 	 */
 	public function EnvironmentName();
@@ -2099,6 +2109,11 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple () { return false; }
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return false; }
 
 	/**
 	 * @return string
@@ -2353,11 +2368,21 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	private $_name = 'CLI';
 
 	/**
+	 * @var bool $_queued = false
+	 */
+	private $_queued = false;
+
+	/**
 	 * @param int   $argc = 0
 	 * @param array $argv = []
 	 */
 	public function __construct ($argc = 0, $argv = []) {
-		if (!Quark::CLI() || $argc > 1) return;
+		if (!Quark::CLI()) return;
+
+		$child = $argc > 1 && ($argv[1] == QuarkTask::CHILD || $argv[1] == QuarkTask::CHILD_ALIAS);
+		if ($argc > 2 && !$child) return;
+
+		$this->_queued = true;
 
 		$dir = new \RecursiveDirectoryIterator(Quark::Host());
 		$fs = new \RecursiveIteratorIterator($dir);
@@ -2376,7 +2401,10 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			 */
 			$service = new $class();
 
-			if ($service instanceof IQuarkScheduledTask)
+			if (!$child && $service instanceof IQuarkScheduledTask)
+				$this->_tasks[] = new QuarkTask($service);
+
+			if ($child && $service instanceof IQuarkChildTask)
 				$this->_tasks[] = new QuarkTask($service);
 
 			unset($service);
@@ -2387,6 +2415,11 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple () { return false; }
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return $this->_queued; }
 
 	/**
 	 * @return string
@@ -2437,29 +2470,35 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 		Quark::CurrentEnvironment($this);
 
 		if ($argc > 1) {
-			if ($argv[1] == QuarkTask::PREDEFINED) {
-				if (!isset($argv[2]))
-					throw new QuarkArchException('Predefined scenario not selected');
-
-				try {
-					$service = QuarkService::Custom('/' . $argv[2], __DIR__ . '/Scenarios', 'Quark/Scenarios', QuarkService::POSTFIX_PREDEFINED_SCENARIO, false)->Service();
-				}
-				catch (QuarkHTTPException $e) {
-					throw new QuarkArchException('Unknown predefined scenario ' . $e->class);
-				}
+			if ($argv[1] == QuarkTask::CHILD || $argv[1] == QuarkTask::CHILD_ALIAS) {
+				foreach ($this->_tasks as $task)
+					$task->Launch($argc, $argv);
 			}
-			else $service = (new QuarkService('/' . $argv[1]))->Service();
+			else {
+				if ($argv[1] == QuarkTask::PREDEFINED || $argv[1] == QuarkTask::PREDEFINED_ALIAS) {
+					if (!isset($argv[2]))
+						throw new QuarkArchException('Predefined scenario not selected');
 
-			if (!($service instanceof IQuarkTask))
-				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
+					try {
+						$service = QuarkService::Custom('/' . $argv[2], __DIR__ . '/Scenarios', 'Quark/Scenarios', QuarkService::POSTFIX_PREDEFINED_SCENARIO, false)->Service();
+					}
+					catch (QuarkHTTPException $e) {
+						throw new QuarkArchException('Unknown predefined scenario ' . $e->class);
+					}
+				}
+				else $service = (new QuarkService('/' . $argv[1]))->Service();
 
-			/**
-			 * @var QuarkService|IQuarkTask|QuarkCLIBehavior $service
-			 */
-			if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior'))
-				$service->ShellInput($argv);
+				if (!($service instanceof IQuarkTask))
+					throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
 
-			$service->Task($argc, $argv);
+				/**
+				 * @var QuarkService|IQuarkTask|QuarkCLIBehavior $service
+				 */
+				if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior'))
+					$service->ShellInput($argv);
+
+				$service->Task($argc, $argv);
+			}
 		}
 		else {
 			if (!$this->_started && $this->_start !== null) {
@@ -2903,6 +2942,11 @@ interface IQuarkSignedPostService extends IQuarkSignedService {
  */
 class QuarkTask {
 	const PREDEFINED = '--quark';
+	const PREDEFINED_ALIAS = '-q';
+
+	const CHILD = '--child';
+	const CHILD_ALIAS = '-c';
+
 	const QUEUE = 'tcp://127.0.0.1:25500';
 
 	/**
@@ -2957,7 +3001,8 @@ class QuarkTask {
 		$out = true;
 
 		try {
-			$this->_service->Task($argc, $argv);
+			if ($this->_service instanceof IQuarkChildTask) $this->_service->TaskChild($argc, $argv);
+			else $this->_service->Task($argc, $argv);
 		}
 		catch (\Exception $e) {
 			$out = QuarkException::ExceptionHandler($e);
@@ -3103,6 +3148,21 @@ interface IQuarkAsyncTask extends IQuarkTask {
 }
 
 /**
+ * Interface IQuarkChildTask
+ *
+ * @package Quark
+ */
+interface IQuarkChildTask extends IQuarkService {
+	/**
+	 * @param int $argc
+	 * @param array $argv
+	 *
+	 * @return mixed
+	 */
+	public function TaskChild($argc, $argv);
+}
+
+/**
  * Interface IQuarkApplicationStartTask
  *
  * @package Quark
@@ -3136,15 +3196,22 @@ class QuarkThreadSet {
 	private $_threads;
 
 	/**
-	 * @var array $_args = []
+	 * @var int $_argc = 0
 	 */
-	private $_args = array();
+	private $_argc = 0;
 
 	/**
-	 * ThreadSet constructor
+	 * @var array $_argv = []
 	 */
-	public function __construct () {
-		$this->_args = func_get_args();
+	private $_argv = array();
+
+	/**
+	 * @param int $argc
+	 * @param array $argv
+	 */
+	public function __construct ($argc, $argv) {
+		$this->_argc = $argc;
+		$this->_argv = $argv;
 	}
 
 	/**
@@ -3182,7 +3249,7 @@ class QuarkThreadSet {
 			if (!($thread instanceof IQuarkThread) || !$thread->UsageCriteria()) continue;
 
 			try {
-				$run_tmp = call_user_func_array(array($thread, 'Thread'), $this->_args);
+				$run_tmp = call_user_func_array(array($thread, 'Thread'), array(&$this->_argc, &$this->_argv));
 				$run_tmp = $run_tmp === null || $run_tmp;
 			}
 			catch (\Exception $e) {
@@ -3629,120 +3696,6 @@ trait QuarkServiceBehavior {
 }
 
 /**
- * Trait QuarkStreamBehavior
- *
- * @package Quark
- */
-trait QuarkStreamBehavior {
-	use QuarkServiceBehavior;
-
-	/**
-	 * @param QuarkDTO|object|array $data
-	 * @param string $url = ''
-	 *
-	 * @return bool
-	 */
-	public function Broadcast ($data, $url = '') {
-		$env = Quark::CurrentEnvironment();
-
-		if ($env instanceof QuarkStreamEnvironment) {
-			$session = $this->Session();
-			$clients = $env->Cluster()->Server()->Clients();
-
-			foreach ($clients as $i => &$client) {
-				$connection = $session->Connection();
-
-				if ($connection && $client->ID() == $connection->ID())
-					$client->Session($session->ID());
-			}
-
-			unset($connection, $clients, $session);
-			
-			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
-		}
-		else $out = QuarkStreamEnvironment::ControllerCommand(
-			QuarkStreamEnvironment::COMMAND_BROADCAST,
-			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
-		);
-
-		unset($env, $data);
-
-		return $out;
-	}
-
-	/**
-	 * @param QuarkDTO|object|array $data
-	 * @param IQuarkStreamNetwork $service = null
-	 *
-	 * @return bool
-	 */
-	public function BroadcastService ($data, IQuarkStreamNetwork $service = null) {
-		return $this->Broadcast($data, $this->URL($service));
-	}
-
-	/**
-	 * @param callable(QuarkSession $client) $sender = null
-	 * @param bool $auth = true
-	 *
-	 * @return bool
-	 *
-	 * @throws QuarkArchException
-	 */
-	public function Event (callable $sender = null, $auth = true) {
-		$env = Quark::CurrentEnvironment();
-
-		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
-		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
-	}
-
-	/**
-	 * @param string $channel = ''
-	 * @param callable(QuarkSession $client) $sender = null
-	 * @param bool $auth = true
-	 *
-	 * @return bool
-	 *
-	 * @throws QuarkArchException
-	 */
-	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true) {
-		$env = Quark::CurrentEnvironment();
-
-		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth, $channel);
-		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
-	}
-
-	/**
-	 * @param string $url = ''
-	 * @param QuarkDTO|object|array $input = []
-	 * @param QuarkSession $session = null
-	 *
-	 * @return mixed
-	 */
-	public function InvokeStream ($url = '', $input = [], QuarkSession $session = null) {
-		$num = func_num_args();
-		
-		return $this->InvokeURL(
-			$url,
-			'Stream',
-			$num < 3 ? $this->Input() : $input,
-			$num < 4 ? $this->Session() : $session
-		);
-	}
-
-	/**
-	 * @return QuarkCluster
-	 */
-	public function &Cluster () {
-		$env = Quark::CurrentEnvironment();
-
-		if ($env instanceof QuarkStreamEnvironment)
-			return $env->Cluster();
-
-		return $this->_null;
-	}
-}
-
-/**
  * Trait QuarkCLIBehavior
  *
  * @package Quark
@@ -3759,6 +3712,11 @@ trait QuarkCLIBehavior {
 	 * @var array $_shellOutput = []
 	 */
 	private $_shellOutput = array();
+
+	/**
+	 * @var QuarkHTTPClient[] $_asyncClients = []
+	 */
+	private $_asyncClients = array();
 
 	/**
 	 * @param string $command = ''
@@ -3950,7 +3908,7 @@ trait QuarkCLIBehavior {
 
 		$args = array_slice($this->_shellInput, 1);
 
-		if ($args[0] == QuarkTask::PREDEFINED)
+		if ($args[0] == QuarkTask::PREDEFINED || $args[0] == QuarkTask::PREDEFINED_ALIAS)
 			$args = array_slice($args, 1);
 
 		$args = array_slice($args, 1);
@@ -4047,6 +4005,184 @@ trait QuarkCLIBehavior {
 		$cmd = new QuarkTask($task);
 
 		return $cmd->AsyncLaunch($args, $queue);
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $register = null
+	 * @param bool $force = false
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientRegister ($id = '', callable $register = null, $force = false) {
+		if (isset($this->_asyncClients[$id]) && !$force) return false;
+		if ($register == null) return false;
+
+		$this->_asyncClients[$id] = $register($id, $force);
+
+		return true;
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $remove = null
+	 */
+	public function AsyncClientPipe ($id = '', callable $remove = null) {
+		if (isset($this->_asyncClients[$id]) && $this->_asyncClients[$id]->Connected()) $this->_asyncClients[$id]->AsyncPipe();
+		else {
+			unset($this->_asyncClients[$id]);
+			if ($remove) $remove($id);
+		}
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $stop = null
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientStop ($id = '', callable $stop = null) {
+		if (!isset($this->_asyncClients[$id]) || $this->_asyncClients[$id] == null) return false;
+
+		$ok = $this->_asyncClients[$id]->Client()->Close();
+		unset($this->_asyncClients[$id]);
+
+		if ($stop) $stop($id);
+
+		return $ok;
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param bool $active = true
+	 * @param callable $start = null
+	 * @param callable $stop = null
+	 * @param bool $force = false
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientProcess ($id = '', $active = true, callable $start = null, callable $stop = null, $force = false) {
+		if (!$active)
+			return $this->AsyncClientStop($id, $stop);
+
+		$this->AsyncClientRegister($id, $start, $force);
+		$this->AsyncClientPipe($id, $stop);
+
+		return true;
+	}
+}
+
+/**
+ * Trait QuarkStreamBehavior
+ *
+ * @package Quark
+ */
+trait QuarkStreamBehavior {
+	use QuarkCLIBehavior;
+
+	/**
+	 * @param QuarkDTO|object|array $data
+	 * @param string $url = ''
+	 *
+	 * @return bool
+	 */
+	public function Broadcast ($data, $url = '') {
+		$env = Quark::CurrentEnvironment();
+
+		if ($env instanceof QuarkStreamEnvironment) {
+			$session = $this->Session();
+			$clients = $env->Cluster()->Server()->Clients();
+
+			foreach ($clients as $i => &$client) {
+				$connection = $session->Connection();
+
+				if ($connection && $client->ID() == $connection->ID())
+					$client->Session($session->ID());
+			}
+
+			unset($connection, $clients, $session);
+
+			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
+		}
+		else $out = QuarkStreamEnvironment::ControllerCommand(
+			QuarkStreamEnvironment::COMMAND_BROADCAST,
+			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
+		);
+
+		unset($env, $data);
+
+		return $out;
+	}
+
+	/**
+	 * @param QuarkDTO|object|array $data
+	 * @param IQuarkStreamNetwork $service = null
+	 *
+	 * @return bool
+	 */
+	public function BroadcastService ($data, IQuarkStreamNetwork $service = null) {
+		return $this->Broadcast($data, $this->URL($service));
+	}
+
+	/**
+	 * @param callable(QuarkSession $client) $sender = null
+	 * @param bool $auth = true
+	 *
+	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function Event (callable $sender = null, $auth = true) {
+		$env = Quark::CurrentEnvironment();
+
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth);
+		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
+	}
+
+	/**
+	 * @param string $channel = ''
+	 * @param callable(QuarkSession $client) $sender = null
+	 * @param bool $auth = true
+	 *
+	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true) {
+		$env = Quark::CurrentEnvironment();
+
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth, $channel);
+		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
+	}
+
+	/**
+	 * @param string $url = ''
+	 * @param QuarkDTO|object|array $input = []
+	 * @param QuarkSession $session = null
+	 *
+	 * @return mixed
+	 */
+	public function InvokeStream ($url = '', $input = [], QuarkSession $session = null) {
+		$num = func_num_args();
+
+		return $this->InvokeURL(
+			$url,
+			'Stream',
+			$num < 3 ? $this->Input() : $input,
+			$num < 4 ? $this->Session() : $session
+		);
+	}
+
+	/**
+	 * @return QuarkCluster
+	 */
+	public function &Cluster () {
+		$env = Quark::CurrentEnvironment();
+
+		if ($env instanceof QuarkStreamEnvironment)
+			return $env->Cluster();
+
+		return $this->_null;
 	}
 }
 
@@ -5072,6 +5208,17 @@ class QuarkObject {
 	 */
 	public static function isTraversable ($source) {
 		return is_array($source) || is_object($source);
+	}
+
+	/**
+	 * https://stackoverflow.com/a/9412313/2097055
+	 *
+	 * @param $object
+	 *
+	 * @return bool
+	 */
+	public static function isEmpty ($object = null) {
+		return !$object || empty($object) || empty((array)$object);
 	}
 
 	/**
@@ -15567,6 +15714,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public function EnvironmentMultiple () { return true; }
 
 	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return true; }
+
+	/**
 	 * @return string
 	 */
 	public function EnvironmentName () {
@@ -16719,6 +16871,11 @@ class QuarkDTO {
 	private $_rawData = '';
 
 	/**
+	 * @var callable $_rawProcessor = null
+	 */
+	private $_rawProcessor = null;
+
+	/**
 	 * @var IQuarkIOProcessor $_processor = null
 	 */
 	private $_processor = null;
@@ -17497,6 +17654,27 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param callable $processor = null
+	 *
+	 * @return callable
+	 */
+	public function RawProcessor (callable $processor = null) {
+		if (func_num_args() != 0)
+			$this->_rawProcessor = $processor;
+
+		return $this->_rawProcessor;
+	}
+
+	/**
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function RawProcessorInvoke ($data = '') {
+		return $this->_rawProcessor ? call_user_func_array($this->_rawProcessor, array(&$data)) : $data;
+	}
+
+	/**
 	 * @param string $data = ''
 	 *
 	 * @return string
@@ -17704,11 +17882,12 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param string $raw
+	 * @param string $raw = ''
+	 * @param bool $batch = false
 	 *
 	 * @return QuarkDTO
 	 */
-	public function UnserializeResponse ($raw = '') {
+	public function UnserializeResponse ($raw = '', $batch = false) {
 		$this->_raw = $raw;
 
 		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, substr($raw, 0, self::RESPONSE_BUFFER), $found)) {
@@ -17721,7 +17900,7 @@ class QuarkDTO {
 				$this->_processor = new QuarkHTMLIOProcessor();
 
 			$this->_unserializeHeaders($found[3]);
-			$this->_unserializeBody($this->_rawData);
+			$this->_unserializeBody($this->_rawData, $batch);
 		}
 
 		return $this;
@@ -17900,12 +18079,21 @@ class QuarkDTO {
 
 	/**
 	 * @param string $raw
+	 * @param bool $batch = false
 	 *
 	 * @return QuarkDTO
 	 */
-	private function _unserializeBody ($raw) {
+	private function _unserializeBody ($raw, $batch = false) {
 		if (!$this->_multipart || strpos($raw, '--' . $this->_boundary) === false) {
-			$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
+			if (!$batch) $this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
+			else {
+				$chunks = $this->_processor->Batch($raw, true);
+
+				foreach ($chunks as $i => &$chunk) {
+					$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($chunk));
+					usleep(QuarkThreadSet::TICK);
+				}
+			}
 		}
 		else {
 			$parts = explode('--' . $this->_boundary, $raw);
@@ -18027,7 +18215,7 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
 
 		$this->_buffer .= $data;
 
-		$parts = call_user_func_array($this->_divider, array(&$this->_buffer));
+		$parts = call_user_func_array($this->_divider, array(&$this->_buffer, true));
 		$size = sizeof($parts);
 
 		$this->_buffer = '';
@@ -18288,15 +18476,22 @@ class QuarkHTTPClient implements IQuarkEventable {
 
 		/** @noinspection PhpUnusedParameterInspection */
 		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
-			if ($http->_asyncInit) $data = $http->_response->Masquerade($data);
-			else $http->_asyncInit = true;
+			$data = $http->_response->RawProcessorInvoke($data);
+			$chunks = $http->_response->Processor()->Batch($data, !$http->_asyncInit);
 
-			$http->_response->UnserializeResponse($data);
+			foreach ($chunks as $i => &$chunk) {
+				if ($http->_asyncInit) $chunk = $http->_response->Masquerade($chunk);
+				else $http->_asyncInit = true;
 
-			if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
-				$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array(&$http->_request, &$http->_response));
+				$http->_response->UnserializeResponse($chunk);
 
-			$http->TriggerArgs(self::EVENT_ASYNC_DATA, array(&$http->_response));
+				if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
+					$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array(&$http->_request, &$http->_response));
+
+				$http->TriggerArgs(self::EVENT_ASYNC_DATA, array(&$http->_response));
+			}
+
+			unset($chunk, $i, $chunks, $data);
 		});
 
 		$http->_client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
@@ -20193,10 +20388,11 @@ interface IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch($raw);
+	public function Batch($raw, $fallback);
 }
 
 /**
@@ -20228,10 +20424,13 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20273,10 +20472,13 @@ class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20316,10 +20518,13 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20347,16 +20552,37 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 *
 	 * @return mixed
 	 */
-	public function Decode ($raw) { return \json_decode($raw); }
+	public function Decode ($raw) {
+		$raw = trim($raw);
+		$length = strlen($raw);
+
+		if ($length < 2) return null;
+		$last = $length - 1;
+
+		$valid = false;
+		if ($raw[0] == '{' && $raw[$last] == '}') $valid = true;
+		if ($raw[0] == '[' && $raw[$last] == ']') $valid = true;
+		if (!$valid) return null;
+
+		return \json_decode($raw);
+	}
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) {
-		$raw = substr($raw, 0, 8192);
-		return explode('}-{', str_replace('}{', '}}-{{', $raw));
+	public function Batch ($raw, $fallback) {
+		$out = trim($raw);
+		$length = strlen($out);
+
+		if ($length >= 2) {
+			if ($out[0] == '{') return explode('}-{', preg_replace('#}\s*{#Uis', '}}-{{', $out));
+			if ($out[0] == '[') return explode(']-[', preg_replace('#\]\s*\[#Uis', ']]-[[', $out));
+		}
+
+		return $fallback ? array($raw) : array();
 	}
 }
 
@@ -20646,10 +20872,13 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20855,10 +21084,13 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -21008,10 +21240,13 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
