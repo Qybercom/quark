@@ -2543,8 +2543,10 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 					echo "\r\n";
 				}
 
-				foreach ($this->_tasks as $task)
+				foreach ($this->_tasks as $i => &$task)
 					$task->Launch($argc, $argv);
+
+				unset($i, $task);
 			}
 			else {
 				if ($argv[1] == QuarkTask::PREDEFINED || $argv[1] == QuarkTask::PREDEFINED_ALIAS) {
@@ -2594,8 +2596,10 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 				echo "\r\n";
 			}
 
-			foreach ($this->_tasks as $task)
+			foreach ($this->_tasks as $i => &$task)
 				$task->Launch($argc, $argv);
+
+			unset($i, $task);
 		}
 	}
 
