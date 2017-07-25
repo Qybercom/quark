@@ -797,6 +797,7 @@ class Quark {
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
 	const INI_ROUTES = 'Routes';
+	const INI_DEDICATED = 'Dedicated';
 	const INI_LOCALIZATION_DETAILS = 'LocalizationDetails';
 	const INI_LOCAL_SETTINGS = 'LocalSettings';
 	const INI_DATA_PROVIDERS = 'DataProviders';
@@ -1000,6 +1001,11 @@ class QuarkConfig {
 	 * @var array $_routes = []
 	 */
 	private $_routes = array();
+
+	/**
+	 * @var array $_dedicated = []
+	 */
+	private $_dedicated = array();
 
 	/**
 	 * @param string $ini = ''
@@ -1516,6 +1522,38 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $service = ''
+	 * @param string $process = ''
+	 *
+	 * @return string[]
+	 */
+	public function Dedicated ($process = '', $service = '') {
+		$process = QuarkObject::ConstValue($process);
+
+		if (func_num_args() == 2) {
+			if (!isset($this->_dedicated[$process]))
+				$this->_dedicated[$process] = array();
+
+			$this->_dedicated[$process][] = $service;
+		}
+
+		return isset($this->_dedicated[$process]) ? $this->_dedicated[$process] : array();
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function DedicatedAll () {
+		$out = array();
+
+		foreach ($this->_dedicated as $process => &$tasks)
+			foreach ($tasks as $i => &$task)
+				$out[] = $task;
+
+		return $out;
+	}
+
+	/**
 	 * @param string $file
 	 *
 	 * @return string
@@ -1856,6 +1894,10 @@ class QuarkConfig {
 					$component->ExtensionOptions($options);
 			}
 		}
+
+		if (isset($ini[self::INI_DEDICATED]))
+			foreach ($ini[self::INI_DEDICATED] as $value => &$key)
+				$this->Dedicated($key, $value);
 
 		unset($environment, $environments);
 		unset($extension, $extensions);
@@ -2347,6 +2389,21 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
  * @package Quark
  */
 class QuarkCLIEnvironment implements IQuarkEnvironment {
+	const STATUS_UNKNOWN = '...';
+	const DEDICATED_UNKNOWN = '<unknown>';
+
+	use QuarkCLIViewBehavior;
+
+	/**
+	 * @var array $_statuses
+	 */
+	private static $_statuses = array(
+		Quark::LOG_INFO => 'INFO',
+		Quark::LOG_OK => 'OK',
+		Quark::LOG_WARN => 'WARN',
+		Quark::LOG_FATAL => 'FAIL'
+	);
+
 	/**
 	 * @var QuarkTask[] $_tasks
 	 */
@@ -2379,10 +2436,13 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	public function __construct ($argc = 0, $argv = []) {
 		if (!Quark::CLI()) return;
 
-		$child = $argc > 1 && ($argv[1] == QuarkTask::CHILD || $argv[1] == QuarkTask::CHILD_ALIAS);
-		if ($argc > 2 && !$child) return;
+		$dedicated = $argc > 1 && ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS);
+		if ($argc > 2 && !$dedicated) return;
 
 		$this->_queued = true;
+		$tasks = $dedicated
+			? Quark::Config()->Dedicated($argc > 2 ? $argv[2] : '')
+			: Quark::Config()->DedicatedAll();
 
 		$dir = new \RecursiveDirectoryIterator(Quark::Host());
 		$fs = new \RecursiveIteratorIterator($dir);
@@ -2400,11 +2460,11 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			 * @var IQuarkService $service
 			 */
 			$service = new $class();
+			if (!($service instanceof IQuarkService)) continue;
+			if ($dedicated && !QuarkService::URLMatch($service, $tasks)) continue;
+			if (!$dedicated && QuarkService::URLMatch($service, $tasks)) continue;
 
-			if (!$child && $service instanceof IQuarkScheduledTask)
-				$this->_tasks[] = new QuarkTask($service);
-
-			if ($child && $service instanceof IQuarkChildTask)
+			if ($service instanceof IQuarkScheduledTask)
 				$this->_tasks[] = new QuarkTask($service);
 
 			unset($service);
@@ -2470,7 +2530,19 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 		Quark::CurrentEnvironment($this);
 
 		if ($argc > 1) {
-			if ($argv[1] == QuarkTask::CHILD || $argv[1] == QuarkTask::CHILD_ALIAS) {
+			if ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS) {
+				if (!$this->_started) {
+					$this->_started = true;
+
+					$this->ShellView(
+						'Quark:Dedicated - ' . ($argc > 2 ? $argv[2] : self::DEDICATED_UNKNOWN),
+						'Starting Quark dedicated process... '
+					);
+
+					$this->ShellLog('Started with ' . sizeof($this->_tasks) . ' tasks', Quark::LOG_OK);
+					echo "\r\n";
+				}
+
 				foreach ($this->_tasks as $task)
 					$task->Launch($argc, $argv);
 			}
@@ -2501,14 +2573,25 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			}
 		}
 		else {
-			if (!$this->_started && $this->_start !== null) {
+			if (!$this->_started) {
 				$this->_started = true;
-				$service = (new QuarkService('/' . $this->_start))->Service();
 
-				if (!($service instanceof IQuarkApplicationStartTask))
-					throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkApplicationStartTask');
+				$this->ShellView(
+					'Quark:Main',
+					'Starting Quark main process...'
+				);
 
-				$service->ApplicationStartTask($argc, $argv);
+				if ($this->_start !== null) {
+					$service = (new QuarkService('/' . $this->_start))->Service();
+
+					if (!($service instanceof IQuarkApplicationStartTask))
+						throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkApplicationStartTask');
+
+					$service->ApplicationStartTask($argc, $argv);
+				}
+
+				$this->ShellLog('Started with ' . sizeof($this->_tasks) . ' tasks', Quark::LOG_OK);
+				echo "\r\n";
 			}
 
 			foreach ($this->_tasks as $task)
@@ -2535,6 +2618,147 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 		$cli->ApplicationStart($uri);
 
 		return $cli;
+	}
+
+	/**
+	 * @param string $lvl = Quark::LOG_INFO
+	 *
+	 * @return string
+	 */
+	public static function ShellStatus ($lvl = Quark::LOG_INFO) {
+		return isset(self::$_statuses[$lvl]) ? self::$_statuses[$lvl] : self::STATUS_UNKNOWN;
+	}
+}
+
+/**
+ * Trait QuarkCLIViewBehavior
+ *
+ * @package Quark
+ */
+trait QuarkCLIViewBehavior {
+	/**
+	 * @param string $data = ''
+	 * @param QuarkCLIColor $color = null
+	 * @param bool $reset = true
+	 *
+	 * @return string
+	 */
+	public function ShellLine ($data = '', QuarkCLIColor $color = null, $reset = true) {
+		return ($color ? $color->Display() : '') . $data . ($color && $reset ? QuarkCLIColor::Reset()->Display() : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineInfo ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::CYAN)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineSuccess ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::GREEN)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineWarning ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::YELLOW)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineError ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::RED)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $message = ''
+	 * @param string $lvl = null
+	 * @param bool $space = true
+	 *
+	 * @return bool
+	 */
+	public function ShellLog ($message = '', $lvl = null, $space = true) {
+		echo ($space ? ' ' : ''), $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
+
+		return true;
+	}
+
+	/**
+	 * @param string $title = ''
+	 * @param string $content = ''
+	 * @param callable $process = null
+	 */
+	public function ShellView ($title = '', $content = '', callable $process = null) {
+		echo "\r\n ",
+			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
+				QuarkCLIColor::BLACK,
+				QuarkCLIColor::WHITE
+			), true), ' ',
+			($content ? "\r\n " . $content : '');
+
+		if ($process) $process();
+
+		echo "\r\n";
+	}
+
+	/**
+	 * @param string $title = ''
+	 * @param string $ok = ''
+	 * @param string $fail = ''
+	 * @param callable $process = null
+	 *
+	 * @return bool
+	 */
+	public function ShellProcess ($title = '', $ok = '', $fail = '', callable $process = null) {
+		if (!$process)
+			new QuarkArchException('ShellProcess requires a callable value for $process argument');
+
+		echo $title;
+
+		if ($process()) echo $ok;
+		else echo $fail;
+
+		return true;
+	}
+
+	/**
+	 * @param string $lvl = Quark::LOG_INFO
+	 * @param string $append = ''
+	 * @param bool $space = true
+	 *
+	 * @return string
+	 */
+	public function ShellProcessStatus ($lvl = Quark::LOG_INFO, $append = '', $space = true) {
+		return
+			($space ? ' ' : '') . $this->ShellLine(QuarkCLIEnvironment::ShellStatus($lvl), QuarkCLIColor::ForLog($lvl)) . "\r\n" .
+			($append ? (($space ? ' ' : '') . $append . "\r\n") : '');
+	}
+
+	/**
+	 * @param string $message = ''
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ShellArchException ($message = '') {
+		$this->ShellLog($message, Quark::LOG_FATAL); echo "\r\n";
+		throw new QuarkArchException($message);
 	}
 }
 
@@ -2944,8 +3168,8 @@ class QuarkTask {
 	const PREDEFINED = '--quark';
 	const PREDEFINED_ALIAS = '-q';
 
-	const CHILD = '--child';
-	const CHILD_ALIAS = '-c';
+	const DEDICATED = '--dedicated';
+	const DEDICATED_ALIAS = '-d';
 
 	const QUEUE = 'tcp://127.0.0.1:25500';
 
@@ -3001,8 +3225,7 @@ class QuarkTask {
 		$out = true;
 
 		try {
-			if ($this->_service instanceof IQuarkChildTask) $this->_service->TaskChild($argc, $argv);
-			else $this->_service->Task($argc, $argv);
+			$this->_service->Task($argc, $argv);
 		}
 		catch (\Exception $e) {
 			$out = QuarkException::ExceptionHandler($e);
@@ -3145,21 +3368,6 @@ interface IQuarkAsyncTask extends IQuarkTask {
 	 * @return mixed
 	 */
 	public function OnLaunch($argc, $argv);
-}
-
-/**
- * Interface IQuarkChildTask
- *
- * @package Quark
- */
-interface IQuarkChildTask extends IQuarkService {
-	/**
-	 * @param int $argc
-	 * @param array $argv
-	 *
-	 * @return mixed
-	 */
-	public function TaskChild($argc, $argv);
 }
 
 /**
@@ -3702,6 +3910,7 @@ trait QuarkServiceBehavior {
  */
 trait QuarkCLIBehavior {
 	use QuarkServiceBehavior;
+	use QuarkCLIViewBehavior;
 
 	/**
 	 * @var array $_shellInput = []
@@ -3751,141 +3960,6 @@ trait QuarkCLIBehavior {
 	 */
 	public function ShellOutput () {
 		return $this->_shellOutput;
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param QuarkCLIColor $color = null
-	 * @param bool $reset = true
-	 * 
-	 * @return string
-	 */
-	public function ShellLine ($data = '', QuarkCLIColor $color = null, $reset = true) {
-		return ($color ? $color->Display() : '') . $data . ($color && $reset ? QuarkCLIColor::Reset()->Display() : '');
-	}
-
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = false
-	 *
-	 * @return string
-	 */
-	public function ShellLineInfo ($data = '', $newLine = false) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::CYAN)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = false
-	 *
-	 * @return string
-	 */
-	public function ShellLineSuccess ($data = '', $newLine = false) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::GREEN)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = false
-	 *
-	 * @return string
-	 */
-	public function ShellLineWarning ($data = '', $newLine = false) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::YELLOW)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = false
-	 *
-	 * @return string
-	 */
-	public function ShellLineError ($data = '', $newLine = false) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::RED)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $message = ''
-	 * @param string $lvl = null
-	 * @param bool $space = true
-	 *
-	 * @return bool
-	 */
-	public function ShellLog ($message = '', $lvl = null, $space = true) {
-		echo ($space ? ' ' : ''), $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
-
-		return true;
-	}
-	
-	/**
-	 * @param string $title = ''
-	 * @param string $content = ''
-	 * @param callable $process = null
-	 */
-	public function ShellView ($title = '', $content = '', callable $process = null) {
-		echo "\r\n ",
-			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
-				QuarkCLIColor::BLACK,
-				QuarkCLIColor::WHITE
-			), true), ' ',
-			($content ? "\r\n " . $content : '');
-		
-		if ($process) $process();
-		
-		echo "\r\n";
-	}
-
-	/**
-	 * @param string $title = ''
-	 * @param string $ok = ''
-	 * @param string $fail = ''
-	 * @param callable $process = null
-	 *
-	 * @return bool
-	 */
-	public function ShellProcess ($title = '', $ok = '', $fail = '', callable $process = null) {
-		if (!$process)
-			new QuarkArchException('ShellProcess requires a callable value for $process argument');
-
-		echo $title;
-
-		if ($process()) echo $ok;
-		else echo $fail;
-
-		return true;
-	}
-
-	/**
-	 * @var array $_statuses
-	 */
-	private static $_statuses = array(
-		Quark::LOG_INFO => 'INFO',
-		Quark::LOG_OK => 'OK',
-		Quark::LOG_WARN => 'WARN',
-		Quark::LOG_FATAL => 'FAIL',
-	);
-
-	/**
-	 * @param string $lvl = Quark::LOG_INFO
-	 * @param string $append = ''
-	 * @param bool $space = true
-	 *
-	 * @return string
-	 */
-	public function ShellProcessStatus ($lvl = Quark::LOG_INFO, $append = '', $space = true) {
-		return
-			($space ? ' ' : '') . $this->ShellLine(isset(self::$_statuses[$lvl]) ? self::$_statuses[$lvl] : '...', QuarkCLIColor::ForLog($lvl)) . "\r\n" .
-			($append ? (($space ? ' ' : '') . $append . "\r\n") : '');
-	}
-
-	/**
-	 * @param string $message = ''
-	 *
-	 * @throws QuarkArchException
-	 */
-	public function ShellArchException ($message = '') {
-		$this->ShellLog($message, Quark::LOG_FATAL); echo "\r\n";
-		throw new QuarkArchException($message);
 	}
 
 	/**
@@ -4106,7 +4180,8 @@ trait QuarkStreamBehavior {
 		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
-			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
+			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
+			$env instanceof QuarkCLIEnvironment
 		);
 
 		unset($env, $data);
@@ -4629,6 +4704,24 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
+	 * @param IQuarkService $service
+	 * @param string[] $urls = []
+	 *
+	 * @return bool
+	 */
+	public static function URLMatch (IQuarkService $service, $urls = []) {
+		$url = self::URLOf($service);
+
+		if (substr($url, -6) == '/Index')
+			$url = substr($url, 0, -6);
+
+		foreach ($urls as $i => &$item)
+			if (preg_match('#^' . $item . '$#is', $url)) return true;
+
+		return false;
+	}
+
+	/**
 	 * @param bool $checkSignature = false
 	 * @param QuarkClient $connection = null
 	 *
@@ -4764,7 +4857,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * reset service
+	 * Reset QuarkService
 	 */
 	public function __destruct () {
 		unset($this->_service);
@@ -8666,6 +8759,14 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	public static function Lazy (IQuarkLinkedModel $model, $value = null) {
 		return new self(new QuarkLazyLink($model, $value));
 	}
+
+	/**
+	 * Reset QuarkCollection
+	 */
+	public function __destruct () {
+		unset($this->_collection);
+		unset($this->_type);
+	}
 }
 
 /**
@@ -10125,6 +10226,14 @@ class QuarkModel implements IQuarkContainer {
 			: true;
 
 		return ($ok || $ok === null) ? self::_provider($model)->Delete($model, $criteria, $options) : false;
+	}
+
+	/**
+	 * Reset QuarkModel
+	 */
+	public function __destruct () {
+		unset($this->_model);
+		unset($this->_errors);
 	}
 }
 
@@ -13364,7 +13473,7 @@ class QuarkSession {
 	}
 
 	/**
-	 * Destructor
+	 * Reset QuarkSession
 	 */
 	public function __destruct () {
 		unset($this->_user);
@@ -13687,7 +13796,7 @@ trait QuarkNetwork {
 	 * @return IQuarkNetworkTransport
 	 */
 	public function Transport (IQuarkNetworkTransport $transport = null) {
-		if (func_num_args() == 1 && $transport != null)
+		if (func_num_args() != 0 && $transport != null)
 			$this->_transport = $transport;
 
 		return $this->_transport;
@@ -14089,19 +14198,18 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Close ($event = true) {
+		if (!$this->_connected) return true;
+
 		$this->_connected = false;
 
 		if ($event && $this->_transport instanceof IQuarkNetworkTransport)
 			$this->_transport->EventClose($this);
 
 		$this->_remote = null;
-		$this->_transport = null;
 		$this->_rps = 0;
 
-		if ($this->_rpsTimer != null) {
+		if ($this->_rpsTimer != null)
 			$this->_rpsTimer->Destroy();
-			$this->_rpsTimer = null;
-		}
 
 		return self::SocketClose($this->_socket);
 	}
@@ -14131,8 +14239,10 @@ class QuarkClient implements IQuarkEventable {
 	 * @param $data
 	 */
 	public function TriggerData ($data) {
-		$this->_rpsCount++;
-		$this->_rpsTimer->Invoke();
+		if ($this->_rpsTimer != null) {
+			$this->_rpsCount++;
+			$this->_rpsTimer->Invoke();
+		}
 
 		$this->TriggerArgs(QuarkClient::EVENT_DATA, array(&$this, $data));
 	}
@@ -14272,6 +14382,20 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function &Channels () {
 		return $this->_channels;
+	}
+
+	/**
+	 * Reset QuarkClient
+	 */
+	public function __destruct () {
+		unset($this->_rpsTimer);
+		unset($this->_certificate);
+		unset($this->_channels);
+		unset($this->_events);
+		unset($this->_remote);
+		unset($this->_session);
+		unset($this->_transport);
+		unset($this->_socket);
 	}
 }
 
@@ -15302,22 +15426,31 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @var QuarkClient $_controller
+	 */
+	private static $_controller;
+
+	/**
 	 * @param string $name
 	 * @param array|object $data
+	 * @param bool $persistent = false
 	 *
 	 * @return bool
 	 */
-	public static function ControllerCommand ($name = '', $data = []) {
-		$client = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
+	public static function ControllerCommand ($name = '', $data = [], $persistent = false) {
+		if (self::$_controller != null) $ok = self::$_controller->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
+		else {
+			self::$_controller = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) use (&$name, &$data) {
-			$client->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
-			$client->Close();
-		});
+			self::$_controller->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) use (&$name, &$data, &$persistent) {
+				$client->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
+				if (!$persistent) $client->Close();
+			});
 
-		$ok = $client->Connect();
+			$ok = self::$_controller->Connect();
+		}
 
-		unset($client);
+		if (!$persistent) unset(self::$_controller);
 
 		return $ok;
 	}
