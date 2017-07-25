@@ -47,6 +47,9 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const AGGREGATE_COUNT = 42;
 	const AGGREGATE_CURSOR = '-1';
 
+	const CRITERIA_ID = 'user_id';
+	const CRITERIA_USERNAME = 'screen_name';
+
 	use OAuthProviderBehavior;
 
 	/**
@@ -128,7 +131,14 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url));
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, (array)$request->Data()));
+
+		if ($request->Method() == QuarkDTO::METHOD_GET) {
+			$query = $request->Processor()->Encode($request->Data());
+			if ($query) $url .= '?' . $query;
+
+			$request->Data('');
+		}
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
@@ -191,17 +201,16 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
-		// TODO:
-		//
-		// NEED INVESTIGATING - TWITTER RETURN ERROR ON WELL-FORMED REQUEST
-		//
-		// screen_name=twitterapi
-		// skip_status=true
-		// include_user_entities=false
+		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		$request->Data(array(
+			'count' => $count ? $count : self::AGGREGATE_COUNT,
+			'cursor' => $offset ? $offset : $this->_cursor,
+			'user_id' => $user
+		));
 
 		$response = $this->OAuthAPI(
-			'/1.1/friends/list.json?count=' . ($count ? $count : self::AGGREGATE_COUNT) . '&cursor=' . ($offset ? $offset : $this->_cursor) . '&user_id=' . $user . '',
-			QuarkDTO::ForGET(new QuarkFormIOProcessor()),
+			'/1.1/friends/list.json',
+			$request,
 			new QuarkDTO(new QuarkJSONIOProcessor())
 		);
 
@@ -213,6 +222,43 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$friends[] = self::_user($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param string[] $users = []
+	 * @param string $criteria = self::CRITERIA_USERNAME
+	 *
+	 * @return SocialNetworkUser[]
+	 *
+	 * @throws OAuthAPIException
+	 */
+	public function Profiles ($users = [], $criteria = self::CRITERIA_USERNAME) {
+		try {
+			if (sizeof($users) == 0) return array();
+
+			$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+			$request->Data(array(
+				$criteria => implode(',', $users)
+			));
+
+			$response = $this->OAuthAPI('/1.1/users/lookup.json',
+				$request,
+				new QuarkDTO(new QuarkJSONIOProcessor())
+			);
+
+			$out = array();
+			$data = $response->Data();
+
+			if (!is_array($data)) return array();
+
+			foreach ($data as $i => &$item)
+				$out[] = self::_user($item);
+
+			return $out;
+		}
+		catch (OAuthAPIException $e) {
+			return $this->_oauth_error($e, 'Profiles', 'API error', array());
+		}
 	}
 
 	/**

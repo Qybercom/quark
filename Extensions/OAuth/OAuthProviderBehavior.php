@@ -7,6 +7,7 @@ use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
+use Quark\QuarkObject;
 
 /**
  * Trait OAuthProviderBehavior
@@ -33,6 +34,11 @@ trait OAuthProviderBehavior {
 	 * @var string $_callback = ''
 	 */
 	private $_callback = '';
+
+	/**
+	 * @var string $_verifier = ''
+	 */
+	private $_verifier = '';
 
 	/**
 	 * @param string $redirect = ''
@@ -101,11 +107,6 @@ trait OAuthProviderBehavior {
 	}
 
 	/**
-	 * @var string $_verifier = ''
-	 */
-	private $_verifier = '';
-
-	/**
 	 * @param QuarkDTO|null $request = null
 	 * @param string $urlAccessToken = ''
 	 * @param string $base = null
@@ -141,6 +142,23 @@ trait OAuthProviderBehavior {
 		));
 
 		$this->_token = $out->Model();
+
+		return $out;
+	}
+
+	/**
+	 * @param OAuthAPIException $e
+	 * @param string $action = ''
+	 * @param string $message = ''
+	 * @param $out = null
+	 *
+	 * @return mixed
+	 */
+	private function _oauth_error (OAuthAPIException $e, $action = '', $message = '', $out = null) {
+		Quark::Log('[OAuth.' . QuarkObject::ClassOf($this) . '::' . $action . '] ' . $message . '. API error:', Quark::LOG_WARN);
+
+		Quark::Trace($e->Request());
+		Quark::Trace($e->Response());
 
 		return $out;
 	}
