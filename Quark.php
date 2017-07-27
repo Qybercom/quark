@@ -4185,7 +4185,7 @@ trait QuarkStreamBehavior {
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
 			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
-			$env instanceof QuarkCLIEnvironment
+			$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'instanceof'
 		);
 
 		unset($env, $data);

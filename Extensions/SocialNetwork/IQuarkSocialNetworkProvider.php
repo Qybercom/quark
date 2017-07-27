@@ -8,6 +8,13 @@ namespace Quark\Extensions\SocialNetwork;
  */
 interface IQuarkSocialNetworkProvider {
 	/**
+	 * @param array|object $data
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile($data);
+
+	/**
 	 * @param string $user
 	 *
 	 * @return SocialNetworkUser

@@ -100,6 +100,15 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param array|object $data
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data) {
+		// TODO: Implement SocialNetworkProfile() method.
+	}
+
+	/**
 	 * @param string $user
 	 *
 	 * @return SocialNetworkUser

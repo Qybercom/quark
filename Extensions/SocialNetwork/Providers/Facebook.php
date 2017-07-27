@@ -193,6 +193,16 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * @param array|object $data
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data, $photo = false) {
+		return self::_user($data, $photo);
+	}
+
+	/**
 	 * @param string $user
 	 * @param string[] $fields = []
 	 *

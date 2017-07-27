@@ -106,6 +106,16 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 	}
 
 	/**
+	 * @param array|object $data
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data, $photo = false) {
+		return self::_user($data, $photo);
+	}
+
+	/**
 	 * @param string $user
 	 *
 	 * @return SocialNetworkUser

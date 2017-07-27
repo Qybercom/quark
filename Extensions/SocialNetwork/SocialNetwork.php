@@ -66,6 +66,15 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	}
 
 	/**
+	 * @param array|object $data = []
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function ProfileFrom ($data = []) {
+		return $this->_provider()->SocialNetworkProfile($data);
+	}
+
+	/**
 	 * @param string $user = ''
 	 *
 	 * @return SocialNetworkUser
