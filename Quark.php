@@ -3903,7 +3903,16 @@ trait QuarkServiceBehavior {
 	 * @return string
 	 */
 	public function WebPath (IQuarkService $service = null) {
-		return Quark::WebLocation($this->URL($service, false, false));
+		return Quark::WebLocation($this->ServiceURL($service));
+	}
+
+	/**
+	 * @param IQuarkService $service = null
+	 *
+	 * @return string
+	 */
+	public function ServiceURL (IQuarkService $service = null) {
+		return $this->URL(func_num_args() != 0 ? $service : $this, false, false);
 	}
 }
 
@@ -4180,12 +4189,12 @@ trait QuarkStreamBehavior {
 
 			unset($connection, $clients, $session);
 
-			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
+			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->ServiceURL(), $data);
 		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
 			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
-			$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'instanceof'
+			$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'QuarkCLIEnvironment'
 		);
 
 		unset($env, $data);
