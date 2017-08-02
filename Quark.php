@@ -3908,11 +3908,25 @@ trait QuarkServiceBehavior {
 
 	/**
 	 * @param IQuarkService $service = null
+	 * @param bool $fallbackOriginal = true
 	 *
 	 * @return string
 	 */
-	public function ServiceURL (IQuarkService $service = null) {
-		return $this->URL(func_num_args() != 0 ? $service : $this, false, false);
+	public function ServiceURL (IQuarkService $service = null, $fallbackOriginal = true) {
+		$url = $this->URL(func_num_args() != 0 ? $service : $this, false, false);
+
+		if (substr($url, -6) == '/Index')
+			$url = substr($url, 0, -6);
+
+		$parts = explode('/', $url);
+		$out = array();
+
+		foreach ($parts as $i => &$part)
+			$out[] = $fallbackOriginal
+				? (preg_match_all('#([A-Z]{1})#', $part) > 1 ? $part : strtolower($part))
+				: strtolower(trim(preg_replace('#([A-Z]{1})#', '-$1', $part), '-'));
+
+		return implode('/', $out);
 	}
 }
 
@@ -4175,6 +4189,7 @@ trait QuarkStreamBehavior {
 	 */
 	public function Broadcast ($data, $url = '') {
 		$env = Quark::CurrentEnvironment();
+		$url = func_num_args() == 2 ? $url : $this->ServiceURL();
 
 		if ($env instanceof QuarkStreamEnvironment) {
 			$session = $this->Session();
@@ -4189,7 +4204,7 @@ trait QuarkStreamBehavior {
 
 			unset($connection, $clients, $session);
 
-			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->ServiceURL(), $data);
+			$out = $env->BroadcastNetwork($url, $data);
 		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
