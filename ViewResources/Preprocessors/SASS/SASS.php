@@ -5,12 +5,16 @@ use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 
+use Quark\QuarkMinimizableViewResourceBehavior;
+
 /**
  * Class SASS
  *
  * @package Quark\ViewResources\Preprocessors\SASS
  */
 class SASS implements IQuarkViewResource, IQuarkInlineViewResource {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -26,9 +30,11 @@ class SASS implements IQuarkViewResource, IQuarkInlineViewResource {
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		// TODO: Implement HTML() method.
 	}
 }

@@ -26,6 +26,7 @@
 	display: inline-block;
 	margin: 0;
 	padding: 0 0 0 15px;
+	vertical-align: middle;
 }
 
 #quark-dialog-box, #quark-gallery-box {
@@ -63,16 +64,26 @@
  */
 .quark-list {
 	padding: 5px;
+	text-align: left;
 }
 
 .quark-list-item {
 	list-style: none;
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	width: 100%;
 }
 
 .quark-list-item:before {
-	content: '\f111';
+	/*content: '\f111';*/
 	vertical-align: middle;
 	margin: 0 10px 0 0;
+}
+
+.quark-list-item .content {
+	display: inline-block;
+	width: 80%;
+	vertical-align: top;
+	margin: 0;
 }
 
 .quark-list-item .quark-input.item-value {
@@ -177,6 +188,11 @@
 	border-radius: inherit;
 }
 
+.quark-progress-text {
+	position: relative;
+	margin: -6px 0 0 0;
+}
+
 
 
 /**
@@ -193,9 +209,9 @@
 
 .quark-scroll-bar {
 	display: inline-block;
-	height: 100%;
+	/*height: 100%;*/
 	vertical-align: top;
-	margin: 3px;
+	margin: 3px -10px 3px -3px;
 	cursor: pointer;
 }
 
@@ -209,4 +225,34 @@
 
 .quark-scroll-trigger:hover {
 	background: rgb(200,200,200);
+}
+
+
+
+/**
+ * .quark-flip-counter component
+ */
+.quark-flip-counter {
+
+}
+
+.quark-flip-counter .quark-flip-counter-digit {
+	display: inline-block;
+	margin: 0 4px 0 0;
+	font-family: 'Lato','Open Sans',sans-serif;
+	font-size: 20px;
+	line-height: 20px;
+	padding: 10px 5px;
+	background: rgb(200,200,200);
+	color: rgb(50,50,50);
+	border-radius: 5px;
+}
+
+.quark-flip-counter .quark-flip-counter-digit:last-child {
+	margin: 0;
+}
+
+.quark-flip-counter .quark-flip-counter-delimiter {
+	display: inline-block;
+	margin: 0 3px 0 0;
 }

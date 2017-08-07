@@ -27,7 +27,7 @@ class LanguageRU implements IWysiBBLanguage {
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 }

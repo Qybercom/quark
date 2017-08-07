@@ -6,6 +6,7 @@ use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithBackwardDependencies;
 
 use Quark\Quark;
+use Quark\QuarkMinimizableViewResourceBehavior;
 use Quark\QuarkSource;
 
 /**
@@ -14,6 +15,8 @@ use Quark\QuarkSource;
  * @package Quark\ViewResources\Preprocessors\LESS
  */
 class LESS implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewResourceWithBackwardDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var string $_location
 	 */
@@ -30,17 +33,12 @@ class LESS implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewRe
 	private $_client = false;
 
 	/**
-	 * @var bool $_obfuscate = true
-	 */
-	private $_obfuscate = true;
-
-	/**
 	 * @param string $location
-	 * @param bool $obfuscate = true
+	 * @param bool $minimize = true
 	 */
-	public function __construct ($location, $obfuscate = true) {
+	public function __construct ($location, $minimize = true) {
 		$this->_location = $location;
-		$this->_obfuscate = $obfuscate;
+		$this->_minimize = $minimize;
 	}
 
 	/**
@@ -53,16 +51,18 @@ class LESS implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkViewRe
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		if ($this->_client)
 			return '<link rel="stylesheet/less" type="text/css" href="' . Quark::WebLocation($this->_location) . '" />';
 
 		$less = new QuarkSource($this->_location, true);
 
-		if ($this->_obfuscate)
-			$less->Obfuscate();
+		if ($this->_minimize)
+			$less->Minimize();
 
 		return '<style type="text/css">' . $less->Content() . '</style>';
 	}

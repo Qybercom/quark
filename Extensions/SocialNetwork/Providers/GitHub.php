@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
@@ -164,6 +163,16 @@ class GitHub implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if (isset($item->bio)) $user->Bio($item->bio);
 
 		return $user;
+	}
+
+	/**
+	 * @param array|object $data
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data, $photo = false) {
+		return self::_user($data, $photo);
 	}
 
 	/**

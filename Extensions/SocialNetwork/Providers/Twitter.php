@@ -1,19 +1,19 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
+use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
+use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
@@ -34,34 +34,23 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
  * https://dev.twitter.com/rest/reference/get/account/verify_credentials
  * https://dev.twitter.com/rest/reference/get/users/lookup
  *
+ * http://kagan.mactane.org/blog/2009/09/22/what-characters-are-allowed-in-twitter-usernames/comment-page-1/
+ * https://support.twitter.com/articles/101299
+ *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
 class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_BASE = 'https://twitter.com/';
 	const URL_API = 'https://api.twitter.com';
+	const URL_STREAM_PUBLIC = 'https://stream.twitter.com/1.1/statuses';
 
 	const AGGREGATE_COUNT = 42;
 	const AGGREGATE_CURSOR = '-1';
 
-	/**
-	 * @var string $_appId
-	 */
-	private $_appId = '';
+	const CRITERIA_ID = 'user_id';
+	const CRITERIA_USERNAME = 'screen_name';
 
-	/**
-	 * @var string $_appSecret = ''
-	 */
-	private $_appSecret = '';
-
-	/**
-	 * @var OAuthToken $_token = ''
-	 */
-	private $_token = '';
-
-	/**
-	 * @var string $_callback = ''
-	 */
-	private $_callback = '';
+	use OAuthProviderBehavior;
 
 	/**
 	 * @var string $_cursor = self::AGGREGATE_CURSOR
@@ -104,13 +93,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	public function OAuthLoginURL ($redirect, $scope) {
-		$this->_callback = $redirect;
-
-		$login = $this->OAuthAPI(
-			'/oauth/request_token',
-			QuarkDTO::ForPOST(new QuarkFormIOProcessor()),
-			new QuarkDTO(new QuarkFormIOProcessor())
-		);
+		$login = $this->OAuth1_0a_RequestToken($redirect, '/oauth/request_token', self::URL_API);
 
 		return isset($login->oauth_token) ? self::URL_API . '/oauth/authenticate?oauth_token=' . $login->oauth_token : null;
 	}
@@ -131,46 +114,33 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return QuarkModel|OAuthToken
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
-		if (!isset($request->oauth_token)) return null;
-		if (!isset($request->oauth_verifier)) return null;
-
-		$this->_token = new OAuthToken();
-		$this->_token->access_token = $request->oauth_token;
-
-		$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$req->Data(array('oauth_verifier' => $request->oauth_verifier));
-
-		$token = $this->OAuthAPI('/oauth/access_token', $req, new QuarkDTO(new QuarkFormIOProcessor()));
-
-		if (!isset($token->oauth_token)) return null;
-		if (!isset($token->oauth_token_secret)) return null;
-
-		$out = new QuarkModel(new OAuthToken(), array(
-			'access_token' => $token->oauth_token,
-			'oauth_token_secret' => $token->oauth_token_secret
-		));
-
-		$this->_token = $out->Model();
-
-		return $out;
+		return $this->OAuth1_0a_TokenFromRequest($request, '/oauth/access_token', self::URL_API);
 	}
 
 	/**
 	 * @param string $url = ''
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
+	 * @param string $base = self::URL_API
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$request->Authorization($this->_authorization($request->Method(), self::URL_API . $url));
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, (array)$request->Data()));
 
-		$api = QuarkHTTPClient::To(self::URL_API . $url, $request, $response);
+		if ($request->Method() == QuarkDTO::METHOD_GET) {
+			$query = $request->Processor()->Encode($request->Data());
+			if ($query) $url .= '?' . $query;
+
+			$request->Data('');
+		}
+
+		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
 		if (isset($api->errors))
 			throw new OAuthAPIException($request, $response);
@@ -191,6 +161,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$user->Location($item->location);
 		$user->Page(self::URL_BASE . $item->screen_name);
 		$user->RegisteredAt(QuarkDate::GMTOf($item->created_at));
+		$user->Username($item->screen_name);
 		$user->Bio($item->description);
 
 		if (isset($item->email))
@@ -200,6 +171,16 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$user->BirthdayByDate('m/d/Y', $item->birthday);
 
 		return $user;
+	}
+
+	/**
+	 * @param array|object $data
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data, $photo = false) {
+		return self::_user($data, $photo);
 	}
 
 	/**
@@ -230,17 +211,16 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
-		// TODO:
-		//
-		// NEED INVESTIGATING - TWITTER RETURN ERROR ON WELL-FORMED REQUEST
-		//
-		// screen_name=twitterapi
-		// skip_status=true
-		// include_user_entities=false
+		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		$request->Data(array(
+			'count' => $count ? $count : self::AGGREGATE_COUNT,
+			'cursor' => $offset ? $offset : $this->_cursor,
+			'user_id' => $user
+		));
 
 		$response = $this->OAuthAPI(
-			'/1.1/friends/list.json?count=' . ($count ? $count : self::AGGREGATE_COUNT) . '&cursor=' . ($offset ? $offset : $this->_cursor) . '&user_id=' . $user . '',
-			QuarkDTO::ForGET(new QuarkFormIOProcessor()),
+			'/1.1/friends/list.json',
+			$request,
 			new QuarkDTO(new QuarkJSONIOProcessor())
 		);
 
@@ -255,47 +235,77 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @note if Twitter responds with error - type a placeholder into Callback URL field in the application settings
+	 * @param string[] $users = []
+	 * @param string $criteria = self::CRITERIA_USERNAME
 	 *
-	 * @param string $method = ''
-	 * @param string $url = ''
-	 * @param array $params = []
+	 * @return SocialNetworkUser[]
 	 *
-	 * @return QuarkKeyValuePair
+	 * @throws OAuthAPIException
 	 */
-	private function _authorization ($method = '', $url = '', $params = []) {
-		$header = array();
-		$now = QuarkDate::Now();
+	public function Profiles ($users = [], $criteria = self::CRITERIA_USERNAME) {
+		try {
+			if (sizeof($users) == 0) return array();
 
-		$params['oauth_signature_method'] = 'HMAC-SHA1';
-		$params['oauth_version'] = '1.0';
-		$params['oauth_timestamp'] = $now->Timestamp();
-		$params['oauth_nonce'] = Quark::GuID();
-		$params['oauth_consumer_key'] = $this->_appId;
+			$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+			$request->Data(array(
+				$criteria => implode(',', $users)
+			));
 
-		if ($this->_callback)
-			$params['oauth_callback'] = $this->_callback;
+			$response = $this->OAuthAPI('/1.1/users/lookup.json',
+				$request,
+				new QuarkDTO(new QuarkJSONIOProcessor())
+			);
 
-		if (isset($this->_token->access_token))
-			$params['oauth_token'] = $this->_token->access_token;
+			$out = array();
+			$data = $response->Data();
 
-		// Parameters are sorted by name, using lexicographical byte value ordering.
-		// Ref: Spec: 9.1.1 (1)
-		uksort($params, 'strcmp');
+			if (!is_array($data)) return array();
 
-		$_sign = array();
+			foreach ($data as $i => &$item)
+				$out[] = self::_user($item);
 
-		foreach ($params as $key => $value) {
-			$header[] = rawurlencode($key) . '="' . rawurlencode($value) .'"';
-			$_sign[] = rawurlencode($key) . '=' . rawurlencode($value);
+			return $out;
 		}
+		catch (OAuthAPIException $e) {
+			return $this->_oauth_error($e, 'Profiles', 'API error', array());
+		}
+	}
 
-		$key = rawurlencode($this->_appSecret) . '&' . rawurlencode(isset($this->_token->oauth_token_secret) ? $this->_token->oauth_token_secret : '');
-		$data = rawurlencode($method) . '&' . rawurlencode($url) . '&' . rawurlencode(implode('&', $_sign));
+	/**
+	 * @param array|object $params = []
+	 * @param callable $incoming = null
+	 * @param bool $filter = true
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public function TwitterStreaming ($params = [], callable $incoming = null, $filter = true) {
+		$url = self::URL_STREAM_PUBLIC . '/filter.json';
 
-		$sign = base64_encode(hash_hmac('sha1', $data, $key, true));
-		$header[] = 'oauth_signature="' . rawurlencode($sign) . '"';
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $url, (array)$params));
+		$request->Data((array)$params);
 
-		return new QuarkKeyValuePair('OAuth', implode(',', $header));
+		$response = new QuarkDTO(new QuarkJSONIOProcessor());
+		$response->RawProcessor(function ($data) {
+			return preg_replace('#\r\n[a-zA-Z0-9]{1,5}\r\n#Uis', '', "\r\n" . $data);
+		});
+
+		$stream = QuarkHTTPClient::AsyncTo($url, $request, $response);
+
+		$stream->On(QuarkHTTPClient::EVENT_ASYNC_ERROR, function ($request, $response) {
+			throw new QuarkArchException('[SocialNetwork.Twitter] StreamingAPI error. Details: ' . print_r($request, true) . print_r($response, true));
+		});
+
+		$last = '';
+
+		return !$stream ? null : $stream->AsyncData(!$filter || !$incoming ? $incoming : function (QuarkDTO $data) use (&$last, &$incoming) {
+			if (!isset($data->text) || !isset($data->user->name)) return;
+			if (!isset($data->id) || !isset($data->created_at)) return;
+			if ($last == $data->id) return;
+
+			$last = $data->id;
+			$incoming($data);
+		});
 	}
 }

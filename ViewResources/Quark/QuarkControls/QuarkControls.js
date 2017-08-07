@@ -93,7 +93,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 	opt = opt || {};
 		opt.box = opt.box === undefined ? '#quark-dialog-box' : opt.box;
 		opt.reset = opt.reset !== undefined ? opt.reset : true;
-		opt.type = opt.type !== undefined ? opt.type : 'GET';
+		//opt.type = opt.type !== undefined ? opt.type : 'GET';
 		opt.successCriteria = opt.successCriteria instanceof Function
 			? opt.successCriteria
 			: function (data) { return data.status !== undefined && data.status === 200; };
@@ -154,7 +154,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		$(opt.box).fadeIn(500);
 	};
 
-	that.Close = function (dialog, action) {
+	that.Close = function (dialog, action, callback) {
 		dialog = dialog || $($(selector).attr('quark-dialog'));
 
 		if (opt.close instanceof Function && opt.close(dialog, action) === false) return;
@@ -162,6 +162,9 @@ Quark.Controls.Dialog = function (selector, opt) {
 		dialog.fadeOut(500);
 		dialog.find('.quark-dialog-state').slideUp();
 		$(opt.box).fadeOut(500);
+
+		if (callback instanceof Function)
+			callback(dialog, action);
 	};
 
 	that.Submit = function (dialog, action) {
@@ -238,10 +241,17 @@ Quark.Controls.Dialog = function (selector, opt) {
 	$(document).on('click', selector, function (e) {
 		e.preventDefault();
 
-		var button = $(this);
-		var dialog = $(button.attr('quark-dialog'));
+		var button = $(this),
+			dialog = $(button.attr('quark-dialog')),
+			action = function () { that.Open(dialog, button.attr('href'), button); };
 
-		that.Open(dialog, button.attr('href'), button);
+		if (button.attr('quark-dialog-exclusive') != 'true') action();
+		else that.Close($('.quark-dialog'), null, function () {
+			var timer = setTimeout(function () {
+				action();
+				clearTimeout(timer);
+			}, 500);
+		});
 	});
 };
 
@@ -881,6 +891,12 @@ Quark.Controls.Progress = function (selector, opt) {
 	});
 };
 
+/**
+ * @param selector
+ * @param opt
+ *
+ * @constructor
+ */
 Quark.Controls.Scrollable = function (selector, opt) {
 	var that = this;
 
@@ -893,33 +909,70 @@ Quark.Controls.Scrollable = function (selector, opt) {
 		var elem = $(this);
 
 		elem.css('overflow', 'hidden');
-		elem = elem.wrap('<div class="quark-scrollable"></div>').addClass('quark-scrollable-content').parent();
+		elem = elem.wrap('<div class="quark-scrollable' + (opt.class !== undefined ? ' ' + opt.class : '') + '"' + (opt.id !== undefined ? ' id="' + opt.id + '"' : '') + '></div>').addClass('quark-scrollable-content').parent();
 		elem.append('<div class="quark-scroll-bar"><div class="quark-scroll-trigger"></div></div>');
 
-		var height = 100;
+		var scroll_content = elem.find('.quark-scrollable-content'),
+			scroll_bar = elem.find('.quark-scroll-bar'),
+			scroll_trigger = elem.find('.quark-scroll-trigger'),
+			height_content = scroll_content.height(),
+			height_content_full = elem.find('.quark-scrollable-content >').height(),
+			height_bar = (elem.height() / height_content_full) * 100;
 
-		var scroll = new Quark.UX(elem.find('.quark-scroll-trigger'));
+		scroll_bar.css('height', height_content + 'px');
+		scroll_trigger.css('height', height_bar + '%');
+
+		elem.on('mousewheel', function (e) {
+			var delta = parseInt(e.originalEvent.wheelDelta),
+				dir = delta / Math.abs(delta) * -1,
+				val = scroll_content.scrollTop() + dir * 40;
+
+			scroll_content.scrollTop(val);
+			scroll_bar.css('margin-top', scroll_content.scrollTop() / 2 + 'px');
+		});
+
+		var initial = 0;
+		elem.on('touchstart', function (e) {
+			e.preventDefault();
+
+			initial = e.originalEvent.touches[0].pageY;
+		});
+
+		elem.on('touchmove', function (e) {
+			e.preventDefault();
+
+			scroll_content.scrollTop(initial - e.originalEvent.touches[0].pageY);
+			scroll_bar.css('margin-top', scroll_content.scrollTop() / 2 + 'px');
+		});
+
+		var scroll = new Quark.UX(scroll_trigger);
 		scroll.Drag({
-			axis: {x:false},
+			//axis: {x:false},
+			//handle: selector,
 			delegateParent: false,
 			defaultCss: false,
+			preventDefault: false,
 			drag: function (e) {
+				if (!e.target.is('.quark-scroll-trigger')) return;
+
 				var val = e.target.data('_scroll') === undefined
 					? parseInt(e.target.css('margin-top').replace('px'))
 					: (e.current.y - parseInt(e.target.data('_scroll')));
 
-				if (val < 0 || val > height) return;
+				if (val < 0 || (val + scroll_trigger.height() - 25) > height_content) return;
 
 				var frame = {
 					name: e.target.attr('quark-slider-name'),
 					range: elem,
 					slider: e.target,
-					value: (val / height) * 100
+					value: (val / height_content) * 100
 				};
 
 				opt.scroll(frame);
 
-				e.target.css('margin-top', val + 'px');
+				scroll_content.scrollTop(val);
+
+				e.target.css('margin-top', scroll_content.scrollTop() / 1.15 + 'px');
 				e.target.data('_scroll', e.current.y - val);
 			}
 		});

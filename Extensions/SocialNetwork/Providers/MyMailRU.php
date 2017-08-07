@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
@@ -175,6 +174,16 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($item->sex == self::GENDER_FEMALE) $user->Gender(SocialNetworkUser::GENDER_FEMALE);
 
 		return $user;
+	}
+
+	/**
+	 * @param array|object $data
+	 * @param bool $photo = false
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data, $photo = false) {
+		return self::_user($data, $photo);
 	}
 
 	/**

@@ -45,15 +45,17 @@ class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 		//preg_match_all(self::ELEM, $raw . "\n", $found, PREG_SET_ORDER);
 		
 		//print_r($found);
-		$lines = explode();
+		//$lines = explode();
+		return null;
 	}
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) {
+	public function Batch ($raw, $fallback) {
 		return preg_split(self::BATCH, "\n" . $raw);
 	}
 }

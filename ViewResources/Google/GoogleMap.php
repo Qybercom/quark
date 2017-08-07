@@ -135,7 +135,7 @@ class GoogleMap implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource,
 	/**
 	 * @return bool
 	 */
-	public function CacheControl () {
+	public function Minimize () {
 		return true;
 	}
 

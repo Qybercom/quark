@@ -296,8 +296,13 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @param string $value
 	 *
 	 * @return string
+	 *
+	 * @throws QuarkArchException
 	 */
 	public function EscapeValue ($value) {
+		if (!$this->_connection || !@$this->_connection->ping())
+			throw new QuarkArchException('[MySQL::EscapeValue] No active connection');
+
 		return $this->_connection->real_escape_string($value);
 	}
 

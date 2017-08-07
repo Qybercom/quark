@@ -6,6 +6,7 @@ use Quark\IQuarkViewResourceWithDependencies;
 use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkMultipleViewResource;
 
+use Quark\QuarkMinimizableViewResourceBehavior;
 use Quark\QuarkStreamEnvironment;
 use Quark\QuarkURI;
 
@@ -15,6 +16,8 @@ use Quark\QuarkURI;
  * @package Quark\ViewResources\Quark\QuarkNetwork
  */
 class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var string $_var = ''
 	 */
@@ -37,9 +40,11 @@ class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, 
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return $this->_stream == null
 			? ''
 			: (

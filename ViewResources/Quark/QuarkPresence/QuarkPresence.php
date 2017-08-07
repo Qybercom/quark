@@ -7,7 +7,9 @@ use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
 use Quark\QuarkCSSViewResourceType;
+use Quark\QuarkMinimizableViewResourceBehavior;
 
+use Quark\ViewResources\Google\GoogleFont;
 use Quark\ViewResources\Quark\QuarkResponsiveUI;
 use Quark\ViewResources\Quark\QuarkUI;
 
@@ -17,6 +19,30 @@ use Quark\ViewResources\Quark\QuarkUI;
  * @package Quark\ViewResources\Quark\QuarkPresence
  */
 class QuarkPresence implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
+	/**
+	 * @var string[] $_weights
+	 */
+	private $_weights = array(
+		GoogleFont::WEIGHT_THIN_100,
+		GoogleFont::WEIGHT_THIN_100_ITALIC,
+		GoogleFont::WEIGHT_LIGHT_300,
+		GoogleFont::WEIGHT_LIGHT_300_ITALIC,
+		GoogleFont::WEIGHT_REGULAR_400,
+		GoogleFont::WEIGHT_REGULAR_400_ITALIC,
+		GoogleFont::WEIGHT_SEMI_BOLD_600,
+		GoogleFont::WEIGHT_SEMI_BOLD_600_ITALIC
+	);
+
+	/**
+	 * @param string[] $weights = []
+	 */
+	public function __construct ($weights = []) {
+		if (func_num_args() != 0)
+			$this->_weights = $weights;
+	}
+
 	/**
 	 * @return string
 	 */
@@ -32,18 +58,11 @@ class QuarkPresence implements IQuarkSpecifiedViewResource, IQuarkLocalViewResou
 	}
 
 	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
-	}
-
-	/**
 	 * @return IQuarkViewResource[]
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkUI(),
+			new QuarkUI($this->_weights),
 			new QuarkResponsiveUI(),
 			new QuarkPresenceControlsCSS()
 		);

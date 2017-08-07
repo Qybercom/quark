@@ -89,13 +89,23 @@ class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	 * @param string $url
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
+	 * @param string $base = ''
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url, QuarkDTO $request, QuarkDTO $response) {
+	public function OAuthAPI ($url, QuarkDTO $request, QuarkDTO $response, $base = null) {
 		// TODO: Implement OAuthAPI() method.
+	}
+
+	/**
+	 * @param array|object $data
+	 *
+	 * @return SocialNetworkUser
+	 */
+	public function SocialNetworkProfile ($data) {
+		// TODO: Implement SocialNetworkProfile() method.
 	}
 
 	/**

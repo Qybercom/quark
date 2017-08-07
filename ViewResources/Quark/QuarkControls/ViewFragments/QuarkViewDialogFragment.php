@@ -22,6 +22,11 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	private $_id = '';
 
 	/**
+	 * @var string $_class = ''
+	 */
+	private $_class = '';
+
+	/**
 	 * @var string $_header = ''
 	 */
 	private $_header = '';
@@ -85,6 +90,54 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	}
 
 	/**
+	 * @param string $header = ''
+	 *
+	 * @return string
+	 */
+	public function Header ($header = '') {
+		if (func_num_args() != 0)
+			$this->_header = $header;
+
+		return $this->_header;
+	}
+
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return string
+	 */
+	public function Content ($content = '') {
+		if (func_num_args() != 0)
+			$this->_content = $content;
+
+		return $this->_content;
+	}
+
+	/**
+	 * @param string $id = ''
+	 *
+	 * @return string
+	 */
+	public function CSSId ($id = '') {
+		if (func_num_args() != 0)
+			$this->_id = $id;
+
+		return $this->_id;
+	}
+
+	/**
+	 * @param string $class = ''
+	 *
+	 * @return string
+	 */
+	public function CSSClass ($class = '') {
+		if (func_num_args() != 0)
+			$this->_class = ' ' . $class;
+
+		return $this->_class;
+	}
+
+	/**
 	 * @param string|null $wait
 	 * @param string|null $success
 	 * @param string|null $error
@@ -121,11 +174,23 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	}
 
 	/**
+	 * @param string $method = QuarkDTO::METHOD_GET
+	 *
+	 * @return string
+	 */
+	public function Method ($method = QuarkDTO::METHOD_GET) {
+		if (func_num_args() != 0)
+			$this->_method = $method;
+
+		return $this->_method;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function CompileFragment () {
 		return '
-			<form class="quark-dialog" id="' . $this->_id . '" method="' . $this->_method . '">
+			<form class="quark-dialog' . $this->_class . '" id="' . $this->_id . '" method="' . $this->_method . '">
 				<h3>' . $this->_header . '</h3>
 				' . $this->_content . '<br />
 				<br />
@@ -138,5 +203,26 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 				<a class="quark-button block ok quark-dialog-confirm">' . $this->_actionConfirm . '</a>
 			</form>
 		';
+	}
+
+	/**
+	 * @param $class
+	 * @param $id
+	 * @param $header
+	 * @param $content
+	 * @param string $messageWait = self::MESSAGE_WAIT
+	 * @param string $messageSuccess = self::MESSAGE_SUCCESS
+	 * @param string $messageError = self::MESSAGE_ERROR
+	 * @param string $actionConfirm = self::ACTION_CONFIRM
+	 * @param string $actionClose = self::ACTION_CLOSE
+	 * @param string $method = QuarkDTO::METHOD_GET
+	 *
+	 * @return QuarkViewDialogFragment
+	 */
+	public static function WithClass ($class, $id, $header, $content, $messageWait = self::MESSAGE_WAIT, $messageSuccess = self::MESSAGE_SUCCESS, $messageError = self::MESSAGE_ERROR, $actionConfirm = self::ACTION_CONFIRM, $actionClose = self::ACTION_CLOSE, $method = QuarkDTO::METHOD_GET) {
+		$dialog = new self($id, $header, $content, $messageWait, $messageSuccess, $messageError, $actionConfirm, $actionClose, $method);
+		$dialog->CSSClass($class);
+
+		return $dialog;
 	}
 }

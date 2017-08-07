@@ -14,11 +14,11 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
- * Class GooglePlus
+ * Class Blogger
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+class Blogger extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_API_PEOPLE = 'https://people.googleapis.com/v1/';
 
 	const SCOPE_CONTACTS = 'contacts';

@@ -15,3 +15,8 @@
 .quark-range-slider:hover {
     background: rgb(0,225,80);
 }
+
+.quark-list .quark-list-item:before {
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	content: '\f111';
+}

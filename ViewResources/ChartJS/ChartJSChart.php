@@ -70,11 +70,12 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	}
 
 	/**
-	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
-		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;$(function(){' . $this->Render(false) . '});</script>';
+	public function HTML ($minimize) {
+		return /** @lang text */'<script type="text/javascript">$(function(){' . $this->Render(false) . '});</script>';
 	}
 
 	/**
@@ -103,5 +104,12 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Minimize () {
+		// TODO: Implement Minimize() method.
 	}
 }

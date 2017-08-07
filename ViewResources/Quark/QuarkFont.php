@@ -5,6 +5,7 @@ use Quark\IQuarkInlineViewResource;
 use Quark\IQuarkViewResource;
 
 use Quark\Quark;
+use Quark\QuarkMinimizableViewResourceBehavior;
 
 /**
  * Class QuarkFont
@@ -17,6 +18,8 @@ class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 	const FALLBACK_CURSIVE = 'cursive';
 	const FALLBACK_FANTASY = 'fantasy';
 	const FALLBACK_MONOSPACE = 'monospace';
+
+	use QuarkMinimizableViewResourceBehavior;
 
 	/**
 	 * @var string $_font = ''
@@ -45,9 +48,11 @@ class QuarkFont implements IQuarkViewResource, IQuarkInlineViewResource {
 	}
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return '<style type="text/css">@font-face{src: url(' . Quark::WebLocation($this->_font) . ');font-family: ' . $this->_family . ',' . $this->_fallback . ';}</style>';
 	}
 }

@@ -14,11 +14,11 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 
 /**
- * Class LinkedIn
+ * Class Wordpress
  *
  * @package Quark\Extensions\SocialNetwork\Providers
  */
-class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @var string $_appId = ''
 	 */
@@ -92,7 +92,6 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @param string $base = null
 	 *
 	 * @return QuarkDTO|null
-	 *
 	 * @throws OAuthAPIException
 	 */
 	public function OAuthAPI ($url, QuarkDTO $request, QuarkDTO $response, $base = null) {

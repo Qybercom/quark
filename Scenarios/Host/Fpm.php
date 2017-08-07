@@ -1,24 +1,27 @@
 <?php
-namespace Quark\Scenarios;
+namespace Quark\Scenarios\Host;
 
 use Quark\IQuarkTask;
 
 use Quark\Quark;
 use Quark\QuarkConfig;
-use Quark\QuarkDate;
+use Quark\QuarkThreadSet;
+use Quark\QuarkCLIBehavior;
+use Quark\QuarkURI;
 use Quark\QuarkDTO;
+use Quark\QuarkDate;
 use Quark\QuarkHTTPServerHost;
 use Quark\QuarkHTTPException;
 use Quark\QuarkArchException;
-use Quark\QuarkThreadSet;
-use Quark\QuarkURI;
 
 /**
- * Class SelfHostedFPM
+ * Class Fpm
  *
- * @package Quark\Scenarios
+ * @package Quark\Scenarios\Host
  */
-class SelfHostedFPM implements IQuarkTask {
+class Fpm implements IQuarkTask {
+	use QuarkCLIBehavior;
+
 	/**
 	 * @var string[] $_secure
 	 */
@@ -57,8 +60,15 @@ class SelfHostedFPM implements IQuarkTask {
 	public function Task ($argc, $argv) {
 		$fpm = Quark::Config()->SelfHostedFPM();
 
+		$this->ShellView(
+			'Host/FPM',
+			'Starting SelfHostedFPM instance...'
+		);
+
 		if ($fpm == null)
-			throw new QuarkArchException('Attempt to start a not configured self-hosted FPM instance');
+			$this->ShellArchException('Attempt to start a not configured self-hosted FPM instance');
+
+		$this->ShellLog('Bind ' . $fpm->URI() . '...');
 
 		$namespace = Quark::Config()->Location(QuarkConfig::SERVICES);
 		$base = Quark::Host() . '/' . $namespace;
@@ -96,7 +106,10 @@ class SelfHostedFPM implements IQuarkTask {
 			});
 
 		if (!$http->Bind())
-			throw new QuarkArchException('Can not bind self-hosted FPM instance on ' . $fpm);
+			$this->ShellArchException('Can not bind self-hosted FPM instance on ' . $fpm);
+
+		$this->ShellLog('Started on ' . $fpm->URI(), Quark::LOG_OK);
+		echo "\r\n";
 
 		QuarkThreadSet::Queue(function () use (&$http) {
 			$http->Pipe();

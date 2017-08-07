@@ -155,7 +155,7 @@ class Quark {
 			self::ContainerFree();
 		});
 
-		if (!self::CLI() || ($argc > 1 || $argc == 0)) $threads->Invoke();
+		if (!self::CLI() || !self::$_environment[0]->EnvironmentQueued()) $threads->Invoke();
 		else $threads->Pipeline(self::$_config->Tick());
 	}
 
@@ -238,19 +238,33 @@ class Quark {
 	}
 
 	/**
+	 * @param bool $computed = true
+	 *
 	 * @return string
 	 */
-	public static function WebHost () {
-		return self::$_config->WebHost()->URI(false);
+	public static function WebHost ($computed = true) {
+		return self::$_config->WebHost()->URI(false, $computed);
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function WebOffset () {
+		return substr(self::WebHost(), strlen(self::WebHost(false)));
 	}
 
 	/**
 	 * @param string $path
+	 * @param bool $full = true
 	 *
 	 * @return string
 	 */
-	public static function WebLocation ($path) {
-		$uri = Quark::WebHost() . str_replace(Quark::Host(), '/', Quark::NormalizePath($path, false));
+	public static function WebLocation ($path, $full = true) {
+		if (!$full && strlen($path) != 0 && $path[0] == '/')
+			$path = Quark::Host() . self::WebOffset() . $path;
+
+		$uri = ($full ? Quark::WebHost() : '') . Quark::NormalizePath(str_replace(Quark::Host(), '/', $path), false);
+
 		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', $uri)));
 	}
 
@@ -461,8 +475,11 @@ class Quark {
 	public static function &Environment (IQuarkEnvironment $provider = null) {
 		if ($provider) {
 			if (!$provider->EnvironmentMultiple())
-				foreach (self::$_environment as $environment)
-					if ($environment instanceof $provider) return self::$_environment;
+				foreach (self::$_environment as $i => &$environment)
+					if ($environment instanceof $provider) {
+						self::$_environment[$i] = $provider;
+						return self::$_environment;
+					}
 
 			self::$_environment[] = $provider;
 		}
@@ -780,6 +797,7 @@ class Quark {
 class QuarkConfig {
 	const INI_QUARK = 'Quark';
 	const INI_ROUTES = 'Routes';
+	const INI_DEDICATED = 'Dedicated';
 	const INI_LOCALIZATION_DETAILS = 'LocalizationDetails';
 	const INI_LOCAL_SETTINGS = 'LocalSettings';
 	const INI_DATA_PROVIDERS = 'DataProviders';
@@ -886,7 +904,7 @@ class QuarkConfig {
 	private $_modelValidation = QuarkModel::CONFIG_VALIDATION_ALL;
 
 	/**
-	 * @var array $_queues = []
+	 * @var array|QuarkKeyValuePair[] $_queues = []
 	 */
 	private $_queues = array();
 
@@ -983,6 +1001,11 @@ class QuarkConfig {
 	 * @var array $_routes = []
 	 */
 	private $_routes = array();
+
+	/**
+	 * @var array $_dedicated = []
+	 */
+	private $_dedicated = array();
 
 	/**
 	 * @param string $ini = ''
@@ -1142,7 +1165,7 @@ class QuarkConfig {
 	 * @return QuarkKeyValuePair
 	 */
 	public function AsyncQueue ($name, QuarkURI $uri = null, IQuarkNetworkProtocol $protocol = null) {
-		if (!isset($this->_queues[$name]) || func_num_args() == 2)
+		if (!isset($this->_queues[$name]) || func_num_args() > 1)
 			$this->_queues[$name] = new QuarkKeyValuePair($uri, $protocol);
 
 		return $this->_queues[$name];
@@ -1192,6 +1215,8 @@ class QuarkConfig {
 	 * @return string
 	 */
 	public function OpenSSLConfig ($location = '') {
+		// TODO: maybe deprecated
+
 		if (func_num_args() != 0)
 			$this->_openSSLConfig = $location;
 		
@@ -1497,6 +1522,38 @@ class QuarkConfig {
 	}
 
 	/**
+	 * @param string $service = ''
+	 * @param string $process = ''
+	 *
+	 * @return string[]
+	 */
+	public function Dedicated ($process = '', $service = '') {
+		$process = QuarkObject::ConstValue($process);
+
+		if (func_num_args() == 2) {
+			if (!isset($this->_dedicated[$process]))
+				$this->_dedicated[$process] = array();
+
+			$this->_dedicated[$process][] = $service;
+		}
+
+		return isset($this->_dedicated[$process]) ? $this->_dedicated[$process] : array();
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function DedicatedAll () {
+		$out = array();
+
+		foreach ($this->_dedicated as $process => &$tasks)
+			foreach ($tasks as $i => &$task)
+				$out[] = $task;
+
+		return $out;
+	}
+
+	/**
 	 * @param string $file
 	 *
 	 * @return string
@@ -1757,10 +1814,15 @@ class QuarkConfig {
 
 		if (isset($ini[self::INI_DATA_PROVIDERS]))
 			foreach ($ini[self::INI_DATA_PROVIDERS] as $key => &$connection) {
-				$component = Quark::Component(QuarkObject::ConstValue($key));
-				
-				if ($component instanceof QuarkModelSource)
-					$component->URI(QuarkURI::FromURI($connection));
+				try {
+					$component = Quark::Component(QuarkObject::ConstValue($key));
+
+					if ($component instanceof QuarkModelSource)
+						$component->URI(QuarkURI::FromURI($connection));
+				}
+				catch (QuarkArchException $e) {
+					Quark::Log('Attempting of configuring unspecified data provider ' . $key . ', by value "' . $connection . '". Possible mistyping of data provider\'s key in INI configuration.', Quark::LOG_WARN);
+				}
 			}
 
 		if (isset($ini[self::INI_ASYNC_QUEUES]))
@@ -1832,6 +1894,10 @@ class QuarkConfig {
 					$component->ExtensionOptions($options);
 			}
 		}
+
+		if (isset($ini[self::INI_DEDICATED]))
+			foreach ($ini[self::INI_DEDICATED] as $value => &$key)
+				$this->Dedicated($key, $value);
 
 		unset($environment, $environments);
 		unset($extension, $extensions);
@@ -1922,6 +1988,11 @@ interface IQuarkEnvironment extends IQuarkThread {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple();
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued();
 
 	/**
 	 * @return string
@@ -2080,6 +2151,11 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple () { return false; }
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return false; }
 
 	/**
 	 * @return string
@@ -2313,6 +2389,21 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
  * @package Quark
  */
 class QuarkCLIEnvironment implements IQuarkEnvironment {
+	const STATUS_UNKNOWN = '...';
+	const DEDICATED_UNKNOWN = '<unknown>';
+
+	use QuarkCLIViewBehavior;
+
+	/**
+	 * @var array $_statuses
+	 */
+	private static $_statuses = array(
+		Quark::LOG_INFO => 'INFO',
+		Quark::LOG_OK => 'OK',
+		Quark::LOG_WARN => 'WARN',
+		Quark::LOG_FATAL => 'FAIL'
+	);
+
 	/**
 	 * @var QuarkTask[] $_tasks
 	 */
@@ -2334,11 +2425,24 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	private $_name = 'CLI';
 
 	/**
+	 * @var bool $_queued = false
+	 */
+	private $_queued = false;
+
+	/**
 	 * @param int   $argc = 0
 	 * @param array $argv = []
 	 */
 	public function __construct ($argc = 0, $argv = []) {
-		if (!Quark::CLI() || $argc > 1) return;
+		if (!Quark::CLI()) return;
+
+		$dedicated = $argc > 1 && ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS);
+		if ($argc > 2 && !$dedicated) return;
+
+		$this->_queued = true;
+		$tasks = $dedicated
+			? Quark::Config()->Dedicated($argc > 2 ? $argv[2] : '')
+			: Quark::Config()->DedicatedAll();
 
 		$dir = new \RecursiveDirectoryIterator(Quark::Host());
 		$fs = new \RecursiveIteratorIterator($dir);
@@ -2356,6 +2460,9 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 			 * @var IQuarkService $service
 			 */
 			$service = new $class();
+			if (!($service instanceof IQuarkService)) continue;
+			if ($dedicated && !QuarkService::URLMatch($service, $tasks)) continue;
+			if (!$dedicated && QuarkService::URLMatch($service, $tasks)) continue;
 
 			if ($service instanceof IQuarkScheduledTask)
 				$this->_tasks[] = new QuarkTask($service);
@@ -2368,6 +2475,11 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple () { return false; }
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return $this->_queued; }
 
 	/**
 	 * @return string
@@ -2418,43 +2530,76 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 		Quark::CurrentEnvironment($this);
 
 		if ($argc > 1) {
-			if ($argv[1] == QuarkTask::PREDEFINED) {
-				if (!isset($argv[2]))
-					throw new QuarkArchException('Predefined scenario not selected');
+			if ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS) {
+				if (!$this->_started) {
+					$this->_started = true;
 
-				try {
-					$service = QuarkService::Custom('/' . $argv[2], __DIR__ . '/Scenarios', 'Quark/Scenarios', QuarkService::POSTFIX_PREDEFINED_SCENARIO, false)->Service();
+					$this->ShellView(
+						'Quark:Dedicated - ' . ($argc > 2 ? $argv[2] : self::DEDICATED_UNKNOWN),
+						'Starting Quark dedicated process... '
+					);
+
+					$this->ShellLog('Started with ' . sizeof($this->_tasks) . ' tasks', Quark::LOG_OK);
+					echo "\r\n";
 				}
-				catch (QuarkHTTPException $e) {
-					throw new QuarkArchException('Unknown predefined scenario ' . $e->class);
-				}
+
+				foreach ($this->_tasks as $i => &$task)
+					$task->Launch($argc, $argv);
+
+				unset($i, $task);
 			}
-			else $service = (new QuarkService('/' . $argv[1]))->Service();
+			else {
+				if ($argv[1] == QuarkTask::PREDEFINED || $argv[1] == QuarkTask::PREDEFINED_ALIAS) {
+					if (!isset($argv[2]))
+						throw new QuarkArchException('Predefined scenario not selected');
 
-			if (!($service instanceof IQuarkTask))
-				throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
+					try {
+						$service = QuarkService::Custom('/' . $argv[2], __DIR__ . '/Scenarios', 'Quark/Scenarios', QuarkService::POSTFIX_PREDEFINED_SCENARIO, false)->Service();
+					}
+					catch (QuarkHTTPException $e) {
+						throw new QuarkArchException('Unknown predefined scenario ' . $e->class);
+					}
+				}
+				else $service = (new QuarkService('/' . $argv[1]))->Service();
 
-			/**
-			 * @var QuarkService|IQuarkTask|QuarkCLIBehavior $service
-			 */
-			if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior'))
-				$service->ShellInput($argv);
+				if (!($service instanceof IQuarkTask))
+					throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkTask');
 
-			$service->Task($argc, $argv);
+				/**
+				 * @var QuarkService|IQuarkTask|QuarkCLIBehavior $service
+				 */
+				if (QuarkObject::Uses($service, 'Quark\\QuarkCLIBehavior'))
+					$service->ShellInput($argv);
+
+				$service->Task($argc, $argv);
+			}
 		}
 		else {
-			if (!$this->_started && $this->_start !== null) {
+			if (!$this->_started) {
 				$this->_started = true;
-				$service = (new QuarkService('/' . $this->_start))->Service();
 
-				if (!($service instanceof IQuarkApplicationStartTask))
-					throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkApplicationStartTask');
+				$this->ShellView(
+					'Quark:Main',
+					'Starting Quark main process...'
+				);
 
-				$service->ApplicationStartTask($argc, $argv);
+				if ($this->_start !== null) {
+					$service = (new QuarkService('/' . $this->_start))->Service();
+
+					if (!($service instanceof IQuarkApplicationStartTask))
+						throw new QuarkArchException('Class ' . get_class($service) . ' is not an IQuarkApplicationStartTask');
+
+					$service->ApplicationStartTask($argc, $argv);
+				}
+
+				$this->ShellLog('Started with ' . sizeof($this->_tasks) . ' tasks', Quark::LOG_OK);
+				echo "\r\n";
 			}
 
-			foreach ($this->_tasks as $task)
+			foreach ($this->_tasks as $i => &$task)
 				$task->Launch($argc, $argv);
+
+			unset($i, $task);
 		}
 	}
 
@@ -2465,6 +2610,159 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	 */
 	public function ExceptionHandler (\Exception $exception) {
 		return QuarkException::ExceptionHandler($exception);
+	}
+
+	/**
+	 * @param string $uri = ''
+	 *
+	 * @return QuarkCLIEnvironment
+	 */
+	public static function WithApplicationStart ($uri = '') {
+		$cli = new self();
+		$cli->ApplicationStart($uri);
+
+		return $cli;
+	}
+
+	/**
+	 * @param string $lvl = Quark::LOG_INFO
+	 *
+	 * @return string
+	 */
+	public static function ShellStatus ($lvl = Quark::LOG_INFO) {
+		return isset(self::$_statuses[$lvl]) ? self::$_statuses[$lvl] : self::STATUS_UNKNOWN;
+	}
+}
+
+/**
+ * Trait QuarkCLIViewBehavior
+ *
+ * @package Quark
+ */
+trait QuarkCLIViewBehavior {
+	/**
+	 * @param string $data = ''
+	 * @param QuarkCLIColor $color = null
+	 * @param bool $reset = true
+	 *
+	 * @return string
+	 */
+	public function ShellLine ($data = '', QuarkCLIColor $color = null, $reset = true) {
+		return ($color ? $color->Display() : '') . $data . ($color && $reset ? QuarkCLIColor::Reset()->Display() : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineInfo ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::CYAN)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineSuccess ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::GREEN)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineWarning ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::YELLOW)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $newLine = false
+	 *
+	 * @return string
+	 */
+	public function ShellLineError ($data = '', $newLine = false) {
+		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::RED)) . ($newLine ? "\r\n" : '');
+	}
+
+	/**
+	 * @param string $message = ''
+	 * @param string $lvl = null
+	 * @param bool $space = true
+	 *
+	 * @return bool
+	 */
+	public function ShellLog ($message = '', $lvl = null, $space = true) {
+		echo ($space ? ' ' : ''), $this->ShellLine($message, QuarkCLIColor::ForLog($lvl)), "\r\n";
+
+		return true;
+	}
+
+	/**
+	 * @param string $title = ''
+	 * @param string $content = ''
+	 * @param callable $process = null
+	 */
+	public function ShellView ($title = '', $content = '', callable $process = null) {
+		echo "\r\n ",
+			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
+				QuarkCLIColor::BLACK,
+				QuarkCLIColor::WHITE
+			), true), ' ',
+			($content ? "\r\n " . $content : '');
+
+		if ($process) $process();
+
+		echo "\r\n";
+	}
+
+	/**
+	 * @param string $title = ''
+	 * @param string $ok = ''
+	 * @param string $fail = ''
+	 * @param callable $process = null
+	 *
+	 * @return bool
+	 */
+	public function ShellProcess ($title = '', $ok = '', $fail = '', callable $process = null) {
+		if (!$process)
+			new QuarkArchException('ShellProcess requires a callable value for $process argument');
+
+		echo $title;
+
+		if ($process()) echo $ok;
+		else echo $fail;
+
+		return true;
+	}
+
+	/**
+	 * @param string $lvl = Quark::LOG_INFO
+	 * @param string $append = ''
+	 * @param bool $space = true
+	 *
+	 * @return string
+	 */
+	public function ShellProcessStatus ($lvl = Quark::LOG_INFO, $append = '', $space = true) {
+		return
+			($space ? ' ' : '') . $this->ShellLine(QuarkCLIEnvironment::ShellStatus($lvl), QuarkCLIColor::ForLog($lvl)) . "\r\n" .
+			($append ? (($space ? ' ' : '') . $append . "\r\n") : '');
+	}
+
+	/**
+	 * @param string $message = ''
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function ShellArchException ($message = '') {
+		$this->ShellLog($message, Quark::LOG_FATAL); echo "\r\n";
+		throw new QuarkArchException($message);
 	}
 }
 
@@ -2872,6 +3170,11 @@ interface IQuarkSignedPostService extends IQuarkSignedService {
  */
 class QuarkTask {
 	const PREDEFINED = '--quark';
+	const PREDEFINED_ALIAS = '-q';
+
+	const DEDICATED = '--dedicated';
+	const DEDICATED_ALIAS = '-d';
+
 	const QUEUE = 'tcp://127.0.0.1:25500';
 
 	/**
@@ -2986,14 +3289,13 @@ class QuarkTask {
 
 	/**
 	 * @param string $queue = self::QUEUE
-	 * @param int $tick = QuarkThreadSet::TICK (microseconds)
 	 *
-	 * @return bool
+	 * @return QuarkServer
 	 */
-	public static function AsyncQueue ($queue = self::QUEUE, $tick = QuarkThreadSet::TICK) {
+	public static function AsyncQueue ($queue = self::QUEUE) {
 		$uri = Quark::Config()->AsyncQueue($queue);
 
-		if (!($uri->Key() instanceof QuarkURI)) return false;
+		if (!($uri->Key() instanceof QuarkURI)) return null;
 
 		$protocol = $uri->Value();
 
@@ -3017,13 +3319,7 @@ class QuarkTask {
 			unset($service, $class, $args, $json, $task);
 		});
 
-		if (!$server->Bind()) return false;
-
-		QuarkThreadSet::Queue(function () use ($server) {
-			return $server->Pipe();
-		}, $tick);
-
-		return true;
+		return $server;
 	}
 
 	/**
@@ -3112,15 +3408,22 @@ class QuarkThreadSet {
 	private $_threads;
 
 	/**
-	 * @var array $_args = []
+	 * @var int $_argc = 0
 	 */
-	private $_args = array();
+	private $_argc = 0;
 
 	/**
-	 * ThreadSet constructor
+	 * @var array $_argv = []
 	 */
-	public function __construct () {
-		$this->_args = func_get_args();
+	private $_argv = array();
+
+	/**
+	 * @param int $argc
+	 * @param array $argv
+	 */
+	public function __construct ($argc, $argv) {
+		$this->_argc = $argc;
+		$this->_argv = $argv;
 	}
 
 	/**
@@ -3158,7 +3461,7 @@ class QuarkThreadSet {
 			if (!($thread instanceof IQuarkThread) || !$thread->UsageCriteria()) continue;
 
 			try {
-				$run_tmp = call_user_func_array(array($thread, 'Thread'), $this->_args);
+				$run_tmp = call_user_func_array(array($thread, 'Thread'), array(&$this->_argc, &$this->_argv));
 				$run_tmp = $run_tmp === null || $run_tmp;
 			}
 			catch (\Exception $e) {
@@ -3306,12 +3609,14 @@ class QuarkTimer {
 	}
 
 	/**
-	 * Destroy timer
+	 * @return QuarkTimer
 	 */
 	public function Destroy () {
 		foreach (self::$_timers as $i => &$timer)
 			if ($timer->_id == $this->_id)
 				unset(self::$_timers[$i]);
+
+		return $this;
 	}
 
 	/**
@@ -3598,7 +3903,273 @@ trait QuarkServiceBehavior {
 	 * @return string
 	 */
 	public function WebPath (IQuarkService $service = null) {
-		return Quark::WebLocation($this->URL($service, false, false));
+		return Quark::WebLocation($this->ServiceURL($service));
+	}
+
+	/**
+	 * @param IQuarkService $service = null
+	 * @param bool $fallbackOriginal = true
+	 *
+	 * @return string
+	 */
+	public function ServiceURL (IQuarkService $service = null, $fallbackOriginal = true) {
+		$url = $this->URL(func_num_args() != 0 ? $service : $this, false, false);
+
+		if (substr($url, -6) == '/Index')
+			$url = substr($url, 0, -6);
+
+		$parts = explode('/', $url);
+		$out = array();
+
+		foreach ($parts as $i => &$part)
+			$out[] = $fallbackOriginal
+				? (preg_match_all('#([A-Z]{1})#', $part) > 1 ? $part : strtolower($part))
+				: strtolower(trim(preg_replace('#([A-Z]{1})#', '-$1', $part), '-'));
+
+		return implode('/', $out);
+	}
+}
+
+/**
+ * Trait QuarkCLIBehavior
+ *
+ * @package Quark
+ */
+trait QuarkCLIBehavior {
+	use QuarkServiceBehavior;
+	use QuarkCLIViewBehavior;
+
+	/**
+	 * @var array $_shellInput = []
+	 */
+	private $_shellInput = array();
+
+	/**
+	 * @var array $_shellOutput = []
+	 */
+	private $_shellOutput = array();
+
+	/**
+	 * @var QuarkHTTPClient[] $_asyncClients = []
+	 */
+	private $_asyncClients = array();
+
+	/**
+	 * @param string $command = ''
+	 * @param string[] &$output = []
+	 * @param int &$status = 0
+	 *
+	 * @return bool
+	 */
+	public function Shell ($command = '', &$output = [], &$status = 0) {
+		if (strlen($command) == 0) return false;
+
+		exec($command, $output, $status);
+		$this->_shellOutput = $output;
+
+		return $status == 0;
+	}
+
+	/**
+	 * @param array $argv = []
+	 *
+	 * @return array
+	 */
+	public function ShellInput ($argv = []) {
+		if (func_num_args() != 0)
+			$this->_shellInput = $argv;
+
+		return $this->_shellInput;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function ShellOutput () {
+		return $this->_shellOutput;
+	}
+
+	/**
+	 * @param int $id = 0
+	 *
+	 * @return mixed
+	 */
+	public function Arg ($id = 0) {
+		return isset($this->_shellInput[$id]) ? $this->_shellInput[$id] : null;
+	}
+
+	/**
+	 * @param bool $flags = false
+	 *
+	 * @return string[]
+	 */
+	public function ServiceArgs ($flags = false) {
+		if (!isset($this->_shellInput[0]))
+			return $this->_shellInput;
+
+		$args = array_slice($this->_shellInput, 1);
+
+		if ($args[0] == QuarkTask::PREDEFINED || $args[0] == QuarkTask::PREDEFINED_ALIAS)
+			$args = array_slice($args, 1);
+
+		$args = array_slice($args, 1);
+
+		if (!$flags)
+			foreach ($args as $i => &$arg)
+				if (strlen($arg) != 0 && $arg[0] == '-')
+					unset($args[$i]);
+
+		return array_values($args);
+	}
+
+	/**
+	 * @param int $id = 0
+	 * @param bool $flags = false
+	 *
+	 * @return string
+	 */
+	public function ServiceArg ($id = 0, $flags = false) {
+		$args = $this->ServiceArgs($flags);
+
+		return isset($args[$id]) ? $args[$id] : null;
+	}
+
+	/**
+	 * @param string $arg = ''
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return bool
+	 */
+	private function _isFlag ($arg = '', $flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		$flag = $prefixFlag . $flag;
+		$alias = $prefixAlias . $alias;
+
+		return $arg == $flag || ($alias != '' && $arg == $alias);
+	}
+
+	/**
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return bool
+	 */
+	public function HasFlag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		foreach ($this->_shellInput as $i => &$arg)
+			if ($this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)) return true;
+		
+		return false;
+	}
+
+	/**
+	 * @param string $flag = ''
+	 * @param string $alias = ''
+	 * @param string $prefixFlag = '--'
+	 * @param string $prefixAlias = '-'
+	 *
+	 * @return mixed
+	 */
+	public function Flag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
+		$i = 0;
+		$size = sizeof($this->_shellInput);
+
+		while ($i < $size) {
+			$arg = $this->_shellInput[$i];
+			$next = isset($this->_shellInput[$i + 1]) ? $this->_shellInput[$i + 1] : null;
+
+			$ok = $this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)
+				&& $next !== null
+				&& !$this->_isFlag($next, $flag, $alias, $prefixFlag, $prefixAlias);
+
+			if ($ok) return $next;
+
+			$i++;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param IQuarkAsyncTask $task
+	 * @param array $args = []
+	 * @param string $queue = QuarkTask::QUEUE
+	 *
+	 * @return mixed
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function AsyncTask (IQuarkAsyncTask $task, $args = [], $queue = QuarkTask::QUEUE) {
+		$cmd = new QuarkTask($task);
+
+		return $cmd->AsyncLaunch($args, $queue);
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $register = null
+	 * @param bool $force = false
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientRegister ($id = '', callable $register = null, $force = false) {
+		if (isset($this->_asyncClients[$id]) && !$force) return false;
+		if ($register == null) return false;
+
+		$this->_asyncClients[$id] = $register($id, $force);
+
+		return true;
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $remove = null
+	 */
+	public function AsyncClientPipe ($id = '', callable $remove = null) {
+		if (isset($this->_asyncClients[$id]) && $this->_asyncClients[$id]->Connected()) $this->_asyncClients[$id]->AsyncPipe();
+		else {
+			unset($this->_asyncClients[$id]);
+			if ($remove) $remove($id);
+		}
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param callable $stop = null
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientStop ($id = '', callable $stop = null) {
+		if (!isset($this->_asyncClients[$id]) || $this->_asyncClients[$id] == null) return false;
+
+		$ok = $this->_asyncClients[$id]->Client()->Close();
+		unset($this->_asyncClients[$id]);
+
+		if ($stop) $stop($id);
+
+		return $ok;
+	}
+
+	/**
+	 * @param string $id = ''
+	 * @param bool $active = true
+	 * @param callable $start = null
+	 * @param callable $stop = null
+	 * @param bool $force = false
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientProcess ($id = '', $active = true, callable $start = null, callable $stop = null, $force = false) {
+		if (!$active)
+			return $this->AsyncClientStop($id, $stop);
+
+		$this->AsyncClientRegister($id, $start, $force);
+		$this->AsyncClientPipe($id, $stop);
+
+		return true;
 	}
 }
 
@@ -3608,7 +4179,7 @@ trait QuarkServiceBehavior {
  * @package Quark
  */
 trait QuarkStreamBehavior {
-	use QuarkServiceBehavior;
+	use QuarkCLIBehavior;
 
 	/**
 	 * @param QuarkDTO|object|array $data
@@ -3618,6 +4189,7 @@ trait QuarkStreamBehavior {
 	 */
 	public function Broadcast ($data, $url = '') {
 		$env = Quark::CurrentEnvironment();
+		$url = func_num_args() == 2 ? $url : $this->ServiceURL();
 
 		if ($env instanceof QuarkStreamEnvironment) {
 			$session = $this->Session();
@@ -3631,12 +4203,13 @@ trait QuarkStreamBehavior {
 			}
 
 			unset($connection, $clients, $session);
-			
-			$out = $env->BroadcastNetwork(func_num_args() == 2 ? $url : $this->URL(), $data);
+
+			$out = $env->BroadcastNetwork($url, $data);
 		}
 		else $out = QuarkStreamEnvironment::ControllerCommand(
 			QuarkStreamEnvironment::COMMAND_BROADCAST,
-			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data)
+			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
+			$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'QuarkCLIEnvironment'
 		);
 
 		unset($env, $data);
@@ -3694,7 +4267,7 @@ trait QuarkStreamBehavior {
 	 */
 	public function InvokeStream ($url = '', $input = [], QuarkSession $session = null) {
 		$num = func_num_args();
-		
+
 		return $this->InvokeURL(
 			$url,
 			'Stream',
@@ -3713,241 +4286,6 @@ trait QuarkStreamBehavior {
 			return $env->Cluster();
 
 		return $this->_null;
-	}
-}
-
-/**
- * Trait QuarkCLIBehavior
- *
- * @package Quark
- */
-trait QuarkCLIBehavior {
-	use QuarkServiceBehavior;
-
-	/**
-	 * @var array $_shellInput = []
-	 */
-	private $_shellInput = array();
-
-	/**
-	 * @var array $_shellOutput = []
-	 */
-	private $_shellOutput = array();
-
-	/**
-	 * @param string $command = ''
-	 * @param string[] &$output = []
-	 * @param int &$status = 0
-	 *
-	 * @return bool
-	 */
-	public function Shell ($command = '', &$output = [], &$status = 0) {
-		if (strlen($command) == 0) return false;
-
-		exec($command, $output, $status);
-		$this->_shellOutput = $output;
-
-		return $status == 0;
-	}
-
-	/**
-	 * @param array $argv = []
-	 *
-	 * @return array
-	 */
-	public function ShellInput ($argv = []) {
-		if (func_num_args() != 0)
-			$this->_shellInput = $argv;
-
-		return $this->_shellInput;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function ShellOutput () {
-		return $this->_shellOutput;
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param QuarkCLIColor $color = null
-	 * @param bool $reset = true
-	 * 
-	 * @return string
-	 */
-	public function ShellLine ($data = '', QuarkCLIColor $color = null, $reset = true) {
-		return ($color ? $color->Display() : '') . $data . ($color && $reset ? QuarkCLIColor::Reset()->Display() : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = true
-	 *
-	 *
-	 * @return string
-	 */
-	public function ShellLineSuccess ($data = '', $newLine = true) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::GREEN)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = true
-	 *
-	 *
-	 * @return string
-	 */
-	public function ShellLineWarning ($data = '', $newLine = true) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::YELLOW)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $data = ''
-	 * @param bool $newLine = true
-	 *
-	 * @return string
-	 */
-	public function ShellLineError ($data = '', $newLine = true) {
-		return $this->ShellLine($data, new QuarkCLIColor(QuarkCLIColor::RED)) . ($newLine ? "\r\n" : '');
-	}
-	
-	/**
-	 * @param string $message = ''
-	 * @param string $lvl = Quark::LOG_INFO
-	 * @param bool $space = true
-	 */
-	public function ShellLog ($message = '', $lvl = Quark::LOG_INFO, $space = true) {
-		echo ($space ? ' ' : '') . $this->ShellLine($message, QuarkCLIColor::ForLog($lvl));
-	}
-	
-	/**
-	 * @param string $title = ''
-	 * @param string $content = ''
-	 * @param callable $process = null
-	 */
-	public function ShellView ($title = '', $content = '', callable $process = null) {
-		echo "\r\n ",
-			$this->ShellLine(' ' . $title . ' ', new QuarkCLIColor(
-				QuarkCLIColor::BLACK,
-				QuarkCLIColor::WHITE
-			)),
-			($content ? "\r\n " . $content : '');
-		
-		if ($process) $process();
-		
-		echo "\r\n ";
-	}
-
-	/**
-	 * @param int $id = 0
-	 *
-	 * @return mixed
-	 */
-	public function Arg ($id = 0) {
-		return isset($this->_shellInput[$id]) ? $this->_shellInput[$id] : null;
-	}
-
-	/**
-	 * @return array
-	 */
-	public function ServiceArgs () {
-		if (!isset($this->_shellInput[0]))
-			return $this->_shellInput;
-
-		$args = array_slice($this->_shellInput, 1);
-
-		if ($args[0] == QuarkTask::PREDEFINED)
-			$args = array_slice($args, 1);
-
-		$args = array_slice($args, 1);
-
-		return $args;
-	}
-
-	/**
-	 * @param int $id = 0
-	 *
-	 * @return mixed
-	 */
-	public function ServiceArg ($id = 0) {
-		$args = $this->ServiceArgs();
-
-		return isset($args[$id]) ? $args[$id] : null;
-	}
-
-	/**
-	 * @param string $arg = ''
-	 * @param string $flag = ''
-	 * @param string $alias = ''
-	 * @param string $prefixFlag = '--'
-	 * @param string $prefixAlias = '-'
-	 *
-	 * @return bool
-	 */
-	private function _isFlag ($arg = '', $flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
-		$flag = $prefixFlag . $flag;
-		$alias = $prefixAlias . $alias;
-
-		return $arg == $flag || ($alias != '' && $arg == $alias);
-	}
-
-	/**
-	 * @param string $flag = ''
-	 * @param string $alias = ''
-	 * @param string $prefixFlag = '--'
-	 * @param string $prefixAlias = '-'
-	 *
-	 * @return bool
-	 */
-	public function HasFlag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
-		foreach ($this->_shellInput as $arg)
-			if ($this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)) return true;
-		
-		return false;
-	}
-
-	/**
-	 * @param string $flag = ''
-	 * @param string $alias = ''
-	 * @param string $prefixFlag = '--'
-	 * @param string $prefixAlias = '-'
-	 *
-	 * @return mixed
-	 */
-	public function Flag ($flag = '', $alias = '', $prefixFlag = '--', $prefixAlias = '-') {
-		$i = 0;
-		$size = sizeof($this->_shellInput);
-
-		while ($i < $size) {
-			$arg = $this->_shellInput[$i];
-			$next = isset($this->_shellInput[$i + 1]) ? $this->_shellInput[$i + 1] : null;
-
-			$ok = $this->_isFlag($arg, $flag, $alias, $prefixFlag, $prefixAlias)
-				&& $next !== null
-				&& !$this->_isFlag($next, $flag, $alias, $prefixFlag, $prefixAlias);
-
-			if ($ok) return $next;
-
-			$i++;
-		}
-
-		return null;
-	}
-
-	/**
-	 * @param IQuarkAsyncTask $task
-	 * @param array $args = []
-	 * @param string $queue = QuarkTask::QUEUE
-	 *
-	 * @return mixed
-	 *
-	 * @throws QuarkArchException
-	 */
-	public function AsyncTask (IQuarkAsyncTask $task, $args = [], $queue = QuarkTask::QUEUE) {
-		$cmd = new QuarkTask($task);
-
-		return $cmd->AsyncLaunch($args, $queue);
 	}
 }
 
@@ -4394,6 +4732,24 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
+	 * @param IQuarkService $service
+	 * @param string[] $urls = []
+	 *
+	 * @return bool
+	 */
+	public static function URLMatch (IQuarkService $service, $urls = []) {
+		$url = self::URLOf($service);
+
+		if (substr($url, -6) == '/Index')
+			$url = substr($url, 0, -6);
+
+		foreach ($urls as $i => &$item)
+			if (preg_match('#^' . $item . '$#is', $url)) return true;
+
+		return false;
+	}
+
+	/**
 	 * @param bool $checkSignature = false
 	 * @param QuarkClient $connection = null
 	 *
@@ -4529,7 +4885,7 @@ class QuarkService implements IQuarkContainer {
 	}
 
 	/**
-	 * reset service
+	 * Reset QuarkService
 	 */
 	public function __destruct () {
 		unset($this->_service);
@@ -4976,6 +5332,17 @@ class QuarkObject {
 	}
 
 	/**
+	 * https://stackoverflow.com/a/9412313/2097055
+	 *
+	 * @param $object
+	 *
+	 * @return bool
+	 */
+	public static function isEmpty ($object = null) {
+		return !$object || empty($object) || empty((array)$object);
+	}
+
+	/**
 	 * @param $source
 	 * @param $type
 	 *
@@ -5301,10 +5668,11 @@ trait QuarkViewBehavior {
 	/**
 	 * @param string $resource = ''
 	 * @param bool $localized = false
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeResourceURL ($resource = '', $localized = false) {
+	public function ThemeResourceURL ($resource = '', $localized = false, $full = false) {
 		return $this->__call('ThemeResourceURL', func_get_args());
 	}
 
@@ -5343,6 +5711,26 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param string $code = ''
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkInlineCSSViewResource
+	 */
+	public function InlineCSS ($code = '', $minimize = true) {
+		return new QuarkInlineCSSViewResource($code, $minimize);
+	}
+
+	/**
+	 * @param string $code = ''
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkInlineJSViewResource
+	 */
+	public function InlineJS ($code = '', $minimize = true) {
+		return new QuarkInlineJSViewResource($code, $minimize);
+	}
+
+	/**
 	 * @param string $uri
 	 * @param bool $signed = false
 	 *
@@ -5350,6 +5738,16 @@ trait QuarkViewBehavior {
 	 */
 	public function Link ($uri, $signed = false) {
 		return $this->__call('Link', func_get_args());
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function FullLink ($uri, $signed = false) {
+		return $this->__call('FullLink', func_get_args());
 	}
 
 	/**
@@ -5377,6 +5775,13 @@ trait QuarkViewBehavior {
 	 */
 	public function Language ($language = QuarkLanguage::ANY) {
 		return $this->__call('Language', func_get_args());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Languages () {
+		return $this->__call('Languages', func_get_args());
 	}
 
 	/**
@@ -5569,53 +5974,49 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param bool $obfuscate = true
+	 * @param bool $minimize = true
 	 *
 	 * @return string
 	 */
-	public function Resources ($obfuscate = true) {
+	public function Resources ($minimize = true) {
 		$out = '';
 		$type = null;
-		$res = null;
-		$location = null;
-		$content = null;
+		$source = new QuarkSource();
 
 		$this->ResourceList();
 
-		/**
-		 * @var IQuarkViewResource|IQuarkSpecifiedViewResource|IQuarkForeignViewResource|IQuarkLocalViewResource|IQuarkInlineViewResource|IQuarkViewResourceWithLocationControl $resource
-		 */
-		foreach ($this->_resources as $resource) {
+		foreach ($this->_resources as $i => &$resource) {
+			$source->Unload();
+			$min = $minimize && $resource instanceof IQuarkMinimizableViewResource && $resource->Minimize();
+
 			if ($resource instanceof IQuarkInlineViewResource) {
-				$out .= $obfuscate && $resource instanceof IQuarkLocalViewResource && $resource->CacheControl()
-					? QuarkSource::ObfuscateString($resource->HTML())
-					: $resource->HTML();
+				if ($min)
+					$source->Minimize();
 
-				continue;
+				$out .= $resource->HTML($min);
 			}
 
-			if (!($resource instanceof IQuarkSpecifiedViewResource)) continue;
+			if ($resource instanceof IQuarkSpecifiedViewResource) {
+				$type = $resource->Type();
 
-			$type = $resource->Type();
-			if (!($type instanceof IQuarkViewResourceType)) continue;
+				if ($type instanceof IQuarkViewResourceType) {
+					$source->Location($resource->Location());
 
-			$location = $resource->Location();
-			$content = '';
-			
-			if ($resource instanceof IQuarkForeignViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(false))) { }
+					if ($resource instanceof IQuarkForeignViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(false))) { }
 
-			if ($resource instanceof IQuarkLocalViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(true))) {
-				$res = new QuarkSource($location, true);
+					if ($resource instanceof IQuarkLocalViewResource || ($resource instanceof IQuarkViewResourceWithLocationControl && $resource->LocationControl(true))) {
+						$source->Load();
+						$source->Location('');
+					}
 
-				if ($obfuscate && $resource->CacheControl())
-					$res->Obfuscate();
+					if ($min) {
+						$source->Trim($type->Trim());
+						$source->Minimize();
+					}
 
-				$content = $res->Content();
-
-				$location = '';
+					$out .= $type->Container($source->Location(), $type->AfterMinimize($source->Content()));
+				}
 			}
-
-			$out .= $type->Container($location, $content);
 		}
 
 		return $out;
@@ -5718,13 +6119,10 @@ class QuarkView implements IQuarkContainer {
 		/**
 		 * @var IQuarkViewResource $dependency
 		 */
-		foreach ($resources as $dependency) {
+		foreach ($resources as $i => &$dependency) {
 			if ($dependency == null) continue;
 
-			if ($dependency instanceof IQuarkViewResourceWithDependencies) $this->_resource($dependency);
-			if ($this->_resource_loaded($dependency)) continue;
-
-			$this->_resources[] = $dependency;
+			$this->_resource($dependency);
 		}
 	}
 
@@ -5741,7 +6139,7 @@ class QuarkView implements IQuarkContainer {
 		/**
 		 * @var IQuarkViewResource $resource
 		 */
-		foreach ($this->_resources as $resource)
+		foreach ($this->_resources as $i => &$resource)
 			if (get_class($resource) == $class) return true;
 
 		return false;
@@ -5795,11 +6193,12 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param bool $localized = true
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeURL ($localized = true) {
-		return Quark::WebLocation($this->Theme($localized));
+	public function ThemeURL ($localized = true, $full = false) {
+		return Quark::WebLocation($this->Theme($localized), $full);
 	}
 
 	/**
@@ -5815,11 +6214,12 @@ class QuarkView implements IQuarkContainer {
 	/**
 	 * @param string $resource = ''
 	 * @param bool $localized = false
+	 * @param bool $full = false
 	 *
 	 * @return string
 	 */
-	public function ThemeResourceURL ($resource = '', $localized = false) {
-		return $this->ThemeURL($localized) . '/' . $resource;
+	public function ThemeResourceURL ($resource = '', $localized = false, $full = false) {
+		return $this->ThemeURL($localized, $full) . '/' . $resource;
 	}
 
 	/**
@@ -5844,10 +6244,30 @@ class QuarkView implements IQuarkContainer {
 	 *
 	 * @return string
 	 */
-	public function Link ($uri, $signed = false) {
-		return Quark::WebLocation($uri . ($signed ? QuarkURI::BuildQuery($uri, array(
+	private function _link ($uri, $signed = false) {
+		return $uri . ($signed ? QuarkURI::BuildQuery($uri, array(
 				QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
-			)) : ''));
+			)) : '');
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function Link ($uri, $signed = false) {
+		return Quark::WebLocation($this->_link($uri, $signed), false);
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function FullLink ($uri, $signed = false) {
+		return Quark::WebLocation($this->_link($uri, $signed), true);
 	}
 
 	/**
@@ -5859,7 +6279,8 @@ class QuarkView implements IQuarkContainer {
 	 * @return string
 	 */
 	public function SignedAction ($uri, $button, $method = QuarkDTO::METHOD_POST, $formStyle = self::SIGNED_ACTION_FORM_STYLE) {
-		return /** @lang text */'<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
+		/** @lang text */
+		return '<form action="' . $uri . '" method="' . $method . '" style="' . $formStyle . '">' . $button . $this->Signature() . '</form>';
 	}
 
 	/**
@@ -5875,11 +6296,12 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param string $path = ''
+	 * @param bool $full = true
 	 *
 	 * @return string
 	 */
-	public function WebLocation ($path = '') {
-		return Quark::WebLocation($path);
+	public function WebLocation ($path = '', $full = true) {
+		return Quark::WebLocation($path, $full);
 	}
 
 	/**
@@ -5927,6 +6349,23 @@ class QuarkView implements IQuarkContainer {
 			$out = '<ul class="quark-list">' . $out . '</ul>';
 
 		return $out;
+	}
+
+	/**
+	 * @param string $name = 'timezone'
+	 * @param string $selected = null
+	 * @param string $format = QuarkCultureISO::TIME
+	 *
+	 * @return string
+	 */
+	public function TimezoneSelector ($name = 'timezone', $selected = null, $format = QuarkCultureISO::TIME) {
+		$zones = QuarkDate::TimezoneList();
+		$out = '<select class="quark-input" name=' . $name . '>';
+
+		foreach ($zones as $zone => &$offset)
+			$out .= '<option value="' . $zone . '"' . ($selected === $zone ? ' selected="selected"' : '') . '>(UTC ' . $offset->Format($format, true) . ') ' . $zone . '</option>';
+
+		return $out . '</select>';
 	}
 
 	/**
@@ -6092,6 +6531,13 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @return string[]
+	 */
+	public function Languages () {
+		return Quark::Config()->Languages();
+	}
+
+	/**
 	 * @param string $language = QuarkLanguage::ANY
 	 * @param string[] $languages = []
 	 * 
@@ -6172,27 +6618,7 @@ class QuarkView implements IQuarkContainer {
 		ob_start();
 		/** @noinspection PhpIncludeInspection */
 		include $this->_file;
-		$out = ob_get_clean();
-
-		if ($this->_inline) {
-			if (preg_match_all('#id="(.*)"#Uis', $out, $ids, PREG_SET_ORDER)) {
-				foreach ($ids as $id) {
-					$css = '';
-
-					if (preg_match_all('#\#' . $id[1] . '{(.*)}#Uis', $out, $id_css, PREG_SET_ORDER)) {
-
-						foreach ($id_css as $id_c) {
-							$css .= $id_c[1];
-							$out = str_replace('#' . $id[1] . '{' . $id_c[1] . '}', '', $out);
-						}
-					}
-
-					$out = str_replace('id="' . $id[1] . '"', 'id="' . $id[1] . '" style="' . $css . '"', $out);
-				}
-			}
-		}
-
-		return $out;
+		return ob_get_clean();
 	}
 
 	/**
@@ -6393,7 +6819,6 @@ interface IQuarkSpecifiedViewResource extends IQuarkViewResource {
 	 * @return string
 	 */
 	public function Location();
-
 }
 
 /**
@@ -6421,16 +6846,23 @@ interface IQuarkViewResourceWithBackwardDependencies extends IQuarkViewResource 
 }
 
 /**
+ * Interface IQuarkMinimizableViewResource
+ *
+ * @package Quark
+ */
+interface IQuarkMinimizableViewResource {
+	/**
+	 * @return bool
+	 */
+	public function Minimize();
+}
+
+/**
  * Interface IQuarkLocalViewResource
  *
  * @package Quark
  */
-interface IQuarkLocalViewResource extends IQuarkViewResource {
-	/**
-	 * @return bool
-	 */
-	public function CacheControl();
-}
+interface IQuarkLocalViewResource extends IQuarkViewResource, IQuarkMinimizableViewResource { }
 
 /**
  * Interface IQuarkForeignViewResource
@@ -6449,7 +6881,7 @@ interface IQuarkForeignViewResource extends IQuarkViewResource {
  *
  * @package Quark
  */
-interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResource {
+interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResource, IQuarkMinimizableViewResource {
 	/**
 	 * @param bool $local
 	 *
@@ -6463,25 +6895,13 @@ interface IQuarkViewResourceWithLocationControl extends IQuarkSpecifiedViewResou
  *
  * @package Quark
  */
-interface IQuarkInlineViewResource extends IQuarkViewResource {
+interface IQuarkInlineViewResource extends IQuarkViewResource, IQuarkMinimizableViewResource {
 	/**
-	 * @return string
-	 */
-	public function HTML();
-}
-
-/**
- * Interface IQuarkViewResourceWithAfterObfuscate
- *
- * @package Quark
- */
-interface IQuarkViewResourceWithAfterObfuscate extends IQuarkViewResource {
-	/**
-	 * @param string $source
+	 * @param bool $minimize
 	 *
 	 * @return string
 	 */
-	public function AfterObfuscate($source);
+	public function HTML($minimize);
 }
 
 /**
@@ -6509,11 +6929,47 @@ interface IQuarkCombinedViewResource extends IQuarkViewResource {
 }
 
 /**
+ * Trait QuarkMinimizableViewResourceBehavior
+ *
+ * @package Quark
+ */
+trait QuarkMinimizableViewResourceBehavior {
+	/**
+	 * @var bool $_minimize = true
+	 */
+	private $_minimize = true;
+
+	/**
+	 * @param bool $minimize = true
+	 *
+	 * @return bool
+	 */
+	public function Minimize ($minimize = true) {
+		if (func_num_args() != 0)
+			$this->_minimize = $minimize;
+
+		return $this->_minimize;
+	}
+
+	/**
+	 * @param string $source = ''
+	 * @param string[] $trim = []
+	 *
+	 * @return string
+	 */
+	public function MinimizeString ($source = '', $trim = []) {
+		return QuarkSource::MinimizeString($source, func_num_args() == 2 ? $trim : explode(' ', QuarkSource::TRIM));
+	}
+}
+
+/**
  * Class QuarkGenericViewResource
  *
  * @package Quark
  */
-class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithAfterObfuscate, IQuarkViewResourceWithLocationControl, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkViewResourceWithLocationControl, IQuarkMultipleViewResource, IQuarkViewResourceWithDependencies {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @var IQuarkViewResourceType $_type = null
 	 */
@@ -6523,11 +6979,6 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @var string $_location = ''
 	 */
 	private $_location = '';
-
-	/**
-	 * @var bool $_minimize = true
-	 */
-	private $_minimize = true;
 
 	/**
 	 * @var IQuarkViewResource[] $_dependencies = []
@@ -6544,12 +6995,14 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 */
-	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = []) {
+	public function __construct ($location, IQuarkViewResourceType $type, $minimize = true, $dependencies = [], $local = true) {
 		$this->_location = $location;
 		$this->_type = $type;
 		$this->_minimize = $minimize;
 		$this->_dependencies = $dependencies;
+		$this->_local = $local;
 	}
 
 	/**
@@ -6565,9 +7018,9 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	}
 
 	/**
-	 * @return IQuarkViewResourceType
+	 * @return IQuarkViewResourceType|QuarkJSViewResourceType|QuarkCSSViewResourceType
 	 */
-	public function Type () {
+	public function &Type () {
 		return $this->_type;
 	}
 
@@ -6576,32 +7029,6 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 */
 	public function Location () {
 		return $this->_location;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return $this->_minimize;
-	}
-
-	/**
-	 * @return void
-	 */
-	public function RequestDTO () {
-		// TODO: Implement RequestDTO() method.
-	}
-
-	/**
-	 * @param string $source
-	 *
-	 * @return string
-	 */
-	public function AfterObfuscate ($source) {
-		if ($this->_type instanceof QuarkCSSViewResourceType)
-			$source = str_replace('and(', ' and (', $source);
-
-		return $source;
 	}
 
 	/**
@@ -6624,15 +7051,16 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResource|string $location
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 *
 	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public static function CSS ($location, $minimize = true, $dependencies = []) {
+	public static function CSS ($location, $minimize = true, $dependencies = [], $local = true) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkCSSViewResourceType(), $minimize, $dependencies)
+				: new self($location, new QuarkCSSViewResourceType(), $minimize, $dependencies, $local)
 			);
 	}
 
@@ -6640,44 +7068,37 @@ class QuarkGenericViewResource implements IQuarkSpecifiedViewResource, IQuarkVie
 	 * @param IQuarkViewResource|string $location
 	 * @param bool $minimize = true
 	 * @param IQuarkViewResource[] $dependencies = []
+	 * @param bool $local = true
 	 *
 	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public static function JS ($location, $minimize = true, $dependencies = []) {
+	public static function JS ($location, $minimize = true, $dependencies = [], $local = true) {
 		return $location instanceof IQuarkViewResource
 			? $location
 			: ($location === null
 				? null
-				: new self($location, new QuarkJSViewResourceType(), $minimize, $dependencies)
+				: new self($location, new QuarkJSViewResourceType(), $minimize, $dependencies, $local)
 			);
 	}
-}
 
-/**
- * Class QuarkLocalCoreJSViewResource
- *
- * @package Quark
- */
-class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
-	 * @return IQuarkViewResourceType
+	 * @param IQuarkViewResource|string $location = ''
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public function Type () {
-		return new QuarkJSViewResourceType();
+	public static function ForeignCSS ($location = '', $dependencies = []) {
+		return self::CSS($location, false, $dependencies, false);
 	}
 
 	/**
-	 * @return string
+	 * @param IQuarkViewResource|string $location = ''
+	 * @param IQuarkViewResource[] $dependencies = []
+	 *
+	 * @return QuarkGenericViewResource|IQuarkViewResource
 	 */
-	public function Location () {
-		return __DIR__ . '/Quark.js';
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
+	public static function ForeignJS ($location = '', $dependencies = []) {
+		return self::JS($location, false, $dependencies, false);
 	}
 }
 
@@ -6687,6 +7108,8 @@ class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuar
  * @package Quark
  */
 class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -6700,31 +7123,51 @@ class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQua
 	public function Location () {
 		return __DIR__ . '/Quark.css';
 	}
+}
+
+/**
+ * Class QuarkLocalCoreJSViewResource
+ *
+ * @package Quark
+ */
+class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
+	use QuarkMinimizableViewResourceBehavior;
 
 	/**
-	 * @return bool
+	 * @return IQuarkViewResourceType
 	 */
-	public function CacheControl () {
-		return true;
+	public function Type () {
+		return new QuarkJSViewResourceType();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Location () {
+		return __DIR__ . '/Quark.js';
 	}
 }
 
 /**
- * Trait QuarkInlineViewResource
+ * Trait QuarkInlineViewResourceBehavior
  *
  * @package Quark
  */
-trait QuarkInlineViewResource {
+trait QuarkInlineViewResourceBehavior {
+	use QuarkMinimizableViewResourceBehavior;
+
 	/**
-	 * @var string $_code
+	 * @var string $_code = ''
 	 */
 	private $_code = '';
 
 	/**
-	 * @param string $code
+	 * @param string $code = ''
+	 * @param bool $minimize = true
 	 */
-	public function __construct ($code = '') {
+	public function __construct ($code = '', $minimize = true) {
 		$this->_code = $code;
+		$this->_minimize = $minimize;
 	}
 
 	/**
@@ -6736,13 +7179,6 @@ trait QuarkInlineViewResource {
 	 * @return void
 	 */
 	public function Type () { }
-
-	/**
-	 * @return bool
-	 */
-	public function CacheControl () {
-		return true;
-	}
 }
 
 /**
@@ -6751,12 +7187,14 @@ trait QuarkInlineViewResource {
  * @package Quark
  */
 class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
+	public function HTML ($minimize) {
 		return '<style type="text/css">' . $this->_code . '</style>';
 	}
 }
@@ -6767,14 +7205,15 @@ class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewR
  * @package Quark
  */
 class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
-	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
-		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;' . $this->_code . '</script>';
+	public function HTML ($minimize) {
+		return /** @lang text */'<script type="text/javascript">' . $this->_code . '</script>';
 	}
 }
 
@@ -6786,7 +7225,7 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
 class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
 	const PROXY_SESSION_VAR = 'session_user';
 
-	use QuarkInlineViewResource;
+	use QuarkInlineViewResourceBehavior;
 
 	/**
 	 * @param $var
@@ -6797,11 +7236,12 @@ class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	}
 
 	/**
-	 * @info EXTERNAL_FRAGMENT need to suppress the PHPStorm 8+ invalid spell check
+	 * @param bool $minimize
+	 *
 	 * @return string
 	 */
-	public function HTML () {
-		return '<script type="text/javascript">var EXTERNAL_FRAGMENT;' . $this->_code . '</script>';
+	public function HTML ($minimize) {
+		return /** @lang text */'<script type="text/javascript">' . $this->_code . '</script>';
 	}
 
 	/**
@@ -6858,7 +7298,7 @@ trait QuarkLexingViewResourceBehavior {
 }
 
 /**
- * Trait QuarkCombinedViewResource
+ * Trait QuarkCombinedViewResourceBehavior
  *
  * @package Quark
  */
@@ -6899,6 +7339,18 @@ interface IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container($location, $content);
+
+	/**
+	 * @return string[]
+	 */
+	public function Trim();
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize($content);
 }
 
 /**
@@ -6907,6 +7359,32 @@ interface IQuarkViewResourceType {
  * @package Quark
  */
 class QuarkCSSViewResourceType implements IQuarkViewResourceType {
+	const MEDIA = 'all|braille|handheld|print|screen|speech|projection|tty|tv';
+
+	/**
+	 * @var string[] $_media = []
+	 */
+	private $_media = array();
+
+	/**
+	 * @param string[] $media = null
+	 */
+	public function __construct ($media = null) {
+		$this->Media($media);
+	}
+
+	/**
+	 * @param string[] $media = null
+	 *
+	 * @return string[]
+	 */
+	public function Media ($media = null) {
+		if (func_num_args() != 0)
+			$this->_media = $media;
+
+		return $this->_media;
+	}
+
 	/**
 	 * @param $location
 	 * @param $content
@@ -6914,9 +7392,30 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container ($location, $content) {
+		$media = $this->_media === null || !is_array($this->_media) ? '' : ' ' . implode('|', $this->_media);
+
 		return strlen($location) != 0
-			? '<link rel="stylesheet" type="text/css" href="' . $location . '" />'
-			: '<style type="text/css">' . $content . '</style>';
+			? '<link rel="stylesheet" type="text/css" href="' . $location . '"' . $media . ' />'
+			: '<style type="text/css"' . $media . '>' . $content . '</style>';
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Trim () {
+		return QuarkSource::TrimChars(array('.', '-', ']', '['));
+	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize ($content) {
+		$content = str_replace('and(', ' and (', $content);
+		$content = str_replace('or(', ' or (', $content);
+
+		return $content;
 	}
 }
 
@@ -6927,13 +7426,76 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
  */
 class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	/**
+	 * @var bool $_defer = false
+	 */
+	private $_defer = false;
+
+	/**
+	 * @var bool $_async = false
+	 */
+	private $_async = false;
+
+	/**
+	 * @param bool $defer = false
+	 * @param bool $async = false
+	 */
+	public function __construct ($defer = false, $async = false) {
+		$this->Defer($defer);
+		$this->Async($async);
+	}
+
+	/**
+	 * @param bool $defer = false
+	 *
+	 * @return bool
+	 */
+	public function Defer ($defer = false) {
+		if (func_num_args() != 0)
+			$this->_defer = $defer;
+
+		return $this->_defer;
+	}
+
+	/**
+	 * @param bool $async = false
+	 *
+	 * @return bool
+	 */
+	public function Async ($async = false) {
+		if (func_num_args() != 0)
+			$this->_async = $async;
+
+		return $this->_async;
+	}
+
+	/**
 	 * @param $location
 	 * @param $content
 	 *
 	 * @return string
 	 */
 	public function Container ($location, $content) {
-		return /** @lang text */'<script type="text/javascript"' . (strlen($location) != 0 ? ' src="' . $location . '"' : '') . '>' . $content . '</script>';
+		return /** @lang text */'<script type="text/javascript"'
+			. (strlen($location) != 0 ? ' src="' . $location . '"' : '')
+			. ($this->_defer ? ' defer="defer"' : '')
+			. ($this->_async ? ' async="async"' : '')
+			. '>' . $content . '</script>';
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Trim () {
+		return QuarkSource::TrimChars(array('.', '-', ']', '['));
+	}
+
+	/**
+	 * @param string $content
+	 *
+	 * @return string
+	 */
+	public function AfterMinimize ($content) {
+		return $content;
 	}
 }
 
@@ -7029,7 +7591,12 @@ trait QuarkCollectionBehavior {
 				
 				continue;
 			}
-			
+
+			/**
+			 * @note This matcher behaves different from MongoDB
+			 *       In case of not existing $property it will return false, insteadof MongoDB behavior which expects true
+			 */
+			// TODO: $this->_matchTarget() signature which will serve non-existing keys if $this->MongoDBCompatible() is true
 			if (isset($document->$key))
 				$this->_matchOut($out, $outChanged, $this->_matchTarget($document->$key, $rule));
 		}
@@ -7173,6 +7740,28 @@ trait QuarkCollectionBehavior {
 					
 		return $state;
 	}
+
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_in ($property, $expected) {
+		return is_array($expected) ? sizeof(array_intersect($property, $expected)) != 0 : false;
+	}
+
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _array_nin ($property, $expected) {
+		return is_array($expected) ? sizeof(array_intersect($property, $expected)) == 0 : false;
+	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
@@ -7283,9 +7872,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_in ($property, $expected) {
-		return is_array($expected) ? in_array($property, $expected) : false;
+		return is_array($expected) && is_scalar($property) && in_array($property, $expected);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7294,9 +7883,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_nin ($property, $expected) {
-		return is_array($expected) ? !in_array($property, $expected) : false;
+		return is_array($expected) && is_scalar($property) && !in_array($property, $expected);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7305,9 +7894,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_in_s ($property, $expected) {
-		return is_array($expected) ? in_array($property, $expected, true) : false;
+		return is_array($expected) && in_array($property, $expected, true);
 	}
-	
+
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
 	 * @param $property
@@ -7316,7 +7905,7 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _compare_nin_s ($property, $expected) {
-		return is_array($expected) ? !in_array($property, $expected, true) : false;
+		return is_array($expected) && !in_array($property, $expected, true);
 	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
@@ -7422,6 +8011,24 @@ trait QuarkCollectionBehavior {
 		$out = $this->Select($query, $options);
 
 		return sizeof($out) == 0 ? null : $out[0];
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return array
+	 */
+	public function SelectRandom ($query = [], $options = []) {
+		$count = $this->Count($query);
+
+		if (!isset($options[QuarkModel::OPTION_SKIP]))
+			$options[QuarkModel::OPTION_SKIP] = mt_rand(0, $count == 0 ? 0 : $count - 1);
+
+		if (!isset($options[QuarkModel::OPTION_LIMIT]))
+			$options[QuarkModel::OPTION_LIMIT] = QuarkModel::LIMIT_RANDOM;
+
+		return $this->Select($query, $options);
 	}
 	
 	/**
@@ -7557,6 +8164,10 @@ trait QuarkCollectionBehavior {
 
 			if (isset($val['$currentDate'])) $_val($key, QuarkDate::GMTNow()->Format(QuarkCultureISO::DATETIME));
 
+			/**
+			 * @note This operators behaves different from MongoDB
+			 *       They are used as VALUES for selected fields, not as top-level modifiers
+			 */
 			if (!$this->_secure) {
 				if (isset($val['$set'])) $_val($key, $val['$set']);
 
@@ -7627,6 +8238,16 @@ trait QuarkCollectionBehavior {
 			? $this->_collection
 			: $this->Select($query, $options)
 		);
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return bool
+	 */
+	public function Exists ($query = [], $options = []) {
+		return $this->Count($query, $options) != 0;
 	}
 
 	/**
@@ -7812,12 +8433,13 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	use QuarkCollectionBehaviorWithArrayAccess {
 		Select as private _select;
+		SelectRandom as private _selectRandom;
 		Aggregate as private _aggregate;
 		offsetSet as private _offsetSet;
 	}
-	
+
 	/**
-	 * @var IQuarkModel|mixed $_type  = null
+	 * @var IQuarkModel|QuarkModelBehavior|mixed $_type  = null
 	 */
 	private $_type = null;
 	
@@ -7837,7 +8459,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	private $_pages = 0;
 
 	/**
-	 * @param object $type
+	 * @param IQuarkModel|QuarkModelBehavior|mixed $type
 	 * @param array $source = []
 	 */
 	public function __construct ($type, $source = []) {
@@ -7981,6 +8603,21 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
+	 * @param callable $iterator = null
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Filter (callable $iterator = null) {
+		$output = new self($this->_type);
+
+		foreach ($this->_collection as $key => &$item)
+			if ($iterator == null || $iterator($item, $key))
+				$output[] = $item;
+
+		return $output;
+	}
+
+	/**
 	 * @param array $fields = null
 	 * @param bool $weak = false
 	 *
@@ -8045,6 +8682,51 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function SelectRandom ($query = [], $options = []) {
+		return new self($this->_type, $this->_selectRandom($query, $options));
+	}
+
+	/**
+	 * @param int $page = 1
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function SelectByPage ($page = 1, $query = [], $options = []) {
+		if (!isset($options[QuarkModel::OPTION_LIMIT]))
+			$options[QuarkModel::OPTION_LIMIT] = QuarkModel::LIMIT_PAGED;
+
+		$pages = 1;
+		$page = (int)$page;
+		if ($page < 1) $page = 1;
+
+		if ($options[QuarkModel::OPTION_LIMIT] != QuarkModel::LIMIT_NO) {
+			$options[QuarkModel::OPTION_LIMIT] = (int)$options[QuarkModel::OPTION_LIMIT];
+
+			if ($options[QuarkModel::OPTION_LIMIT] < 1)
+				$options[QuarkModel::OPTION_LIMIT] = 1;
+
+			$pages = (int)ceil($this->Count($query) / $options[QuarkModel::OPTION_LIMIT]);
+		}
+
+		if (!isset($options[QuarkModel::OPTION_SKIP]))
+			$options[QuarkModel::OPTION_SKIP] = ($page - 1) * $options[QuarkModel::OPTION_LIMIT];
+
+		$out = $this->Select($query, $options);
+
+		$out->Page($page);
+		$out->Pages($pages);
+
+		return $out;
+	}
+
+	/**
 	 * @param array $options = []
 	 *
 	 * @return QuarkCollection
@@ -8104,6 +8786,14 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 */
 	public static function Lazy (IQuarkLinkedModel $model, $value = null) {
 		return new self(new QuarkLazyLink($model, $value));
+	}
+
+	/**
+	 * Reset QuarkCollection
+	 */
+	public function __destruct () {
+		unset($this->_collection);
+		unset($this->_type);
 	}
 }
 
@@ -9519,6 +10209,19 @@ class QuarkModel implements IQuarkContainer {
 	/**
 	 * @param IQuarkModel|QuarkModelBehavior $model
 	 * @param $criteria = []
+	 * @param int $limit = 0
+	 * @param int $skip = 0
+	 * @param array $options = []
+	 *
+	 * @return bool
+	 */
+	public static function Exists (IQuarkModel $model, $criteria = [], $limit = 0, $skip = 0, $options = []) {
+		return self::Count($model, $criteria, $limit, $skip, $options) != 0;
+	}
+
+	/**
+	 * @param IQuarkModel|QuarkModelBehavior $model
+	 * @param $criteria = []
 	 * @param array $options = []
 	 *
 	 * @return mixed
@@ -9551,6 +10254,14 @@ class QuarkModel implements IQuarkContainer {
 			: true;
 
 		return ($ok || $ok === null) ? self::_provider($model)->Delete($model, $criteria, $options) : false;
+	}
+
+	/**
+	 * Reset QuarkModel
+	 */
+	public function __destruct () {
+		unset($this->_model);
+		unset($this->_errors);
 	}
 }
 
@@ -10338,6 +11049,7 @@ class QuarkField {
 	 */
 	private static function _dateTime ($type, $key, $nullable = false, IQuarkCulture $culture = null) {
 		if ($nullable && $key == null) return true;
+		if (!is_string($key)) return false;
 
 		if ($culture == null)
 			$culture = Quark::Config()->Culture();
@@ -10384,15 +11096,17 @@ class QuarkField {
 
 	/**
 	 * @param $key
+	 * @param int $minLevel = 1
+	 * @param int $maxLevel = -1
 	 * @param bool $nullable = false
 	 *
 	 * @return bool
 	 */
-	public static function Email ($key, $nullable = false) {
+	public static function Email ($key, $minLevel = 1, $maxLevel = -1, $nullable = false) {
 		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
-		return preg_match('#(.+)\@(.+)#Uis', $key);
+		return preg_match('#^(\S+)\@([^@.]+\.){' . ($minLevel < 0 ? 0 : $minLevel) . ',' . ($maxLevel < 0 ? '' : $maxLevel) . '}$#', $key . '.');
 	}
 
 	/**
@@ -11183,6 +11897,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public function InTimezone ($timezone = self::CURRENT, $copy = false) {
 		$this->_timezone = $timezone;
+
 		return $this->Offset('+' . self::TimezoneOffset($timezone) . ' seconds', $copy);
 	}
 
@@ -11278,11 +11993,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 
 	/**
 	 * @param string $date
+	 * @param bool $ignoreTimezone = false
 	 *
 	 * @return QuarkDate
 	 */
-	public static function GMTOf ($date) {
-		return self::Of($date, self::GMT);
+	public static function GMTOf ($date, $ignoreTimezone = false) {
+		$out = self::Of($date, self::GMT);
+
+		return $ignoreTimezone && $out != null ? self::GMTOf($out->Format('Y-m-d H:i:s')) : $out;
 	}
 
 	/**
@@ -11334,6 +12052,19 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		}
 
 		return (new \DateTimeZone($timezone))->getOffset(self::GMTNow()->Value());
+	}
+
+	/**
+	 * @return QuarkDateInterval[]
+	 */
+	public static function TimezoneList () {
+		$zones = \DateTimeZone::listIdentifiers();
+		$out = array();
+
+		foreach ($zones as $i => &$zone)
+			$out[$zone] = QuarkDateInterval::FromSeconds(self::TimezoneOffset($zone));
+
+		return $out;
 	}
 
 	/**
@@ -11427,6 +12158,7 @@ class QuarkDateInterval {
 	
 	const SECONDS_IN_YEAR = 31536000;
 	const SECONDS_IN_MONTH = 2678400;
+	const SECONDS_IN_WEEK = 604800;
 	const SECONDS_IN_DAY = 86400;
 	const SECONDS_IN_HOUR = 3600;
 	const SECONDS_IN_MINUTE = 60;
@@ -11434,18 +12166,25 @@ class QuarkDateInterval {
 	
 	const MINUTES_IN_YEAR = 525600;
 	const MINUTES_IN_MONTH = 44640;
+	const MINUTES_IN_WEEK = 10080;
 	const MINUTES_IN_DAY = 1440;
 	const MINUTES_IN_HOUR = 60;
 	const MINUTES_IN_MINUTE = 1;
 	
 	const HOURS_IN_YEAR = 8760;
 	const HOURS_IN_MONTH = 744;
+	const HOURS_IN_WEEK = 168;
 	const HOURS_IN_DAY = 24;
 	const HOURS_IN_HOUR = 1;
 	
 	const DAYS_IN_YEAR = 365;
 	const DAYS_IN_MONTH = 31;
+	const DAYS_IN_WEEK = 7;
 	const DAYS_IN_DAY = 1;
+
+	const WEEKS_IN_YEAR = 52;
+	const WEEKS_IN_MONTH = 4;
+	const WEEKS_IN_WEEK = 1;
 	
 	const MONTHS_IN_YEAR = 12;
 	const MONTHS_IN_MONTH = 1;
@@ -11739,6 +12478,36 @@ class QuarkDateInterval {
 	 */
 	public function Rate ($rate = 1) {
 		return self::FromSeconds($this->Seconds() * $rate);
+	}
+
+	/**
+	 * @param string $elapsed
+	 * @param array $mappings
+	 * @param string $unit
+	 *
+	 * @return string
+	 */
+	private function _elapsed ($elapsed, $mappings, $unit) {
+		return $this->{$unit . 's'} . ' ' . (isset($mappings[$unit]) ? $mappings[$unit] : $unit . 's') . ',' . $elapsed;
+	}
+
+	/**
+	 * @param array $mappings = []
+	 * @param int $units = 1
+	 *
+	 * @return string
+	 */
+	public function Elapsed ($mappings = [], $units = 1) {
+		$elapsed = '';
+
+		if ($this->seconds != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_SECOND);
+		if ($this->minutes != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_MINUTE);
+		if ($this->hours != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_HOUR);
+		if ($this->days != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_DAY);
+		if ($this->months != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_MONTH);
+		if ($this->years != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_YEAR);
+
+		return implode(', ', array_slice(explode(',', trim($elapsed, ',')), 0, $units));
 	}
 	
 	/**
@@ -12732,7 +13501,7 @@ class QuarkSession {
 	}
 
 	/**
-	 * Destructor
+	 * Reset QuarkSession
 	 */
 	public function __destruct () {
 		unset($this->_user);
@@ -13055,7 +13824,7 @@ trait QuarkNetwork {
 	 * @return IQuarkNetworkTransport
 	 */
 	public function Transport (IQuarkNetworkTransport $transport = null) {
-		if (func_num_args() == 1 && $transport != null)
+		if (func_num_args() != 0 && $transport != null)
 			$this->_transport = $transport;
 
 		return $this->_transport;
@@ -13457,15 +14226,18 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Close ($event = true) {
+		if (!$this->_connected) return true;
+
 		$this->_connected = false;
 
 		if ($event && $this->_transport instanceof IQuarkNetworkTransport)
 			$this->_transport->EventClose($this);
 
 		$this->_remote = null;
-		$this->_transport = null;
 		$this->_rps = 0;
-		$this->_rpsTimer = null;
+
+		if ($this->_rpsTimer != null)
+			$this->_rpsTimer->Destroy();
 
 		return self::SocketClose($this->_socket);
 	}
@@ -13495,8 +14267,10 @@ class QuarkClient implements IQuarkEventable {
 	 * @param $data
 	 */
 	public function TriggerData ($data) {
-		$this->_rpsCount++;
-		$this->_rpsTimer->Invoke();
+		if ($this->_rpsTimer != null) {
+			$this->_rpsCount++;
+			$this->_rpsTimer->Invoke();
+		}
 
 		$this->TriggerArgs(QuarkClient::EVENT_DATA, array(&$this, $data));
 	}
@@ -13636,6 +14410,20 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function &Channels () {
 		return $this->_channels;
+	}
+
+	/**
+	 * Reset QuarkClient
+	 */
+	public function __destruct () {
+		unset($this->_rpsTimer);
+		unset($this->_certificate);
+		unset($this->_channels);
+		unset($this->_events);
+		unset($this->_remote);
+		unset($this->_session);
+		unset($this->_transport);
+		unset($this->_socket);
 	}
 }
 
@@ -14571,7 +15359,7 @@ interface IQuarkCluster extends IQuarkPeer {
 class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	const URI_NODE_INTERNAL = QuarkServer::TCP_ALL_INTERFACES_RANDOM_PORT;
 	const URI_NODE_EXTERNAL = 'ws://0.0.0.0:25000';
-	const URI_CONTROLLER_INTERNAL = 'tcp://0.0..0:25800';
+	const URI_CONTROLLER_INTERNAL = 'tcp://0.0.0.0:25800';
 	const URI_CONTROLLER_EXTERNAL = 'ws://0.0.0.0:25900';
 
 	const PACKAGE_REQUEST = 'url';
@@ -14661,27 +15449,36 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	private function _errorCryptogram ($action, $error) {
 		$this->_log($action, $error, array(
-			'This usually happens when mistyping certificate options for stream environment. Check your configuration.'
+			'This usually happens when mistyping certificate options for stream environment or client requested a non-supported SSL/TLS protocol version. Check your configuration.'
 		));
 	}
 
 	/**
+	 * @var QuarkClient $_controller
+	 */
+	private static $_controller;
+
+	/**
 	 * @param string $name
 	 * @param array|object $data
+	 * @param bool $persistent = false
 	 *
 	 * @return bool
 	 */
-	public static function ControllerCommand ($name = '', $data = []) {
-		$client = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
+	public static function ControllerCommand ($name = '', $data = [], $persistent = false) {
+		if (self::$_controller != null) $ok = self::$_controller->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
+		else {
+			self::$_controller = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$name, &$data) {
-			$client->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
-			$client->Close();
-		});
+			self::$_controller->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) use (&$name, &$data, &$persistent) {
+				$client->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
+				if (!$persistent) $client->Close();
+			});
 
-		$ok = $client->Connect();
+			$ok = self::$_controller->Connect();
+		}
 
-		unset($client);
+		if (!$persistent) unset(self::$_controller);
 
 		return $ok;
 	}
@@ -15078,6 +15875,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return bool
 	 */
 	public function EnvironmentMultiple () { return true; }
+
+	/**
+	 * @return bool
+	 */
+	public function EnvironmentQueued () { return true; }
 
 	/**
 	 * @return string
@@ -15734,13 +16536,14 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param bool $full
+	 * @param bool $full = false
+	 * @param bool $path = true
 	 *
 	 * @return string
 	 */
-	public function URI ($full = false) {
+	public function URI ($full = false, $path = true) {
 		return $this->Hostname()
-			. ($this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
+			. ($path && $this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
 			. ($full ? '/?' . $this->query : '');
 	}
 
@@ -16231,6 +17034,11 @@ class QuarkDTO {
 	private $_rawData = '';
 
 	/**
+	 * @var callable $_rawProcessor = null
+	 */
+	private $_rawProcessor = null;
+
+	/**
 	 * @var IQuarkIOProcessor $_processor = null
 	 */
 	private $_processor = null;
@@ -16544,9 +17352,10 @@ class QuarkDTO {
 	 */
 	public function MergeData ($data) {
 		if ($this->_data instanceof QuarkView || $data === null) return $this->_data;
+		if (!is_scalar($this->_data) && is_scalar($data)) return $this->_data;
 
 		if (is_string($data) && is_string($this->_data)) $this->_data .= $data;
-		elseif($data instanceof QuarkView) $this->_data = $data;
+		elseif ($data instanceof QuarkView) $this->_data = $data;
 		else $this->_data = QuarkObject::Merge($this->_data, $data);
 
 		return $this->_data;
@@ -16990,6 +17799,13 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function RawHeaders () {
+		return substr($this->_raw, 0, strpos($this->_raw, "\r\n\r\n"));
+	}
+
+	/**
 	 * @param string $raw
 	 *
 	 * @return string
@@ -16999,6 +17815,36 @@ class QuarkDTO {
 			$this->_rawData = $raw;
 
 		return $this->_rawData;
+	}
+
+	/**
+	 * @param callable $processor = null
+	 *
+	 * @return callable
+	 */
+	public function RawProcessor (callable $processor = null) {
+		if (func_num_args() != 0)
+			$this->_rawProcessor = $processor;
+
+		return $this->_rawProcessor;
+	}
+
+	/**
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function RawProcessorInvoke ($data = '') {
+		return $this->_rawProcessor ? call_user_func_array($this->_rawProcessor, array(&$data)) : $data;
+	}
+
+	/**
+	 * @param string $data = ''
+	 *
+	 * @return string
+	 */
+	public function Masquerade ($data = '') {
+		return $this->RawHeaders() . "\r\n\r\n" . $data;
 	}
 
 	/**
@@ -17200,11 +18046,12 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param string $raw
+	 * @param string $raw = ''
+	 * @param bool $batch = false
 	 *
 	 * @return QuarkDTO
 	 */
-	public function UnserializeResponse ($raw = '') {
+	public function UnserializeResponse ($raw = '', $batch = false) {
 		$this->_raw = $raw;
 
 		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, substr($raw, 0, self::RESPONSE_BUFFER), $found)) {
@@ -17217,7 +18064,7 @@ class QuarkDTO {
 				$this->_processor = new QuarkHTMLIOProcessor();
 
 			$this->_unserializeHeaders($found[3]);
-			$this->_unserializeBody($this->_rawData);
+			$this->_unserializeBody($this->_rawData, $batch);
 		}
 
 		return $this;
@@ -17396,12 +18243,21 @@ class QuarkDTO {
 
 	/**
 	 * @param string $raw
+	 * @param bool $batch = false
 	 *
 	 * @return QuarkDTO
 	 */
-	private function _unserializeBody ($raw) {
+	private function _unserializeBody ($raw, $batch = false) {
 		if (!$this->_multipart || strpos($raw, '--' . $this->_boundary) === false) {
-			$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
+			if (!$batch) $this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
+			else {
+				$chunks = $this->_processor->Batch($raw, true);
+
+				foreach ($chunks as $i => &$chunk) {
+					$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($chunk));
+					usleep(QuarkThreadSet::TICK);
+				}
+			}
 		}
 		else {
 			$parts = explode('--' . $this->_boundary, $raw);
@@ -17523,7 +18379,7 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
 
 		$this->_buffer .= $data;
 
-		$parts = call_user_func_array($this->_divider, array(&$this->_buffer));
+		$parts = call_user_func_array($this->_divider, array(&$this->_buffer, true));
 		$size = sizeof($parts);
 
 		$this->_buffer = '';
@@ -17565,7 +18421,17 @@ class QuarkTCPNetworkTransport implements IQuarkNetworkTransport {
  *
  * @package Quark
  */
-class QuarkHTTPClient {
+class QuarkHTTPClient implements IQuarkEventable {
+	const EVENT_ASYNC_DATA = 'client.async.data';
+	const EVENT_ASYNC_ERROR = 'client.async.error';
+
+	use QuarkEvent;
+
+	/**
+	 * @var QuarkClient $_client
+	 */
+	private $_client;
+
 	/**
 	 * @var QuarkDTO $_request
 	 */
@@ -17577,6 +18443,11 @@ class QuarkHTTPClient {
 	private $_response;
 
 	/**
+	 * @var bool $_asyncInit = false
+	 */
+	private $_asyncInit = false;
+
+	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
 	 */
@@ -17586,6 +18457,13 @@ class QuarkHTTPClient {
 
 		if ($this->_response != null)
 			$this->_request->Header(QuarkDTO::HEADER_ACCEPT, $this->_response->Processor()->MimeType());
+	}
+
+	/**
+	 * @return QuarkClient
+	 */
+	public function &Client () {
+		return $this->_client;
 	}
 
 	/**
@@ -17610,6 +18488,33 @@ class QuarkHTTPClient {
 			$this->_response = $response;
 
 		return $this->_response;
+	}
+
+	/**
+	 * @param callable $callback
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public function AsyncData (callable $callback) {
+		$this->On(self::EVENT_ASYNC_DATA, $callback);
+
+		return $this;
+	}
+
+	/**
+	 * @param int $max = -1
+	 *
+	 * @return bool
+	 */
+	public function AsyncPipe ($max = -1) {
+		return $this->_client->Pipe($max);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Connected () {
+		return $this->_client->Connected();
 	}
 
 	/**
@@ -17697,6 +18602,71 @@ class QuarkHTTPClient {
 		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
 
 		return $file;
+	}
+
+	/**
+	 * @param QuarkURI|string $uri
+	 * @param QuarkDTO $request
+	 * @param QuarkDTO $response
+	 * @param QuarkCertificate $certificate
+	 * @param int $timeout = 10
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public static function AsyncTo ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+		$http = new self($request, $response);
+		$http->_client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, false);
+
+		$http->_client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http) {
+			if ($http->_request == null) return false;
+
+			if ($http->_response == null)
+				$http->_response = new QuarkDTO();
+
+			$client->URI()->Compose($uri, $http->_request->URI() ? $http->_request->URI()->Options() : array());
+
+			$http->_request->URI($client->URI());
+			$http->_response->URI($client->URI());
+
+			$http->_request->Remote($client->ConnectionURI(true));
+			$http->_response->Remote($client->ConnectionURI(true));
+
+			$http->_response->Method($http->_request->Method());
+
+			$request = $http->_request->SerializeRequest();
+
+			return $client->Send($request);
+		});
+
+		/** @noinspection PhpUnusedParameterInspection */
+		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
+			$data = $http->_response->RawProcessorInvoke($data);
+			$chunks = $http->_response->Processor()->Batch($data, !$http->_asyncInit);
+
+			foreach ($chunks as $i => &$chunk) {
+				if ($http->_asyncInit) $chunk = $http->_response->Masquerade($chunk);
+				else $http->_asyncInit = true;
+
+				$http->_response->UnserializeResponse($chunk);
+
+				if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
+					$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array(&$http->_request, &$http->_response));
+
+				$http->TriggerArgs(self::EVENT_ASYNC_DATA, array(&$http->_response));
+			}
+
+			unset($chunk, $i, $chunks, $data);
+		});
+
+		$http->_client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+		});
+
+		$http->_client->On(QuarkServer::EVENT_ERROR_CRYPTOGRAM, function ($error) {
+			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
+		});
+
+		return $http->_client->Connect() ? $http : null;
 	}
 }
 
@@ -18852,6 +19822,21 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param bool $unloadLocation = true
+	 *
+	 * @return QuarkFile
+	 */
+	public function Unload ($unloadLocation = true) {
+		$this->_loaded = false;
+		$this->_content = '';
+
+		if ($unloadLocation)
+			$this->Location('');
+
+		return $this;
+	}
+
+	/**
 	 * @param int $mode = self::MODE_DEFAULT
 	 *
 	 * @return bool
@@ -19237,7 +20222,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param array &$source
+	 * @param array|QuarkModel[] &$source
 	 * @param string|int $key
 	 * @param string|int $name
 	 * @param string|int $value
@@ -19567,10 +20552,11 @@ interface IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch($raw);
+	public function Batch($raw, $fallback);
 }
 
 /**
@@ -19602,10 +20588,13 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -19647,10 +20636,13 @@ class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -19690,10 +20682,13 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -19721,16 +20716,37 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 *
 	 * @return mixed
 	 */
-	public function Decode ($raw) { return \json_decode($raw); }
+	public function Decode ($raw) {
+		$raw = trim($raw);
+		$length = strlen($raw);
+
+		if ($length < 2) return null;
+		$last = $length - 1;
+
+		$valid = false;
+		if ($raw[0] == '{' && $raw[$last] == '}') $valid = true;
+		if ($raw[0] == '[' && $raw[$last] == ']') $valid = true;
+		if (!$valid) return null;
+
+		return \json_decode($raw);
+	}
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) {
-		$raw = substr($raw, 0, 8192);
-		return explode('}-{', str_replace('}{', '}}-{{', $raw));
+	public function Batch ($raw, $fallback) {
+		$out = trim($raw);
+		$length = strlen($out);
+
+		if ($length >= 2) {
+			if ($out[0] == '{') return explode('}-{', preg_replace('#}\s*{#Uis', '}}-{{', $out));
+			if ($out[0] == '[') return explode(']-[', preg_replace('#\]\s*\[#Uis', ']]-[[', $out));
+		}
+
+		return $fallback ? array($raw) : array();
 	}
 }
 
@@ -20020,10 +21036,13 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20229,10 +21248,13 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -20382,10 +21404,13 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 	/**
 	 * @param string $raw
+	 * @param bool $fallback
 	 *
 	 * @return mixed
 	 */
-	public function Batch ($raw) { return $raw; }
+	public function Batch ($raw, $fallback) {
+		return array($raw);
+	}
 }
 
 /**
@@ -22108,22 +23133,21 @@ interface IQuarkSQLDataProvider {
  * @package Quark
  */
 class QuarkSource extends QuarkFile {
+	const TRIM = '. , ; ? : ( ) { } [ ] + - * / += -= *= /= > < >= <= != == !== === = => -> && || & | << >>';
+
 	/**
 	 * @var string[] $_trim = []
 	 */
 	private $_trim = array();
 
 	/**
-	 * @var string[] $__trim
+	 * @param string $location = ''
+	 * @param bool $load = false
 	 */
-	private static $__trim = array(
-		',',';','?',':',
-		'(',')','{','}','[',']',
-		'+','*','/',
-		'>','<','>=','<=','!=','==',
-		'=','=>','->',
-		'&&', '||'
-	);
+	public function __construct ($location = '', $load = false) {
+		parent::__construct($location, $load);
+		$this->_trim = explode(' ', self::TRIM);
+	}
 
 	/**
 	 * @param string[] $trim = []
@@ -22138,12 +23162,10 @@ class QuarkSource extends QuarkFile {
 	}
 
 	/**
-	 * @param callable $after = null
-	 *
 	 * @return QuarkSource
 	 */
-	public function Obfuscate (callable $after = null) {
-		$this->_content = self::ObfuscateString($this->_content, $this->_trim, $after);
+	public function Minimize () {
+		$this->_content = self::MinimizeString($this->_content, $this->_trim);
 
 		return $this;
 	}
@@ -22151,12 +23173,11 @@ class QuarkSource extends QuarkFile {
 	/**
 	 * @param string $source = ''
 	 * @param string[] $trim = []
-	 * @param callable $after = null
 	 *
 	 * @return string
 	 */
-	public static function ObfuscateString ($source = '', $trim = [], callable $after = null) {
-		$trim = func_num_args() == 3 ? $trim : self::$__trim;
+	public static function MinimizeString ($source = '', $trim = []) {
+		$trim = func_num_args() > 1 ? $trim : explode(' ', self::TRIM);
 		$slash = ':\\\\' . Quark::GuID() . '\\\\';
 
 		$source = str_replace('://', $slash, $source);
@@ -22164,8 +23185,9 @@ class QuarkSource extends QuarkFile {
 		$source = str_replace($slash, '://', $source);
 		$source = preg_replace('#\/\*(.*)\*\/#Uis', '', $source);
 		$source = str_replace("\r\n", '', $source);
+		$source = str_replace("\n", '', $source);
 		$source = preg_replace('/\s+/', ' ', $source);
-		$source = trim(str_replace('<?phpn', '<?php n', $source));
+		$source = str_replace('<?php', '<?php ', $source);
 
 		foreach ($trim as $rule) {
 			$source = str_replace(' ' . $rule . ' ', $rule, $source);
@@ -22173,10 +23195,21 @@ class QuarkSource extends QuarkFile {
 			$source = str_replace($rule . ' ', $rule, $source);
 		}
 
-		if ($after)
-			$source = $after($source);
+		return trim($source);
+	}
 
-		return $source;
+	/**
+	 * @param string[] $exclude = []
+	 *
+	 * @return string[]
+	 */
+	public static function TrimChars ($exclude = []) {
+		$trim = self::TRIM . ' ';
+
+		foreach ($exclude as $i => &$char)
+			$trim = str_replace($char . ' ', '', $trim);
+
+		return explode(' ', trim($trim));
 	}
 }
 

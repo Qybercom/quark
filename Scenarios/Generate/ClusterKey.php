@@ -7,25 +7,23 @@ use Quark\Quark;
 use Quark\QuarkCLIBehavior;
 
 /**
- * Class Password
+ * Class ClusterKey
  *
  * @package Quark\Scenarios\Generate
  */
-class Password implements IQuarkTask {
+class ClusterKey implements IQuarkTask {
 	use QuarkCLIBehavior;
 
 	/**
 	 * @param int $argc
 	 * @param array $argv
 	 *
-	 * @return void
+	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		$length = $this->ServiceArg();
-		
 		$this->ShellView(
-			'Generate/Password',
-			'Your generated password is: ' . $this->ShellLineSuccess(Quark::GeneratePassword($length ? $length : 10))
+			'Generate/ClusterKey',
+			'Your generated cluster key is: ' . $this->ShellLineSuccess(Quark::GuID())
 		);
 	}
 }

@@ -1,6 +1,8 @@
 <?php
 namespace Quark\Extensions\Analytics;
 
+use Quark\IQuarkViewResource;
+
 /**
  * Interface IQuarkAnalyticsProvider
  *
@@ -24,6 +26,11 @@ interface IQuarkAnalyticsProvider {
 	 * @return mixed
 	 */
 	public function AnalyticsProviderOption($key, $value);
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function AnalyticsProviderViewDependencies();
 
 	/**
 	 * @return string
