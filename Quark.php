@@ -17352,9 +17352,10 @@ class QuarkDTO {
 	 */
 	public function MergeData ($data) {
 		if ($this->_data instanceof QuarkView || $data === null) return $this->_data;
+		if (!is_scalar($this->_data) && is_scalar($data)) return $this->_data;
 
 		if (is_string($data) && is_string($this->_data)) $this->_data .= $data;
-		elseif($data instanceof QuarkView) $this->_data = $data;
+		elseif ($data instanceof QuarkView) $this->_data = $data;
 		else $this->_data = QuarkObject::Merge($this->_data, $data);
 
 		return $this->_data;
