@@ -10,6 +10,17 @@ use Quark\IQuarkIOProcessor;
  */
 class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 	const MIME = 'text/yaml';
+	
+	const TRUE_TRUE = 'true';
+	const TRUE_YES = 'yes';
+	const FALSE_FALSE = 'false';
+	const FALSE_NO = 'no';
+	const NULL_NULL = 'null';
+	const NULL_TILDA = '~';
+	
+	const BATCH = '#\n?---(.*)\n#Uis';
+	//const ELEM = '#(.+)\:(([^\n]*)|(\s{2,}(.*)))\n#Uis';
+	const ELEM = '#(\s{2,})?(.+)\:(.*)\n#Uis';
 
 	/**
 	 * @return string
@@ -31,7 +42,10 @@ class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		// TODO: Implement Decode() method.
+		//preg_match_all(self::ELEM, $raw . "\n", $found, PREG_SET_ORDER);
+		
+		//print_r($found);
+		$lines = explode();
 	}
 
 	/**
@@ -40,6 +54,6 @@ class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Batch ($raw) {
-		// TODO: Implement Batch() method.
+		return preg_split(self::BATCH, "\n" . $raw);
 	}
 }

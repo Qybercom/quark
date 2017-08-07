@@ -1,0 +1,34 @@
+<?php
+namespace Quark\Extensions\LabelCode\Providers;
+
+use Quark\Extensions\LabelCode\IQuarkLabelCodeProvider;
+
+/**
+ * Class LCProviderCode128
+ *
+ * @package Quark\Extensions\LabelCode\Providers
+ */
+class LCProviderCode128 implements IQuarkLabelCodeProvider {
+	/**
+	 * @return int
+	 */
+	public function LCProviderPointWidth () {
+		// TODO: Implement LCProviderPointWidth() method.
+	}
+	
+	/**
+	 * @return int
+	 */
+	public function LCProviderPointHeight () {
+		// TODO: Implement LCProviderPointHeight() method.
+	}
+	
+	/**
+	 * @param string $data
+	 *
+	 * @return string
+	 */
+	public function LCProviderEncode ($data) {
+		// TODO: Implement LCProviderEncode() method.
+	}
+}
