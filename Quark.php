@@ -23044,7 +23044,7 @@ class QuarkSQL {
 		return $this->Query(
 			$model,
 			$options,
-			'DELETE FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
+			/** @lang text */ 'DELETE FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
 		);
 	}
 

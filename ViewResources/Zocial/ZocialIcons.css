@@ -1,0 +1,7 @@
+.zi {
+	font-family: 'zocial', 'Open Sans', sans-serif !important;
+}
+
+.zi.gmail:before {
+	content: "\f125";
+}
