@@ -11106,7 +11106,7 @@ class QuarkField {
 		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
-		return preg_match('#^(\S+)\@([^@.]+\.){' . ($minLevel < 0 ? 0 : $minLevel) . ',' . ($maxLevel < 0 ? '' : $maxLevel) . '}$#', $key . '.');
+		return preg_match('#^(\S+)\@([^@.]+\.){' . ($minLevel < 0 ? 0 : (int)$minLevel) . ',' . ($maxLevel < 0 ? '' : (int)$maxLevel) . '}$#', $key . '.');
 	}
 
 	/**
