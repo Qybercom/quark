@@ -39,7 +39,7 @@ class QuarkUI implements IQuarkViewResource, IQuarkViewResourceWithDependencies 
 	 * @param string[] $weights = []
 	 * @param bool $js = true
 	 */
-	public function __construct ($weights = [], $js = false) {
+	public function __construct ($weights = [], $js = true) {
 		if (func_num_args() != 0)
 			$this->_weights = $weights;
 

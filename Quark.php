@@ -149,7 +149,7 @@ class Quark {
 		$threads->On(QuarkThreadSet::EVENT_AFTER_INVOKE, function () {
 			$timers = QuarkTimer::Timers();
 
-			foreach ($timers as $timer)
+			foreach ($timers as $i => &$timer)
 				if ($timer) $timer->Invoke();
 
 			self::ContainerFree();
@@ -208,7 +208,7 @@ class Quark {
 	public static function BytesToString ($bytes = []) {
 		$out = '';
 
-		foreach ($bytes as $byte)
+		foreach ($bytes as $i => &$byte)
 			$out .= chr($byte);
 
 		return $out;
@@ -301,11 +301,12 @@ class Quark {
 		$absolutes = array();
 		$route = explode('/', str_replace('\\', '/', $path));
 
-		foreach ($route as $part) {
+		foreach ($route as $i => &$part) {
 			if ('.'  == $part) {
 				$absolutes[] = '';
 				continue;
 			}
+
 			if ('..' == $part) array_pop($absolutes);
 			else $absolutes[] = $part;
 		}
@@ -398,7 +399,7 @@ class Quark {
 		$out = '';
 		$last = strlen($alphabet) - 1;
 
-		foreach ($found as $item) {
+		foreach ($found as $j => &$item) {
 			if (!isset($item[3])) {
 				$out .= $item[1];
 				continue;
@@ -549,7 +550,7 @@ class Quark {
 	public static function StackOf (IQuarkStackable $type) {
 		$out = array();
 
-		foreach (self::$_stack as $object)
+		foreach (self::$_stack as $i => &$object)
 			if ($object instanceof $type)
 				$out[] = $object;
 
@@ -701,7 +702,7 @@ class Quark {
 		$stack = self::CallStack(false, false);
 		$out = array();
 
-		foreach ($stack as $item)
+		foreach ($stack as $i => &$item)
 			$out[]  = (isset($item['class']) ? $item['class'] : '')
 					. (isset($item['type']) ? $item['type'] : '')
 					. $item['function']
