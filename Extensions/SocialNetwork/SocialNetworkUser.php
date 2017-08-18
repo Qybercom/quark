@@ -67,6 +67,11 @@ class SocialNetworkUser {
 	private $_registeredAt;
 
 	/**
+	 * @var bool $_verified = false
+	 */
+	private $_verified = false;
+
+	/**
 	 * @var string $_location = ''
 	 */
 	private $_location = '';
@@ -240,6 +245,18 @@ class SocialNetworkUser {
 			$this->_registeredAt = $date;
 
 		return $this->_registeredAt;
+	}
+
+	/**
+	 * @param bool $verified = false
+	 *
+	 * @return bool
+	 */
+	public function Verified ($verified = false) {
+		if (func_num_args() != 0)
+			$this->_verified = $verified;
+
+		return $this->_verified;
 	}
 
 	/**

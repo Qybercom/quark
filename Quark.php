@@ -18553,8 +18553,8 @@ class QuarkHTTPClient implements IQuarkEventable {
 			return $client->Send($request);
 		});
 
-		$client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
-			$http->_response->UnserializeResponse($data);
+		$client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $response) use (&$http) {
+			$http->_response->UnserializeResponse($response);
 
 			return $client->Close();
 		});
