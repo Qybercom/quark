@@ -153,7 +153,7 @@ trait QuarkPresenceControlComponent {
 			<div class="quark-presence-column left-inverse" id="presence-user-info">
 				<div class="quark-presence-container">
 					' . $name . '<br />
-					<a href="' . (func_num_args() == 5 ? $this->Link($logoutAddr, $logoutSigned) : $logoutAddr). '" class="quark-button">' . $logoutTitle . '</a>
+					<a href="' . $this->Link($logoutAddr, $logoutSigned). '" class="quark-button">' . $logoutTitle . '</a>
 				</div>
 			</div>
 			<div class="quark-presence-column right" id="presence-user-photo">

@@ -4286,7 +4286,8 @@ trait QuarkStreamBehavior {
 		if ($env instanceof QuarkStreamEnvironment)
 			return $env->Cluster();
 
-		return $this->_null;
+		$null = null;
+		return $null;
 	}
 }
 
@@ -4922,11 +4923,6 @@ class QuarkService implements IQuarkContainer {
  * @package Quark
  */
 trait QuarkContainerBehavior {
-	/**
-	 * @var null $_null = null
-	 */
-	protected $_null = null;
-
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 * @return IQuarkContainer
 	 */
@@ -9071,6 +9067,37 @@ trait QuarkModelBehavior {
 }
 
 /**
+ * Class QuarkModelWithValidationControl
+ *
+ * @package Quark
+ */
+trait QuarkModelWithValidationControl {
+	/**
+	 * @var bool $_validationControl = null
+	 */
+	private $_validationControl = null;
+
+	/**
+	 * @return bool|null
+	 */
+	public function ValidationControl () {
+		return $this->_validationControl;
+	}
+
+	/**
+	 * @param bool|null $control = null
+	 *
+	 * @return IQuarkModel|IQuarkModelWithValidationControl|QuarkModelWithValidationControl
+	 */
+	public static function WithValidationControl ($control = null) {
+		$model = new self();
+		$model->_validationControl = $control;
+
+		return $model;
+	}
+}
+
+/**
  * Class QuarkModelSource
  *
  * @package Quark
@@ -9701,6 +9728,13 @@ class QuarkModel implements IQuarkContainer {
 		QuarkField::FlushValidationErrors();
 
 		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
+
+		if ($model instanceof IQuarkModelWithValidationControl) {
+			$control = $model->ValidationControl();
+
+			if ($control !== null)
+				return $control;
+		}
 
 		$output = $model;
 
@@ -10531,6 +10565,18 @@ interface IQuarkModelWithAfterExport {
 }
 
 /**
+ * Interface IQuarkModelWithValidationControl
+ *
+ * @package Quark
+ */
+interface IQuarkModelWithValidationControl {
+	/**
+	 * @return bool|null
+	 */
+	public function ValidationControl();
+}
+
+/**
  * Interface IQuarkModelWithBeforeValidate
  *
  * @package Quark
@@ -10655,8 +10701,8 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return array
 	 */
@@ -10664,8 +10710,8 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -10673,8 +10719,8 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $id
-	 * @param             $options
+	 * @param $id
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -10682,8 +10728,8 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -10691,8 +10737,8 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -10700,10 +10746,10 @@ interface IQuarkDataProvider {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $limit
-	 * @param             $skip
-	 * @param             $options
+	 * @param $criteria
+	 * @param $limit
+	 * @param $skip
+	 * @param $options
 	 *
 	 * @return int
 	 */
@@ -16777,6 +16823,20 @@ class QuarkURI {
 		return func_num_args() == 0
 			? $params
 			: (isset($params[$key]) ? $params[$key] : null);
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return object
+	 */
+	public function RemoveOption ($key = '') {
+		$options = $this->Options();
+
+		if (isset($options[$key]))
+			unset($options[$key]);
+
+		return $this->Params($options);
 	}
 
 	/**

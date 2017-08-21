@@ -37,7 +37,8 @@ class OwlCarouselCSS implements IQuarkSpecifiedViewResource, IQuarkForeignViewRe
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/' . $this->_version . '/owl.carousel.min.css';
+		//return 'https://cdnjs.cloudflare.com/ajax/libs/owl-carousel/' . $this->_version . '/owl.carousel.min.css';
+		return 'https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/' . $this->_version . '/assets/owl.carousel.min.css';
 	}
 
 	/**

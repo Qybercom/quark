@@ -10,7 +10,8 @@ use Quark\IQuarkViewResourceWithDependencies;
  * @package Quark\ViewResources\jQuery\Plugins\OwlCarousel
  */
 class OwlCarousel implements IQuarkViewResource, IQuarkViewResourceWithDependencies{
-	const CURRENT_VERSION = '1.32';
+	//const CURRENT_VERSION = '1.32';
+	const CURRENT_VERSION = '2.2.1';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
@@ -31,7 +32,7 @@ class OwlCarousel implements IQuarkViewResource, IQuarkViewResourceWithDependenc
 		return array(
 			new OwlCarouselCSS($this->_version),
 			new OwlCarouselTheme($this->_version),
-			new OwlCarouselTransitions($this->_version),
+			//new OwlCarouselTransitions($this->_version),
 			new OwlCarouselJS($this->_version)
 		);
 	}

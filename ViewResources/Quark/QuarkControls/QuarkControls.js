@@ -508,10 +508,11 @@ Quark.Controls.Toggle = function (selector, opt) {
 	 * @param elem
 	 */
 	that.Toggle = function (elem) {
-		if (elem.attr('quark-enabled') === 'true') opt.enabled.action(that, elem);
-		else opt.disabled.action(that, elem);
+		var ok = elem.attr('quark-enabled') === 'true'
+			? opt.enabled.action(that, elem)
+			: opt.disabled.action(that, elem);
 
-		if (opt.autoState) that.State(elem);
+		if (opt.autoState && ok !== false) that.State(elem);
 	};
 
 	/**

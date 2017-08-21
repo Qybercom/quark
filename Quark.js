@@ -194,6 +194,48 @@ if (!Array.prototype.min) {
 }
 
 /**
+ * http://artkiev.com/blog/number_format-in-javascript.htm
+ *
+ * @param {number|string} number
+ * @param {int=} decimals
+ * @param {string=} dec_point
+ * @param {string=} separator
+ *
+ * @returns {string}
+ */
+Quark.NumberFormat = function number_format (number, decimals, dec_point, separator) {
+	number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+
+	var n = !isFinite(+number) ? 0 : +number,
+		precision = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+		sep = (typeof separator === 'undefined') ? ',' : separator,
+		dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+		toFixedFix = function(n, precision) {
+			var k = Math.pow(10, precision);
+			return '' + (Math.round(n * k) / k).toFixed(precision);
+		},
+		s = (precision ? toFixedFix(n, precision) : '' + Math.round(n)).split('.');
+
+	if (s[0].length > 3)
+		s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+
+	if ((s[1] || '').length < precision) {
+		s[1] = s[1] || '';
+		s[1] += new Array(precision - s[1].length + 1).join('0');
+	}
+
+	return s.join(dec);
+};
+
+if (!Number.prototype.format) {
+	(function () {
+		Number.prototype.format = function (decimals, dec_point, separator) {
+			return Quark.NumberFormat(this, decimals, dec_point, separator);
+		};
+	})();
+}
+
+/**
  * http://stackoverflow.com/a/324533/2097055
  *
  * @param {string} selector
