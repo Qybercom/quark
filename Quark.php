@@ -3929,6 +3929,13 @@ trait QuarkServiceBehavior {
 
 		return implode('/', $out);
 	}
+
+	/**
+	 * @return string
+	 */
+	public function CalledURL () {
+		return $this->EnvironmentIsCLI() ? $this->ServiceURL() : $this->URL();
+	}
 }
 
 /**
@@ -4190,7 +4197,7 @@ trait QuarkStreamBehavior {
 	 */
 	public function Broadcast ($data, $url = '') {
 		$env = Quark::CurrentEnvironment();
-		$url = func_num_args() == 2 ? $url : $this->ServiceURL();
+		$url = func_num_args() == 2 ? $url : $this->CalledURL();
 
 		if ($env instanceof QuarkStreamEnvironment) {
 			$session = $this->Session();
