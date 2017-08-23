@@ -5343,7 +5343,10 @@ class QuarkObject {
 	 * @return bool
 	 */
 	public static function isEmpty ($object = null) {
-		return !$object || empty($object) || empty((array)$object);
+		if (!$object || empty($object)) return true;
+
+		$object = (array)$object;
+		return empty($object);
 	}
 
 	/**
