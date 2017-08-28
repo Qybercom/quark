@@ -20789,17 +20789,8 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Decode ($raw) {
 		$raw = trim($raw);
-		$length = strlen($raw);
 
-		if ($length < 2) return null;
-		$last = $length - 1;
-
-		$valid = false;
-		if ($raw[0] == '{' && $raw[$last] == '}') $valid = true;
-		if ($raw[0] == '[' && $raw[$last] == ']') $valid = true;
-		if (!$valid) return null;
-
-		return \json_decode($raw);
+		return self::IsValid($raw) ? \json_decode($raw) : null;
 	}
 
 	/**
@@ -20818,6 +20809,26 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		}
 
 		return $fallback ? array($raw) : array();
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return bool
+	 */
+	public static function IsValid ($raw = '') {
+		$raw = trim($raw);
+		$length = strlen($raw);
+
+		if ($length < 2) return false;
+		$last = $length - 1;
+
+		$valid = false;
+		if ($raw[0] == '{' && $raw[$last] == '}') $valid = true;
+		if ($raw[0] == '[' && $raw[$last] == ']') $valid = true;
+		if (!$valid) return false;
+
+		return true;
 	}
 }
 
@@ -22927,6 +22938,8 @@ class QuarkSQL {
 	 */
 	public function Value ($value) {
 		if ($value === null) return self::NULL;
+		if ($value instanceof QuarkCollection) return json_encode($value->Extract());
+		if (is_array($value)) return json_encode($value);
 		if (!is_scalar($value)) return null;
 		if (is_bool($value))
 			$value = $value ? 1 : 0;

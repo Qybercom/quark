@@ -6,9 +6,11 @@ use Quark\IQuarkSQLDataProvider;
 use Quark\IQuarkModel;
 
 use Quark\Quark;
+use Quark\QuarkCollection;
 use Quark\QuarkDate;
 use Quark\QuarkException;
 use Quark\QuarkField;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
@@ -175,12 +177,18 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
-		$output = array();
 		$records = $this->_sql->Select($model, $criteria, $options);
+		if (!$records) return array();
 
-		if ($records)
-			foreach ($records as $record)
-				$output[] = $record;
+		$output = array();
+
+		foreach ($records as $record) {
+			foreach ($record as $key => &$value)
+				if (isset($model->$key) && $model->$key instanceof QuarkCollection && QuarkJSONIOProcessor::IsValid($value))
+					$value = json_decode($value);
+
+			$output[] = $record;
+		}
 
 		return $output;
 	}
