@@ -402,6 +402,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		return $this->_sql->Query(
 			$model,
 			$options,
+			/** @lang text */
 			'CREATE TABLE '
 			. ($options[self::OPTION_SCHEMA_CHECK_EXISTS] ? 'IF NOT EXISTS ' : '')
 			. QuarkSQL::Collection($model)
