@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
@@ -131,7 +132,8 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, (array)$request->Data()));
+		$data = $request->Data();
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, !is_scalar($data) ? (array)$data : array()));
 
 		if ($request->Method() == QuarkDTO::METHOD_GET) {
 			$query = $request->Processor()->Encode($request->Data());
