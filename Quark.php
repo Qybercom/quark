@@ -4117,68 +4117,78 @@ trait QuarkCLIBehavior {
 	}
 
 	/**
-	 * @param string $id = ''
-	 * @param callable $register = null
-	 * @param bool $force = false
+	 * @param IQuarkAsyncClientProcess $process = null
 	 *
 	 * @return bool
+	 * @throws QuarkArchException
 	 */
-	public function AsyncClientRegister ($id = '', callable $register = null, $force = false) {
-		if (isset($this->_asyncClients[$id]) && !$force) return false;
-		if ($register == null) return false;
+	public function AsyncClientProcess (IQuarkAsyncClientProcess $process = null) {
+		if ($process == null)
+			$process = $this;
 
-		$this->_asyncClients[$id] = $register($id, $force);
+		if (!($process instanceof IQuarkAsyncClientProcess))
+			throw new QuarkArchException('[' . $this->ClassName() . '::AsyncClientProcess] Argument $process expected to be IQuarkAsyncClientProcess');
 
-		return true;
-	}
+		$id = $process->AsyncClientProcessID();
 
-	/**
-	 * @param string $id = ''
-	 * @param callable $remove = null
-	 */
-	public function AsyncClientPipe ($id = '', callable $remove = null) {
-		if (isset($this->_asyncClients[$id]) && $this->_asyncClients[$id]->Connected()) $this->_asyncClients[$id]->AsyncPipe();
-		else {
+		if (!$process->AsyncClientProcessActive($id)) {
+			if (!isset($this->_asyncClients[$id]) || $this->_asyncClients[$id] == null) return false;
+
+			$this->_asyncClients[$id]->Client()->Close();
+			$process->AsyncClientProcessStop($id);
 			unset($this->_asyncClients[$id]);
-			if ($remove) $remove($id);
+
+			return true;
 		}
-	}
 
-	/**
-	 * @param string $id = ''
-	 * @param callable $stop = null
-	 *
-	 * @return bool
-	 */
-	public function AsyncClientStop ($id = '', callable $stop = null) {
-		if (!isset($this->_asyncClients[$id]) || $this->_asyncClients[$id] == null) return false;
+		if (!isset($this->_asyncClients[$id]))
+			$this->_asyncClients[$id] = $process->AsyncClientProcessStart($id);
 
-		$ok = $this->_asyncClients[$id]->Client()->Close();
-		unset($this->_asyncClients[$id]);
+		if (!($this->_asyncClients[$id] instanceof QuarkHTTPClient))
+			throw new QuarkArchException('[' . $this->ClassName() . '::AsyncClientPipe] Expected QuarkHTTPClient, got [' . gettype($this->_asyncClients[$id]) . '] ' . print_r($this->_asyncClients[$id], true));
 
-		if ($stop) $stop($id);
+		$this->_asyncClients[$id]->AsyncPipe();
 
-		return $ok;
-	}
-
-	/**
-	 * @param string $id = ''
-	 * @param bool $active = true
-	 * @param callable $start = null
-	 * @param callable $stop = null
-	 * @param bool $force = false
-	 *
-	 * @return bool
-	 */
-	public function AsyncClientProcess ($id = '', $active = true, callable $start = null, callable $stop = null, $force = false) {
-		if (!$active)
-			return $this->AsyncClientStop($id, $stop);
-
-		$this->AsyncClientRegister($id, $start, $force);
-		$this->AsyncClientPipe($id, $stop);
+		if (!$this->_asyncClients[$id]->Connected()) {
+			$process->AsyncClientProcessStop($id);
+			unset($this->_asyncClients[$id]);
+		}
 
 		return true;
 	}
+}
+
+/**
+ * Interface IQuarkAsyncClientProcess
+ *
+ * @package Quark
+ */
+interface IQuarkAsyncClientProcess {
+	/**
+	 * @return string
+	 */
+	public function AsyncClientProcessID();
+
+	/**
+	 * @param string $id
+	 *
+	 * @return bool
+	 */
+	public function AsyncClientProcessActive($id);
+
+	/**
+	 * @param string $id
+	 *
+	 * @return QuarkHTTPClient
+	 */
+	public function AsyncClientProcessStart($id);
+
+	/**
+	 * @param string $id
+	 *
+	 * @return mixed
+	 */
+	public function AsyncClientProcessStop($id);
 }
 
 /**
@@ -17873,7 +17883,7 @@ class QuarkDTO {
 	 * @return string
 	 */
 	public function RawHeaders () {
-		return substr($this->_raw, 0, strpos($this->_raw, "\r\n\r\n"));
+		return preg_replace('#\r\n\r\n(.*)#', '', $this->_raw);
 	}
 
 	/**
@@ -18119,14 +18129,15 @@ class QuarkDTO {
 	/**
 	 * @param string $raw = ''
 	 * @param bool $batch = false
+	 * @param bool $reset = false
 	 *
 	 * @return QuarkDTO
 	 */
-	public function UnserializeResponse ($raw = '', $batch = false) {
+	public function UnserializeResponse ($raw = '', $batch = false, $reset = false) {
 		$this->_raw = $raw;
 
-		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, substr($raw, 0, self::RESPONSE_BUFFER), $found)) {
-			$this->_rawData = $found[4] != '' ? substr($raw, strpos($raw, $found[4])) : '';
+		if (preg_match(self::HTTP_PROTOCOL_RESPONSE, $this->_raw, $found)) {
+			$this->_rawData = $found[4];
 
 			$this->Protocol($found[1]);
 			$this->Status($found[2]);
@@ -18135,8 +18146,10 @@ class QuarkDTO {
 				$this->_processor = new QuarkHTMLIOProcessor();
 
 			$this->_unserializeHeaders($found[3]);
-			$this->_unserializeBody($this->_rawData, $batch);
+			$this->_unserializeBody($this->_rawData, $batch, $reset);
 		}
+
+		unset($found);
 
 		return $this;
 	}
@@ -18315,12 +18328,13 @@ class QuarkDTO {
 	/**
 	 * @param string $raw
 	 * @param bool $batch = false
+	 * @param bool $reset = false
 	 *
 	 * @return QuarkDTO
 	 */
-	private function _unserializeBody ($raw, $batch = false) {
+	private function _unserializeBody ($raw, $batch = false, $reset = false) {
 		if (!$this->_multipart || strpos($raw, '--' . $this->_boundary) === false) {
-			if (!$batch) $this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($raw));
+			if (!$batch) $this->_data = QuarkObject::Merge($reset ? null : $this->_data, $this->_processor->Decode($raw));
 			else {
 				$chunks = $this->_processor->Batch($raw, true);
 
@@ -18711,14 +18725,14 @@ class QuarkHTTPClient implements IQuarkEventable {
 
 		/** @noinspection PhpUnusedParameterInspection */
 		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
-			$data = $http->_response->RawProcessorInvoke($data);
+			$data = $http->_asyncInit ? $http->_response->RawProcessorInvoke($data) : $data;
 			$chunks = $http->_response->Processor()->Batch($data, !$http->_asyncInit);
 
 			foreach ($chunks as $i => &$chunk) {
 				if ($http->_asyncInit) $chunk = $http->_response->Masquerade($chunk);
 				else $http->_asyncInit = true;
 
-				$http->_response->UnserializeResponse($chunk);
+				$http->_response->UnserializeResponse($chunk, false, true);
 
 				if ($http->_response->Status() != QuarkDTO::STATUS_200_OK)
 					$http->TriggerArgs(self::EVENT_ASYNC_ERROR, array(&$http->_request, &$http->_response));
