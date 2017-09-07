@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
@@ -19,6 +18,7 @@ use Quark\Extensions\OAuth\OAuthProviderBehavior;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class Twitter
@@ -234,6 +234,33 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$friends[] = self::_user($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * https://dev.twitter.com/rest/reference/post/statuses/update
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Data(array(
+			'status' => $post->Content()
+		));
+
+		$response = $this->OAuthAPI(
+			'/1.1/statuses/update.json',
+			$request,
+			new QuarkDTO(new QuarkJSONIOProcessor())
+		);
+
+		if (!isset($response->id_str))
+			return null;
+
+		$post->ID($response->id_str);
+
+		return $post;
 	}
 
 	/**

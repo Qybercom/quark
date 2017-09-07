@@ -16,6 +16,13 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	const GRANT_AUTHORIZATION_CODE = 'authorization_code';
 	const GRANT_PASSWORD = 'password';
 	const GRANT_CLIENT_CREDENTIALS = 'client_credentials';
+	const GRANT_REFRESH_TOKEN = 'refresh_token';
+
+	//authorization_code
+	//implicit
+	//password_credentials
+	//client_credentials
+	//refresh_token
 
 	/**
 	 * @var IQuarkOAuthProvider $_provider

@@ -28,6 +28,7 @@ use Quark\Extensions\OAuth\OAuthProviderBehavior;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class Tumblr
@@ -241,6 +242,15 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
 		// TODO: Implement SocialNetworkFriends() method.
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		// TODO: Implement SocialNetworkPublish() method.
 	}
 
 	/**

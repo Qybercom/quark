@@ -12,6 +12,7 @@ use Quark\Extensions\OAuth\Providers\GoogleOAuth;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class GooglePlus
@@ -156,5 +157,14 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 			$friends[] = self::_people($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		// TODO: Implement SocialNetworkPublish() method.
 	}
 }

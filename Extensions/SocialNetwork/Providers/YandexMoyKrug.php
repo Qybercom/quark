@@ -12,6 +12,7 @@ use Quark\Extensions\OAuth\Providers\YandexOAuth;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class YandexMoyKrug
@@ -111,5 +112,14 @@ class YandexMoyKrug extends YandexOAuth implements IQuarkOAuthProvider, IQuarkSo
 	public function SocialNetworkFriends ($user, $count, $offset) {
 		// TODO: Implement SocialNetworkFriends() method.
 		return array();
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		// TODO: Implement SocialNetworkPublish() method.
 	}
 }

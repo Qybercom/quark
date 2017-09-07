@@ -3,14 +3,14 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
+
 use Quark\QuarkDTO;
 use Quark\QuarkKeyValuePair;
 
 /**
  * Class OAuthServer
-
  *
-*@package Quark\Extensions\OAuth
+ * @package Quark\Extensions\OAuth
  */
 class OAuthServer implements IQuarkAuthorizationProvider {
 	/**

@@ -2,6 +2,7 @@
 namespace Quark\Extensions\SocialNetwork\Providers;
 
 use Quark\Quark;
+use Quark\QuarkFormIOProcessor;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
@@ -16,6 +17,7 @@ use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class Facebook
@@ -23,24 +25,34 @@ use Quark\Extensions\SocialNetwork\SocialNetworkUser;
  * @package Quark\Extensions\SocialNetwork\Providers
  */
 class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
-	const URL_OAUTH_LOGIN = 'https://www.facebook.com/v2.9/dialog/oauth';
+	const URL_OAUTH_LOGIN = 'https://www.facebook.com/v2.10/dialog/oauth';
 	const URL_OAUTH_LOGOUT = 'https://www.facebook.com/logout.php';
-	const URL_API = 'https://graph.facebook.com/v2.9';
+	const URL_API = 'https://graph.facebook.com/v2.10';
 
 	const CURRENT_USER = 'me';
 
-	const PERMISSION_ID = 'id';
-	const PERMISSION_NAME = 'name';
-	const PERMISSION_PICTURE = 'picture.width(1200).height(1200)';
-	const PERMISSION_GENDER = 'gender';
-	const PERMISSION_LINK = 'link';
+	const FIELD_ID = 'id';
+	const FIELD_NAME = 'name';
+	const FIELD_PICTURE = 'picture.width(1200).height(1200)';
+	const FIELD_GENDER = 'gender';
+	const FIELD_LINK = 'link';
+	const FIELD_EMAIL = 'email';
+	const FIELD_BIRTHDAY = 'birthday';
+	const FIELD_ABOUT = 'about';
 
+	const PERMISSION_PUBLIC_PROFILE = 'public_profile';
 	const PERMISSION_EMAIL = 'email';
-	const PERMISSION_BIRTHDAY = 'birthday';
-	const PERMISSION_FRIENDS = 'user_friends';
-
-	const PERMISSION_LIKES = 'user_likes';
+	const PERMISSION_USER_BIRTHDAY = 'user_birthday';
+	const PERMISSION_USER_FRIENDS = 'user_friends';
+	const PERMISSION_USER_LIKES = 'user_likes';
 	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
+	const PERMISSION_PUBLISH_PAGES = 'publish_pages';
+
+	const PUBLISH_AUDIENCE_EVERYONE = 'EVERYONE';
+	const PUBLISH_AUDIENCE_FRIENDS_ALL = 'ALL_FRIENDS';
+	const PUBLISH_AUDIENCE_FRIENDS_OF_FRIENDS = 'FRIENDS_OF_FRIENDS';
+	const PUBLISH_AUDIENCE_SELF = 'SELF';
+	const PUBLISH_AUDIENCE_CUSTOM = 'CUSTOM';
 
 	/**
 	 * @var string $_appId = ''
@@ -58,6 +70,11 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private $_token;
 
 	/**
+	 * @var array $_audience = []
+	 */
+	private $_audience = array('value' => self::PUBLISH_AUDIENCE_SELF);
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return IQuarkOAuthConsumer
@@ -71,12 +88,29 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $appId
 	 * @param string $appSecret
+	 * @param $options = null
 	 *
 	 * @return mixed
 	 */
-	public function OAuthApplication ($appId, $appSecret) {
+	public function OAuthApplication ($appId, $appSecret, $options = null) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
+
+		if (isset($options->FacebookPublishAudience)) {
+			$default = array(
+				self::PUBLISH_AUDIENCE_EVERYONE,
+				self::PUBLISH_AUDIENCE_FRIENDS_ALL,
+				self::PUBLISH_AUDIENCE_FRIENDS_OF_FRIENDS,
+				self::PUBLISH_AUDIENCE_SELF
+			);
+
+			$this->_audience = in_array($options->FacebookPublishAudience, $default)
+				? array('value' => $options->FacebookPublishAudience)
+				: array(
+					'value' => self::PUBLISH_AUDIENCE_CUSTOM,
+					'allow' => explode(',', $options->FacebookPublishAudience)
+				);
+		}
 	}
 
 	/**
@@ -160,13 +194,13 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	private static function _fields ($fields) {
 		return implode(',', $fields != null ? $fields : array(
-			self::PERMISSION_ID,
-			self::PERMISSION_NAME,
-			self::PERMISSION_LINK,
-			self::PERMISSION_GENDER,
-			self::PERMISSION_PICTURE,
-			self::PERMISSION_BIRTHDAY,
-			self::PERMISSION_EMAIL
+			self::FIELD_ID,
+			self::FIELD_NAME,
+			self::FIELD_LINK,
+			self::FIELD_GENDER,
+			self::FIELD_PICTURE,
+			self::FIELD_BIRTHDAY,
+			self::FIELD_EMAIL
 		));
 	}
 
@@ -182,6 +216,10 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$user->PhotoFromLink(isset($item->picture->data->url) ? $item->picture->data->url : '', $photo);
 		$user->Gender($item->gender[0]);
 		$user->Page($item->link);
+		$user->Verified($item->verified);
+
+		if (isset($item->about))
+			$user->Bio($item->about);
 
 		if (isset($item->email))
 			$user->Email($item->email);
@@ -245,5 +283,34 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$friends[] = self::_user($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		$target = $post->Target();
+		$audience = $post->Audience();
+
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Data(array(
+			'message' => $post->Content(),
+			'privacy' => $audience ? $audience : $this->_audience
+		));
+
+		$response = $this->OAuthAPI(
+			'/' . ($target ? $target : self::CURRENT_USER) . '/feed',
+			$request,
+			new QuarkDTO(new QuarkJSONIOProcessor())
+		);
+
+		if (!isset($response->id))
+			return null;
+
+		$post->ID($response->id);
+
+		return $post;
 	}
 }
