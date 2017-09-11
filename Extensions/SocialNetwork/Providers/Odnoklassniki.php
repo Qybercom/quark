@@ -19,6 +19,7 @@ use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
+use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 
 /**
  * Class Odnoklassniki
@@ -350,6 +351,15 @@ class Odnoklassniki implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 			$friends[] = self::_user($item);
 
 		return $friends;
+	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		// TODO: Implement SocialNetworkPublish() method.
 	}
 
 	/**

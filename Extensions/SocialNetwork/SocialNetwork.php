@@ -103,4 +103,18 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 			return $this->_error($e, 'Friends', 'Can not get friends', array());
 		}
 	}
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function Publish (SocialNetworkPost $post) {
+		try {
+			return $this->_provider()->SocialNetworkPublish($post);
+		}
+		catch (OAuthAPIException $e) {
+			return $this->_error($e, 'Publish', 'Can not publish article', null);
+		}
+	}
 }

@@ -29,4 +29,11 @@ interface IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends($user, $count, $offset);
+
+	/**
+	 * @param SocialNetworkPost $post
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function SocialNetworkPublish (SocialNetworkPost $post);
 }
