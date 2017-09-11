@@ -2,11 +2,11 @@
 namespace Quark\Extensions\OAuth;
 
 /**
- * Trait OAuthBehavior
+ * Trait OAuthClientBehavior
  *
  * @package Quark\Extensions\OAuth
  */
-trait OAuthBehavior {
+trait OAuthClientBehavior {
 	/**
 	 * @param string $config
 	 * @param string $redirect = ''

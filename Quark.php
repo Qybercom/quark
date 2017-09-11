@@ -1883,9 +1883,7 @@ class QuarkConfig {
 		foreach ($components as $key => &$component) {
 			if ($component instanceof QuarkSessionSource) {
 				$options = self::_ini($ini, self::INI_AUTHORIZATION_PROVIDER, $component->Name());
-
-				if ($options !== null)
-					$component->Options($options);
+				$component->Options($options);
 			}
 
 			if ($component instanceof IQuarkExtensionConfig) {
@@ -13458,6 +13456,13 @@ class QuarkSession {
 	}
 
 	/**
+	 * @return QuarkSessionSource
+	 */
+	public function &Source () {
+		return $this->_source;
+	}
+
+	/**
 	 * @return bool
 	 */
 	public function Commit () {
@@ -16722,18 +16727,41 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param int $id
-	 *
-	 * @return array|string
+	 * @return string[]
 	 */
-	public function Route ($id = 0) {
+	private function _route () {
 		if (sizeof($this->_route) == 0)
 			$this->_route = self::ParseRoute($this->path);
 
-		if (func_num_args() == 1)
-			return isset($this->_route[$id]) ? $this->_route[$id] : '';
-
 		return $this->_route;
+	}
+
+	/**
+	 * @param int $id = 0
+	 *
+	 * @return string[]|string
+	 */
+	public function Route ($id = 0) {
+		$route = $this->_route();
+
+		if (func_num_args() == 1)
+			return isset($route[$id]) ? $route[$id] : '';
+
+		return $route;
+	}
+
+	/**
+	 * @param int $id = 0
+	 *
+	 * @return string[]|string
+	 */
+	public function ReverseRoute ($id = 0) {
+		$route = array_reverse($this->_route());
+
+		if (func_num_args() == 1)
+			return isset($route[$id]) ? $route[$id] : '';
+
+		return $route;
 	}
 
 	/**
@@ -17067,6 +17095,7 @@ class QuarkDTO {
 	const STATUS_201_CREATED = '201 Created';
 	const STATUS_202_ACCEPTED = '202 Accepted';
 	const STATUS_302_FOUND = '302 Found';
+	const STATUS_400_BAD_REQUEST = '400 Bad Request';
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
 	const STATUS_403_FORBIDDEN = '403 Forbidden';
 	const STATUS_404_NOT_FOUND = '404 Not Found';

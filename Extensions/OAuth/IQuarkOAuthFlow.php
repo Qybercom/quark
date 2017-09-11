@@ -2,6 +2,7 @@
 namespace Quark\Extensions\OAuth;
 
 use Quark\QuarkDTO;
+use Quark\QuarkKeyValuePair;
 
 /**
  * Interface IQuarkOAuthFlow
@@ -12,14 +13,19 @@ interface IQuarkOAuthFlow {
 	/**
 	 * @param QuarkDTO $request
 	 *
-	 * @return mixed
+	 * @return bool
 	 */
-	public function OAuthFlowServerAuthorize(QuarkDTO $request);
+	public function OAuthFlowRecognize(QuarkDTO $request);
 
 	/**
-	 * @param QuarkDTO $request
+	 * @param OAuthToken $token
 	 *
-	 * @return OAuthToken
+	 * @return QuarkDTO|OAuthError
 	 */
-	public function OAuthFlowServerToken(QuarkDTO $request);
+	public function OAuthFlowSuccess(OAuthToken $token);
+
+	/**
+	 * @return QuarkKeyValuePair
+	 */
+	public function OAuthFlowClient();
 }

@@ -9,11 +9,11 @@ use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
 
 /**
- * Class PasswordCredentialsFlow
+ * Class ImplicitFlow
  *
  * @package Quark\Extensions\OAuth\Flows
  */
-class PasswordCredentialsFlow implements IQuarkOAuthFlow {
+class ImplicitFlow implements IQuarkOAuthFlow {
 	/**
 	 * @param QuarkDTO $request
 	 *

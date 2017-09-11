@@ -3,6 +3,7 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+use Quark\QuarkDTO;
 
 /**
  * Class OAuthConfig
@@ -10,6 +11,9 @@ use Quark\IQuarkExtensionConfig;
  * @package Quark\Extensions\OAuth
  */
 class OAuthConfig implements IQuarkExtensionConfig {
+	const URL_AUTHORIZE = 'authorize';
+	const URL_TOKEN = 'token';
+
 	const RESPONSE_CODE = 'code';
 	const RESPONSE_TOKEN = 'token';
 
@@ -144,5 +148,26 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 */
 	public function ExtensionInstance () {
 		// TODO: Implement ExtensionInstance() method.
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public static function URLS () {
+		return array(
+			self::URL_AUTHORIZE,
+			self::URL_TOKEN
+		);
+	}
+
+	/**
+	 * @param QuarkDTO $request
+	 *
+	 * @return string|null
+	 */
+	public static function URLAllowed (QuarkDTO $request) {
+		$url = $request->URI()->ReverseRoute(0);
+
+		return in_array($url, self::URLS()) ? $url : null;
 	}
 }

@@ -20,12 +20,16 @@ use Quark\QuarkObject;
  * @property string $access_token
  * @property string $refresh_token
  * @property QuarkDate $refreshed
+ * @property string $token_type = self::TYPE_BEARER
+ * @property string $code
  * @property int $expires_in
  * @property string $oauth_token_secret
  *
  * @package Quark\Extensions\OAuth
  */
 class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+	const TYPE_BEARER = 'Bearer';
+
 	use QuarkModelBehavior;
 
 	/**
@@ -83,6 +87,8 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			'access_token' => '',
 			'refresh_token' => '',
 			'refreshed' => QuarkDate::GMTNow(),
+			'token_type' => self::TYPE_BEARER,
+			'code' => '',
 			'expires_in' => 0,
 			'oauth_token_secret' => ''
 		);
@@ -138,6 +144,18 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @return object
+	 */
+	public function ExtractOAuth () {
+		return $this->Extract(array(
+			'access_token',
+			'expires_in',
+			'refresh_token',
+			'token_type'
+		));
+	}
+
+	/**
 	 * @param QuarkDTO $request = null
 	 * @param string $redirect = ''
 	 *
@@ -145,14 +163,14 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function FromRequest (QuarkDTO $request = null, $redirect = '') {
+	public function InitFromRequest (QuarkDTO $request = null, $redirect = '') {
 		if ($request == null) return null;
 
 		try {
 			$token = $this->Provider()->OAuthTokenFromRequest($request, $redirect);
 
 			if ($token == null)
-				throw new QuarkArchException('[OAuthToken::FromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] Can not create OAuthToken from request: OAuth provider returned invalid OAuthToken object');
+				throw new QuarkArchException('[OAuthToken::InitFromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] Can not create OAuthToken from request: OAuth provider returned invalid OAuthToken object');
 
 			$token->OAuthConfig($this->config);
 
@@ -165,7 +183,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			return $token;
 		}
 		catch (OAuthAPIException $e) {
-			Quark::Log('[OAuthToken::FromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] API error:');
+			Quark::Log('[OAuthToken::InitFromRequest.' . QuarkObject::ClassOf($this->Provider()) . '] API error:');
 
 			Quark::Trace($e->Request());
 			Quark::Trace($e->Response());
@@ -199,10 +217,10 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public static function InitFromRequest ($config, QuarkDTO $request = null, $redirect = '') {
+	public static function FromRequest ($config, QuarkDTO $request = null, $redirect = '') {
 		$token = new self($config);
 
-		return $token->FromRequest($request, $redirect);
+		return $token->InitFromRequest($request, $redirect);
 	}
 
 	/**
@@ -215,7 +233,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public static function InitFromParams ($config, $access_token = '', $refresh_token = '', $oauth_token_secret = '', $expires_in = 0, QuarkDate $refreshed = null) {
+	public static function FromParams ($config, $access_token = '', $refresh_token = '', $oauth_token_secret = '', $expires_in = 0, QuarkDate $refreshed = null) {
 		return new QuarkModel(new OAuthToken($config), array(
 			'access_token' => $access_token,
 			'refresh_token' => $refresh_token,
@@ -231,7 +249,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public static function InitFromMeta ($config, $meta = '') {
+	public static function FromMeta ($config, $meta = '') {
 		return new QuarkModel(new OAuthToken($config), self::MetaDecode($meta));
 	}
 }
