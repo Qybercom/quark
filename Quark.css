@@ -2,51 +2,51 @@
  * Quark default styles
  */
 body {
-    font-family: FontAwesome, 'Open Sans', sans-serif;
-    font-size: 12px;
-    line-height: 16px;
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	font-size: 12px;
+	line-height: 16px;
 }
 
 h1 {
-    margin: 25px 0 15px 0;
-    font-size: 24px;
-    font-weight: 300;
-    line-height: 26px;
+	margin: 25px 0 15px 0;
+	font-size: 24px;
+	font-weight: 300;
+	line-height: 26px;
 }
 
 h2 {
-    margin: 5px 0 5px 0;
-    font-size: 20px;
-    font-weight: 300;
-    line-height: 22px;
+	margin: 5px 0 5px 0;
+	font-size: 20px;
+	font-weight: 300;
+	line-height: 22px;
 }
 
 h3 {
-    margin: 2px 0 2px 0;
-    font-size: 18px;
-    font-weight: 300;
-    line-height: 20px;
+	margin: 2px 0 2px 0;
+	font-size: 18px;
+	font-weight: 300;
+	line-height: 20px;
 }
 
 h4 {
-    margin: 2px 0 2px 0;
-    font-size: 16px;
-    font-weight: 300;
-    line-height: 18px;
+	margin: 2px 0 2px 0;
+	font-size: 16px;
+	font-weight: 300;
+	line-height: 18px;
 }
 
 h5 {
-    margin: 2px 0 2px 0;
-    font-size: 14px;
-    font-weight: 300;
-    line-height: 16px;
+	margin: 2px 0 2px 0;
+	font-size: 14px;
+	font-weight: 300;
+	line-height: 16px;
 }
 
 h6 {
-    margin: 2px 0 2px 0;
-    font-size: 12px;
-    font-weight: 300;
-    line-height: 14px;
+	margin: 2px 0 2px 0;
+	font-size: 12px;
+	font-weight: 300;
+	line-height: 14px;
 }
 
 
@@ -54,28 +54,24 @@ h6 {
  * .quark-input and .quark-button are base controls
  */
 .quark-input, .quark-button {
-    font-family: FontAwesome, 'Open Sans', sans-serif;
-    font-size: 12px;
-    line-height: 14px;
-    color: rgb(150, 150, 150);
-    text-decoration: none;
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	font-size: 12px;
+	line-height: 14px;
+	color: rgb(150, 150, 150);
+	text-decoration: none;
 }
 
 .quark-input, .quark-button.block {
-    border: 1px solid rgb(230, 230, 230);
-    border-radius: 3px;
-    padding: 10px 12px;
+	border: 1px solid rgb(230, 230, 230);
+	border-radius: 3px;
+	padding: 10px 12px;
 }
 
-textarea.quark-input {
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-}
+textarea.quark-input { }
 
 select.quark-input {
-    padding: 7px 0 7px 7px;
-    width: 176px;
+	padding: 7px 0 7px 7px;
+	width: 176px;
 	height: 36px;
 }
 
@@ -85,36 +81,40 @@ button.quark-button {
 }
 
 .quark-button.block {
-    white-space: nowrap;
+	white-space: nowrap;
 }
 
 .quark-button:hover {
-    color: rgb(0, 0, 0);
-    cursor: pointer;
+	color: rgb(0, 0, 0);
+	cursor: pointer;
 }
 
 .quark-button.block:hover {
-    background: rgb(230, 230, 230);
+	background: rgb(230, 230, 230);
 }
 
 .quark-input {
-    display: inline-block;
-    width: 150px;
+	display: inline-block;
+	width: 180px;
+	margin: 0;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 .quark-link {
-    color: rgba(0,0,0,0);
-    text-decoration: none;
-    cursor: pointer;
+	color: rgba(0,0,0,0);
+	text-decoration: none;
+	cursor: pointer;
 }
 
 .quark-link.underlined {
-    color: rgb(150, 150, 150);
+	color: rgb(150, 150, 150);
 	text-decoration: underline;
 }
 
 .quark-link.underlined:hover {
-    color: rgb(0, 0, 0);
+	color: rgb(0, 0, 0);
 }
 
 .quark-button-group {
@@ -130,69 +130,69 @@ button.quark-button {
  * .quark-message represent short notifications from system
  */
 .quark-message {
-    font-family: FontAwesome, 'Open Sans', sans-serif;
-    font-size: 12px;
-    line-height: 12px;
+	font-family: FontAwesome, 'Open Sans', sans-serif;
+	font-size: 12px;
+	line-height: 12px;
 
-    padding: 10px;
-    margin: 3px 1px;
+	padding: 10px;
+	margin: 3px 1px;
 
-    border-radius: 5px;
+	border-radius: 5px;
 }
 
 .quark-message:before {
-    vertical-align: middle;
-    display: inline-block;
-    margin-right: 10px;
-    font-size: 14px;
+	vertical-align: middle;
+	display: inline-block;
+	margin-right: 10px;
+	font-size: 14px;
 }
 
 .quark-message .content {
-    padding: 0;
+	padding: 0;
 	margin: 0;
-    vertical-align: middle;
-    display: inline-block;
+	vertical-align: middle;
+	display: inline-block;
 }
 
 .quark-message.info {
 	background: rgba(205,217,255,0.3);
-    /*border: 1px solid #CDD9FF;*/
+	/*border: 1px solid #CDD9FF;*/
 }
 
 .quark-message.info:before {
-    color: #A7BCFF;
+	color: #A7BCFF;
 }
 
 .quark-message.warn {
 	background: rgba(211,190,2,0.3);
-    /*border: 1px solid rgb(211, 190, 2);*/
+	/*border: 1px solid rgb(211, 190, 2);*/
 }
 
 .quark-message.warn:before {
-    color: rgb(211, 190, 2);
+	color: rgb(211, 190, 2);
 }
 
 .quark-message.fatal {
 	background: rgba(255,153,96,0.3);
-    /*border: 1px solid #ff9960;*/
+	/*border: 1px solid #ff9960;*/
 }
 
 .quark-message.fatal:before {
-    color: #ff9960;
+	color: #ff9960;
 }
 
 .quark-message.question {
-    background: rgba(230,230,230,0.3);
-    /*border: 1px solid rgb(230, 230, 230);*/
+	background: rgba(230,230,230,0.3);
+	/*border: 1px solid rgb(230, 230, 230);*/
 }
 
 .quark-message.ok {
 	background: rgba(1,165,1,0.3);
-    /*border: 1px solid rgb(1, 165, 1);*/
+	/*border: 1px solid rgb(1, 165, 1);*/
 }
 
 .quark-message.ok:before {
-    color: rgb(1, 165, 1);
+	color: rgb(1, 165, 1);
 }
 
 .quark-message.hidden {
@@ -204,14 +204,14 @@ button.quark-button {
  * .quark-document useful for code snippets or other text output
  */
 .quark-document {
-    font-family: Consolas, 'Anonymous Pro', monospace;
-    font-size: 12px;
+	font-family: Consolas, 'Anonymous Pro', monospace;
+	font-size: 12px;
 
-    padding: 10px;
-    margin: 5px 0;
+	padding: 10px;
+	margin: 5px 0;
 
-    border-radius: 3px;
-    border: 1px solid rgb(230, 230, 230);
+	border-radius: 3px;
+	border: 1px solid rgb(230, 230, 230);
 }
 
 
@@ -219,19 +219,19 @@ button.quark-button {
  * .quark-table nice look of tables
  */
 .quark-table {
-    border-collapse: collapse;
+	border-collapse: collapse;
 }
 
 .quark-table thead {
-    background: rgb(180, 255, 125);
+	background: rgb(180, 255, 125);
 }
 
 .quark-table td {
-    padding: 10px;
+	padding: 10px;
 }
 
 .quark-table .quark-table-section {
-    background: rgb(240,240,240);
+	background: rgb(240,240,240);
 }
 
 
@@ -239,15 +239,15 @@ button.quark-button {
  * Social network buttons
  */
 .quark-button.social {
-    font-size: 20px;
-    line-height: 20px;
-    padding: 10px;
-    color: rgb(255,255,255);
-    display: inline-block;
-    width: 20px;
-    text-align: center;
+	font-size: 20px;
+	line-height: 20px;
+	padding: 10px;
+	color: rgb(255,255,255);
+	display: inline-block;
+	width: 20px;
+	text-align: center;
 }
 
 .quark-button.social:hover {
-    color: rgb(255,255,255);
+	color: rgb(255,255,255);
 }

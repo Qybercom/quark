@@ -120,7 +120,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Error = function (trigger, dialog, data) {
-		if (data !== undefined && data.errors instanceof Array) {
+		if (data !== undefined && data !== null && data.errors instanceof Array) {
 			var i = 0;
 			var errors = '';
 
