@@ -9,6 +9,8 @@ use Quark\Extensions\OAuth\IQuarkOAuthFlow;
 use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
+use Quark\Extensions\OAuth\OAuthFlowBehavior;
+use Quark\QuarkURI;
 
 /**
  * Class AuthorizationCodeFlow
@@ -16,6 +18,8 @@ use Quark\Extensions\OAuth\OAuthError;
  * @package Quark\Extensions\OAuth\Flows
  */
 class AuthorizationCodeFlow implements IQuarkOAuthFlow {
+	use OAuthFlowBehavior;
+
 	/**
 	 * @var bool $_authorize = false
 	 */
@@ -25,11 +29,6 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	 * @var bool $_stageToken = false
 	 */
 	private $_stageToken = false;
-
-	/**
-	 * @var QuarkKeyValuePair $_client
-	 */
-	private $_client;
 
 	/**
 	 * @var string $_redirect = ''
@@ -45,6 +44,16 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	 * @var string $_code
 	 */
 	private $_code = '';
+
+	/**
+	 * @var string $_state = ''
+	 */
+	private $_state = '';
+
+	/**
+	 * @var string $_signature = ''
+	 */
+	private $_signature = '';
 
 	/**
 	 * @return bool
@@ -82,6 +91,8 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 		$this->_redirect = urldecode($request->redirect_uri);
 		$this->_scope = explode(',', $request->scope);
 		$this->_code = $request->code;
+		$this->_state = $request->state;
+		$this->_signature = $request->Signature();
 
 		return $this->_stageAuthorize || $this->_stageToken;
 	}
@@ -93,7 +104,17 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	 */
 	public function OAuthFlowSuccess (OAuthToken $token) {
 		if ($this->_stageAuthorize) {
-			$response = QuarkDTO::ForRedirect($this->_redirect);
+			$query = array(
+				'code' => $token->code
+			);
+
+			if ($this->_state)
+				$query['state'] = $this->_state;
+
+			$redirect = QuarkURI::FromURI($this->_redirect);
+			$redirect->AppendQuery($query);
+
+			$response = QuarkDTO::ForRedirect($redirect->URI(true));
 			$response->Data($token->ExtractOAuth());
 
 			return $response;
@@ -110,10 +131,10 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	}
 
 	/**
-	 * @return QuarkKeyValuePair
+	 * @return bool
 	 */
-	public function OAuthFlowClient () {
-		return $this->_client;
+	public function OAuthFlowRequiresAuthentication () {
+		return $this->_stageAuthorize && $this->_signature != $this->_session->Signature();
 	}
 
 	/**

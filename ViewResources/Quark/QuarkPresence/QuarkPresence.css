@@ -1,63 +1,63 @@
 body {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    color: rgb(255,255,255);
-    font-weight: 300;
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	color: rgb(255,255,255);
+	font-weight: 300;
 }
 
 .quark-presence-screen {
-    background-position: center center;
-    width: 100%;
+	background-position: center center;
+	width: 100%;
 }
 
 .quark-message {
-    font-weight: 300;
+	font-weight: 300;
 }
 
 .quark-input {
-    font-weight: 300;
+	font-weight: 300;
 }
 
 .quark-button {
-    color: rgb(255,255,255);
-    font-size: 16px;
-    line-height: 24px;
-    margin: 0 5px 0 0;
-    font-weight: 300;
+	color: rgb(255,255,255);
+	font-size: 16px;
+	line-height: 24px;
+	margin: 0 5px 0 0;
+	font-weight: 300;
 }
 
 .quark-button:hover {
-    color: rgb(0,225,80);
+	color: rgb(0,225,80);
 }
 
 .quark-button.block {
-    display: inline-block;
-    text-shadow: none;
-    margin: 0;
+	display: inline-block;
+	text-shadow: none;
+	margin: 0;
 }
 
 .quark-button.block.white {
-    background: rgb(255,255,255);
-    color: rgb(0,0,0);
+	background: rgb(255,255,255);
+	color: rgb(0,0,0);
 }
 
 .quark-button.block.white:hover {
-    background: rgb(230,230,230);
+	background: rgb(230,230,230);
 }
 
 .quark-button.block.ok {
-    background: rgb(0,176,80);
-    border: 1px solid rgba(0,0,0,0);
-    color: rgb(255,255,255);
-    padding: 10px 20px;
+	background: rgb(0,176,80);
+	border: 1px solid rgba(0,0,0,0);
+	color: rgb(255,255,255);
+	padding: 10px 20px;
 }
 
 .quark-button.block.ok:hover {
-    color: rgb(255,255,255);
-    background: rgb(0,225,80);
+	color: rgb(255,255,255);
+	background: rgb(0,225,80);
 }
 
 .quark-button-group .group-name {
@@ -65,122 +65,128 @@ body {
 	padding: 5px 15px 5px 15px;
 }
 
+.quark-link {
+	font-size: 14px;
+	color: rgb(100,150,255);
+	text-decoration: underline;
+}
+	
 
 
 .quark-presence-container {
-    display: inline-block;
-    text-align: center;
-    width: 100%;
+	display: inline-block;
+	text-align: center;
+	width: 100%;
 }
 
 .quark-presence-column {
-    display: inline-block;
-    text-align: left;
-    vertical-align: top;
-    margin: 10px;
+	display: inline-block;
+	text-align: left;
+	vertical-align: top;
+	margin: 10px;
 }
 
 .quark-presence-column.left {
-    text-align: left;
-    float: left;
+	text-align: left;
+	float: left;
 }
 
 .quark-presence-column.right {
-    text-align: right;
-    float: right;
+	text-align: right;
+	float: right;
 }
 
 .quark-presence-column.center {
-    text-align: center;
+	text-align: center;
 }
 
 .quark-presence-column.left-inverse {
-    text-align: right;
-    float: left;
+	text-align: right;
+	float: left;
 }
 
 .quark-presence-column.right-inverse {
-    text-align: left;
-    float: right;
+	text-align: left;
+	float: right;
 }
 
 .quark-presence-column.no-float {
-    float: none;
+	float: none;
 }
 
 .quark-presence-screen-overlay {
-    min-height: 100%;
+	min-height: 100%;
 }
 
 .quark-presence-copyright {
-    margin: 25px 5% 10px 5%;
-    font-size: 10px;
-    color: rgb(150,150,150);
+	margin: 25px 5% 10px 5%;
+	font-size: 10px;
+	color: rgb(150,150,150);
 }
 
 .quark-presence-copyright:before {
-    content: '(c)';
-    margin: 0 3px 0 0;
+	content: '(c)';
+	margin: 0 3px 0 0;
 }
 
 .quark-presence-trademark:after {
-    content: 'TM';
-    font-size: 6px;
-    vertical-align: super;
+	content: 'TM';
+	font-size: 6px;
+	vertical-align: super;
 }
 
 .quark-presence-form { }
 
 .quark-presence-form textarea {
-    height: 150px;
-    width: 100%;
-    max-width: 400px;
-    resize: none;
+	height: 150px;
+	width: 100%;
+	max-width: 400px;
+	resize: none;
 }
 
 .quark-presence-background {
-    background: center center no-repeat;
-    background-size: cover;
+	background: center center no-repeat;
+	background-size: cover;
 }
 
 .quark-presence-contrast, .quark-button.contrast {
-    color: rgb(255,255,255);
-    text-shadow:
-        -1px -1px 3px rgb(0,0,0),
-        -1px 0 3px rgb(0,0,0),
-        0 -1px 3px rgb(0,0,0),
-        0 0 3px rgb(0,0,0),
-        0 1px 3px rgb(0,0,0),
-        1px 0 3px rgb(0,0,0),
-        1px 1px 3px rgb(0,0,0);
+	color: rgb(255,255,255);
+	text-shadow:
+		-1px -1px 3px rgb(0,0,0),
+		-1px 0 3px rgb(0,0,0),
+		0 -1px 3px rgb(0,0,0),
+		0 0 3px rgb(0,0,0),
+		0 1px 3px rgb(0,0,0),
+		1px 0 3px rgb(0,0,0),
+		1px 1px 3px rgb(0,0,0);
 }
 
 .quark-button.contrast:hover {
-    color: rgb(0,225,80);
+	color: rgb(0,225,80);
 }
 
 .toggle {
-    color: rgb(0,0,0);
+	color: rgb(0,0,0);
 }
 
 .toggle:before {
-    font-size: 24px;
-    margin: -3px 5px 0 0;
-    vertical-align: middle;
+	font-size: 24px;
+	margin: -3px 5px 0 0;
+	vertical-align: middle;
 }
 
 .toggle.on:before {
-    color: rgb(0,250,75);
+	color: rgb(0,250,75);
 }
 
 .toggle.off:before {
-    color: rgb(225,75,0);
+	color: rgb(225,75,0);
 }
 
 .toggle.disabled {
-    color: rgb(200,200,200);
+	color: rgb(200,200,200);
 }
 
 .toggle.disabled:before {
-    color: rgb(200,200,200);
+	color: rgb(200,200,200);
 }

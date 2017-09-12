@@ -2,11 +2,11 @@
 namespace Quark\Extensions\OAuth\Flows;
 
 use Quark\QuarkDTO;
-use Quark\QuarkKeyValuePair;
 
 use Quark\Extensions\OAuth\IQuarkOAuthFlow;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
+use Quark\Extensions\OAuth\OAuthFlowBehavior;
 
 /**
  * Class ImplicitFlow
@@ -14,6 +14,8 @@ use Quark\Extensions\OAuth\OAuthError;
  * @package Quark\Extensions\OAuth\Flows
  */
 class ImplicitFlow implements IQuarkOAuthFlow {
+	use OAuthFlowBehavior;
+
 	/**
 	 * @param QuarkDTO $request
 	 *
@@ -21,6 +23,13 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 	 */
 	public function OAuthFlowRecognize (QuarkDTO $request) {
 		// TODO: Implement OAuthFlowRecognize() method.
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function OAuthFlowScope () {
+		// TODO: Implement OAuthFlowScope() method.
 	}
 
 	/**
@@ -33,9 +42,9 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 	}
 
 	/**
-	 * @return QuarkKeyValuePair
+	 * @return bool
 	 */
-	public function OAuthFlowClient () {
-		// TODO: Implement OAuthFlowClient() method.
+	public function OAuthFlowRequiresAuthentication () {
+		return true;
 	}
 }

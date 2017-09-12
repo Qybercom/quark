@@ -3,13 +3,12 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
-use Quark\IQuarkModel;
 
-use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkSession;
 
 use Quark\Extensions\OAuth\Flows\AuthorizationCodeFlow;
 use Quark\Extensions\OAuth\Flows\ClientCredentialsFlow;
@@ -24,9 +23,9 @@ use Quark\Extensions\OAuth\Flows\RefreshTokenFlow;
  */
 class OAuthServer implements IQuarkAuthorizationProvider {
 	/**
-	 * @var IQuarkModel $_character
+	 * @var string $_session = ''
 	 */
-	private $_character;
+	private $_session = '';
 
 	/**
 	 * @var IQuarkOAuthFlow[] $_flows = []
@@ -54,37 +53,19 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	private $_error;
 
 	/**
-	 * @param IQuarkModel $character = null
+	 * @param string $session = ''
 	 * @param IQuarkOAuthFlow[] $flows = []
 	 */
-	public function __construct (IQuarkModel $character = null, $flows = []) {
-		$this->_character = $character;
+	public function __construct ($session = '', $flows = []) {
+		$this->_session = $session;
 		$this->_flows = $flows;
 	}
 
 	/**
-	 * @param IQuarkModel $character = null
-	 *
-	 * @return IQuarkModel
-	 */
-	public function &Character (IQuarkModel $character = null) {
-		if (func_num_args() != 0)
-			$this->_character = $character;
-
-		return $this->_character;
-	}
-
-	/**
-	 * @param QuarkDTO $request = null
-	 *
 	 * @return IQuarkOAuthFlow
 	 */
-	public function OAuthFlow (QuarkDTO $request = null) {
-		foreach ($this->_flows as $i => &$flow)
-			if ($flow->OAuthFlowRecognize(func_num_args() == 0 ? $this->_input : $request))
-				return $this->_flow = $flow;
-
-		return null;
+	public function OAuthFlow () {
+		return $this->_flow;
 	}
 
 	/**
@@ -136,6 +117,23 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	 */
 	public function Session ($name, IQuarkAuthorizableModel $model, QuarkDTO $input) {
 		$this->_input = $input;
+
+		$session = QuarkSession::Init($this->_session, $input);
+
+		foreach ($this->_flows as $i => &$flow) {
+			if (!$flow->OAuthFlowRecognize($this->_input)) continue;
+
+			$this->_flow = $flow;
+
+			if ($session != null)
+				$this->_flow->OAuthFlowUser($session);
+		}
+
+		$output = new QuarkDTO();
+		$output->AuthorizationProvider($this->_input->AuthorizationProvider());
+		$output->Data($this->_flow ? $this->_flow : $input->Authorization());
+
+		return $output;
 	}
 
 	/**

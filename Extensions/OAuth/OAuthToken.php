@@ -22,7 +22,7 @@ use Quark\QuarkObject;
  * @property QuarkDate $refreshed
  * @property string $token_type = self::TYPE_BEARER
  * @property string $code
- * @property int $expires_in
+ * @property int $expires_in = 0
  * @property string $oauth_token_secret
  *
  * @package Quark\Extensions\OAuth

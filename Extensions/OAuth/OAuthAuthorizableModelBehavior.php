@@ -22,6 +22,11 @@ trait OAuthAuthorizableModelBehavior {
 	private $_error;
 
 	/**
+	 * @var string $_redirect = ''
+	 */
+	private $_redirect = '';
+
+	/**
 	 * @throws QuarkArchException
 	 */
 	private function _oauth_check () {
@@ -31,30 +36,34 @@ trait OAuthAuthorizableModelBehavior {
 
 	/**
 	 * @param OAuthToken $token
+	 * @param string $redirect = ''
 	 *
 	 * @return $this
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function OAuthToken (OAuthToken $token) {
+	public function OAuthToken (OAuthToken $token, $redirect = '') {
 		$this->_oauth_check();
 
 		$this->_token = $token;
+		$this->_redirect = $redirect;
 
 		return $this;
 	}
 
 	/**
 	 * @param OAuthError $error
+	 * @param string $redirect = ''
 	 *
 	 * @return $this
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function OAuthError (OAuthError $error) {
+	public function OAuthError (OAuthError $error, $redirect = '') {
 		$this->_oauth_check();
 
 		$this->_error = $error;
+		$this->_redirect = $redirect;
 
 		return $this;
 	}
@@ -71,5 +80,22 @@ trait OAuthAuthorizableModelBehavior {
 	 */
 	public function OAuthModelError () {
 		return $this->_error;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OAuthModelRedirect () {
+		return $this->_redirect;
+	}
+
+	/**
+	 * @param string $canonical = ''
+	 * @param string $redirect = ''
+	 *
+	 * @return bool
+	 */
+	public function OAuthModelRedirectAllowed ($canonical = '', $redirect = '') {
+		return strpos($redirect, $canonical) !== false;
 	}
 }

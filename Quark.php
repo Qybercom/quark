@@ -12999,9 +12999,14 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	 * @return QuarkModel|IQuarkLinkedModel
 	 */
 	public function Retrieve () {
-		$this->_linked = true;
+		$out = $this->_model->Link($this->value);
 
-		return $this->_model->Link($this->value);
+		$this->_linked = $out != null;
+
+		if ($this->_linked)
+			$this->_model = $out;
+
+		return $out;
 	}
 	
 	/**

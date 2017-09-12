@@ -3,6 +3,7 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\QuarkDTO;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkSession;
 
 /**
  * Interface IQuarkOAuthFlow
@@ -18,6 +19,11 @@ interface IQuarkOAuthFlow {
 	public function OAuthFlowRecognize(QuarkDTO $request);
 
 	/**
+	 * @return string[]
+	 */
+	public function OAuthFlowScope();
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return QuarkDTO|OAuthError
@@ -28,4 +34,16 @@ interface IQuarkOAuthFlow {
 	 * @return QuarkKeyValuePair
 	 */
 	public function OAuthFlowClient();
+
+	/**
+	 * @param QuarkSession $session = null
+	 *
+	 * @return QuarkSession
+	 */
+	public function OAuthFlowUser(QuarkSession $session = null);
+
+	/**
+	 * @return bool
+	 */
+	public function OAuthFlowRequiresAuthentication();
 }

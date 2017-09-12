@@ -7,10 +7,10 @@ namespace Quark\Extensions\OAuth;
  * @package Quark\Extensions\OAuth
  */
 class OAuthError {
-	const UNAUTHORIZED_CLIENT = 'unauthorized_client';
-	const ACCESS_DENIED = 'access_denied';
 	const INTERNAL_ERROR = 'internal_error';
 
+	const ACCESS_DENIED = 'access_denied';
+	const UNAUTHORIZED_CLIENT = 'unauthorized_client';
 	const INVALID_REQUEST = 'invalid_request';
 	const INVALID_SCOPE = 'invalid_scope';
 	const INVALID_CLIENT = 'invalid_client';

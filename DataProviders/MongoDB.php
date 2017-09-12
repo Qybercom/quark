@@ -985,11 +985,9 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 	 * @throws QuarkArchException
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
-		if (isset($model->_id))
-			unset($model->_id);
-
 		$query = new BulkWrite();
-		$model->_id = $query->insert($this->_data($model));
+		/** @noinspection PhpUndefinedFieldInspection */
+		$model->_id = $query->insert($model);
 
 		return $this->BulkWrite($model, $query, $options);
 	}
