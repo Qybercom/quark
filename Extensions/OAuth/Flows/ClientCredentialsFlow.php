@@ -2,8 +2,10 @@
 namespace Quark\Extensions\OAuth\Flows;
 
 use Quark\QuarkDTO;
+use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\OAuth\IQuarkOAuthFlow;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
 use Quark\Extensions\OAuth\OAuthFlowBehavior;
@@ -22,14 +24,23 @@ class ClientCredentialsFlow implements IQuarkOAuthFlow {
 	 * @return bool
 	 */
 	public function OAuthFlowRecognize (QuarkDTO $request) {
-		// TODO: Implement OAuthFlowRecognize() method.
+		$url = OAuthConfig::URLAllowed($request);
+		if (!$url) return false;
+
+		$client = OAuthConfig::URL_TOKEN
+			&& isset($request->grant_type)
+			&& $request->grant_type == OAuthConfig::GRANT_CLIENT_CREDENTIALS;
+
+		$this->_oauthFlowInit($request);
+
+		return $client;
 	}
 
 	/**
-	 * @return string[]
+	 * @return bool
 	 */
-	public function OAuthFlowScope () {
-		// TODO: Implement OAuthFlowScope() method.
+	public function OAuthFlowRequiresAuthentication () {
+		return false;
 	}
 
 	/**
@@ -38,13 +49,9 @@ class ClientCredentialsFlow implements IQuarkOAuthFlow {
 	 * @return QuarkDTO|OAuthError
 	 */
 	public function OAuthFlowSuccess (OAuthToken $token) {
-		// TODO: Implement OAuthFlowSuccess() method.
-	}
+		$response = QuarkDTO::ForResponse(new QuarkJSONIOProcessor());
+		$response->Data($token->ExtractOAuth());
 
-	/**
-	 * @return bool
-	 */
-	public function OAuthFlowRequiresAuthentication () {
-		return false;
+		return $response;
 	}
 }

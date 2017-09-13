@@ -4792,7 +4792,7 @@ class QuarkService implements IQuarkContainer {
 		$this->_output->Merge($this->_session->Output(), false);
 
 		if ($criteria !== true) {
-			$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria));
+			$this->_output->Merge($this->_service->AuthorizationFailed($this->_input, $criteria), false);
 
 			return false;
 		}
@@ -4864,7 +4864,7 @@ class QuarkService implements IQuarkContainer {
 		$this->_filterOutput();
 
 		if ($this->_service instanceof IQuarkAuthorizableService && !$empty)
-			$this->_output->Merge($this->_session->Output(), false);
+			$this->_output->Merge($this->_session->Output(), false, !($output instanceof QuarkDTO));
 
 		return $output;
 	}
@@ -16621,7 +16621,13 @@ class QuarkURI {
 	public function URI ($full = false, $path = true) {
 		return $this->Hostname()
 			. ($path && $this->path !== null ? Quark::NormalizePath('/' . $this->path, false) : '')
-			. ($full ? '/?' . $this->query : '');
+			. ($full
+				? (
+					($this->query ? ('?' . $this->query) : '') .
+					($this->fragment ? ('#' . $this->fragment) : '')
+				)
+				: ''
+			);
 	}
 
 	/**
@@ -16727,6 +16733,19 @@ class QuarkURI {
 		$this->query .=
 			(strlen($this->query) == 0 ? '' : '&') .
 			(is_scalar($query) ? $query : http_build_query($query));
+
+		return $this;
+	}
+
+	/**
+	 * @param array $fragment = []
+	 *
+	 * @return QuarkURI
+	 */
+	public function AppendFragment ($fragment = []) {
+		$this->fragment .=
+			(strlen($this->fragment) == 0 ? '' : '&') .
+			(is_scalar($fragment) ? $fragment : http_build_query($fragment));
 
 		return $this;
 	}

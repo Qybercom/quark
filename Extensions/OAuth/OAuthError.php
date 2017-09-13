@@ -1,5 +1,6 @@
 <?php
 namespace Quark\Extensions\OAuth;
+use Quark\QuarkDTO;
 
 /**
  * Class OAuthError
@@ -15,6 +16,7 @@ class OAuthError {
 	const INVALID_SCOPE = 'invalid_scope';
 	const INVALID_CLIENT = 'invalid_client';
 	const INVALID_GRANT = 'invalid_grant';
+	const INVALID_TOKEN = 'invalid_token';
 	const UNSUPPORTED_GRANT_TYPE = 'unsupported_grant_type';
 	const UNSUPPORTED_RESPONSE_TYPE = 'unsupported_response_type';
 
@@ -97,5 +99,38 @@ class OAuthError {
 			$this->_state = $state;
 
 		return $this->_state;
+	}
+
+	/**
+	 * @param string $status = QuarkDTO::STATUS_400_BAD_REQUEST
+	 *
+	 * @return QuarkDTO
+	 */
+	public function DTO ($status = QuarkDTO::STATUS_400_BAD_REQUEST) {
+		$response = QuarkDTO::ForStatus($status);
+		$response->Data((object)array(
+			'error' => $this->_error
+		));
+
+		if ($this->_description) $response->error_description = $this->_description;
+		if ($this->_uri) $response->error_uri = $this->_uri;
+		if ($this->_state) $response->state = $this->_state;
+
+		return $response;
+	}
+
+	/**
+	 * @return object
+	 */
+	public function Data () {
+		$data = (object)array(
+			'error' => $this->_error
+		);
+
+		if ($this->_description) $data->error_description = $this->_description;
+		if ($this->_uri) $data->error_uri = $this->_uri;
+		if ($this->_state) $data->state = $this->_state;
+
+		return $data;
 	}
 }

@@ -12,6 +12,7 @@ use Quark\QuarkException;
 use Quark\QuarkField;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkLocalizedString;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
@@ -181,10 +182,11 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if (!$records) return array();
 
 		$output = array();
+		$fields = (object)$model->Fields();
 
 		foreach ($records as $record) {
 			foreach ($record as $key => &$value)
-				if (isset($model->$key) && $model->$key instanceof QuarkCollection && QuarkJSONIOProcessor::IsValid($value))
+				if (isset($fields->$key) && ($fields->$key instanceof QuarkCollection || ($fields->$key instanceof IQuarkModel && !($fields->$key instanceof QuarkLocalizedString)) || is_array($fields->$key)) && QuarkJSONIOProcessor::IsValid($value))
 					$value = json_decode($value);
 
 			$output[] = $record;

@@ -1,16 +1,15 @@
 <?php
 namespace Quark\Extensions\OAuth\Flows;
 
+use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkKeyValuePair;
 
 use Quark\Extensions\OAuth\IQuarkOAuthFlow;
 use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
 use Quark\Extensions\OAuth\OAuthFlowBehavior;
-use Quark\QuarkURI;
 
 /**
  * Class AuthorizationCodeFlow
@@ -21,7 +20,7 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	use OAuthFlowBehavior;
 
 	/**
-	 * @var bool $_authorize = false
+	 * @var bool $_stageAuthorize = false
 	 */
 	private $_stageAuthorize = false;
 
@@ -34,11 +33,6 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	 * @var string $_redirect = ''
 	 */
 	private $_redirect = '';
-
-	/**
-	 * @var string[] $_scope = []
-	 */
-	private $_scope = array();
 
 	/**
 	 * @var string $_code
@@ -56,27 +50,12 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	private $_signature = '';
 
 	/**
-	 * @return bool
-	 */
-	public function OAuthFlowStageAuthorize () {
-		return $this->_stageAuthorize;
-	}
-
-	/**
-	 * @return bool
-	 */
-	public function OAuthFlowStageToken () {
-		return $this->_stageToken;
-	}
-
-	/**
 	 * @param QuarkDTO $request
 	 *
 	 * @return bool
 	 */
 	public function OAuthFlowRecognize (QuarkDTO $request) {
 		$url = OAuthConfig::URLAllowed($request);
-
 		if (!$url) return false;
 
 		$this->_stageAuthorize = $url == OAuthConfig::URL_AUTHORIZE
@@ -87,14 +66,21 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 			&& isset($request->grant_type)
 			&& $request->grant_type == OAuthConfig::GRANT_AUTHORIZATION_CODE;
 
-		$this->_client = new QuarkKeyValuePair($request->client_id, $request->client_secret);
+		$this->_oauthFlowInit($request);
+
 		$this->_redirect = urldecode($request->redirect_uri);
-		$this->_scope = explode(',', $request->scope);
 		$this->_code = $request->code;
 		$this->_state = $request->state;
 		$this->_signature = $request->Signature();
 
 		return $this->_stageAuthorize || $this->_stageToken;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function OAuthFlowRequiresAuthentication () {
+		return $this->_stageAuthorize && $this->_signature != $this->_session->Signature();
 	}
 
 	/**
@@ -114,10 +100,7 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 			$redirect = QuarkURI::FromURI($this->_redirect);
 			$redirect->AppendQuery($query);
 
-			$response = QuarkDTO::ForRedirect($redirect->URI(true));
-			$response->Data($token->ExtractOAuth());
-
-			return $response;
+			return QuarkDTO::ForRedirect($redirect->URI(true));
 		}
 
 		if ($this->_stageToken) {
@@ -133,8 +116,15 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	/**
 	 * @return bool
 	 */
-	public function OAuthFlowRequiresAuthentication () {
-		return $this->_stageAuthorize && $this->_signature != $this->_session->Signature();
+	public function OAuthFlowStageAuthorize () {
+		return $this->_stageAuthorize;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function OAuthFlowStageToken () {
+		return $this->_stageToken;
 	}
 
 	/**
@@ -145,16 +135,23 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	}
 
 	/**
-	 * @return string[]
+	 * @return string
 	 */
-	public function OAuthFlowScope () {
-		return $this->_scope;
+	public function OAuthFlowCode () {
+		return $this->_code;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function OAuthFlowCode () {
-		return $this->_code;
+	public function OAuthFlowState () {
+		return $this->_state;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OAuthFlowSignature () {
+		return $this->_signature;
 	}
 }

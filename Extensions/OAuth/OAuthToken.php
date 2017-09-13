@@ -20,6 +20,7 @@ use Quark\QuarkObject;
  * @property string $access_token
  * @property string $refresh_token
  * @property QuarkDate $refreshed
+ * @property bool $permanent
  * @property string $token_type = self::TYPE_BEARER
  * @property string $code
  * @property int $expires_in = 0
@@ -87,6 +88,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			'access_token' => '',
 			'refresh_token' => '',
 			'refreshed' => QuarkDate::GMTNow(),
+			'permanent' => false,
 			'token_type' => self::TYPE_BEARER,
 			'code' => '',
 			'expires_in' => 0,
@@ -121,6 +123,8 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function Expired () {
+		if ($this->permanent) return false;
+
 		$now = QuarkDate::GMTNow();
 
 		return $now->Later($this->refreshed->Offset('+' . $this->expires_in . ' seconds'));

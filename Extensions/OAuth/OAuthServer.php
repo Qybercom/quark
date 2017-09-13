@@ -19,6 +19,8 @@ use Quark\Extensions\OAuth\Flows\RefreshTokenFlow;
 /**
  * Class OAuthServer
  *
+ * https://tools.ietf.org/html/draft-ietf-oauth-v2-13
+ *
  * @package Quark\Extensions\OAuth
  */
 class OAuthServer implements IQuarkAuthorizationProvider {
@@ -126,7 +128,7 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 			$this->_flow = $flow;
 
 			if ($session != null)
-				$this->_flow->OAuthFlowUser($session);
+				$this->_flow->OAuthFlowSession($session);
 		}
 
 		$output = new QuarkDTO();

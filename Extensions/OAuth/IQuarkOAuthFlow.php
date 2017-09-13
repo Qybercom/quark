@@ -19,9 +19,9 @@ interface IQuarkOAuthFlow {
 	public function OAuthFlowRecognize(QuarkDTO $request);
 
 	/**
-	 * @return string[]
+	 * @return bool
 	 */
-	public function OAuthFlowScope();
+	public function OAuthFlowRequiresAuthentication();
 
 	/**
 	 * @param OAuthToken $token
@@ -40,10 +40,10 @@ interface IQuarkOAuthFlow {
 	 *
 	 * @return QuarkSession
 	 */
-	public function OAuthFlowUser(QuarkSession $session = null);
+	public function OAuthFlowSession(QuarkSession $session = null);
 
 	/**
-	 * @return bool
+	 * @return string[]
 	 */
-	public function OAuthFlowRequiresAuthentication();
+	public function OAuthFlowScope();
 }

@@ -2,8 +2,11 @@
 namespace Quark\Extensions\OAuth\Flows;
 
 use Quark\QuarkDTO;
+use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkKeyValuePair;
 
 use Quark\Extensions\OAuth\IQuarkOAuthFlow;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthError;
 use Quark\Extensions\OAuth\OAuthFlowBehavior;
@@ -17,19 +20,35 @@ class PasswordCredentialsFlow implements IQuarkOAuthFlow {
 	use OAuthFlowBehavior;
 
 	/**
+	 * @var QuarkKeyValuePair $_user
+	 */
+	private $_user;
+
+	/**
 	 * @param QuarkDTO $request
 	 *
 	 * @return bool
 	 */
 	public function OAuthFlowRecognize (QuarkDTO $request) {
-		// TODO: Implement OAuthFlowRecognize() method.
+		$url = OAuthConfig::URLAllowed($request);
+		if (!$url) return false;
+
+		$password = OAuthConfig::URL_TOKEN
+			&& isset($request->grant_type)
+			&& $request->grant_type == OAuthConfig::GRANT_PASSWORD;
+
+		$this->_oauthFlowInit($request);
+
+		$this->_user = new QuarkKeyValuePair($request->username, $request->password);
+
+		return $password;
 	}
 
 	/**
-	 * @return string[]
+	 * @return bool
 	 */
-	public function OAuthFlowScope () {
-		// TODO: Implement OAuthFlowScope() method.
+	public function OAuthFlowRequiresAuthentication () {
+		return false;
 	}
 
 	/**
@@ -38,13 +57,16 @@ class PasswordCredentialsFlow implements IQuarkOAuthFlow {
 	 * @return QuarkDTO|OAuthError
 	 */
 	public function OAuthFlowSuccess (OAuthToken $token) {
-		// TODO: Implement OAuthFlowSuccess() method.
+		$response = QuarkDTO::ForResponse(new QuarkJSONIOProcessor());
+		$response->Data($token->ExtractOAuth());
+
+		return $response;
 	}
 
 	/**
-	 * @return bool
+	 * @return QuarkKeyValuePair
 	 */
-	public function OAuthFlowRequiresAuthentication () {
-		return false;
+	public function OAuthFlowUser () {
+		return $this->_user;
 	}
 }
