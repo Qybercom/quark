@@ -9577,7 +9577,8 @@ class QuarkModel implements IQuarkContainer {
 		if ($model instanceof IQuarkStrongModelWithRuntimeFields)
 			$fields = array_replace($fields, (array)$model->RuntimeFields());
 
-		if (!$default && $model instanceof IQuarkModelWithDataProvider && ($model instanceof IQuarkModelWithManageableDataProvider ? $model->DataProviderForSubModel($source) : true)) {
+		// TODO: investigate the $default behavior: for old and new MongoDB drivers is now useless...
+		if (/*!$default && */$model instanceof IQuarkModelWithDataProvider && ($model instanceof IQuarkModelWithManageableDataProvider ? $model->DataProviderForSubModel($source) : true)) {
 			/**
 			 * @var IQuarkModel $model
 			 */

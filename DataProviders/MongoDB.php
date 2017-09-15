@@ -986,6 +986,10 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 	 */
 	public function Create (IQuarkModel $model, $options = []) {
 		$query = new BulkWrite();
+
+		if (isset($model->_id))
+			unset($model->_id);
+
 		/** @noinspection PhpUndefinedFieldInspection */
 		$model->_id = $query->insert($model);
 
