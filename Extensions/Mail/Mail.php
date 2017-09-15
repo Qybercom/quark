@@ -40,6 +40,11 @@ class Mail implements IQuarkExtension {
 	private $_sender = '';
 
 	/**
+	 * @var string $_from = ''
+	 */
+	private $_from = '';
+
+	/**
 	 * @var string[] $_receivers = []
 	 */
 	private $_receivers = array();
@@ -81,7 +86,8 @@ class Mail implements IQuarkExtension {
 		if (!($this->_config instanceof MailConfig)) return;
 
 		$this->_dto = new QuarkDTO(new QuarkHTMLIOProcessor());
-		$this->_sender = $this->_config->From();
+		$this->_sender = $this->_config->Sender();
+		$this->_from = $this->_config->From();
 
 		$this->Subject($subject);
 		$this->Content($content);
@@ -203,7 +209,7 @@ class Mail implements IQuarkExtension {
 			$this->_cmd($client, 'AUTH LOGIN');
 			$this->_cmd($client, base64_encode($smtp->user));
 			$this->_cmd($client, base64_encode($smtp->pass));
-			$this->_cmd($client, 'MAIL FROM: <' . $smtp->user . '>');
+			$this->_cmd($client, 'MAIL FROM: <' . $this->_from . '>');
 
 			foreach ($this->_receivers as $receiver)
 				$this->_cmd($client, 'RCPT TO: <' . $receiver . '>');
@@ -213,7 +219,14 @@ class Mail implements IQuarkExtension {
 			$this->_cmd($client, 'QUIT');
 		});
 
-		return $client->Connect();
+		$out = $client->Connect();
+
+		if ($this->_config->Log()) {
+			Quark::Log('[Mail] Tracing Mail');
+			Quark::Trace($this->Log());
+		}
+
+		return $out;
 	}
 
 	/**

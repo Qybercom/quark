@@ -40,6 +40,16 @@ class MailConfig implements IQuarkExtensionConfig {
 	private $_name = '';
 
 	/**
+	 * @var string $_sender = ''
+	 */
+	private $_sender = '';
+
+	/**
+	 * @var string $_from = ''
+	 */
+	private $_from = '';
+
+	/**
 	 * @var QuarkCertificate $_certificate
 	 */
 	private $_certificate;
@@ -53,6 +63,11 @@ class MailConfig implements IQuarkExtensionConfig {
 	 * @var int $_timeoutCommand = self::TIMEOUT_COMMAND (microseconds)
 	 */
 	private $_timeoutCommand = self::TIMEOUT_COMMAND;
+
+	/**
+	 * @var bool $_log = false
+	 */
+	private $_log = false;
 
 	/**
 	 * @param IQuarkMailProvider $provider
@@ -70,8 +85,15 @@ class MailConfig implements IQuarkExtensionConfig {
 	/**
 	 * @return string
 	 */
+	public function Sender () {
+		return $this->_sender ? $this->_sender : Mail::Sender($this->_fullName, $this->_username);
+	}
+
+	/**
+	 * @return string
+	 */
 	public function From () {
-		return Mail::Sender($this->_fullName, $this->_username);
+		return $this->_from ? $this->_from : $this->MailSMTPEndpoint()->user;
 	}
 
 	/**
@@ -135,6 +157,13 @@ class MailConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function Log () {
+		return $this->_log;
+	}
+
+	/**
 	 * @return IQuarkMailProvider
 	 */
 	public function &MailProvider () {
@@ -183,6 +212,12 @@ class MailConfig implements IQuarkExtensionConfig {
 
 		if (isset($ini->FullName))
 			$this->_fullName = $ini->FullName;
+
+		if (isset($ini->Sender))
+			$this->_sender = $ini->Sender;
+
+		if (isset($ini->From))
+			$this->_from = $ini->From;
 		
 		if (isset($ini->CertificateLocation))
 			$this->_certificate = new QuarkCertificate($ini->CertificateLocation);
@@ -195,6 +230,8 @@ class MailConfig implements IQuarkExtensionConfig {
 
 		if (isset($ini->TimeoutCommand))
 			$this->_timeoutCommand = $ini->TimeoutCommand;
+
+		$this->_log = isset($ini->Log) && $ini->Log;
 
 		$this->_provider->MailINI($ini);
 	}
