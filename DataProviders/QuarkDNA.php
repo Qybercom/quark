@@ -9,12 +9,14 @@ use Quark\IQuarkModelWithCustomPrimaryKey;
 use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkCollection;
+use Quark\QuarkConfig;
 use Quark\QuarkDTO;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
+use Quark\QuarkModelSource;
 use Quark\QuarkObject;
 use Quark\QuarkURI;
 
@@ -320,5 +322,15 @@ class QuarkDNA implements IQuarkDataProvider, IQuarkGuIDSynchronizer {
 	 */
 	public function GuIDRequest () {
 		return Quark::GuID();
+	}
+
+	/**
+	 * @param string $name = ''
+	 * @param string $file = ''
+	 *
+	 * @return QuarkModelSource
+	 */
+	public static function RuntimeStorage ($name = '', $file = '') {
+		return Quark::Config()->DataProvider($name, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/' . $file));
 	}
 }

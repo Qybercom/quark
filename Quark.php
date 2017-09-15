@@ -9226,26 +9226,6 @@ class QuarkModelSource implements IQuarkStackable {
 	public function &Connected () {
 		return $this->_connected;
 	}
-
-	/**
-	 * @param string $name
-	 * @param IQuarkDataProvider $provider
-	 * @param QuarkURI $uri
-	 *
-	 * @return QuarkModelSource|IQuarkStackable
-	 */
-	public static function Register ($name, IQuarkDataProvider $provider, QuarkURI $uri) {
-		return Quark::Component($name, new self($name, $provider, $uri));
-	}
-
-	/**
-	 * @param string $name
-	 *
-	 * @return QuarkModelSource|IQuarkStackable
-	 */
-	public static function Get ($name) {
-		return Quark::Component($name);
-	}
 }
 
 /**
@@ -12557,12 +12537,13 @@ class QuarkDateInterval {
 	}
 
 	/**
+	 * @param string $now = ''
 	 * @param array $mappings = []
 	 * @param int $units = 1
 	 *
 	 * @return string
 	 */
-	public function Elapsed ($mappings = [], $units = 1) {
+	public function Elapsed ($now = '', $mappings = [], $units = 1) {
 		$elapsed = '';
 
 		if ($this->seconds != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_SECOND);
@@ -12572,7 +12553,7 @@ class QuarkDateInterval {
 		if ($this->months != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_MONTH);
 		if ($this->years != 0) $elapsed = $this->_elapsed($elapsed, $mappings, self::UNIT_YEAR);
 
-		return implode(', ', array_slice(explode(',', trim($elapsed, ',')), 0, $units));
+		return $elapsed ? implode(', ', array_slice(explode(',', trim($elapsed, ',')), 0, $units)) : $now;
 	}
 	
 	/**

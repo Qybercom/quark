@@ -109,7 +109,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return mixed
 	 */
 	public function Link ($raw) {
-		return new QuarkModel(new OAuthToken(), self::MetaDecode($raw));
+		return self::FromMeta($raw);
 	}
 
 	/**
@@ -228,32 +228,12 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
-	 * @param string $config
-	 * @param string $access_token = ''
-	 * @param string $refresh_token = ''
-	 * @param string $oauth_token_secret = ''
-	 * @param int $expires_in = 0
-	 * @param QuarkDate $refreshed = null
-	 *
-	 * @return QuarkModel|OAuthToken
-	 */
-	public static function FromParams ($config, $access_token = '', $refresh_token = '', $oauth_token_secret = '', $expires_in = 0, QuarkDate $refreshed = null) {
-		return new QuarkModel(new OAuthToken($config), array(
-			'access_token' => $access_token,
-			'refresh_token' => $refresh_token,
-			'refreshed' => $refreshed ? $refreshed : QuarkDate::GMTNow(),
-			'expires_in' => $expires_in,
-			'oauth_token_secret' => $oauth_token_secret
-		));
-	}
-
-	/**
-	 * @param string $config
 	 * @param string $meta = ''
+	 * @param string $config = ''
 	 *
 	 * @return QuarkModel|OAuthToken
 	 */
-	public static function FromMeta ($config, $meta = '') {
-		return new QuarkModel(new OAuthToken($config), self::MetaDecode($meta));
+	public static function FromMeta ($meta = '', $config = '') {
+		return new QuarkModel(func_num_args() == 2 ? new OAuthToken($config) : new OAuthToken(), self::MetaDecode($meta));
 	}
 }

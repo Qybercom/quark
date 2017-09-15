@@ -98,4 +98,29 @@ trait OAuthAuthorizableModelBehavior {
 	public function OAuthModelRedirectAllowed ($canonical = '', $redirect = '') {
 		return strpos($redirect, $canonical) !== false;
 	}
+
+
+
+	public function OAuthModelSession ($session) {
+		if ($session instanceof IQuarkOAuthFlow) {
+			if ($session->OAuthFlowRequiresAuthentication())
+				return $this->OAuthModelClient($session->OAuthFlowClient());
+
+			return null;
+		}
+
+		if ($session instanceof QuarkKeyValuePair) {
+			$token = $this->OAuthModelSessionToken($session->Value());
+
+			if ($token == null)
+				return new OAuthError(OAuthError::INVALID_TOKEN, 'Provided token not found');
+
+			if ($token->Expired())
+				return new OAuthError(OAuthError::INVALID_TOKEN, 'Provided token is expired');
+
+			return $this->OAuthModelSessionActor();
+		}
+
+		return null;
+	}
 }

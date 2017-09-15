@@ -7,14 +7,12 @@ use Quark\IQuarkModelWithDataProvider;
 use Quark\IQuarkStrongModel;
 
 use Quark\Quark;
-use Quark\QuarkConfig;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkModel;
-use Quark\QuarkModelSource;
 use Quark\QuarkModelBehavior;
 
 use Quark\DataProviders\QuarkDNA;
@@ -258,7 +256,7 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 	 */
 	public function DataProvider () {
 		if (!$this->_init) {
-			QuarkModelSource::Register($this->_storage, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/social.tumblr.qd'));
+			QuarkDNA::RuntimeStorage($this->_storage, 'social.tumblr.qd');
 			$this->_init = true;
 		}
 

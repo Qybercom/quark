@@ -5,14 +5,11 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
-use Quark\QuarkConfig;
 use Quark\QuarkDate;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkModel;
-use Quark\QuarkModelSource;
 use Quark\QuarkObject;
-use Quark\QuarkURI;
 
 use Quark\DataProviders\QuarkDNA;
 
@@ -201,7 +198,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 */
 	public function DataProvider () {
 		if (!$this->_init) {
-			QuarkModelSource::Register($this->_storage, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/cdn.qd'));
+			QuarkDNA::RuntimeStorage($this->_storage, 'cdn.qd');
 			$this->_init = true;
 		}
 

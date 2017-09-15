@@ -9,14 +9,11 @@ use Quark\IQuarkModelWithCustomCollectionName;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
-use Quark\QuarkConfig;
 use Quark\QuarkCookie;
 use Quark\QuarkGenericModel;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
-use Quark\QuarkModelSource;
-use Quark\QuarkURI;
 
 use Quark\DataProviders\QuarkDNA;
 
@@ -221,7 +218,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	 */
 	public function DataProvider () {
 		if (!$this->_init) {
-			QuarkModelSource::Register($this->_storage, new QuarkDNA(), QuarkURI::FromFile(Quark::Config()->Location(QuarkConfig::RUNTIME) . '/session.qd'));
+			QuarkDNA::RuntimeStorage($this->_storage, 'session.qd');
 			$this->_init = true;
 		}
 
