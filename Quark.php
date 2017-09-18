@@ -8497,7 +8497,12 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 * @return bool
 	 */
 	public function TypeIs ($item) {
-		return $item instanceof $this->_type || ($item instanceof QuarkModel && $item->Model() instanceof $this->_type) || ($this->_type instanceof \stdClass && is_object($item));
+		if ($item instanceof QuarkModel)
+			$item = $item->Model();
+
+		return $item instanceof $this->_type
+			|| ($this->_type instanceof QuarkLazyLink && $this->_type->Model() instanceof $item)
+			|| ($this->_type instanceof \stdClass && is_object($item));
 	}
 
 	/**
@@ -22986,10 +22991,10 @@ class QuarkSQL {
 	 * @return bool|float|int|string
 	 */
 	public function Value ($value) {
-		if ($value === null) return self::NULL;
-		if ($value instanceof QuarkCollection) return json_encode($value->Extract());
-		if (is_array($value)) return json_encode($value);
-		if (!is_scalar($value)) return null;
+		if ($value === null) $value = self::NULL;
+		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());
+		if (is_array($value)) $value = json_encode($value);
+		if (!is_scalar($value)) $value = null;
 		if (is_bool($value))
 			$value = $value ? 1 : 0;
 
