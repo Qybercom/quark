@@ -747,7 +747,13 @@ class _MongoDB_php_mongo implements IQuarkMongoDBDriver {
  * @package Quark\DataProviders
  */
 class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
-	const WRITE_CONCERN_LEVEL = WriteConcern::MAJORITY;
+	const PARAM_WRITE_CONCERN_LEVEL = '__writeConcernLevel';
+	const PARAM_WRITE_CONCERN_TIMEOUT = '__writeConcernTimeout';
+	const PARAM_LOG = '__log';
+
+	const WRITE_CONCERN_LEVEL_MAJORITY = WriteConcern::MAJORITY;
+	const WRITE_CONCERN_LEVEL_STANDALONE = 1;
+	const WRITE_CONCERN_LEVEL_DISABLED = 0;
 	const WRITE_CONCERN_TIMEOUT = 100;
 
 	const OPTION_UPDATE_WITH_ID = '___mongodb___update_with_id___';
@@ -762,6 +768,21 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 	 * @var QuarkURI $_uri
 	 */
 	private $_uri;
+
+	/**
+	 * @var string $_writeConcernLevel = self::WRITE_CONCERN_LEVEL_MAJORITY
+	 */
+	private $_writeConcernLevel = self::WRITE_CONCERN_LEVEL_MAJORITY;
+
+	/**
+	 * @var int $_writeConcernTimeout = self::WRITE_CONCERN_TIMEOUT
+	 */
+	private $_writeConcernTimeout = self::WRITE_CONCERN_TIMEOUT;
+
+	/**
+	 * @var bool $_log = false
+	 */
+	private $_log = false;
 
 	/**
 	 * @param $id
@@ -876,13 +897,13 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 	 */
 	public function BulkWrite (IQuarkModel $model, BulkWrite $query, $options = [], WriteConcern $concern = null) {
 		if (!($concern instanceof WriteConcern))
-			$concern = new WriteConcern(self::WRITE_CONCERN_LEVEL, self::WRITE_CONCERN_TIMEOUT);
+			$concern = new WriteConcern($this->_writeConcernLevel, $this->_writeConcernTimeout);
 
 		try {
 			return $this->_connection->executeBulkWrite($this->_collection($model, $options), $query, $concern);
 		}
 		catch (\Exception $e) {
-			throw new QuarkArchException('[MongoDB::BulkWrite] Error during writing model ' . get_class($model) . ': ' . print_r($e, true));
+			throw new QuarkArchException('[MongoDB::BulkWrite] Error during writing model ' . get_class($model) . ': ' . $e->getMessage() . ($this->_log ? ' - ' . print_r($e, true) : ''));
 		}
 	}
 
@@ -901,7 +922,7 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 			);
 		}
 		catch (\Exception $e) {
-			Quark::Log('[MongoDB::Query] Can not proceed query on model ' . get_class($model) . ': ' . print_r($e, true));
+			Quark::Log('[MongoDB::Query] Can not proceed query on model ' . get_class($model) . ': ' . $e->getMessage() . ($this->_log ? ' - ' . print_r($e, true) : ''));
 			return null;
 		}
 	}
@@ -916,7 +937,7 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 			return $this->_connection->executeCommand($this->DBName(), new Command($command));
 		}
 		catch (\Exception $e) {
-			Quark::Log('[MongoDB::Command] Can not proceed command: ' . print_r($e, true));
+			Quark::Log('[MongoDB::Command] Can not proceed command: ' . $e->getMessage() . ($this->_log ? ' - ' . print_r($e, true) : ''));
 			return null;
 		}
 	}
@@ -965,6 +986,33 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 	 * @throws QuarkConnectionException
 	 */
 	public function Connect (QuarkURI $uri) {
+		$level = $uri->Options(self::PARAM_WRITE_CONCERN_LEVEL);
+
+		if ($level !== null) {
+			$uri->RemoveOption(self::PARAM_WRITE_CONCERN_LEVEL);
+
+			if (is_numeric($level))
+				$level = (int)$level;
+
+			$this->_writeConcernLevel = $level;
+		}
+
+		$timeout = $uri->Options(self::PARAM_WRITE_CONCERN_TIMEOUT);
+
+		if ($timeout !== null) {
+			$uri->RemoveOption(self::PARAM_WRITE_CONCERN_TIMEOUT);
+
+			$this->_writeConcernTimeout = (int)$timeout;
+		}
+
+		$log = $uri->Options(self::PARAM_LOG);
+
+		if ($log !== null) {
+			$uri->RemoveOption(self::PARAM_LOG);
+
+			$this->_log = $log != 'false';
+		}
+
 		$this->_uri = $uri;
 
 		try {
