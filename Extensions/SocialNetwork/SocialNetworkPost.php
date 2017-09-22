@@ -2,6 +2,8 @@
 namespace Quark\Extensions\SocialNetwork;
 
 use Quark\QuarkDate;
+use Quark\QuarkFile;
+use Quark\QuarkObject;
 
 /**
  * Class SocialNetworkPost
@@ -28,6 +30,21 @@ class SocialNetworkPost {
 	 * @var $_audience
 	 */
 	private $_audience;
+
+	/**
+	 * @var bool $_sensitive = false
+	 */
+	private $_sensitive = false;
+
+	/**
+	 * @var string $_reply = ''
+	 */
+	private $_reply = '';
+
+	/**
+	 * @var QuarkFile[] $_attachments = []
+	 */
+	private $_attachments = array();
 
 	/**
 	 * @var string $_target = null
@@ -72,6 +89,54 @@ class SocialNetworkPost {
 			$this->_audience = $audience;
 
 		return $this->_audience;
+	}
+
+	/**
+	 * @param bool $sensitive = false
+	 *
+	 * @return bool
+	 */
+	public function Sensitive ($sensitive = false) {
+		if (func_num_args() != 0)
+			$this->_sensitive = $sensitive;
+
+		return $this->_sensitive;
+	}
+
+	/**
+	 * @param string $reply = ''
+	 *
+	 * @return string
+	 */
+	public function Reply ($reply = '') {
+		if (func_num_args() != 0)
+			$this->_reply = $reply;
+
+		return $this->_reply;
+	}
+
+	/**
+	 * @param QuarkFile $attachment = null
+	 *
+	 * @return SocialNetworkPost
+	 */
+	public function Attach (QuarkFile $attachment = null) {
+		if (func_num_args() != 0)
+			$this->_attachments[] = $attachment;
+
+		return $this;
+	}
+
+	/**
+	 * @param QuarkFile[] $attachments = []
+	 *
+	 * @return QuarkFile[]
+	 */
+	public function Attachments ($attachments = []) {
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($attachments, new QuarkFile()))
+			$this->_attachments = $attachments;
+
+		return $this->_attachments;
 	}
 
 	/**

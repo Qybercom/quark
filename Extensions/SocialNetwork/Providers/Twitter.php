@@ -4,6 +4,7 @@ namespace Quark\Extensions\SocialNetwork\Providers;
 use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
+use Quark\QuarkFile;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
@@ -44,6 +45,11 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_BASE = 'https://twitter.com/';
 	const URL_API = 'https://api.twitter.com';
 	const URL_STREAM_PUBLIC = 'https://stream.twitter.com/1.1/statuses';
+	const URL_MEDIA_UPLOAD = 'https://upload.twitter.com/1.1/media/upload.json';
+
+	const MEDIA_COMMAND_INIT = 'INIT';
+	const MEDIA_COMMAND_APPEND = 'APPEND';
+	const MEDIA_COMMAND_FINALIZE = 'FINALIZE';
 
 	const AGGREGATE_COUNT = 42;
 	const AGGREGATE_CURSOR = '-1';
@@ -123,17 +129,18 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
 	 * @param string $base = self::URL_API
+	 * @param bool $dataSign = true
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API, $dataSign = true) {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		$data = $request->Data();
-		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, !is_scalar($data) ? (array)$data : array()));
+		$request->Authorization($this->OAuth1_0a_AuthorizationHeader($request->Method(), $base . $url, is_scalar($data) || !$dataSign ? array() : (array)$data));
 
 		if ($request->Method() == QuarkDTO::METHOD_GET) {
 			$query = $request->Processor()->Encode($request->Data());
@@ -240,13 +247,26 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @param SocialNetworkPost $post
 	 *
 	 * https://dev.twitter.com/rest/reference/post/statuses/update
+	 * https://github.com/abraham/twitteroauth/issues/387
 	 *
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		$media = array();
+		$attachments = $post->Attachments();
+
+		foreach ($attachments as $i => &$attachment) {
+			$id = $this->TwitterMediaUpload($attachment);
+
+			if ($id) $media[] = $id;
+		}
+
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data(array(
-			'status' => $post->Content()
+			'status' => $post->Content(),
+			'in_reply_to_status_id' => $post->Reply(),
+			'possibly_sensitive' => $post->Sensitive() ? 'true' : 'false',
+			'media_ids' => implode(',', $media)
 		));
 
 		$response = $this->OAuthAPI(
@@ -336,5 +356,59 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$last = $data->id;
 			$incoming($data);
 		});
+	}
+
+	/**
+	 * @param $command
+	 * @param array|object $payload = []
+	 * @param bool $sign = true
+	 *
+	 * @return QuarkDTO
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function TwitterMediaAPI ($command, $payload = [], $sign = true) {
+		$payload = (array)$payload;
+		$payload['command'] = $command;
+
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Data($payload);
+
+		try {
+			return $this->OAuthAPI('', $request, new QuarkDTO(new QuarkJSONIOProcessor()), self::URL_MEDIA_UPLOAD, $sign);
+		}
+		catch (OAuthAPIException $e) {
+			throw new QuarkArchException('[SocialNetwork.Twitter] MediaAPI error. Details: ' . print_r($e->Request(), true) . print_r($e->Response(), true));
+		}
+	}
+
+	/**
+	 * @param QuarkFile $file = null
+	 *
+	 * @return string
+	 */
+	public function TwitterMediaUpload (QuarkFile $file = null) {
+		if ($file == null) return null;
+
+		$id = $this->TwitterMediaAPI(self::MEDIA_COMMAND_INIT, array(
+			'total_bytes' => $file->size,
+			'media_type' => $file->type
+		));
+
+		if (!$id || !isset($id->media_id_string)) return null;
+
+		$chunk = $this->TwitterMediaAPI(self::MEDIA_COMMAND_APPEND, array(
+			'media_id' => $id->media_id_string,
+			'media' => $file,
+			'segment_index' => 0 // TODO: refactor in order to support videos and animated GIFs
+		), false);
+
+		if (substr($chunk->StatusCode(), 0, 1) != 2) return null;
+
+		$id = $this->TwitterMediaAPI(self::MEDIA_COMMAND_FINALIZE, array(
+			'media_id' => $id->media_id_string,
+		));
+
+		return $id && isset($id->media_id_string) ? $id->media_id_string : null;
 	}
 }

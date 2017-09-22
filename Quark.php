@@ -4271,7 +4271,7 @@ trait QuarkStreamBehavior {
 		$env = Quark::CurrentEnvironment();
 
 		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth, $channel);
-		else throw new QuarkArchException('QuarkStreamBehavior: the `Event` method cannot be called in a non-stream environment');
+		else throw new QuarkArchException('QuarkStreamBehavior: the `ChannelEvent` method cannot be called in a non-stream environment');
 	}
 
 	/**
@@ -18333,7 +18333,11 @@ class QuarkDTO {
 	 */
 	private function _serializePart ($key, $value, $disposition) {
 		$file = $value instanceof QuarkFile;
-		$contents = $file ? $value->Load()->Content() : $value;
+
+		if ($file && !$value->Loaded())
+			$value->Load();
+
+		$contents = $file ? $value->Content() : $value;
 
 		if ($file)
 			$this->_files[] = new QuarkModel($value);
@@ -18721,7 +18725,7 @@ class QuarkHTTPClient implements IQuarkEventable {
 
 		$name = array_reverse($uri->Route())[0];
 
-		$file->Content($out->RawData());
+		$file->Content($out->RawData(), true);
 		$file->type = QuarkFile::MimeOf($file->Content());
 		$file->extension = QuarkFile::ExtensionByMime($file->type);
 		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
@@ -20065,13 +20069,17 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 	/**
 	 * @param string $content = ''
+	 * @param bool $load = false
 	 *
 	 * @return string
 	 */
-	public function Content ($content = '') {
-		if (func_num_args() == 1) {
+	public function Content ($content = '', $load = false) {
+		if (func_num_args() != 0) {
 			$this->_content = $content;
 			$this->size = strlen($this->_content);
+
+			if (func_num_args() == 2)
+				$this->_loaded = $load;
 		}
 
 		return $this->_content;
@@ -21891,7 +21899,7 @@ class QuarkCertificate extends QuarkFile {
 	 */
 	public static function ForCSR ($commonName = '', $passphrase = null, $algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
 		if (strlen($commonName) == 0)
-			return self::_error('ForDomainCSR: CommonName must not be empty');
+			return self::_error('ForCSR: CommonName must not be empty');
 
 		$certificate = new self();
 
@@ -22573,12 +22581,15 @@ class QuarkCipherKeyPair extends QuarkFile {
 
 	/**
 	 * @param string $content = ''
+	 * @param bool $load = false
 	 *
 	 * @return string
 	 */
-	public function Content ($content = '') {
+	public function Content ($content = '', $load = false) {
 		if (func_num_args() != 0) {
-			parent::Content($content);
+			if (func_num_args() == 2) parent::Content($content, $load);
+			else parent::Content($content);
+
 			$this->_load();
 		}
 

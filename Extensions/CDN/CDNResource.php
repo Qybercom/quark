@@ -3,9 +3,11 @@ namespace Quark\Extensions\CDN;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkModel;
+use Quark\IQuarkModelWithAfterPopulate;
 use Quark\IQuarkStrongModel;
 use Quark\IQuarkLinkedModel;
 
+use Quark\IQuarkStrongModelWithRuntimeFields;
 use Quark\Quark;
 use Quark\QuarkException;
 use Quark\QuarkFile;
@@ -18,11 +20,13 @@ use Quark\QuarkModelBehavior;
  *
  * @property string $resource = ''
  *
+ * @property string $url = ''
+ *
  * @package Quark\Extensions\CDN
  */
-class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
+class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQuarkStrongModelWithRuntimeFields, IQuarkLinkedModel, IQuarkModelWithAfterPopulate {
 	use QuarkModelBehavior;
-	
+
 	/**
 	 * @var CDNConfig $_config
 	 */
@@ -98,6 +102,8 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 		if (!$id) return false;
 
 		$this->resource = $id;
+		$this->url = $this->URL();
+
 		return true;
 	}
 
@@ -147,6 +153,15 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	}
 
 	/**
+	 * @return mixed
+	 */
+	public function RuntimeFields () {
+		return array(
+			'url' => ''
+		);
+	}
+
+	/**
 	 * @param $raw
 	 *
 	 * @return mixed
@@ -162,5 +177,14 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 */
 	public function Unlink () {
 		return $this->resource;
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return mixed
+	 */
+	public function AfterPopulate ($raw) {
+		$this->url = $this->URL();
 	}
 }
