@@ -151,7 +151,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
-		if (isset($api->errors))
+		if (isset($api->errors) || isset($api->error))
 			throw new OAuthAPIException($request, $response);
 
 		return $api;
