@@ -2,15 +2,25 @@
  * http://www.socicon.com/chart.php
  */
 .socicon-mailru:before {
+	display: inline-block;
 	content: ' ';
 	background-color: rgb(255,255,255);
 	/*
 	 * https://stackoverflow.com/a/43340423/2097055
 	 * https://codepen.io/noahblon/post/coloring-svgs-in-css-background-images
 	 */
-	mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) no-repeat center center;
-	-webkit-mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) no-repeat center center;
+	mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) center center no-repeat;
+	-webkit-mask: url(http://static.tildacdn.com/tild3830-6334-4532-b237-663335656465/maila.svg) center center no-repeat;
+	width: 18px;
+	height: 18px;
+}
+
+.socicon-feedly:before {
 	display: inline-block;
+	content: ' ';
+	background-color: rgb(255,255,255);
+	mask: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiMwMDAiID48ZyBpZD0ic3VyZmFjZTEiPjxwYXRoIHN0eWxlPSIgIiBkPSJNIDEwLjcwNzAzMSAzLjU4OTg0NCBMIDIuODU5Mzc1IDExLjQzNzUgQyAyLjA3MDMxMyAxMi4yMjY1NjMgMi4wNzAzMTMgMTMuNTAzOTA2IDIuODU5Mzc1IDE0LjI5Mjk2OSBMIDguNTY2NDA2IDIwIEwgMTUuNjk5MjE5IDIwIEwgMjEuNDA2MjUgMTQuMjkyOTY5IEMgMjIuMTk1MzEzIDEzLjUwMzkwNiAyMi4xOTUzMTMgMTIuMjI2NTYzIDIxLjQwNjI1IDExLjQzNzUgTCAxMy41NTg1OTQgMy41ODk4NDQgQyAxMi43NzM0MzggMi44MDA3ODEgMTEuNDkyMTg4IDIuODAwNzgxIDEwLjcwNzAzMSAzLjU4OTg0NCBaIE0gMTIuODQ3NjU2IDE3LjE0NDUzMSBMIDEyLjEzMjgxMyAxNy44NTkzNzUgQyAxMS43MzgyODEgMTguMjUzOTA2IDExLjEwMTU2MyAxOC4yNTM5MDYgMTAuNzA3MDMxIDE3Ljg1OTM3NSBMIDkuOTkyMTg4IDE3LjE0NDUzMSBMIDExLjQyMTg3NSAxNS43MTg3NSBaIE0gMTMuNTU4NTk0IDEyLjE1MjM0NCBMIDkuOTkyMTg4IDE1LjcxODc1IEMgOS41OTc2NTYgMTYuMTEzMjgxIDguOTYwOTM4IDE2LjExMzI4MSA4LjU2NjQwNiAxNS43MTg3NSBMIDcuODUxNTYzIDE1LjAwNzgxMyBMIDEyLjEzMjgxMyAxMC43MjY1NjMgWiBNIDEzLjU1ODU5NCA3Ljg3MTA5NCBMIDcuODUxNTYzIDEzLjU3ODEyNSBDIDcuNDU3MDMxIDEzLjk3MjY1NiA2LjgyMDMxMyAxMy45NzI2NTYgNi40MjU3ODEgMTMuNTc4MTI1IEwgNS43MTA5MzggMTIuODY3MTg4IEwgMTIuMTMyODEzIDYuNDQ1MzEzIFogIj48L3BhdGg+PC9nPjwvc3ZnPg==') center center no-repeat;
+	-webkit-mask: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9IiMwMDAiID48ZyBpZD0ic3VyZmFjZTEiPjxwYXRoIHN0eWxlPSIgIiBkPSJNIDEwLjcwNzAzMSAzLjU4OTg0NCBMIDIuODU5Mzc1IDExLjQzNzUgQyAyLjA3MDMxMyAxMi4yMjY1NjMgMi4wNzAzMTMgMTMuNTAzOTA2IDIuODU5Mzc1IDE0LjI5Mjk2OSBMIDguNTY2NDA2IDIwIEwgMTUuNjk5MjE5IDIwIEwgMjEuNDA2MjUgMTQuMjkyOTY5IEMgMjIuMTk1MzEzIDEzLjUwMzkwNiAyMi4xOTUzMTMgMTIuMjI2NTYzIDIxLjQwNjI1IDExLjQzNzUgTCAxMy41NTg1OTQgMy41ODk4NDQgQyAxMi43NzM0MzggMi44MDA3ODEgMTEuNDkyMTg4IDIuODAwNzgxIDEwLjcwNzAzMSAzLjU4OTg0NCBaIE0gMTIuODQ3NjU2IDE3LjE0NDUzMSBMIDEyLjEzMjgxMyAxNy44NTkzNzUgQyAxMS43MzgyODEgMTguMjUzOTA2IDExLjEwMTU2MyAxOC4yNTM5MDYgMTAuNzA3MDMxIDE3Ljg1OTM3NSBMIDkuOTkyMTg4IDE3LjE0NDUzMSBMIDExLjQyMTg3NSAxNS43MTg3NSBaIE0gMTMuNTU4NTk0IDEyLjE1MjM0NCBMIDkuOTkyMTg4IDE1LjcxODc1IEMgOS41OTc2NTYgMTYuMTEzMjgxIDguOTYwOTM4IDE2LjExMzI4MSA4LjU2NjQwNiAxNS43MTg3NSBMIDcuODUxNTYzIDE1LjAwNzgxMyBMIDEyLjEzMjgxMyAxMC43MjY1NjMgWiBNIDEzLjU1ODU5NCA3Ljg3MTA5NCBMIDcuODUxNTYzIDEzLjU3ODEyNSBDIDcuNDU3MDMxIDEzLjk3MjY1NiA2LjgyMDMxMyAxMy45NzI2NTYgNi40MjU3ODEgMTMuNTc4MTI1IEwgNS43MTA5MzggMTIuODY3MTg4IEwgMTIuMTMyODEzIDYuNDQ1MzEzIFogIj48L3BhdGg+PC9nPjwvc3ZnPg==') center center no-repeat;
 	width: 18px;
 	height: 18px;
 }
@@ -91,12 +101,28 @@
 	background: rgba(0, 90, 96, 0.75);
 }
 
+.quark-button.social[class*=" socicon-feedly"] {
+	background: rgb(43, 178, 76);
+}
+
+.quark-button.social[class*=" socicon-feedly"]:hover {
+	background: rgba(43, 178, 76, 0.75);
+}
+
 .quark-button.social[class*=" socicon-instagram"] {
 	background: rgb(81, 127, 164);
 }
 
 .quark-button.social[class*=" socicon-instagram"]:hover {
 	background: rgba(81, 127, 164, 0.75);
+}
+
+.quark-button.social[class*=" socicon-pinterest"] {
+	background: rgb(201, 38, 25);
+}
+
+.quark-button.social[class*=" socicon-pinterest"]:hover {
+	background: rgba(201, 38, 25, 0.75);
 }
 
 .quark-button.social[class*=" socicon-flickr"] {

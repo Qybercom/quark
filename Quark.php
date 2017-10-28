@@ -4143,7 +4143,7 @@ trait QuarkCLIBehavior {
 			$this->_asyncClients[$id] = $process->AsyncClientProcessStart($id);
 
 		if (!($this->_asyncClients[$id] instanceof QuarkHTTPClient))
-			throw new QuarkArchException('[' . $this->ClassName() . '::AsyncClientPipe] Expected QuarkHTTPClient, got [' . gettype($this->_asyncClients[$id]) . '] ' . print_r($this->_asyncClients[$id], true));
+			throw new QuarkArchException('[' . $this->ClassName() . '::AsyncClientProcess] Expected QuarkHTTPClient, got [' . gettype($this->_asyncClients[$id]) . '] ' . print_r($this->_asyncClients[$id], true));
 
 		$this->_asyncClients[$id]->AsyncPipe();
 
@@ -8275,6 +8275,22 @@ trait QuarkCollectionBehavior {
 	}
 
 	/**
+	 * @param callable $mapper = null
+	 *
+	 * @return array
+	 */
+	public function Map (callable $mapper = null) {
+		if ($mapper == null) return null;
+
+		$out = array();
+
+		foreach ($this->_collection as $i => &$item)
+			$out[] = $mapper($item);
+
+		return $out;
+	}
+
+	/**
 	 * @param array $initial = []
 	 * @param callable $navigator = null
 	 *
@@ -8450,6 +8466,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 		Select as private _select;
 		SelectRandom as private _selectRandom;
 		Aggregate as private _aggregate;
+		Map as private _map;
 		offsetSet as private _offsetSet;
 	}
 
@@ -8753,6 +8770,19 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 */
 	public function Aggregate ($options = []) {
 		return new self($this->_type, $this->_aggregate($options));
+	}
+
+	/**
+	 * @param IQuarkModel $type = null
+	 * @param callable $mapper = null
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Map (IQuarkModel $type = null, callable $mapper = null) {
+		return $mapper == null ? null : new self(
+			$type == null ? $this->_type : $type,
+			$this->_map($mapper)
+		);
 	}
 	
 	/**

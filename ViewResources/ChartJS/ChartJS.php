@@ -19,8 +19,10 @@ use Quark\ViewResources\jQuery\jQueryCore;
  * @package Quark\ViewResources\ChartJS
  */
 class ChartJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '1.0.2';
-	//const CURRENT_VERSION = '2.6.0';
+	const VERSION_1_0_2 = '1.0.2';
+	const VERSION_2_6_0 = '2.6.0';
+
+	const CURRENT_VERSION = self::VERSION_2_6_0;
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

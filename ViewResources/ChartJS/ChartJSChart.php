@@ -83,7 +83,7 @@ class ChartJSChart implements IQuarkViewResource, IQuarkInlineViewResource, IQua
 	 */
 	public function Dependencies () {
 		return array(
-			new ChartJS()
+			new ChartJS(ChartJS::VERSION_1_0_2)
 		);
 	}
 

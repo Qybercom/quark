@@ -2,8 +2,8 @@
 namespace Quark\IOProcessors;
 
 use Quark\IQuarkIOProcessor;
-
 use Quark\IQuarkModel;
+
 use Quark\QuarkCollection;
 use Quark\QuarkModel;
 use Quark\QuarkObject;
