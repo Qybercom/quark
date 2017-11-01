@@ -341,6 +341,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		});
 
 		$stream = QuarkHTTPClient::AsyncTo($url, $request, $response);
+		if ($stream == null) return null;
 
 		$stream->On(QuarkHTTPClient::EVENT_ASYNC_ERROR, function ($request, $response) {
 			throw new QuarkArchException('[SocialNetwork.Twitter] StreamingAPI error. Details: ' . print_r($request, true) . print_r($response, true));
@@ -348,7 +349,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$last = '';
 
-		return !$stream ? null : $stream->AsyncData(!$filter || !$incoming ? $incoming : function (QuarkDTO $data) use (&$last, &$incoming) {
+		return $stream->AsyncData(!$filter || !$incoming ? $incoming : function (QuarkDTO $data) use (&$last, &$incoming) {
 			if (!isset($data->text) || !isset($data->user->name)) return;
 			if (!isset($data->id) || !isset($data->created_at)) return;
 			if ($last == $data->id) return;
