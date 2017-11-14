@@ -446,15 +446,6 @@ class Quark {
 
 		return (float)(mt_rand($min_int, $max_int) . '.' . mt_rand($min_float, $max_float));
 	}
-
-	/**
-	 * @param string $regEx = ''
-	 *
-	 * @return mixed
-	 */
-	public static function EscapeRegEx ($regEx = '') {
-		return preg_replace('#([\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|])#Uis', '\\\$1', $regEx);
-	}
 	
 	/**
 	 * @param int $code
@@ -1589,7 +1580,7 @@ class QuarkConfig {
 				? null
 				: $this->_localization->Decode(new QuarkINIIOProcessor(), true);
 
-		if (preg_match('#^(.*)' . Quark::EscapeRegEx($this->_localizationDetailsDelimiter) . '.*#i', $key, $found) && !in_array($found[1], $this->_localizationDetailsLoaded)) {
+		if (preg_match('#^(.*)' . QuarkRegEx::Escape($this->_localizationDetailsDelimiter) . '.*#i', $key, $found) && !in_array($found[1], $this->_localizationDetailsLoaded)) {
 			$domain = $found[1];
 
 			if (isset($this->_localizationDetails->$domain)) {
@@ -20404,6 +20395,104 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 }
 
 /**
+ * Class QuarkRegEx
+ *
+ * @package Quark
+ */
+class QuarkRegEx {
+	const PCRE_UNGREEDY = 'U';
+	const PCRE_CASELESS = 'i';
+	const PCRE_DOTALL = 's';
+	const PCRE_UTF8 = 'u';
+
+	/**
+	 * @var string $_regEx = ''
+	 */
+	private $_regEx = '';
+
+	/**
+	 * @var string $_delimiter = ''
+	 */
+	private $_delimiter = '';
+
+	/**
+	 * @var string $_expression = ''
+	 */
+	private $_expression = '';
+
+	/**
+	 * @var string[] $_flags = []
+	 */
+	private $_flags = array();
+
+	/**
+	 * @param string $regEx
+	 */
+	public function __construct ($regEx = '') {
+		$this->RegEx($regEx);
+	}
+
+	/**
+	 * @param string $regEx = ''
+	 *
+	 * @return string
+	 */
+	public function RegEx ($regEx = '') {
+		if (func_num_args() != 0) {
+			$this->_regEx = $regEx;
+
+			if (!preg_match('#^([^a-zA-Z0-9\\\s])(.*)\1([a-zA-Z]*)$#', $this->_regEx, $meta)) $this->_expression = $regEx;
+			else {
+				$this->_delimiter = $meta[1];
+				$this->_expression = $meta[2];
+				$this->_flags = (array)$meta[3];
+			}
+		}
+
+		return $this->_regEx;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Delimiter () {
+		return $this->_delimiter;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Expression () {
+		return $this->_expression;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function Flags () {
+		return $this->_flags;
+	}
+
+	/**
+	 * @param string $flag = ''
+	 *
+	 * @return bool
+	 */
+	public function HasFlag ($flag = '') {
+		return in_array($flag, $this->_flags);
+	}
+
+	/**
+	 * @param string $regEx = ''
+	 *
+	 * @return mixed
+	 */
+	public static function Escape ($regEx = '') {
+		return preg_replace('#([\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|])#Uis', '\\\$1', $regEx);
+	}
+}
+
+/**
  * Interface IQuarkCulture
  *
  * @package Quark
@@ -23069,6 +23158,11 @@ class QuarkSQL {
 				case '`$gte`': $output[] = '>=' . $value; break;
 				case '`$ne`': $output[] = ($value == self::NULL ? ' IS NOT ' : '<>') . $value; break;
 
+				case '`$regex`':
+					$regEx = new QuarkRegEx($rule);
+					$output[] = ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
+					break;
+
 				case '`$and`':
 					$value = $this->Condition($rule, ' AND ');
 					$output[] = ' (' . $value . ') ';
@@ -23154,7 +23248,7 @@ class QuarkSQL {
 							break;
 					}
 
-					$fields = $key . ($i == $count || !$key ? '' : ', ');
+					$fields .= $key . ($i == $count || !$key ? '' : ', ');
 					$i++;
 				}
 			}
