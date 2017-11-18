@@ -179,12 +179,30 @@ class GitHub implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user == SocialNetwork::CURRENT_USER ? self::CURRENT_USER : 's/' . $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count == SocialNetwork::FRIENDS_ALL ? 0 : $count;
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 
-		$response = $this->OAuthAPI('/user' . ($user ? 's/' . $user : self::CURRENT_USER), $request);
+		$response = $this->OAuthAPI('/user' . $user, $request);
 
 		return self::_user($response);
 	}

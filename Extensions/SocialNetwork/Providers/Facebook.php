@@ -242,6 +242,24 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param string $user
+	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user == SocialNetwork::CURRENT_USER ? self::CURRENT_USER : $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count == SocialNetwork::FRIENDS_ALL ? 0 : $count;
+	}
+
+	/**
+	 * @param string $user
 	 * @param string[] $fields = []
 	 *
 	 * @return SocialNetworkUser
@@ -252,7 +270,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			'fields' => self::_fields($fields)
 		));
 
-		$response = $this->OAuthAPI('/' . ($user ? $user : self::CURRENT_USER), $request);
+		$response = $this->OAuthAPI('/' . $user, $request);
 
 		if ($response == null) return null;
 
@@ -273,7 +291,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			'fields' => self::_fields($fields)
 		));
 
-		$response = $this->OAuthAPI('/' . ($user ? $user : self::CURRENT_USER) . '/friends', $request);
+		$response = $this->OAuthAPI('/' . $user . '/friends', $request);
 
 		if ($response == null || !isset($response->data) || !is_array($response->data)) return array();
 
@@ -301,7 +319,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		));
 
 		$response = $this->OAuthAPI(
-			'/' . ($target ? $target : self::CURRENT_USER) . '/feed',
+			'/' . $target . '/feed',
 			$request,
 			new QuarkDTO(new QuarkJSONIOProcessor())
 		);

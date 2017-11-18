@@ -119,12 +119,30 @@ class Blogger extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNe
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user == SocialNetwork::CURRENT_USER ? self::CURRENT_USER : $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count == SocialNetwork::FRIENDS_ALL ? 0 : $count;
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 
-		$response = $this->OAuthAPI('/plus/v1/people/' . ($user ? $user : self::CURRENT_USER), $request);
+		$response = $this->OAuthAPI('/plus/v1/people/' . $user, $request);
 
 		return self::_user($response);
 	}
@@ -145,7 +163,7 @@ class Blogger extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocialNe
 			'pageToken' => $offset
 		));
 
-		$response = $this->OAuthAPI('people/' . ($user ? $user : self::CURRENT_USER) . '/connections', $request, null, self::URL_API_PEOPLE);
+		$response = $this->OAuthAPI('people/' . $user . '/connections', $request, null, self::URL_API_PEOPLE);
 
 		if ($response == null || !isset($response->connections) || !is_array($response->connections)) return array();
 

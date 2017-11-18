@@ -17,6 +17,20 @@ interface IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser($user);
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount($count);
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser($user);

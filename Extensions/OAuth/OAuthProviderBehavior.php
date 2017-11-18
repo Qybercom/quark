@@ -41,21 +41,68 @@ trait OAuthProviderBehavior {
 	private $_verifier = '';
 
 	/**
-	 * @param string $redirect = ''
-	 * @param string $url = ''
-	 * @param string $base = null
-	 *
-	 * @return QuarkDTO
+	 * @var array $_params = []
 	 */
-	public function OAuth1_0a_RequestToken ($redirect = '', $url = '', $base = null) {
-		/**
-		 * @var IQuarkOAuthProvider|OAuthProviderBehavior $this
-		 */
-		if (!($this instanceof IQuarkOAuthProvider)) return null;
+	private $_params = array();
 
-		$this->_callback = $redirect;
+	/**
+	 * @param OAuthAPIException $e
+	 * @param string $action = ''
+	 * @param string $message = ''
+	 * @param $out = null
+	 *
+	 * @return mixed
+	 */
+	private function _oauth_error (OAuthAPIException $e, $action = '', $message = '', $out = null) {
+		Quark::Log('[OAuth.' . QuarkObject::ClassOf($this) . '::' . $action . '] ' . $message . '. API error:', Quark::LOG_WARN);
 
-		return $this->OAuthAPI($url, QuarkDTO::ForPOST(new QuarkFormIOProcessor()), new QuarkDTO(new QuarkFormIOProcessor()), $base);
+		Quark::Trace($e->Request());
+		Quark::Trace($e->Response());
+
+		return $out;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function OAuth1_0a_Params () {
+		return array(
+			'oauth_signature_method' => 'HMAC-SHA1',
+			'oauth_version' => '1.0',
+			'oauth_timestamp' => QuarkDate::Now()->Timestamp(),
+			'oauth_nonce' => Quark::GuID(),
+			'oauth_consumer_key' => $this->_appId
+		);
+	}
+
+	/**
+	 * @param string $method = ''
+	 * @param string $url = ''
+	 * @param array $params = []
+	 *
+	 * @return string
+	 */
+	public function OAuth1_0a_Signature ($method = '', $url = '', $params = []) {
+		$sign = array();
+
+		uksort($params, 'strcmp');
+
+		foreach ($params as $key => &$value)
+			$sign[] = $this->_param_encode($key) . '=' . $this->_param_encode($value);
+
+		$key = $this->_param_encode($this->_appSecret) . '&' . $this->_param_encode(isset($this->_token->oauth_token_secret) ? $this->_token->oauth_token_secret : '');
+		$data = $this->_param_encode($method) . '&' . $this->_param_encode($url) . '&' . $this->_param_encode(implode('&', $sign));
+
+		return base64_encode(hash_hmac('sha1', $data, $key, true));
+	}
+
+	/**
+	 * @param string $input = ''
+	 *
+	 * @return string
+	 */
+	private function _param_encode ($input = '') {
+		return str_replace('+', ' ', str_replace('%7E', '~', rawurlencode($input)));
 	}
 
 	/**
@@ -90,20 +137,70 @@ trait OAuthProviderBehavior {
 		// Ref: Spec: 9.1.1 (1)
 		uksort($params, 'strcmp');
 
+		$this->_params = $params;
+
 		$_sign = array();
 
 		foreach ($params as $key => $value) {
-			$header[] = rawurlencode($key) . '="' . rawurlencode($value) .'"';
-			$_sign[] = rawurlencode($key) . '=' . rawurlencode($value);
+			$header[] = $this->_param_encode($key) . '="' . $this->_param_encode($value) . '"';
+			$_sign[] = $this->_param_encode($key) . '=' . $this->_param_encode($value);
 		}
 
-		$key = rawurlencode($this->_appSecret) . '&' . rawurlencode(isset($this->_token->oauth_token_secret) ? $this->_token->oauth_token_secret : '');
-		$data = rawurlencode($method) . '&' . rawurlencode($url) . '&' . rawurlencode(implode('&', $_sign));
+		$key = $this->_param_encode($this->_appSecret) . '&' . $this->_param_encode(isset($this->_token->oauth_token_secret) ? $this->_token->oauth_token_secret : '');
+		$data = $this->_param_encode($method) . '&' . $this->_param_encode($url) . '&' . $this->_param_encode(implode('&', $_sign));
 
 		$sign = base64_encode(hash_hmac('sha1', $data, $key, true));
-		$header[] = 'oauth_signature="' . rawurlencode($sign) . '"';
+		$header[] = 'oauth_signature="' . $this->_param_encode($sign) . '"';
 
-		return new QuarkKeyValuePair('OAuth', implode(',', $header));
+		return new QuarkKeyValuePair('OAuth', implode(', ', $header));
+	}
+
+	/**
+	 * @note This method is useful for those providers, who requires to pass /access_token in URL
+	 *
+	 * @param string $method = ''
+	 * @param string $url = ''
+	 * @param array $params = []
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function OAuth1_0a_AuthorizationQuery ($method = '', $url = '', $params = []) {
+		$params = array_replace($this->OAuth1_0a_Params(), $params);
+
+		if ($this->_callback)
+			$params['oauth_callback'] = $this->_callback;
+
+		if ($this->_verifier)
+			$params['oauth_verifier'] = $this->_verifier;
+
+		if (isset($this->_token->access_token))
+			$params['oauth_token'] = $this->_token->access_token;
+
+		uksort($params, 'strcmp');
+
+		$params['oauth_signature'] = $this->OAuth1_0a_Signature($method, $url, $params);
+
+		uksort($params, 'strcmp');
+
+		return $params;
+	}
+
+	/**
+	 * @param string $redirect = ''
+	 * @param string $url = ''
+	 * @param string $base = null
+	 *
+	 * @return QuarkDTO
+	 */
+	public function OAuth1_0a_RequestToken ($redirect = '', $url = '', $base = null) {
+		/**
+		 * @var IQuarkOAuthProvider|OAuthProviderBehavior $this
+		 */
+		if (!($this instanceof IQuarkOAuthProvider)) return null;
+
+		$this->_callback = $redirect;
+
+		return $this->OAuthAPI($url, QuarkDTO::ForPOST(new QuarkFormIOProcessor()), new QuarkDTO(new QuarkFormIOProcessor()), $base);
 	}
 
 	/**
@@ -111,10 +208,12 @@ trait OAuthProviderBehavior {
 	 * @param string $urlAccessToken = ''
 	 * @param string $base = null
 	 * @param string $oauthTokenSecret = null
+	 * @param QuarkDTO $req = null
+	 * @param QuarkDTO $res = null
 	 *
 	 * @return OAuthToken
 	 */
-	public function OAuth1_0a_TokenFromRequest (QuarkDTO $request = null, $urlAccessToken = '', $base = null, $oauthTokenSecret = null) {
+	public function OAuth1_0a_TokenFromRequest (QuarkDTO $request = null, $urlAccessToken = '', $base = null, $oauthTokenSecret = null, $req = null, $res = null) {
 		/**
 		 * @var IQuarkOAuthProvider|OAuthProviderBehavior $this
 		 */
@@ -128,10 +227,13 @@ trait OAuthProviderBehavior {
 		if ($oauthTokenSecret !== null)
 			$this->_token->oauth_token_secret = $oauthTokenSecret;
 
-		$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$req->Data(array('oauth_verifier' => $request->oauth_verifier));
+		if ($req == null) {
+			$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+			$req->Data(array('oauth_verifier' => $request->oauth_verifier));
+		}
+		if ($res == null) $res = new QuarkDTO(new QuarkFormIOProcessor());
 
-		$token = $this->OAuthAPI($urlAccessToken, $req, new QuarkDTO(new QuarkFormIOProcessor()), $base);
+		$token = $this->OAuthAPI($urlAccessToken, $req, $res, $base);
 
 		if (!isset($token->oauth_token)) return null;
 		if (!isset($token->oauth_token_secret)) return null;
@@ -142,23 +244,6 @@ trait OAuthProviderBehavior {
 		));
 
 		$this->_token = $out->Model();
-
-		return $out;
-	}
-
-	/**
-	 * @param OAuthAPIException $e
-	 * @param string $action = ''
-	 * @param string $message = ''
-	 * @param $out = null
-	 *
-	 * @return mixed
-	 */
-	private function _oauth_error (OAuthAPIException $e, $action = '', $message = '', $out = null) {
-		Quark::Log('[OAuth.' . QuarkObject::ClassOf($this) . '::' . $action . '] ' . $message . '. API error:', Quark::LOG_WARN);
-
-		Quark::Trace($e->Request());
-		Quark::Trace($e->Response());
 
 		return $out;
 	}

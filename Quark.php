@@ -16874,6 +16874,7 @@ class QuarkURI {
 	public function Params ($query = []) {
 		if (func_num_args() != 0)
 			$this->query = http_build_query((array)$query);
+			//$this->query = http_build_query((array)$query, '', '&', PHP_QUERY_RFC3986);
 		
 		return QuarkObject::Merge($this->Options());
 	}
@@ -18674,14 +18675,15 @@ class QuarkHTTPClient implements IQuarkEventable {
 	 * @param QuarkCertificate $certificate
 	 * @param int $timeout = 10
 	 * @param bool $sync = true
+	 * @param bool $trace = false
 	 *
 	 * @return QuarkDTO|bool
 	 */
-	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true) {
+	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true, $trace = false) {
 		$http = new self($request, $response);
 		$client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, $sync);
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http) {
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http, &$trace) {
 			if ($http->_request == null) return false;
 
 			if ($http->_response == null)
@@ -18698,11 +18700,13 @@ class QuarkHTTPClient implements IQuarkEventable {
 			$http->_response->Method($http->_request->Method());
 
 			$request = $http->_request->SerializeRequest();
+			if ($trace) Quark::Trace($request);
 
 			return $client->Send($request);
 		});
 
-		$client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $response) use (&$http) {
+		$client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $response) use (&$http, &$trace) {
+			if ($trace) Quark::Trace($response);
 			$http->_response->UnserializeResponse($response);
 
 			return $client->Close();
@@ -18729,14 +18733,16 @@ class QuarkHTTPClient implements IQuarkEventable {
 	 * @param QuarkDTO $response
 	 * @param QuarkCertificate $certificate
 	 * @param int $timeout = 10
+	 * @param bool $sync = true
+	 * @param bool $trace = false
 	 *
 	 * @return QuarkFile
 	 */
-	public static function Download ($uri, QuarkDTO $request = null, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+	public static function Download ($uri, QuarkDTO $request = null, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true, $trace = false) {
 		if ($request == null)
 			$request = QuarkDTO::ForGET();
 
-		$out = self::To($uri, $request, $response, $certificate, $timeout);
+		$out = self::To($uri, $request, $response, $certificate, $timeout, $sync, $trace);
 
 		if (!$out || $out->Status() != QuarkDTO::STATUS_200_OK) return null;
 
@@ -18760,14 +18766,15 @@ class QuarkHTTPClient implements IQuarkEventable {
 	 * @param QuarkDTO $response
 	 * @param QuarkCertificate $certificate
 	 * @param int $timeout = 10
+	 * @param bool $trace = false
 	 *
 	 * @return QuarkHTTPClient
 	 */
-	public static function AsyncTo ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10) {
+	public static function AsyncTo ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $trace = false) {
 		$http = new self($request, $response);
 		$http->_client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, false);
 
-		$http->_client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http) {
+		$http->_client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$uri, &$http, &$trace) {
 			if ($http->_request == null) return false;
 
 			if ($http->_response == null)
@@ -18784,18 +18791,21 @@ class QuarkHTTPClient implements IQuarkEventable {
 			$http->_response->Method($http->_request->Method());
 
 			$request = $http->_request->SerializeRequest();
+			if ($trace) Quark::Trace($request);
 
 			return $client->Send($request);
 		});
 
 		/** @noinspection PhpUnusedParameterInspection */
-		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http) {
+		$http->_client->On(QuarkClient::EVENT_DATA, function (QuarkClient $client, $data) use (&$http, &$trace) {
 			$data = $http->_asyncInit ? $http->_response->RawProcessorInvoke($data) : $data;
 			$chunks = $http->_response->Processor()->Batch($data, !$http->_asyncInit);
 
 			foreach ($chunks as $i => &$chunk) {
 				if ($http->_asyncInit) $chunk = $http->_response->Masquerade($chunk);
 				else $http->_asyncInit = true;
+
+				if ($trace) Quark::Trace($chunk);
 
 				$http->_response->UnserializeResponse($chunk, false, true);
 
@@ -23223,41 +23233,33 @@ class QuarkSQL {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $criteria
-	 * @param array $options
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
 	public function Select (IQuarkModel $model, $criteria, $options = []) {
-		if (isset($options[self::OPTION_FIELDS])) $fields = $options[self::OPTION_FIELDS];
+		if (isset($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
 		else {
-			$fields = '*';
+			$query_fields = '*';
 
 			if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
-				$fields = '';
-				$count = sizeof($options[QuarkModel::OPTION_FIELDS]);
-				$i = 1;
+				$fields = array();
 
-				foreach ($options[QuarkModel::OPTION_FIELDS] as $field) {
+				foreach ($options[QuarkModel::OPTION_FIELDS] as $i => &$field) {
 					switch ($field) {
-						case self::FIELD_COUNT_ALL:
-							$key = $field;
-							break;
-
-						default:
-							$key = $this->Field($field);
-							break;
+						case self::FIELD_COUNT_ALL: $fields[] = $field; break;
+						default: $fields[] = $this->Field($field); break;
 					}
-
-					$fields .= $key . ($i == $count || !$key ? '' : ', ');
-					$i++;
 				}
+
+				$query_fields = implode(', ', $fields);
 			}
 		}
 
 		return $this->Query(
 			$model,
 			$options,
-			'SELECT ' . $fields . (isset($options[self::OPTION_AS]) ? ' AS ' . $options[self::OPTION_AS] : '') . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
+			'SELECT ' . $query_fields . (isset($options[self::OPTION_AS]) ? ' AS ' . $options[self::OPTION_AS] : '') . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
 		);
 	}
 
@@ -23288,28 +23290,37 @@ class QuarkSQL {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param array       $options
+	 * @param $criteria
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */
 	public function Update (IQuarkModel $model, $criteria, $options = []) {
-		$fields = array();
+		if (isset($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
+		else {
+			$fields = array();
+			$_fields = isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])
+				? $options[QuarkModel::OPTION_FIELDS]
+				: null;
 
-		foreach ($model as $key => $value)
-			$fields[] = $this->Field($key) . '=' . $this->Value($value);
+			foreach ($model as $key => &$value)
+				if ($_fields === null || in_array($key, $_fields))
+					$fields[] = $this->Field($key) . '=' . $this->Value($value);
+
+			$query_fields = implode(', ', $fields);
+		}
 
 		return $this->Query(
 			$model,
 			$options,
-			'UPDATE ' . self::Collection($model) . ' SET ' . implode(', ', $fields) . $this->Condition($criteria) . $this->_cursor($options)
+			'UPDATE ' . self::Collection($model) . ' SET ' . $query_fields . $this->Condition($criteria) . $this->_cursor($options)
 		);
 	}
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param             $options
+	 * @param $criteria
+	 * @param $options
 	 *
 	 * @return mixed
 	 */
@@ -23323,8 +23334,8 @@ class QuarkSQL {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param             $criteria
-	 * @param array       $options
+	 * @param $criteria
+	 * @param array $options = []
 	 *
 	 * @return mixed
 	 */

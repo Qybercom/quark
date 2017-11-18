@@ -112,6 +112,24 @@ class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		// TODO: Implement SocialNetworkParameterUser() method.
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		// TODO: Implement SocialNetworkParameterFriendsCount() method.
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {

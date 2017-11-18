@@ -195,11 +195,29 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count == SocialNetwork::FRIENDS_ALL ? self::AGGREGATE_COUNT : $count;
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
 		$response = $this->OAuthAPI(
-			$user == ''
+			$user == SocialNetwork::CURRENT_USER
 				? '/1.1/account/verify_credentials.json'
 				: '/1.1/users/lookup.json?user_id=' . $user,
 			QuarkDTO::ForGET(new QuarkFormIOProcessor()),
@@ -220,9 +238,12 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkUser[]
 	 */
 	public function SocialNetworkFriends ($user, $count, $offset) {
+		if ($count == SocialNetwork::FRIENDS_ALL)
+			$count = 0;
+
 		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		$request->Data(array(
-			'count' => $count ? $count : self::AGGREGATE_COUNT,
+			'count' => $count,
 			'cursor' => $offset ? $offset : $this->_cursor,
 			'user_id' => $user
 		));

@@ -168,6 +168,9 @@ Quark.Controls.Dialog = function (selector, opt) {
 	};
 
 	that.Submit = function (dialog, action) {
+		var _continue = !(opt.confirm instanceof Function) || opt.confirm(dialog, action, that);
+		if (!_continue) return;
+
 		$.ajax({
 			url: action.attr('href'),
 			dataType: 'json',
@@ -244,6 +247,9 @@ Quark.Controls.Dialog = function (selector, opt) {
 		var button = $(this),
 			dialog = $(button.attr('quark-dialog')),
 			action = function () { that.Open(dialog, button.attr('href'), button); };
+
+		if (opt.call instanceof Function && opt.call(button, dialog) === false)
+			return;
 
 		if (button.attr('quark-dialog-exclusive') != 'true') action();
 		else that.Close($('.quark-dialog'), null, function () {

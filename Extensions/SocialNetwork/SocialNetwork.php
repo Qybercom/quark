@@ -17,6 +17,9 @@ use Quark\Extensions\OAuth\OAuthAPIException;
  * @package Quark\Extensions\SocialNetwork
  */
 class SocialNetwork implements IQuarkOAuthConsumer {
+	const CURRENT_USER = '___current_user___';
+	const FRIENDS_ALL = -1;
+
 	use OAuthConsumerBehavior;
 
 	/**
@@ -75,13 +78,15 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	}
 
 	/**
-	 * @param string $user = ''
+	 * @param string $user = self::CURRENT_USER
 	 *
 	 * @return SocialNetworkUser
 	 */
-	public function User ($user = '') {
+	public function User ($user = self::CURRENT_USER) {
 		try {
-			return $this->_provider()->SocialNetworkUser($user);
+			return $this->_provider()->SocialNetworkUser(
+				$this->_provider()->SocialNetworkParameterUser($user)
+			);
 		}
 		catch (OAuthAPIException $e) {
 			return $this->_error($e, 'User', 'Can not get user', null);
@@ -89,15 +94,19 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	}
 
 	/**
-	 * @param string $user = ''
-	 * @param int $count = 0
+	 * @param string $user = self::CURRENT_USER
+	 * @param int $count = self::FRIENDS_ALL
 	 * @param int $offset = 0
 	 *
 	 * @return SocialNetworkUser[]
 	 */
-	public function Friends ($user = '', $count = 0, $offset = 0) {
+	public function Friends ($user = self::CURRENT_USER, $count = self::FRIENDS_ALL, $offset = 0) {
 		try {
-			return $this->_provider()->SocialNetworkFriends($user, $count, $offset);
+			return $this->_provider()->SocialNetworkFriends(
+				$this->_provider()->SocialNetworkParameterUser($user),
+				$this->_provider()->SocialNetworkParameterFriendsCount($count),
+				$offset
+			);
 		}
 		catch (OAuthAPIException $e) {
 			return $this->_error($e, 'Friends', 'Can not get friends', array());
@@ -111,6 +120,8 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 	 */
 	public function Publish (SocialNetworkPost $post) {
 		try {
+			$post->Target($this->_provider()->SocialNetworkParameterUser($post->Target()));
+
 			return $this->_provider()->SocialNetworkPublish($post);
 		}
 		catch (OAuthAPIException $e) {

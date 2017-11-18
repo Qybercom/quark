@@ -82,6 +82,11 @@ class SocialNetworkUser {
 	private $_bio = '';
 
 	/**
+	 * @var string $_company = ''
+	 */
+	private $_company = '';
+
+	/**
 	 * @param string $id = ''
 	 * @param string $name = ''
 	 */
@@ -281,5 +286,17 @@ class SocialNetworkUser {
 			$this->_bio = $bio;
 
 		return $this->_bio;
+	}
+
+	/**
+	 * @param string $company = ''
+	 *
+	 * @return string
+	 */
+	public function Company ($company = '') {
+		if (func_num_args() != 0)
+			$this->_company = $company;
+
+		return $this->_company;
 	}
 }

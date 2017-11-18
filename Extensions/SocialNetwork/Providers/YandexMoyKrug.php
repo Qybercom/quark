@@ -89,6 +89,24 @@ class YandexMoyKrug extends YandexOAuth implements IQuarkOAuthProvider, IQuarkSo
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user == SocialNetwork::CURRENT_USER ? self::CURRENT_USER : $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count == SocialNetwork::FRIENDS_ALL ? 0 : $count;
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {

@@ -214,12 +214,30 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 	/**
 	 * @param string $user
 	 *
+	 * @return string
+	 */
+	public function SocialNetworkParameterUser ($user) {
+		return $user;
+	}
+
+	/**
+	 * @param int $count
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkParameterFriendsCount ($count) {
+		return $count;
+	}
+
+	/**
+	 * @param string $user
+	 *
 	 * @return SocialNetworkUser
 	 */
 	public function SocialNetworkUser ($user) {
 		$out = null;
 
-		if ($user == '') {
+		if ($user == SocialNetwork::CURRENT_USER) {
 			$response = $this->OAuthAPI('/user/info', QuarkDTO::ForGET(new QuarkFormIOProcessor()), new QuarkDTO(new QuarkJSONIOProcessor()));
 			$out = isset($response->response->user->blogs) && sizeof($response->response->user->blogs) != 0 ? $response->response->user->blogs[0] : null;
 		}
