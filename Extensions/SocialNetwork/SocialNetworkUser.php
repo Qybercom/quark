@@ -17,6 +17,11 @@ class SocialNetworkUser {
 	const GENDER_UNKNOWN = '';
 
 	/**
+	 * @var object $_raw = null
+	 */
+	private $_raw = null;
+
+	/**
 	 * @var string $_id = ''
 	 */
 	private $_id = '';
@@ -89,10 +94,24 @@ class SocialNetworkUser {
 	/**
 	 * @param string $id = ''
 	 * @param string $name = ''
+	 * @param object $raw = null
 	 */
-	public function __construct ($id = '', $name = '') {
+	public function __construct ($id = '', $name = '', $raw = null) {
 		$this->_id = $id;
 		$this->_name = $name;
+		$this->_raw = $raw;
+	}
+
+	/**
+	 * @param object $raw = null
+	 *
+	 * @return object
+	 */
+	public function Raw ($raw = null) {
+		if (func_num_args() != 0)
+			$this->_raw = $raw;
+
+		return $this->_raw;
 	}
 
 	/**

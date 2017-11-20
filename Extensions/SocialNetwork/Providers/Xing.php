@@ -280,7 +280,7 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuarkMo
 	 * @return SocialNetworkUser
 	 */
 	private static function _user ($item, $photo = false) {
-		$user = new SocialNetworkUser($item->id, $item->display_name);
+		$user = new SocialNetworkUser($item->id, $item->display_name, $item);
 
 		$user->Email($item->active_email);
 		$user->PhotoFromLink(isset($item->photo_urls->large) ? $item->photo_urls->large : '', $photo);

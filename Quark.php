@@ -556,6 +556,13 @@ class Quark {
 	}
 
 	/**
+	 * @param IQuarkContainer $container
+	 */
+	public static function ContainerDispose (IQuarkContainer &$container) {
+		unset(self::$_containers[spl_object_hash($container->Primitive())]);
+	}
+
+	/**
 	 * @param string $id
 	 *
 	 * @return IQuarkContainer|null
