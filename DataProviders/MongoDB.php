@@ -167,6 +167,30 @@ class MongoDB implements IQuarkDataProvider {
 	const LEGACY = '__legacy';
 
 	/**
+	 * https://docs.mongodb.com/v3.0/reference/operator/query/type/
+	 */
+
+	const TYPE_DOUBLE = 1;
+	const TYPE_STRING = 2;
+	const TYPE_OBJECT = 3;
+	const TYPE_ARRAY = 4;
+	const TYPE_BINARY = 5;
+	const TYPE_UNDEFINED = 6; /** @deprecated */
+	const TYPE_OBJECT_ID = 7;
+	const TYPE_BOOLEAN = 8;
+	const TYPE_DATE = 9;
+	const TYPE_NULL = 10;
+	const TYPE_REGEXP = 11;
+	const TYPE_JAVASCRIPT = 13;
+	const TYPE_SYMBOL = 14; /** @deprecated */
+	const TYPE_JAVASCRIPT_WITH_SCOPE = 15;
+	const TYPE_32BIT_INTEGER = 16;
+	const TYPE_TIMESTAMP = 17;
+	const TYPE_64BIT_INTEGER = 18;
+	const TYPE_KEY_MIN = -1;
+	const TYPE_KEY_MAX = 127;
+
+	/**
 	 * @var IQuarkMongoDBDriver $_driver
 	 */
 	private $_driver;
@@ -236,6 +260,13 @@ class MongoDB implements IQuarkDataProvider {
 	 */
 	public static function QueryRegex ($regex) {
 		return self::_callStatic('QueryRegex', array($regex));
+	}
+
+	/**
+	 * @return IQuarkMongoDBDriver
+	 */
+	public function &Driver () {
+		return $this->_driver;
 	}
 
 	/**
@@ -1206,8 +1237,12 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 		if (isset($options[self::OPTION_COUNT_HINT]))
 			$command['hint'] = $options[self::OPTION_COUNT_HINT];
 
-		$result = $this->Command($command)->toArray();
+		$result = $this->Command($command);
 
-		return is_array($result) && isset($result[0]->n) ? $result[0]->n : 0;
+		if (!$result) return 0;
+
+		$out = $result->toArray();
+
+		return is_array($out) && isset($out[0]->n) ? $out[0]->n : 0;
 	}
 }

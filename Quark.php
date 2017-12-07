@@ -4773,6 +4773,9 @@ class QuarkService implements IQuarkContainer {
 	 * @throws QuarkArchException
 	 */
 	public function Authorize ($checkSignature = false, QuarkClient &$connection = null) {
+		if ($connection != null)
+			$this->_session = QuarkSession::InitWithConnection($connection);
+
 		if (!($this->_service instanceof IQuarkAuthorizableService)) return true;
 
 		$service = get_class($this->_service);
@@ -5276,7 +5279,7 @@ class QuarkObject {
 		
 		$out = null;
 		
-		foreach ($args as $arg) {
+		foreach ($args as $i => &$arg) {
 			if ($arg === null) continue;
 
 			$iterative = self::isIterative($arg);
@@ -5291,7 +5294,7 @@ class QuarkObject {
 				continue;
 			}
 
-			foreach ($arg as $key => $value) {
+			foreach ($arg as $key => &$value) {
 				if ($iterative) {
 					if (!is_array($out))
 						$out = array();
@@ -5310,6 +5313,8 @@ class QuarkObject {
 				}
 			}
 		}
+
+		unset($i, $arg, $iterative, $key, $value, $def, $args);
 		
 		return $out;
 	}
@@ -7543,7 +7548,7 @@ trait QuarkCollectionBehavior {
 	/**
 	 * @return array
 	 */
-	public function Collection () {
+	public function &Collection () {
 		return $this->_collection;
 	}
 
@@ -7608,9 +7613,11 @@ trait QuarkCollectionBehavior {
 			/**
 			 * @note This matcher behaves different from MongoDB
 			 *       In case of not existing $property it will return false, insteadof MongoDB behavior which expects true
+			 *
+			 * @upd $document->$key now uses null check. Need more testing.
 			 */
 			// TODO: $this->_matchTarget() signature which will serve non-existing keys if $this->MongoDBCompatible() is true
-			if (isset($document->$key))
+			if (isset($document->$key) || $document->$key === null)
 				$this->_matchOut($out, $outChanged, $this->_matchTarget($document->$key, $rule));
 		}
 		
@@ -8202,6 +8209,20 @@ trait QuarkCollectionBehavior {
 				$this->_collection[$i]->$key = $value;
 		}
 	}
+
+	/**
+	 * @param array $query = []
+	 * @param array|callable $update = null
+	 * @param array $options = []
+	 * @param int &$changed = 0
+	 *
+	 * @return QuarkCollectionBehavior
+	 */
+	public function ChangeAndReturn ($query = [], $update = null, $options = [], &$changed = 0) {
+		$changed = $this->Change($query, $update, $options);
+
+		return $this;
+	}
 	
 	/**
 	 * @param array $query = []
@@ -8231,6 +8252,20 @@ trait QuarkCollectionBehavior {
 			$this->_collection = array_values($this->_collection);
 		
 		return sizeof($purge);
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 * @param bool $preserveKeys = false
+	 * @param int &$purged = 0
+	 *
+	 * @return QuarkCollectionBehavior
+	 */
+	public function PurgeAndReturn ($query = [], $options = [], $preserveKeys = false, &$purged = 0) {
+		$purged = $this->Purge($query, $options, $preserveKeys);
+
+		return $this;
 	}
 	
 	/**
@@ -8265,11 +8300,19 @@ trait QuarkCollectionBehavior {
 
 	/**
 	 * @param array $options = []
+	 * @param bool $free = false
 	 *
 	 * @return array
 	 */
-	public function Aggregate ($options = []) {
-		return $this->_slice($this->_collection, $options);
+	public function Aggregate ($options = [], $free = false) {
+		$out = $this->_slice($this->_collection, $options);
+
+		if ($free) {
+			unset($this->_collection);
+			$this->_collection = array();
+		}
+
+		return $out;
 	}
 
 	/**
@@ -8283,7 +8326,7 @@ trait QuarkCollectionBehavior {
 		$out = array();
 
 		foreach ($this->_collection as $i => &$item)
-			$out[] = $mapper($item);
+			$out[] = $mapper($item, $this);
 
 		return $out;
 	}
@@ -8463,6 +8506,8 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	use QuarkCollectionBehaviorWithArrayAccess {
 		Select as private _select;
 		SelectRandom as private _selectRandom;
+		ChangeAndReturn as private _changeAndReturn;
+		PurgeAndReturn as private _purgeAndReturn;
 		Aggregate as private _aggregate;
 		Map as private _map;
 		offsetSet as private _offsetSet;
@@ -8762,12 +8807,37 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
+	 * @param array $query = []
+	 * @param array|callable $update = null
 	 * @param array $options = []
+	 * @param int &$changed = 0
 	 *
 	 * @return QuarkCollection
 	 */
-	public function Aggregate ($options = []) {
-		return new self($this->_type, $this->_aggregate($options));
+	public function ChangeAndReturn ($query = [], $update = null, $options = [], &$changed = 0) {
+		return $this->_changeAndReturn($query, $update, $options, $changed);
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 * @param bool $preserveKeys = false
+	 * @param int &$purged = 0
+	 *
+	 * @return QuarkCollection
+	 */
+	public function PurgeAndReturn ($query = [], $options = [], $preserveKeys = false, &$purged = 0) {
+		return $this->_purgeAndReturn($query, $options, $preserveKeys, $purged);
+	}
+
+	/**
+	 * @param array $options = []
+	 * @param bool $free = false
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Aggregate ($options = [], $free = false) {
+		return new self($this->_type, $this->_aggregate($options, $free));
 	}
 
 	/**
@@ -9387,7 +9457,7 @@ class QuarkModel implements IQuarkContainer {
 	 */
 	public function __call ($method, $args) {
 		if (method_exists($this->_model, $method))
-			return call_user_func_array(array($this->_model, $method), $args);
+			return call_user_func_array(array(&$this->_model, $method), $args);
 
 		$model = $this->_model == null ? 'null' : get_class($this->_model);
 
@@ -9586,7 +9656,7 @@ class QuarkModel implements IQuarkContainer {
 			}
 			else $output->$key = $field instanceof IQuarkModel
 				? QuarkModel::Build($field, empty($model->$key) ? null : $model->$key)
-				: (is_callable($field)
+				: (self::_callableField($field)
 					? $field($key, null, false)
 					: $field
 				);
@@ -12392,7 +12462,7 @@ class QuarkDateInterval {
 	/**
 	 * @param bool $ceil = true
 	 * 
-	 * @return int
+	 * @return int|float
 	 */
 	public function Years ($ceil = true) {
 		$full = $this->months + $this->days + $this->hours + $this->minutes + $this->seconds;
@@ -12403,7 +12473,7 @@ class QuarkDateInterval {
 	/**
 	 * @param bool $ceil = true
 	 * 
-	 * @return int
+	 * @return int|float
 	 */
 	public function Months ($ceil = true) {
 		$full = $this->days + $this->hours + $this->minutes + $this->seconds;
@@ -12415,7 +12485,7 @@ class QuarkDateInterval {
 	/**
 	 * @param bool $ceil = true
 	 * 
-	 * @return int
+	 * @return int|float
 	 */
 	public function Days ($ceil = true) {
 		$full = $this->hours + $this->minutes + $this->seconds;
@@ -12428,7 +12498,7 @@ class QuarkDateInterval {
 	/**
 	 * @param bool $ceil = true
 	 * 
-	 * @return int
+	 * @return int|float
 	 */
 	public function Hours ($ceil = true) {
 		$full = $this->minutes + $this->seconds;
@@ -12442,7 +12512,7 @@ class QuarkDateInterval {
 	/**
 	 * @param bool $ceil = true
 	 * 
-	 * @return int
+	 * @return int|float
 	 */
 	public function Minutes ($ceil = true) {
 		$full = $this->seconds;
@@ -12465,6 +12535,17 @@ class QuarkDateInterval {
 				 + $this->minutes * self::SECONDS_IN_MINUTE;
 		
 		return $seconds + $this->seconds;
+	}
+
+	/**
+	 * @param bool $ceil = true
+	 *
+	 * @return int|float
+	 */
+	public function Weeks ($ceil = true) {
+		$weeks = $this->Days(false) / 7;
+
+		return $ceil ? ceil($weeks) : $weeks;
 	}
 
 	/**
@@ -13556,6 +13637,20 @@ class QuarkSession {
 
 		$session = new self($source);
 		$session->Input($input);
+		$session->_connection = $connection;
+
+		return $session;
+	}
+
+	/**
+	 * @param QuarkClient $connection = null
+	 *
+	 * @return QuarkSession
+	 */
+	public static function InitWithConnection (QuarkClient &$connection = null) {
+		if ($connection == null) return null;
+
+		$session = new self();
 		$session->_connection = $connection;
 
 		return $session;
@@ -16875,13 +16970,13 @@ class QuarkURI {
 
 	/**
 	 * @param $query = []
+	 * @param int $enc_type = PHP_QUERY_RFC1738|PHP_QUERY_RFC3986
 	 * 
 	 * @return object
 	 */
-	public function Params ($query = []) {
+	public function Params ($query = [], $enc_type = PHP_QUERY_RFC1738) {
 		if (func_num_args() != 0)
-			$this->query = http_build_query((array)$query);
-			//$this->query = http_build_query((array)$query, '', '&', PHP_QUERY_RFC3986);
+			$this->query = http_build_query((array)$query, '', '&', $enc_type);
 		
 		return QuarkObject::Merge($this->Options());
 	}
@@ -20181,13 +20276,15 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param string $name = ''
+	 *
 	 * @return QuarkDTO
 	 */
-	public function Download () {
+	public function Download ($name = '') {
 		$response = new QuarkDTO(new QuarkPlainIOProcessor());
 
 		$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, $this->type);
-		$response->Header(QuarkDTO::HEADER_CONTENT_DISPOSITION, 'attachment; filename="' . $this->name . '"');
+		$response->Header(QuarkDTO::HEADER_CONTENT_DISPOSITION, 'attachment; filename="' . (func_num_args() != 0 ? $name : $this->name) . '"');
 
 		if (!$this->_loaded)
 			$this->Content(file_get_contents($this->location));
