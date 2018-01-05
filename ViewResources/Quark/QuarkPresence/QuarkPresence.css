@@ -114,6 +114,13 @@ body {
 	float: none;
 }
 
+.quark-presence-column.materialized {
+	background: rgb(255,255,255);
+	box-shadow: 0 1px 3px 1px rgba(0,0,0,0.15);
+	padding: 15px;
+	margin: 0 10px 10px 0;
+}
+
 .quark-presence-screen-overlay {
 	min-height: 100%;
 }

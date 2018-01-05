@@ -102,6 +102,41 @@ button.quark-button {
 	box-sizing: border-box;
 }
 
+.quark-input-labeled {
+	display: inline-block;
+	padding: 5px 10px;
+	margin: 0;
+	border: 1px solid rgb(230,230,230);
+	border-radius: 3px;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+.quark-input-labeled span {
+	display: block;
+	font-size: 8px;
+	line-height: 8px;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	margin: 3px 0 5px 0;
+}
+
+.quark-input-labeled input {
+	display: block;
+	width: 100%;
+	font-size: 14px;
+	line-height: 18px;
+	border: none;
+	padding: 0;
+	font-family: FontAwesome,'Open Sans',sans-serif;
+	color: rgb(150,150,150);
+}
+
+.quark-input-labeled input:focus {
+	outline: none;
+}
+
 .quark-link {
 	color: rgba(0,0,0,0);
 	text-decoration: none;
@@ -109,6 +144,7 @@ button.quark-button {
 }
 
 .quark-link.underlined {
+	font-size: inherit;
 	color: rgb(150, 150, 150);
 	text-decoration: underline;
 }

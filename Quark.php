@@ -4860,7 +4860,8 @@ class QuarkService implements IQuarkContainer {
 
 		$this->_output->Merge($morph && $selected != null && $output instanceof QuarkView
 			? $output->ExtractVars()
-			: $output
+			: $output,
+			true, true, true
 		);
 		$this->_filterOutput();
 
@@ -6479,11 +6480,14 @@ class QuarkView implements IQuarkContainer {
 		if ($data instanceof QuarkModel)
 			$data = $data->Model();
 
-		foreach ($data as $key => $value) {
+		foreach ($data as $key => &$value) {
 			$append = $prefix . $key;
-			$source = QuarkObject::isTraversable($value)
+			$source = QuarkObject::isTraversable($value) && !is_callable($value)
 				? self::_tpl($source, $value, $append . '.')
-				: preg_replace('#\{' . $append . '\}#Uis', $value, $source);
+				: (is_scalar($value) || !is_callable($value)
+					? preg_replace('#\{' . $append . '\}#Uisu', $value, $source)
+					: preg_replace_callback('#\{' . $append . '\}#Uisu', function ($matches) use (&$value, &$key, &$append) { return $value($matches, $key, $append); }, $source)
+				);
 		}
 
 		return $source;
@@ -11522,6 +11526,17 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 */
 	public function Current ($value = '') {
 		return $this->Of(Quark::CurrentLanguage(), func_num_args() != 0 && is_scalar($value) ? $value : null);
+	}
+
+	/**
+	 * @param string $default = ''
+	 *
+	 * @return string
+	 */
+	public function CurrentOrDefault ($default = '') {
+		$current = $this->Current();
+
+		return $current == '' ? $default : $current;
 	}
 
 	/**
@@ -17553,10 +17568,11 @@ class QuarkDTO {
 	 * @param mixed $data
 	 * @param bool $processor = true
 	 * @param bool $status = true
+	 * @param bool $fullControl = false
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Merge ($data = [], $processor = true, $status = true) {
+	public function Merge ($data = [], $processor = true, $status = true, $fullControl = false) {
 		if (!($data instanceof QuarkDTO)) $this->MergeData($data);
 		else {
 			$this->_method = $data->Method();
@@ -17574,6 +17590,9 @@ class QuarkDTO {
 
 			if ($processor)
 				$this->_processor = $data->Processor();
+
+			if ($fullControl)
+				$this->_fullControl = $data->FullControl();
 
 			$this->MergeData($data->Data());
 		}
