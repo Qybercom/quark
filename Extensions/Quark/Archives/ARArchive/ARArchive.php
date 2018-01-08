@@ -1,10 +1,12 @@
 <?php
-namespace Quark\Extensions\Quark\Archives;
+namespace Quark\Extensions\Quark\Archives\ARArchive;
 
 use Quark\IQuarkArchive;
 
 use Quark\QuarkArchiveItem;
 use Quark\QuarkDate;
+use Quark\QuarkField;
+use Quark\QuarkObject;
 
 /**
  * Class ARArchive
@@ -12,7 +14,7 @@ use Quark\QuarkDate;
  * http://citforum.ru/operating_systems/manpages/AR.4.shtml
  * https://ru.wikipedia.org/wiki/Deb_(%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82_%D1%84%D0%B0%D0%B9%D0%BB%D0%BE%D0%B2)
  *
- * @package Quark\Extensions\Quark\Archives
+ * @package Quark\Extensions\Quark\Archives\ARArchive
  */
 class ARArchive implements IQuarkArchive {
 	const TYPE = "!<arch>\n";
@@ -85,18 +87,26 @@ class ARArchive implements IQuarkArchive {
 	 */
 	public function UnpackItem ($data = '', $start = 0) {
 		$header = substr($data, $start, self::BLOCK);
-		$meta = unpack('a16name/a12date/a6uid/a6gid/a8mode/a10size', $header);
-		
+
+		$meta = QuarkObject::FromBinary($header, array(
+			'name' => QuarkField::BinaryString(16),
+			'date' => QuarkField::BinaryString(12),
+			'user' => QuarkField::BinaryString(6),
+			'group' => QuarkField::BinaryString(6),
+			'mode' => QuarkField::BinaryString(8),
+			'size' => QuarkField::BinaryString(10)
+		));
+
 		$item = new QuarkArchiveItem(
-			trim($meta['name']),
+			trim($meta->name),
 			'',
-			QuarkDate::FromTimestamp((int)$meta['date']),
-			(int)$meta['size']
+			QuarkDate::FromTimestamp((int)$meta->date),
+			(int)$meta->size
 		);
-		
+
 		$item->Content(substr($data, $start + self::BLOCK, $item->size));
 		$item->Next($start + self::BLOCK + $item->size);
-		
+
 		return $item;
 	}
 }

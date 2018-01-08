@@ -1,11 +1,13 @@
 <?php
-namespace Quark\Extensions\Quark\Archives;
+namespace Quark\Extensions\Quark\Archives\TARArchive;
 
 use Quark\IQuarkArchive;
 use Quark\IQuarkCompressor;
 
 use Quark\QuarkArchiveItem;
 use Quark\QuarkDate;
+use Quark\QuarkField;
+use Quark\QuarkObject;
 
 /**
  * Class TARArchive
@@ -14,7 +16,7 @@ use Quark\QuarkDate;
  * http://www.mkssoftware.com/docs/man4/tar.4.asp
  * https://stackoverflow.com/a/31118634/2097055
  *
- * @package Quark\Extensions\Quark\Archives
+ * @package Quark\Extensions\Quark\Archives\TARArchive
  */
 class TARArchive implements IQuarkArchive {
 	const BLOCK = 512;
@@ -131,21 +133,21 @@ class TARArchive implements IQuarkArchive {
 	}
 	
 	/**
-	 * @param string $content
+	 * @param string $data
 	 *
 	 * @return QuarkArchiveItem[]
 	 */
-	public function Unpack ($content = '') {
+	public function Unpack ($data) {
 		if ($this->_compressor)
-			$content = $this->_compressor->Decompress($content);
+			$data= $this->_compressor->Decompress($data);
 		
 		$next = 0;
 		$read = true;
-		$orig = strlen(trim($content));
+		$orig = strlen(trim($data));
 		$out = array();
 		
 		while ($read) {
-			$item = $this->UnpackItem($content, $next);
+			$item = $this->UnpackItem($data, $next);
 			$next = $item->Next();
 			$read = $item->Next() < $orig;
 			$out[] = $item;
@@ -155,24 +157,43 @@ class TARArchive implements IQuarkArchive {
 	}
 	
 	/**
-	 * @param string $content
-	 * @param int $start
+	 * @param string $data = ''
+	 * @param int $start = 0
 	 *
 	 * @return QuarkArchiveItem
 	 */
-	public function UnpackItem ($content = '', $start = 0) {
-		$header = substr($content, $start, self::BLOCK);
-		$meta = unpack('a100name/a8perms/a8uid/a8gid/a12size/a12time/a8checksum/a1flag/a100link/a6magic/a2version/a32user_name/a32group_name/a8device_major/a8device_minor/a155prefix/a12other', $header);
-		
+	public function UnpackItem ($data = '', $start = 0) {
+		$header = substr($data, $start, self::BLOCK);
+
+		$meta = QuarkObject::FromBinary($header, array(
+			'name' => QuarkField::BinaryString(100),
+			'permissions' => QuarkField::BinaryString(8),
+			'user' => QuarkField::BinaryString(8),
+			'group' => QuarkField::BinaryString(8),
+			'size' => QuarkField::BinaryString(12),
+			'time' => QuarkField::BinaryString(12),
+			'checksum' => QuarkField::BinaryString(8),
+			'flag' => QuarkField::BinaryString(1),
+			'link' => QuarkField::BinaryString(100),
+			'magic' => QuarkField::BinaryString(6),
+			'version' => QuarkField::BinaryString(2),
+			'name_user' => QuarkField::BinaryString(32),
+			'name_group' => QuarkField::BinaryString(32),
+			'device_major' => QuarkField::BinaryString(8),
+			'device_minor' => QuarkField::BinaryString(8),
+			'prefix' => QuarkField::BinaryString(155),
+			'other' => QuarkField::BinaryString(12)
+		));
+
 		$item = new QuarkArchiveItem(
-			trim($meta['name']),
+			trim($meta->name),
 			'',
-			QuarkDate::FromTimestamp(octdec($meta['time'])),
-			octdec($meta['size']),
-			$meta['flag'] == self::FLAG_DIR
+			QuarkDate::FromTimestamp(octdec($meta->time)),
+			octdec($meta->size),
+			$meta->flag == self::FLAG_DIR
 		);
 		
-		$item->Content(substr($content, $start + self::BLOCK, $item->size));
+		$item->Content(substr($data, $start + self::BLOCK, $item->size));
 		$item->Next($start + self::BLOCK + $this->Block($item));
 		
 		return $item;

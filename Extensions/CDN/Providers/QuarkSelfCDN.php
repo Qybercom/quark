@@ -133,7 +133,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 * @return string
 	 */
 	public function CDNResourceCreate (QuarkFile $file) {
-		$now = QuarkDate::GMTNow(QuarkDate::NOW_FULL);
+		$now = QuarkDate::GMTNow(QuarkDate::FORMAT_ISO_FULL);
 		$parent = implode('/', array(
 			$now->Format('Y/m/d'),
 			$now->Format('H'),

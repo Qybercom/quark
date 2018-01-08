@@ -642,6 +642,28 @@ class Quark {
 	}
 
 	/**
+	 * @param string $extension = ''
+	 * @param string $function = ''
+	 * @param bool $silent = false
+	 *
+	 * @return bool
+	 *
+	 * @throws QuarkArchException
+	 */
+	public static function Requires ($extension = '', $function = '', $silent = false) {
+		if (function_exists($function)) return true;
+
+		if (!$silent) {
+			$stack = self::ShortCallStack();
+			$caller = isset($stack[4]) ? array_reverse(explode('\\', explode(' ', $stack[3])[0]))[0] : '';
+
+			throw new QuarkArchException('[' . $caller . '] Function "' . $function . '" not found. Please check that "' . $extension . '" extension is configured for your PHP installation.');
+		}
+
+		return false;
+	}
+
+	/**
 	 * @param string $message
 	 * @param string $lvl = self::LOG_INFO
 	 * @param string $domain = 'application'
@@ -5613,6 +5635,131 @@ class QuarkObject {
 		if (is_object($var) && !$objectToNull) return new \stdClass();
 		
 		return null;
+	}
+
+	/**
+	 * @param string $input = ''
+	 * @param array $fields = []
+	 *
+	 * @return object
+	 */
+	public static function FromBinary ($input = '', $fields = []) {
+		$format = array();
+
+		foreach ($fields as $key => &$value)
+			$format[] = $value . $key;
+
+		return (object)unpack(implode('/', $format), $input);
+	}
+
+	/**
+	 * @param IQuarkBinaryObject $object = null
+	 * @param string $input = ''
+	 *
+	 * @return IQuarkBinaryObject
+	 */
+	public static function BinaryPopulate (IQuarkBinaryObject $object = null, $input = '') {
+		if ($object == null) return null;
+
+		$obj = self::FromBinary($input, $object->BinaryFields());
+
+		foreach ($obj as $key => &$value)
+			$object->$key = $value;
+
+		$object->BinaryPopulate($input);
+
+		return $object;
+	}
+
+	/**
+	 * @param object $obj = null
+	 * @param array $fields = []
+	 *
+	 * @return string
+	 */
+	public static function ToBinary ($obj = null, $fields = []) {
+		if ($obj == null) return '';
+
+		$out = '';
+
+		foreach ($fields as $key => &$value)
+			if (isset($obj->$key))
+				$out .= pack($value, $obj->$key);
+
+		return $out;
+	}
+
+	/**
+	 * @param IQuarkBinaryObject $object = null
+	 *
+	 * @return string
+	 */
+	public static function BinaryExtract (IQuarkBinaryObject $object = null) {
+		if ($object == null) return '';
+
+		$out = self::ToBinary($object, $object->BinaryFields());
+
+		return $out . $object->BinaryExtract($out);
+	}
+
+	/**
+	 * @param IQuarkBinaryObject $object = null
+	 *
+	 * @return bool|int
+	 */
+	public static function BinaryLength (IQuarkBinaryObject $object = null) {
+		return $object == null ? 0 : strlen(self::ToBinary($object, $object->BinaryFields()));
+	}
+}
+
+/**
+ * Interface IQuarkBinaryObject
+ *
+ * @package Quark
+ */
+interface IQuarkBinaryObject {
+	/**
+	 * @return mixed
+	 */
+	public function BinaryFields();
+
+	/**
+	 * @return int
+	 */
+	public function BinaryLength();
+
+	/**
+	 * @param $data
+	 *
+	 * @return mixed
+	 */
+	public function BinaryPopulate($data);
+
+	/**
+	 * @param $data
+	 *
+	 * @return mixed
+	 */
+	public function BinaryExtract($data);
+}
+
+/**
+ * Trait QuarkBinaryObjectBehavior
+ *
+ * @package Quark
+ */
+trait QuarkBinaryObjectBehavior {
+	/**
+	 * @return int|bool
+	 */
+	public function BinaryLengthCalculated () {
+		/**
+		 * @var IQuarkBinaryObject|QuarkBinaryObjectBehavior $this
+		 */
+
+		return $this instanceof IQuarkBinaryObject
+			? QuarkObject::BinaryLength($this)
+			: false;
 	}
 }
 
@@ -11459,6 +11606,144 @@ class QuarkField {
 
 		return $errors;
 	}
+
+	/**
+	 * @param int|string $length = '*'
+	 * @param bool $nullTerm = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryString ($length = '*', $nullTerm = true) {
+		return ($nullTerm ? 'a' : 'A') . $length;
+	}
+
+	/**
+	 * @param int|string $length = '*'
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryHex ($length = '*', $bigEndian = true) {
+		return ($bigEndian ? 'H' : 'h') . $length;
+	}
+
+	/**
+	 * @param bool $signed = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryChar ($signed = true) {
+		return $signed ? 'c' : 'C';
+	}
+
+	/**
+	 * @param bool $signed = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryShortMachine ($signed = true) {
+		return $signed ? 's' : 'S';
+	}
+
+	/**
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryShort ($bigEndian = true) {
+		return $bigEndian ? 'n' : 'v';
+	}
+
+	/**
+	 * @param bool $signed = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryInteger ($signed = true) {
+		return $signed ? 'i' : 'I';
+	}
+
+	/**
+	 * @param bool $signed = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryLongMachine ($signed = true) {
+		return $signed ? 'l' : 'L';
+	}
+
+	/**
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryLong ($bigEndian = true) {
+		return $bigEndian ? 'N' : 'V';
+	}
+
+	/**
+	 * @param bool $signed = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryLongLongMachine ($signed = true) {
+		return $signed ? 'q' : 'Q';
+	}
+
+	/**
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryLongLong ($bigEndian = true) {
+		return $bigEndian ? 'J' : 'P';
+	}
+
+	/**
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryFloat ($bigEndian = true) {
+		return func_num_args() < 2 ? 'f' : ($bigEndian ? 'G' : 'g');
+	}
+
+	/**
+	 * @param bool $bigEndian = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryDouble ($bigEndian = true) {
+		return func_num_args() < 2 ? 'd' : ($bigEndian ? 'E' : 'e');
+	}
+
+	/**
+	 * @param int|string $length = '*'
+	 *
+	 * @return string
+	 */
+	public static function BinaryByteBackup ($length = '*') {
+		return 'X' . $length;
+	}
+
+	/**
+	 * @param int|string $length = '*'
+	 *
+	 * @return string
+	 */
+	public static function BinaryNull ($length = '*') {
+		return 'x' . $length;
+	}
+
+	/**
+	 * @param int|string $length = '*'
+	 * @param bool $fill = true
+	 *
+	 * @return string
+	 */
+	public static function BinaryNullFill ($length = '*', $fill = true) {
+		return ($fill ? '@' : 'Z') . $length;
+	}
 }
 
 /**
@@ -11828,10 +12113,12 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
  */
 class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterPopulate, IQuarkModelWithBeforeExtract {
 	const NOW = 'now';
-	const NOW_FULL = 'Y-m-d H:i:s.u';
 	const GMT = 'UTC';
 	const CURRENT = '';
-	const UNKNOWN_YEAR = '0000';
+
+	const FORMAT_ISO = 'Y-m-d H:i:s';
+	const FORMAT_ISO_FULL = 'Y-m-d H:i:s.u';
+	const FORMAT_MS_DOS = '___quark_ms_dos___';
 
 	const PRECISE_YEARS = 'Y-01-01 00:00:00';
 	const PRECISE_MONTHS = 'Y-m-01 00:00:00';
@@ -11839,6 +12126,11 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const PRECISE_HOURS = 'Y-m-d H:00:00';
 	const PRECISE_MINUTES = 'Y-m-d H:i:00';
 	const PRECISE_SECONDS = 'Y-m-d H:i:s';
+
+	const UNKNOWN_YEAR = '0000';
+
+	const LIMIT_UNIX = 1970;
+	const LIMIT_MS_DOS = 1980;
 
 	/**
 	 * @var IQuarkCulture|QuarkCultureISO $_culture
@@ -12038,6 +12330,21 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return string
 	 */
 	public function Format ($format = '') {
+		if ($format == self::FORMAT_MS_DOS) {
+			$date = explode('-', $this->_date->format('Y-m-d-H-i-s'));
+			$limits = array(self::LIMIT_MS_DOS, 1, 1, 0, 0, 0);
+			$modifiers = array(self::LIMIT_MS_DOS, 0, 0, 0, 0, 0);
+			$offsets = array(25, 21, 16, 11, 5, 1);
+			$out = 0;
+
+			foreach ($date as $i => &$component) {
+				$sum = (($date[0] < self::LIMIT_MS_DOS ? $limits[$i] : (int)($component[0] == '0' ? $component[1] : $component)) - $modifiers[$i]);
+				$out |= $i == 5 ? $sum >> $offsets[$i] : $sum << $offsets[$i];
+			}
+
+			return $out;
+		}
+
 		return $this->_date->format($format);
 	}
 
@@ -12198,6 +12505,34 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		$date->_fromTimestamp = true;
 
 		return $date;
+	}
+
+	/**
+	 * https://github.com/splitbrain/php-archive/blob/master/src/Zip.php
+	 *
+	 * @param string $date = ''
+	 * @param string $time = ''
+	 *
+	 * @return QuarkDate
+	 */
+	public static function FromMSDOSDate ($date = '', $time = '') {
+		$year = (($date & 0xFE00) >> 9) + 1980;
+		$month = ($date & 0x01E0) >> 5;
+		$day = $date & 0x001F;
+		$hour = ($time & 0xF800) >> 11;
+		$minute = ($time & 0x07E0) >> 5;
+		$seconds = ($time & 0x001F) << 1;
+
+		return self::FromTimestamp(mktime($hour, $minute, $seconds, $month, $day, $year));
+	}
+
+	/**
+	 * @return object
+	 */
+	public function ToMSDOSDate () {
+		$date = dechex($this->Format(QuarkDate::FORMAT_MS_DOS));
+
+		return (object)unpack('vTime/vDate', pack('H*', $date[6] . $date[7] . $date[4] . $date[5] . $date[2] . $date[3] . $date[0] . $date[1]));
 	}
 
 	/**
@@ -22904,7 +23239,9 @@ class QuarkCipherKeyPair extends QuarkFile {
  * @package Quark
  */
 class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess {
-	use QuarkCollectionBehaviorWithArrayAccess;
+	use QuarkCollectionBehaviorWithArrayAccess {
+		Exists as private _exists;
+	}
 	
 	/**
 	 * @var IQuarkArchive $_archive
@@ -22917,11 +23254,17 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 	private $_unpacked = false;
 	
 	/**
+	 * @var bool $_existsFile = false
+	 */
+	private $_existsFile = false;
+
+	/**
 	 * @param IQuarkArchive $archive
 	 * @param string $location = ''
 	 */
 	public function __construct (IQuarkArchive $archive, $location = '') {
 		parent::__construct($location, false);
+
 		$this->_archive = $archive;
 	}
 	
@@ -22965,8 +23308,12 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 	 * @return QuarkArchive
 	 */
 	public function Unpack () {
+		$this->_existsFile = true;
+
 		if (!$this->_loaded)
 			$this->Load();
+
+		$this->_existsFile = false;
 		
 		$this->_collection = $this->_archive->Unpack($this->_content);
 		$this->_unpacked = true;
@@ -22995,6 +23342,23 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 		}
 		
 		return $ok;
+	}
+
+	/**
+	 * @param array $query = []
+	 * @param array $options = []
+	 *
+	 * @return bool
+	 */
+	public function Exists ($query = [], $options = []) {
+		return $this->_existsFile ? parent::Exists() : $this->_exists($query, $options);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function FileExists () {
+		return parent::Exists();
 	}
 }
 

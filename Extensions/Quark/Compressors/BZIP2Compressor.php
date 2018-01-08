@@ -3,6 +3,7 @@ namespace Quark\Extensions\Quark\Compressors;
 
 use Quark\IQuarkCompressor;
 
+use Quark\Quark;
 use Quark\QuarkArchException;
 
 /**
@@ -19,9 +20,8 @@ class BZIP2Compressor implements IQuarkCompressor {
 	 * @throws QuarkArchException
 	 */
 	public function Compress ($data) {
-		if (!function_exists('bzcompress'))
-			throw new QuarkArchException('[BZIP2Compressor::Compress] Function "bzcompress" not found. Please check that "Bzip2" extension is configured for your PHP installation.');
-		
+		Quark::Requires('Bzip2', 'bzcompress');
+
 		return bzcompress($data);
 	}
 	
@@ -33,9 +33,8 @@ class BZIP2Compressor implements IQuarkCompressor {
 	 * @throws QuarkArchException
 	 */
 	public function Decompress ($data) {
-		if (!function_exists('bzdecompress'))
-			throw new QuarkArchException('[BZIP2Compressor::Uncompress] Function "bzdecompress" not found. Please check that "Bzip2" extension is configured for your PHP installation.');
-		
+		Quark::Requires('Bzip2', 'bzdecompress');
+
 		return bzdecompress($data);
 	}
 }
