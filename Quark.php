@@ -20622,6 +20622,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		}
 
 		$this->Location($this->location);
+
 		return true;
 	}
 
@@ -23178,12 +23179,13 @@ class QuarkCipherKeyPair extends QuarkFile {
 	/**
 	 * @param string $content = ''
 	 * @param bool $load = false
+	 * @param bool $mime = false
 	 *
 	 * @return string
 	 */
-	public function Content ($content = '', $load = false) {
+	public function Content ($content = '', $load = false, $mime = false) {
 		if (func_num_args() != 0) {
-			if (func_num_args() == 2) parent::Content($content, $load);
+			if (func_num_args() == 2) parent::Content($content, $load, $mime);
 			else parent::Content($content);
 
 			$this->_load();
