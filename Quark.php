@@ -20569,7 +20569,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			$this->_content = $content;
 			$this->size = strlen($this->_content);
 
-			if (func_num_args() == 2)
+			if (func_num_args() > 1)
 				$this->_loaded = $load;
 
 			if ($mime) {
