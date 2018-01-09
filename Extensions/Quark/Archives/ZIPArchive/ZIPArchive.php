@@ -71,7 +71,7 @@ class ZIPArchive implements IQuarkArchive {
 		foreach ($items as $i => &$item) {
 			$zipItem = ZIPArchiveItem::FromQuarkArchiveItem($item, $this->_level);
 
-			$zipItemCentral = $zipItem->HeaderCentralDirectory();
+			$zipItemCentral = $zipItem->HeaderCentral();
 			$zipItemCentral->local_header_offset = strlen($bufferLocal);
 
 			$zipItemLocal = $zipItem->HeaderLocal();
@@ -106,14 +106,14 @@ class ZIPArchive implements IQuarkArchive {
 
 		while ($i < $meta_obj->central_directory_count_current) {
 			/**
-			 * @var ZIPArchiveHeaderCentralDirectory $record
+			 * @var ZIPArchiveHeaderFile $record
 			 */
 			$record = QuarkObject::BinaryPopulate(
-				new ZIPArchiveHeaderCentralDirectory(),
+				new ZIPArchiveHeaderFile(),
 				substr($data, $cursor)
 			);
 
-			$item = ZIPArchiveItem::FromCentralDirectory($record, $data);
+			$item = ZIPArchiveItem::FromFileHeader($record, $data);
 
 			if ($item != null)
 				$out[] = $item->QuarkArchive();

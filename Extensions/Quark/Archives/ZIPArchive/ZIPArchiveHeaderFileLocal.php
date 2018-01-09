@@ -7,11 +7,11 @@ use Quark\QuarkBinaryObjectBehavior;
 use Quark\QuarkField;
 
 /**
- * Class ZIPArchiveHeaderLocal
+ * Class ZIPArchiveHeaderFileLocal
  *
  * @package Quark\Extensions\Quark\Archives
  */
-class ZIPArchiveHeaderLocal implements IQuarkBinaryObject {
+class ZIPArchiveHeaderFileLocal implements IQuarkBinaryObject {
 	use QuarkBinaryObjectBehavior;
 
 	/**

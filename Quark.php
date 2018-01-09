@@ -215,6 +215,16 @@ class Quark {
 	}
 
 	/**
+	 * @param string $input = ''
+	 * @param int $size = 8
+	 *
+	 * @return string
+	 */
+	public static function BitsToString ($input = '', $size = 8) {
+		return str_pad(decbin($input), $size, 0, STR_PAD_LEFT);
+	}
+
+	/**
 	 * @return string
 	 */
 	public static function HostIP () {
@@ -19208,9 +19218,7 @@ class QuarkHTTPClient implements IQuarkEventable {
 
 		$name = array_reverse($uri->Route())[0];
 
-		$file->Content($out->RawData(), true);
-		$file->type = QuarkFile::MimeOf($file->Content());
-		$file->extension = QuarkFile::ExtensionByMime($file->type);
+		$file->Content($out->RawData(), true, true);
 		$file->name = $name . (strpos($name, '.') === false ? $file->extension : '');
 
 		return $file;
@@ -20344,8 +20352,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public static function ExtensionByMime ($mime) {
 		$extension = array_reverse(explode('/', $mime));
 
-		if ($extension[0] == 'jpeg')
-			$extension[0] = 'jpg';
+		if ($extension[0] == 'jpeg') $extension[0] = 'jpg';
+		if ($mime == 'text/plain') $extension[0] = 'txt';
 
 		return sizeof($extension) == 2 && substr_count($extension[0], '-') == 0 ? $extension[0] : null;
 	}
@@ -20418,14 +20426,9 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		if (!Quark::MemoryAvailable())
-			Quark::Log('[QuarkFile::Load] Insufficient memory available for loading file "' . $this->location . '". Current memory limit in QuarkConfig::Alloc(): ' . Quark::Config()->Alloc() . 'MB.');
-		else {
-			$this->Content(file_get_contents($this->location));
-			$this->type = self::MimeOf($this->_content);
-			$this->extension = self::ExtensionByMime($this->type);
-			$this->_loaded = true;
-		}
+		// TODO: refactor
+		if (!Quark::MemoryAvailable()) Quark::Log('[QuarkFile::Load] Insufficient memory available for loading file "' . $this->location . '". Current memory limit in QuarkConfig::Alloc(): ' . Quark::Config()->Alloc() . 'MB.');
+		else $this->Content(file_get_contents($this->location), true, true);
 
 		return $this;
 	}
@@ -20557,16 +20560,22 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	/**
 	 * @param string $content = ''
 	 * @param bool $load = false
+	 * @param bool $mime = false
 	 *
 	 * @return string
 	 */
-	public function Content ($content = '', $load = false) {
+	public function Content ($content = '', $load = false, $mime = false) {
 		if (func_num_args() != 0) {
 			$this->_content = $content;
 			$this->size = strlen($this->_content);
 
 			if (func_num_args() == 2)
 				$this->_loaded = $load;
+
+			if ($mime) {
+				$this->type = self::MimeOf($this->_content);
+				$this->extension = self::ExtensionByMime($this->type);
+			}
 		}
 
 		return $this->_content;
@@ -23382,9 +23391,8 @@ class QuarkArchiveItem extends QuarkFile {
 	 */
 	public function __construct ($location = '', $content = '', $date = null, $size = 0, $dir = false) {
 		parent::__construct($location, false);
-		
-		$this->location = $location;
-		$this->Content($content);
+
+		$this->Content($content, true, true);
 		
 		$args = func_num_args();
 		if ($args > 2) $this->_dateModified = $date;
