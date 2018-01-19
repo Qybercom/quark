@@ -5461,13 +5461,15 @@ class QuarkObject {
 	/**
 	 * http://stackoverflow.com/a/25900210/2097055
 	 * 
-	 * @param string $class = ''
+	 * @param string|object $class = ''
 	 * @param string $trait = ''
 	 * @param bool $parents = true
 	 *
 	 * @return bool
 	 */
 	public static function Uses ($class = '', $trait = '', $parents = true) {
+		if (!is_string($class) && !is_object($class)) return false;
+
 		$tree = $parents ? class_parents($class) : array();
 		$tree[] = $class;
 
@@ -7833,7 +7835,7 @@ trait QuarkCollectionBehavior {
 		$isoDate = null;
 		$matcher = '_array_';
 				
-		if (!is_array($target)) {
+		if (!is_array($target) && !(QuarkObject::Uses($target, 'Quark\\QuarkCollectionBehaviorWithArrayAccess'))) {
 			$date = QuarkField::DateTime($target);
 			$isoDate = $date ? QuarkDate::From($target) : null;
 			$matcher = '_compare_';
