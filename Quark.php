@@ -5468,7 +5468,7 @@ class QuarkObject {
 	 * @return bool
 	 */
 	public static function Uses ($class = '', $trait = '', $parents = true) {
-		if (!is_string($class) && !is_object($class)) return false;
+		if (!is_object($class) && !(is_string($class) && class_exists($class))) return false;
 
 		$tree = $parents ? class_parents($class) : array();
 		$tree[] = $class;
