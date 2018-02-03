@@ -300,6 +300,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			return null;
 
 		$post->ID($response->id_str);
+		$post->URL(self::URL_BASE . $response->user->screen_name . '/status/' . $response->id_str);
 
 		return $post;
 	}

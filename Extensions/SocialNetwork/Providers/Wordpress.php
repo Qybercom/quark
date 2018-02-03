@@ -228,6 +228,36 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
-		// TODO: Implement SocialNetworkPublish() method.
+		$author = $post->Author();
+
+		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
+		$response = $this->OAuthAPI('/' . ($author ? $author : self::CURRENT_USER), $request);
+
+		if ($response == null) return null;
+
+		$site = $post->Site();
+
+		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Data(array(
+			'title' => $post->Title(),
+			'content' => $post->Content(),
+			//'status' => $post->Audience()
+		));
+
+		$response = $this->OAuthAPI('/sites/' . ($site ? $site : $response->primary_blog) . '/posts/new', $request);
+
+		if (!isset($response->ID)) return null;
+
+		$post->ID($response->ID);
+		$post->URL($response->URL);
+		$post->Author($response->author->name);
+
+		$created = QuarkDate::GMTOf($response->date);
+		$post->DateCreated(QuarkDate::FromTimestamp($created->Timestamp()));
+
+		$updated = QuarkDate::GMTOf($response->modified);
+		$post->DateUpdated(QuarkDate::FromTimestamp($updated->Timestamp()));
+
+		return $post;
 	}
 }

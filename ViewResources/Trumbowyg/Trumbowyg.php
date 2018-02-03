@@ -4,18 +4,16 @@ namespace Quark\ViewResources\Trumbowyg;
 use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceWithDependencies;
 
-use Quark\ViewResources\jQuery\jQueryCore;
-
 /**
  * Class Trumbowyg
  *
  * @package Quark\ViewResources\Trumbowyg
  */
 class Trumbowyg implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '2.5.1';
+	const CURRENT_VERSION = '2.9.4';
 
 	/**
-	 * @var string $_lang = TumbowygLanguage::LANG_DEFAULT
+	 * @var string $_lang = TrumbowygLanguage::LANG_DEFAULT
 	 */
 	private $_language = TrumbowygLanguage::LANG_DEFAULT;
 

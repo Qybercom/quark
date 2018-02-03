@@ -206,10 +206,10 @@ class QuarkViewDialogFragment implements IQuarkViewFragment {
 	}
 
 	/**
-	 * @param $class
-	 * @param $id
-	 * @param $header
-	 * @param $content
+	 * @param string $class
+	 * @param string $id
+	 * @param string $header
+	 * @param string $content
 	 * @param string $messageWait = self::MESSAGE_WAIT
 	 * @param string $messageSuccess = self::MESSAGE_SUCCESS
 	 * @param string $messageError = self::MESSAGE_ERROR

@@ -28,7 +28,8 @@ class Socicon implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
-		return 'https://d1azc1qln24ryf.cloudfront.net/114779/Socicon/style-cf.css';
+		//return 'https://d1azc1qln24ryf.cloudfront.net/114779/Socicon/style-cf.css';
+		return 'https://s3.amazonaws.com/icomoon.io/114779/Socicon/style.css?u8vidh';
 	}
 
 	/**

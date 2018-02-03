@@ -17,6 +17,16 @@ class SocialNetworkPost {
 	private $_id = '';
 
 	/**
+	 * @var string $_url = ''
+	 */
+	private $_url = '';
+
+	/**
+	 * @var string $_author = ''
+	 */
+	private $_author = '';
+
+	/**
 	 * @var QuarkDate $_dateCreated
 	 */
 	private $_dateCreated;
@@ -52,6 +62,16 @@ class SocialNetworkPost {
 	private $_target = null;
 
 	/**
+	 * @var string $_site = ''
+	 */
+	private $_site = '';
+
+	/**
+	 * @var string $_title = ''
+	 */
+	private $_title = '';
+
+	/**
 	 * @var string $_content = ''
 	 */
 	private $_content = '';
@@ -77,6 +97,30 @@ class SocialNetworkPost {
 			$this->_id = $id;
 
 		return $this->_id;
+	}
+
+	/**
+	 * @param string $url = ''
+	 *
+	 * @return string
+	 */
+	public function URL ($url = '') {
+		if (func_num_args() != 0)
+			$this->_url = $url;
+
+		return $this->_url;
+	}
+
+	/**
+	 * @param string $author = ''
+	 *
+	 * @return string
+	 */
+	public function Author ($author = '') {
+		if (func_num_args() != 0)
+			$this->_author = $author;
+
+		return $this->_author;
 	}
 
 	/**
@@ -152,6 +196,30 @@ class SocialNetworkPost {
 	}
 
 	/**
+	 * @param string $site = ''
+	 *
+	 * @return string
+	 */
+	public function Site ($site = '') {
+		if (func_num_args() != 0)
+			$this->_site = $site;
+
+		return $this->_site;
+	}
+
+	/**
+	 * @param string $title = ''
+	 *
+	 * @return string
+	 */
+	public function Title ($title = '') {
+		if (func_num_args() != 0)
+			$this->_title = $title;
+
+		return $this->_title;
+	}
+
+	/**
 	 * @param string $content = ''
 	 *
 	 * @return string
@@ -192,16 +260,26 @@ class SocialNetworkPost {
 	}
 
 	/**
+	 * @param QuarkDate $date = null
+	 *
 	 * @return QuarkDate
 	 */
-	public function DateCreated () {
+	public function DateCreated (QuarkDate $date = null) {
+		if (func_num_args() != 0)
+			$this->_dateCreated = $date;
+
 		return $this->_dateCreated;
 	}
 
 	/**
+	 * @param QuarkDate $date = null
+	 *
 	 * @return QuarkDate
 	 */
-	public function DateUpdated () {
+	public function DateUpdated (QuarkDate $date = null) {
+		if (func_num_args() != 0)
+			$this->_dateUpdated = $date;
+
 		return $this->_dateUpdated;
 	}
 }
