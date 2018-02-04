@@ -50,4 +50,11 @@ interface IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post);
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels($user);
 }

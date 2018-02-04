@@ -51,6 +51,8 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 		Quark::Trace($e->Request());
 		Quark::Trace($e->Response());
 
+		$this->_errorLast = $e->Error();
+
 		return $out;
 	}
 
@@ -123,6 +125,20 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 			$post->Target($this->_provider()->SocialNetworkParameterUser($post->Target()));
 
 			return $this->_provider()->SocialNetworkPublish($post);
+		}
+		catch (OAuthAPIException $e) {
+			return $this->_error($e, 'Publish', 'Can not publish article', null);
+		}
+	}
+
+	/**
+	 * @param string $user = self::CURRENT_USER
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function PublishingChannels ($user = self::CURRENT_USER) {
+		try {
+			return $this->_provider()->SocialNetworkPublishingChannels($this->_provider()->SocialNetworkParameterUser($user));
 		}
 		catch (OAuthAPIException $e) {
 			return $this->_error($e, 'Publish', 'Can not publish article', null);

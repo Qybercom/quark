@@ -4939,12 +4939,8 @@ class QuarkService implements IQuarkContainer {
 	 * Reset QuarkService
 	 */
 	public function __destruct () {
-		unset($this->_service);
-		unset($this->_session);
-		unset($this->_input);
-		unset($this->_output);
-		unset($this->_filterInput);
-		unset($this->_filterOutput);
+		// TODO: this one-liner is temporary solution
+		unset($this->_service, $this->_session, $this->_input, $this->_output, $this->_filterInput, $this->_filterOutput);
 	}
 
 	/**
@@ -10027,7 +10023,7 @@ class QuarkModel implements IQuarkContainer {
 		foreach ($output as $key => $value) {
 			if ($key == '' || !($value instanceof QuarkModel)) continue;
 
-			if ($check) $valid &= $value->Validate();
+			if ($check) $valid &= $value->Validate(false);
 			else $valid[$key] = $value->ValidationRules();
 		}
 
@@ -10158,11 +10154,15 @@ class QuarkModel implements IQuarkContainer {
 	}
 
 	/**
+	 * @param bool $root
+	 *
 	 * @return bool
 	 */
-	public function Validate () {
+	public function Validate ($root = true) {
 		$validate = self::_validate($this->_model);
 		$this->_errors = self::$_errorFlux;
+
+		if ($root) self::$_errorFlux = array();
 
 		return $validate;
 	}

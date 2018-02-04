@@ -27,6 +27,11 @@ trait OAuthConsumerBehavior {
 	private $_token;
 
 	/**
+	 * @var OAuthError $_errorLast
+	 */
+	private $_errorLast;
+
+	/**
 	 * @param string $config
 	 *
 	 * @return mixed
@@ -92,5 +97,12 @@ trait OAuthConsumerBehavior {
 
 			return null;
 		}
+	}
+
+	/**
+	 * @return OAuthError
+	 */
+	public function &ErrorLast () {
+		return $this->_errorLast;
 	}
 }

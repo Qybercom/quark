@@ -27,6 +27,7 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 
 /**
  * Class Xing
@@ -369,6 +370,15 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuarkMo
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
 		// TODO: Implement SocialNetworkPublish() method.
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels ($user) {
+		// TODO: Implement SocialNetworkPublishingChannels() method.
 	}
 
 	/**

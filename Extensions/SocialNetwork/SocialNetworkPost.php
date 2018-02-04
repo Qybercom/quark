@@ -67,6 +67,11 @@ class SocialNetworkPost {
 	private $_site = '';
 
 	/**
+	 * @var string[] $_categories = []
+	 */
+	private $_categories = array();
+
+	/**
 	 * @var string $_title = ''
 	 */
 	private $_title = '';
@@ -205,6 +210,18 @@ class SocialNetworkPost {
 			$this->_site = $site;
 
 		return $this->_site;
+	}
+
+	/**
+	 * @param string[] $categories = []
+	 *
+	 * @return string[]
+	 */
+	public function Categories ($categories = []) {
+		if (func_num_args() != 0)
+			$this->_categories = $categories;
+
+		return $this->_categories;
 	}
 
 	/**

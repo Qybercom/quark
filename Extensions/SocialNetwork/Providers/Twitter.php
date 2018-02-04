@@ -20,6 +20,7 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 
 /**
  * Class Twitter
@@ -303,6 +304,24 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$post->URL(self::URL_BASE . $response->user->screen_name . '/status/' . $response->id_str);
 
 		return $post;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels ($user) {
+		$profile = $this->SocialNetworkUser($user);
+		if ($profile == null) return array();
+
+		$channel = new SocialNetworkPublishingChannel($profile->ID(), $profile->Name(), $profile->Page());
+		$channel->Description($profile->Bio());
+		$channel->Logo($profile->PhotoLink());
+
+		return array(
+			$channel
+		);
 	}
 
 	/**

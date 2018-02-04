@@ -20,6 +20,7 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 
 /**
  * Class Wordpress
@@ -79,16 +80,16 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return string
 	 */
 	public function OAuthLoginURL ($redirect, $scope) {
-		$auth = QuarkURI::Build(self::URL_OAUTH . '/authorize', array(
+		$auth = array(
 			'client_id' => $this->_appId,
 			'redirect_uri' => $redirect,
 			'response_type' => OAuthConfig::RESPONSE_CODE
-		));
+		);
 
 		if ($scope)
-			$auth['scope'] = $scope;
+			$auth['scope'] = implode(',', $scope);
 
-		return $auth;
+		return QuarkURI::Build(self::URL_OAUTH . '/authorize', $auth);
 	}
 
 	/**
@@ -224,27 +225,40 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $primary = false
+	 * @param bool $categoriesById = true
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post) {
-		$author = $post->Author();
-
-		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
-		$response = $this->OAuthAPI('/' . ($author ? $author : self::CURRENT_USER), $request);
-
-		if ($response == null) return null;
-
+	public function SocialNetworkPublish (SocialNetworkPost $post, $primary = false, $categoriesById = true) {
 		$site = $post->Site();
 
+		if ($primary && !$site) {
+			$author = $post->Author();
+
+			$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
+			$response = $this->OAuthAPI('/' . $this->SocialNetworkParameterUser($author), $request);
+
+			if ($response == null) return null;
+
+			$site = $response->primary_blog;
+		}
+
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-		$request->Data(array(
+
+		$data = array(
 			'title' => $post->Title(),
 			'content' => $post->Content(),
 			//'status' => $post->Audience()
-		));
+		);
 
-		$response = $this->OAuthAPI('/sites/' . ($site ? $site : $response->primary_blog) . '/posts/new', $request);
+		// TODO: for v1.2 categories and categories_by_id are split
+		/*if ($categoriesById) $data['categories_by_id'] = $post->Categories();
+		else */$data['categories'] = $post->Categories();
+
+		$request->Data($data);
+
+		$response = $this->OAuthAPI('/sites/' . $site . '/posts/new', $request);
 
 		if (!isset($response->ID)) return null;
 
@@ -259,5 +273,34 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$post->DateUpdated(QuarkDate::FromTimestamp($updated->Timestamp()));
 
 		return $post;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels ($user) {
+		$requestSites = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
+		$responseSites = $this->OAuthAPI('/' . $user . '/sites', $requestSites);
+
+		if (!isset($responseSites->sites) || !is_array($responseSites->sites)) return array();
+
+		$out = array();
+
+		foreach ($responseSites->sites as $site) {
+			$requestCategories = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
+			$responseCategories = $this->OAuthAPI('/sites/' . $site->ID . '/categories', $requestCategories);
+
+			if (isset($responseCategories->categories) && is_array($responseCategories->categories))
+				foreach ($responseCategories->categories as $category) {
+					$channel = new SocialNetworkPublishingChannel($site->ID . '-' . $category->ID, $site->name . ' - ' . $category->name);
+					$channel->Description($category->description);
+
+					$out[] = $channel;
+				}
+		}
+
+		return $out;
 	}
 }

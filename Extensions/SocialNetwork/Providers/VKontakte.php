@@ -20,6 +20,7 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 
 /**
  * Class VKontakte
@@ -319,5 +320,14 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
 		// TODO: Implement SocialNetworkPublish() method.
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels ($user) {
+		// TODO: Implement SocialNetworkPublishingChannels() method.
 	}
 }

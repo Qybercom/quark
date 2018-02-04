@@ -22,14 +22,21 @@ class OAuthAPIException extends QuarkArchException {
 	private $_response;
 
 	/**
+	 * @var OAuthError $_error
+	 */
+	private $_error;
+
+	/**
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
+	 * @param OAuthError $error = null
 	 */
-	public function __construct (QuarkDTO $request, QuarkDTO $response) {
+	public function __construct (QuarkDTO $request, QuarkDTO $response, OAuthError $error = null) {
 		parent::__construct('', Quark::LOG_WARN);
 
 		$this->_request = $request;
 		$this->_response = $response;
+		$this->_error = $error;
 	}
 
 	/**
@@ -44,5 +51,12 @@ class OAuthAPIException extends QuarkArchException {
 	 */
 	public function &Response () {
 		return $this->_response;
+	}
+
+	/**
+	 * @return OAuthError
+	 */
+	public function &Error () {
+		return $this->_error;
 	}
 }

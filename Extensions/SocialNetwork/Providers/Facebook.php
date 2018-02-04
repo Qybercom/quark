@@ -13,11 +13,13 @@ use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
+use Quark\Extensions\OAuth\OAuthError;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 
 /**
  * Class Facebook
@@ -39,6 +41,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const FIELD_EMAIL = 'email';
 	const FIELD_BIRTHDAY = 'birthday';
 	const FIELD_ABOUT = 'about';
+	const FIELD_SHORT_NAME = 'short_name';
 
 	const PERMISSION_PUBLIC_PROFILE = 'public_profile';
 	const PERMISSION_EMAIL = 'email';
@@ -182,7 +185,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
 		if (isset($api->error))
-			throw new OAuthAPIException($request, $response);
+			throw new OAuthAPIException($request, $response, new OAuthError($api->error->type, $api->error->message));
 
 		return $api;
 	}
@@ -200,7 +203,8 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			self::FIELD_GENDER,
 			self::FIELD_PICTURE,
 			self::FIELD_BIRTHDAY,
-			self::FIELD_EMAIL
+			self::FIELD_EMAIL,
+			self::FIELD_SHORT_NAME
 		));
 	}
 
@@ -226,6 +230,9 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		if (isset($item->birthday))
 			$user->BirthdayByDate('m/d/Y', $item->birthday);
+
+		if (isset($item->short_name))
+			$user->Username($item->short_name);
 
 		return $user;
 	}
@@ -330,5 +337,25 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$post->ID($response->id);
 
 		return $post;
+	}
+
+	/**
+	 * @param string $user
+	 *
+	 * @return SocialNetworkPublishingChannel[]
+	 */
+	public function SocialNetworkPublishingChannels ($user) {
+		// TODO: add FacebookPages
+
+		$profile = $this->SocialNetworkUser($user);
+		if ($profile == null) return array();
+
+		$channel = new SocialNetworkPublishingChannel($profile->ID(), $profile->Name(), $profile->Page());
+		$channel->Description($profile->Bio());
+		$channel->Logo($profile->PhotoLink());
+
+		return array(
+			$channel
+		);
 	}
 }
