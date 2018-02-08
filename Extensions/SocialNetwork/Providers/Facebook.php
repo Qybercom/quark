@@ -162,7 +162,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$api = $this->OAuthAPI('/oauth/access_token', $req);
 
-		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
+		return isset($api->access_token) ? new QuarkModel(new OAuthToken(), $api->Data()) : null;
 	}
 
 	/**

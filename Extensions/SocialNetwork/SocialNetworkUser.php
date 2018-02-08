@@ -5,6 +5,7 @@ use Quark\QuarkCultureISO;
 use Quark\QuarkDate;
 use Quark\QuarkFile;
 use Quark\QuarkHTTPClient;
+use Quark\QuarkLanguage;
 
 /**
  * Class SocialNetworkUser
@@ -80,6 +81,11 @@ class SocialNetworkUser {
 	 * @var string $_location = ''
 	 */
 	private $_location = '';
+
+	/**
+	 * @var string $_language = QuarkLanguage::ANY
+	 */
+	private $_language = QuarkLanguage::ANY;
 
 	/**
 	 * @var string $_bio = ''
@@ -293,6 +299,18 @@ class SocialNetworkUser {
 			$this->_location = $location;
 
 		return $this->_location;
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function Language ($language = QuarkLanguage::ANY) {
+		if (func_num_args() != 0)
+			$this->_language = $language;
+
+		return $this->_language;
 	}
 
 	/**

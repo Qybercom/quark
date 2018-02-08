@@ -25,6 +25,7 @@ use Quark\QuarkObject;
  * @property string $code
  * @property int $expires_in = 0
  * @property string $oauth_token_secret
+ * @property string $api_user
  *
  * @package Quark\Extensions\OAuth
  */
@@ -92,7 +93,8 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			'token_type' => self::TYPE_BEARER,
 			'code' => '',
 			'expires_in' => 0,
-			'oauth_token_secret' => ''
+			'oauth_token_secret' => '',
+			'api_user' => ''
 		);
 	}
 

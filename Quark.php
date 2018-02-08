@@ -1928,10 +1928,7 @@ class QuarkConfig {
 			foreach ($ini[self::INI_DEDICATED] as $value => &$key)
 				$this->Dedicated($key, $value);
 
-		unset($environment, $environments);
-		unset($extension, $extensions);
-		unset($options, $callback, $ini);
-		unset($key, $value);
+		unset($environment, $environments, $extension, $extensions, $options, $callback, $ini, $key, $value);
 	}
 	
 	/**
@@ -4939,7 +4936,6 @@ class QuarkService implements IQuarkContainer {
 	 * Reset QuarkService
 	 */
 	public function __destruct () {
-		// TODO: this one-liner is temporary solution
 		unset($this->_service, $this->_session, $this->_input, $this->_output, $this->_filterInput, $this->_filterOutput);
 	}
 
@@ -9069,8 +9065,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 * Reset QuarkCollection
 	 */
 	public function __destruct () {
-		unset($this->_collection);
-		unset($this->_type);
+		unset($this->_collection, $this->_type);
 	}
 }
 
@@ -10560,8 +10555,7 @@ class QuarkModel implements IQuarkContainer {
 	 * Reset QuarkModel
 	 */
 	public function __destruct () {
-		unset($this->_model);
-		unset($this->_errors);
+		unset($this->_model, $this->_errors);
 	}
 }
 
@@ -14053,10 +14047,7 @@ class QuarkSession {
 	 * Reset QuarkSession
 	 */
 	public function __destruct () {
-		unset($this->_user);
-		unset($this->_source);
-		unset($this->_output);
-		unset($this->_connection);
+		unset($this->_user, $this->_source, $this->_output, $this->_connection);
 	}
 }
 
@@ -14965,14 +14956,7 @@ class QuarkClient implements IQuarkEventable {
 	 * Reset QuarkClient
 	 */
 	public function __destruct () {
-		unset($this->_rpsTimer);
-		unset($this->_certificate);
-		unset($this->_channels);
-		unset($this->_events);
-		unset($this->_remote);
-		unset($this->_session);
-		unset($this->_transport);
-		unset($this->_socket);
+		unset($this->_rpsTimer, $this->_certificate, $this->_channels, $this->_events, $this->_remote, $this->_session, $this->_transport, $this->_socket);
 	}
 }
 
@@ -17223,22 +17207,25 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $decode = true
+	 *
 	 * @return string[]
 	 */
-	private function _route () {
+	private function _route ($decode = true) {
 		if (sizeof($this->_route) == 0)
-			$this->_route = self::ParseRoute($this->path);
+			$this->_route = self::ParseRoute($this->path, $decode);
 
 		return $this->_route;
 	}
 
 	/**
 	 * @param int $id = 0
+	 * @param bool $decode = true
 	 *
 	 * @return string[]|string
 	 */
-	public function Route ($id = 0) {
-		$route = $this->_route();
+	public function Route ($id = 0, $decode = true) {
+		$route = $this->_route($decode);
 
 		if (func_num_args() == 1)
 			return isset($route[$id]) ? $route[$id] : '';
@@ -17261,19 +17248,24 @@ class QuarkURI {
 	}
 
 	/**
-	 * @param string $source
+	 * @param string $source = ''
+	 * @param bool $decode = true
 	 *
 	 * @return array
 	 */
-	public static function ParseRoute ($source = '') {
+	public static function ParseRoute ($source = '', $decode = true) {
 		if (!is_string($source)) return array();
 
 		$query = preg_replace('#(((\/)*)((\?|\&)(.*)))*#', '', $source);
 		$route = explode('/', trim(Quark::NormalizePath(preg_replace('#\.php$#Uis', '', $query), false)));
 		$buffer = array();
 
-		foreach ($route as $component)
-			if (strlen(trim($component)) != 0) $buffer[] = trim($component);
+		foreach ($route as $component) {
+			$item = trim($component);
+
+			if (strlen($item) != 0)
+				$buffer[] = $decode ? urldecode($item) : $item;
+		}
 
 		$route = $buffer;
 		unset($buffer);
