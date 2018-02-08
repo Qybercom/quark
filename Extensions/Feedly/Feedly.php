@@ -131,14 +131,14 @@ class Feedly implements IQuarkExtension {
 
 			if (isset($api->items) && is_array($api->items))
 				foreach ($api->items as $item) {
-					$article = new FeedlyArticle($item->originId, $item->title, $item->summary->content);
+					$article = new FeedlyArticle($item->originId, $item->title);
 					$article->ID($item->id);
-					$article->Author($item->author);
-					$article->Created(QuarkDate::FromTimestamp($item->published));
-					$article->Crawled(QuarkDate::FromTimestamp($item->crawled));
 
-					if (isset($item->visual->url))
-						$article->Cover($item->visual->url);
+					if (isset($item->author)) $article->Author($item->author);
+					if (isset($item->published)) $article->Created(QuarkDate::FromTimestamp($item->published));
+					if (isset($item->crawled)) $article->Crawled(QuarkDate::FromTimestamp($item->crawled));
+					if (isset($item->summary->content)) $article->Content($item->summary->content);
+					if (isset($item->visual->url)) $article->Cover($item->visual->url);
 
 					$out[] = $article;
 				}
