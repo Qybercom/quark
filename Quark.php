@@ -2463,7 +2463,7 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 		if (!Quark::CLI()) return;
 
 		$dedicated = $argc > 1 && ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS);
-		if ($argc > 2 && !$dedicated) return;
+		if (!($argc <= 1 || $dedicated)) return;
 
 		$this->_queued = true;
 		$tasks = $dedicated

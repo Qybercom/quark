@@ -50,12 +50,24 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const PERMISSION_USER_LIKES = 'user_likes';
 	const PERMISSION_PUBLISH_ACTIONS = 'publish_actions';
 	const PERMISSION_PUBLISH_PAGES = 'publish_pages';
+	const PERMISSION_MANAGE_PAGES = 'manage_pages';
+	const PERMISSION_READ_PAGE_MAILBOXES = 'read_page_mailboxes';
+	const PERMISSION_PAGES_SHOW_LIST = 'pages_show_list';
+	const PERMISSION_PAGES_MANAGE_CTA = 'pages_manage_cta';
+	const PERMISSION_PAGES_MANAGE_INSTANT_ARTICLES = 'pages_manage_instant_articles';
 
 	const PUBLISH_AUDIENCE_EVERYONE = 'EVERYONE';
 	const PUBLISH_AUDIENCE_FRIENDS_ALL = 'ALL_FRIENDS';
 	const PUBLISH_AUDIENCE_FRIENDS_OF_FRIENDS = 'FRIENDS_OF_FRIENDS';
 	const PUBLISH_AUDIENCE_SELF = 'SELF';
 	const PUBLISH_AUDIENCE_CUSTOM = 'CUSTOM';
+
+	const PAGE_ROLE_ADMINISTER = 'ADMINISTER';
+	const PAGE_ROLE_EDIT_PROFILE = 'EDIT_PROFILE';
+	const PAGE_ROLE_CREATE_CONTENT = 'CREATE_CONTENT';
+	const PAGE_ROLE_MODERATE_CONTENT = 'MODERATE_CONTENT';
+	const PAGE_ROLE_CREATE_ADS = 'CREATE_ADS';
+	const PAGE_ROLE_BASIC_ADMIN = 'BASIC_ADMIN';
 
 	/**
 	 * @var string $_appId = ''
@@ -345,8 +357,6 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPublishingChannel[]
 	 */
 	public function SocialNetworkPublishingChannels ($user) {
-		// TODO: add FacebookPages
-
 		$profile = $this->SocialNetworkUser($user);
 		if ($profile == null) return array();
 
@@ -354,8 +364,26 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$channel->Description($profile->Bio());
 		$channel->Logo($profile->PhotoLink());
 
-		return array(
+		$out = array(
 			$channel
 		);
+
+		$request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
+		$response = $this->OAuthAPI(
+			'/' . $user . '/accounts',
+			$request,
+			new QuarkDTO(new QuarkJSONIOProcessor())
+		);
+
+		if (isset($response->data) && is_array($response->data))	{
+			foreach ($response->data as $item) {
+				$channel = new SocialNetworkPublishingChannel($item->id, $item->name);
+				$channel->Description($item->category);
+
+				$out[] = $channel;
+			}
+		}
+
+		return $out;
 	}
 }
