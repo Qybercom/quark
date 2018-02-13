@@ -231,7 +231,7 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post, $primary = false, $categoriesById = true) {
-		$site = $post->Site();
+		$site = $post->Target();
 
 		if ($primary && !$site) {
 			$author = $post->Author();

@@ -62,11 +62,6 @@ class SocialNetworkPost {
 	private $_target = null;
 
 	/**
-	 * @var string $_site = ''
-	 */
-	private $_site = '';
-
-	/**
 	 * @var string[] $_categories = []
 	 */
 	private $_categories = array();
@@ -198,18 +193,6 @@ class SocialNetworkPost {
 			$this->_target = $target;
 
 		return $this->_target;
-	}
-
-	/**
-	 * @param string $site = ''
-	 *
-	 * @return string
-	 */
-	public function Site ($site = '') {
-		if (func_num_args() != 0)
-			$this->_site = $site;
-
-		return $this->_site;
 	}
 
 	/**

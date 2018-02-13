@@ -243,8 +243,8 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		if (isset($item->birthday))
 			$user->BirthdayByDate('m/d/Y', $item->birthday);
 
-		if (isset($item->short_name))
-			$user->Username($item->short_name);
+		if (isset($item->id))
+			$user->Username($item->id);
 
 		return $user;
 	}
@@ -331,11 +331,15 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$target = $post->Target();
 		$audience = $post->Audience();
 
+		$data = array(
+			'message' => $post->Content()
+		);
+
+		if ($target == self::CURRENT_USER)
+			$data['privacy'] = $audience ? $audience : $this->_audience;
+
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$request->Data(array(
-			'message' => $post->Content(),
-			'privacy' => $audience ? $audience : $this->_audience
-		));
+		$request->Data($data);
 
 		$response = $this->OAuthAPI(
 			'/' . $target . '/feed',
