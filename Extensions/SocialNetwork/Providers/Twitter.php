@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Extensions\OAuth\OAuthError;
 use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
@@ -152,8 +153,17 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
-		if (isset($api->errors) || isset($api->error))
-			throw new OAuthAPIException($request, $response);
+		$eMultiple = isset($api->errors);
+		$eSingle = isset($api->error);
+
+		if ($eMultiple || $eSingle) {
+			$exception = null;
+
+			if ($eMultiple && isset($api->errors[0])) $exception = new OAuthError($api->errors[0]->code, $api->errors[0]->message);
+			if ($eSingle) $exception = new OAuthError($api->error->code, $api->error->message);
+
+			throw new OAuthAPIException($request, $response, $exception);
+		}
 
 		return $api;
 	}

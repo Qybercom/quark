@@ -328,6 +328,9 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		// TODO: post from the voice of Page (need obtaining the Page access token)
+
+		$author = $post->Author();
 		$target = $post->Target();
 		$audience = $post->Audience();
 
@@ -335,7 +338,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			'message' => $post->Content()
 		);
 
-		if ($target == self::CURRENT_USER)
+		if ($target == self::CURRENT_USER || $author == $target)
 			$data['privacy'] = $audience ? $audience : $this->_audience;
 
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());

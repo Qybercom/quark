@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Extensions\OAuth\OAuthError;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkURI;
@@ -125,16 +126,16 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param string $url
-	 * @param QuarkDTO $request
-	 * @param QuarkDTO $response
+	 * @param string $url = ''
+	 * @param QuarkDTO $request = null
+	 * @param QuarkDTO $response = null
 	 * @param string $base = self::URL_API
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url, QuarkDTO $request, QuarkDTO $response = null, $base = self::URL_API) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
@@ -144,7 +145,7 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
 		if (isset($api->error))
-			throw new OAuthAPIException($request, $response);
+			throw new OAuthAPIException($request, $response, new OAuthError($api->error, $api->message));
 
 		return $api;
 	}

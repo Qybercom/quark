@@ -95,6 +95,8 @@ trait OAuthConsumerBehavior {
 			Quark::Trace($e->Request());
 			Quark::Trace($e->Response());
 
+			$this->_errorLast = $e->Error();
+
 			return null;
 		}
 	}
