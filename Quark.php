@@ -17537,8 +17537,8 @@ class QuarkURI {
 class QuarkDTO {
 	const HTTP_VERSION_1_0 = 'HTTP/1.0';
 	const HTTP_VERSION_1_1 = 'HTTP/1.1';
-	const HTTP_PROTOCOL_REQUEST = '#^(.*) (.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
-	const HTTP_PROTOCOL_RESPONSE = '#^(.*) (.*)\n(.*)\n\s\n(.*)$#Uis';
+	const HTTP_PROTOCOL_REQUEST = '#^([^\r\n]*) ([^\r\n]*) ([^\r\n]*)\r?\n((?:[^\r\n]+\r?\n)*)\r?\n(.*)#Uis';
+	const HTTP_PROTOCOL_RESPONSE = '#^([^\r\n\s]+) ([^\r\n]*)\r?\n((?:[^\r\n]+\r?\n)*)\r?\n(.*)#is';
 
 	const METHOD_GET = 'GET';
 	const METHOD_POST = 'POST';

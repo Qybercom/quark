@@ -1,11 +1,9 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Extensions\OAuth\OAuthError;
 use Quark\QuarkArchException;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
-use Quark\QuarkFile;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
@@ -16,12 +14,14 @@ use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\OAuth\OAuthProviderBehavior;
+use Quark\Extensions\OAuth\OAuthError;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 
 /**
  * Class Twitter
@@ -67,6 +67,16 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private $_cursor = self::AGGREGATE_CURSOR;
 
 	/**
+	 * @var string $_twitterUrlPrefix = ' '
+	 */
+	private $_twitterUrlPrefix = ' ';
+
+	/**
+	 * @var string $_twitterUrlDelimiter = ' '
+	 */
+	private $_twitterUrlDelimiter = ' ';
+
+	/**
 	 * @return string
 	 */
 	public function &Cursor () {
@@ -87,12 +97,19 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $appId
 	 * @param string $appSecret
+	 * @param $options = null
 	 *
 	 * @return mixed
 	 */
-	public function OAuthApplication ($appId, $appSecret) {
+	public function OAuthApplication ($appId, $appSecret, $options = null) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
+
+		if (isset($options->TwitterURLPrefix))
+			$this->_twitterUrlPrefix = $options->TwitterURLPrefix;
+
+		if (isset($options->TwitterURLDelimiter))
+			$this->_twitterUrlDelimiter = $options->TwitterURLDelimiter;
 	}
 
 	/**
@@ -160,7 +177,10 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$exception = null;
 
 			if ($eMultiple && isset($api->errors[0])) $exception = new OAuthError($api->errors[0]->code, $api->errors[0]->message);
-			if ($eSingle) $exception = new OAuthError($api->error->code, $api->error->message);
+			if ($eSingle)
+				$exception = !isset($api->error->code) || !isset($api->error->message)
+					? new OAuthError($api->error, $api->error)
+					: new OAuthError($api->error->code, $api->error->message);
 
 			throw new OAuthAPIException($request, $response, $exception);
 		}
@@ -284,18 +304,25 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post) {
+		$urls = array();
 		$media = array();
+
 		$attachments = $post->Attachments();
 
 		foreach ($attachments as $i => &$attachment) {
-			$id = $this->TwitterMediaUpload($attachment);
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
+				$urls[] = $attachment->Content();
 
-			if ($id) $media[] = $id;
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+				$id = $this->TwitterMediaUpload($attachment);
+
+				if ($id) $media[] = $id;
+			}
 		}
 
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data(array(
-			'status' => $post->Content(),
+			'status' => $post->Content() . (sizeof($urls) == 0 ? '' : $this->_twitterUrlPrefix . implode($this->_twitterUrlDelimiter, $urls)),
 			'in_reply_to_status_id' => $post->Reply(),
 			'possibly_sensitive' => $post->Sensitive() ? 'true' : 'false',
 			'media_ids' => implode(',', $media)
@@ -435,11 +462,14 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
-	 * @param QuarkFile $file = null
+	 * @param SocialNetworkPostAttachment $attachment = null
 	 *
 	 * @return string
 	 */
-	public function TwitterMediaUpload (QuarkFile $file = null) {
+	public function TwitterMediaUpload (SocialNetworkPostAttachment $attachment = null) {
+		if ($attachment == null) return null;
+
+		$file = $attachment->ToFile();
 		if ($file == null) return null;
 
 		$id = $this->TwitterMediaAPI(self::MEDIA_COMMAND_INIT, array(
@@ -454,6 +484,8 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			'media' => $file,
 			'segment_index' => 0 // TODO: refactor in order to support videos and animated GIFs
 		), false);
+
+		$file->SaveTo('D:/dev/lnr/streams/runtime/test.jpg');
 
 		if (substr($chunk->StatusCode(), 0, 1) != 2) return null;
 

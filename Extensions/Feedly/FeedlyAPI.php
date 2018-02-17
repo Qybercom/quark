@@ -139,6 +139,9 @@ class FeedlyAPI implements IQuarkOAuthProvider {
 		if (isset($api->error))
 			throw new OAuthAPIException($request, $response, new OAuthError($api->error->type, $api->error->message));
 
+		if (isset($api->errorCode) && isset($api->errorMessage))
+			throw new OAuthAPIException($request, $response, new OAuthError($api->errorCode, $api->errorMessage));
+
 		return $api;
 	}
 }

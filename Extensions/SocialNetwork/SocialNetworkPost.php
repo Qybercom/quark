@@ -2,7 +2,6 @@
 namespace Quark\Extensions\SocialNetwork;
 
 use Quark\QuarkDate;
-use Quark\QuarkFile;
 use Quark\QuarkObject;
 
 /**
@@ -37,7 +36,7 @@ class SocialNetworkPost {
 	private $_dateUpdated;
 
 	/**
-	 * @var $_audience
+	 * @var SocialNetworkPostAudience $_audience
 	 */
 	private $_audience;
 
@@ -52,7 +51,7 @@ class SocialNetworkPost {
 	private $_reply = '';
 
 	/**
-	 * @var QuarkFile[] $_attachments = []
+	 * @var SocialNetworkPostAttachment[] $_attachments = []
 	 */
 	private $_attachments = array();
 
@@ -78,10 +77,10 @@ class SocialNetworkPost {
 
 	/**
 	 * @param string $content = ''
-	 * @param $audience = null
 	 * @param string $target = null
+	 * @param SocialNetworkPostAudience $audience = null
 	 */
-	public function __construct ($content = '', $audience = null, $target = null) {
+	public function __construct ($content = '', $target = null, SocialNetworkPostAudience $audience = null) {
 		$this->Content($content);
 		$this->Audience($audience);
 		$this->Target($target);
@@ -124,11 +123,11 @@ class SocialNetworkPost {
 	}
 
 	/**
-	 * @param $audience = null
+	 * @param SocialNetworkPostAudience $audience = null
 	 *
-	 * @return mixed
+	 * @return SocialNetworkPostAudience
 	 */
-	public function Audience ($audience = null) {
+	public function &Audience (SocialNetworkPostAudience $audience = null) {
 		if (func_num_args() != 0)
 			$this->_audience = $audience;
 
@@ -160,11 +159,11 @@ class SocialNetworkPost {
 	}
 
 	/**
-	 * @param QuarkFile $attachment = null
+	 * @param SocialNetworkPostAttachment $attachment = null
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function Attach (QuarkFile $attachment = null) {
+	public function Attach (SocialNetworkPostAttachment $attachment = null) {
 		if (func_num_args() != 0)
 			$this->_attachments[] = $attachment;
 
@@ -172,15 +171,30 @@ class SocialNetworkPost {
 	}
 
 	/**
-	 * @param QuarkFile[] $attachments = []
+	 * @param SocialNetworkPostAttachment[] $attachments = []
 	 *
-	 * @return QuarkFile[]
+	 * @return SocialNetworkPostAttachment[]
 	 */
 	public function Attachments ($attachments = []) {
-		if (func_num_args() != 0 && QuarkObject::IsArrayOf($attachments, new QuarkFile()))
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($attachments, new SocialNetworkPostAttachment()))
 			$this->_attachments = $attachments;
 
 		return $this->_attachments;
+	}
+
+	/**
+	 * @param string $type::TYPE_URL
+	 *
+	 * @return SocialNetworkPostAttachment[]
+	 */
+	public function AttachmentsByType ($type = SocialNetworkPostAttachment::TYPE_URL) {
+		$out = array();
+
+		foreach ($this->_attachments as $i => &$attachment)
+			if ($attachment->Type() == $type)
+				$out[]  =$attachment;
+
+		return $out;
 	}
 
 	/**

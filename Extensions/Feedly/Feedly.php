@@ -94,7 +94,7 @@ class Feedly implements IQuarkExtension {
 			$out = array();
 
 			if ($all)
-				$out[] = new FeedlyCategory(FeedlyCategory::ALL);
+				$out[] = new FeedlyCategory(FeedlyCategory::ALL, FeedlyCategory::ALL);
 
 			if (is_array($categories))
 				foreach ($categories as $category)
@@ -135,10 +135,12 @@ class Feedly implements IQuarkExtension {
 					$article->ID($item->id);
 
 					if (isset($item->author)) $article->Author($item->author);
-					if (isset($item->published)) $article->Created(QuarkDate::FromTimestamp($item->published));
-					if (isset($item->crawled)) $article->Crawled(QuarkDate::FromTimestamp($item->crawled));
+					if (isset($item->published)) $article->Created(QuarkDate::FromTimestamp(ceil($item->published / 1000)));
+					if (isset($item->crawled)) $article->Crawled(QuarkDate::FromTimestamp(ceil($item->crawled / 1000)));
 					if (isset($item->summary->content)) $article->Content($item->summary->content);
+					if (isset($item->content->content)) $article->Content($item->content->content);
 					if (isset($item->visual->url)) $article->Cover($item->visual->url);
+					if (isset($item->thumbnail[0]->url)) $article->Cover($item->thumbnail[0]->url);
 
 					$out[] = $article;
 				}

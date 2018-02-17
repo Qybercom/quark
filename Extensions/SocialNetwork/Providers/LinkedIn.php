@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Quark;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
@@ -94,6 +95,16 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private $_audience = self::VISIBILITY_ANYONE;
 
 	/**
+	 * @var string $_linkedInUrlPrefix = ' '
+	 */
+	private $_linkedInUrlPrefix = ' ';
+
+	/**
+	 * @var string $_linkedInUrlDelimiter = ' '
+	 */
+	private $_linkedInUrlDelimiter = ' ';
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return IQuarkOAuthConsumer
@@ -124,6 +135,12 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			if (in_array($options->LinkedInPublishAudience, $default))
 				$this->_audience = $options->LinkedInPublishAudience;
 		}
+
+		if (isset($options->LinkedInURLPrefix))
+			$this->_linkedInUrlPrefix = $options->LinkedInURLPrefix;
+
+		if (isset($options->LinkedInURLDelimiter))
+			$this->_linkedInUrlDelimiter = $options->LinkedInURLDelimiter;
 	}
 
 	/**
@@ -332,19 +349,44 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$target = $post->Target();
 		$audience = $post->Audience();
 
-		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-		$request->Data(array(
+		$query = array(
 			'comment' => $post->Content(),
-			/*'content' => array(
-				'title' => $post->Title(),
-				'description' => $post->Content(),
-				'submitted-url' => 'https://developer.linkedin.com',
-				'submitted-image-url' => 'https://example.com/logo.png'
-			),*/
 			'visibility' => array(
-				'code' => $audience ? $audience : $this->_audience
+				'code' => /*$audience ? $audience : */$this->_audience // TODO: handle audience
 			)
-		));
+		);
+
+		$urls = array();
+		$media = array();
+
+		$attachments = $post->Attachments();
+
+		foreach ($attachments as $i => &$attachment) {
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
+				$urls[] = $attachment->Content();
+
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+				// TODO: handle forcing of uploading
+				$media[] = $attachment->Content();
+			}
+		}
+
+		if (sizeof($urls) != 0 && sizeof($media) != 0) {
+			$query['content'] = array(
+				'title' => $post->Title(),
+				//'description' => $post->Content(),
+				'submitted-url' => $urls[0],
+				'submitted-image-url' => $media[0]
+			);
+		}
+		else {
+			if (sizeof($urls) != 0)
+				$query['comment'] .= $this->_linkedInUrlPrefix . implode($this->_linkedInUrlDelimiter, $urls);
+		}
+
+		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$request->Data($query);
+
 		$response = $this->OAuthAPI(
 			$author == $target
 				? '/v1/people/~/shares?format=json'

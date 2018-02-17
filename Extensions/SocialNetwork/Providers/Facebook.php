@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Quark;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkURI;
@@ -339,16 +340,36 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		);
 
 		if ($target == self::CURRENT_USER || $author == $target)
-			$data['privacy'] = $audience ? $audience : $this->_audience;
+			$data['privacy'] = /*$audience ? $audience : */$this->_audience; // TODO: handle audience
+
+		$urls = array();
+		$media = array();
+
+		$attachments = $post->Attachments();
+
+		foreach ($attachments as $i => &$attachment) {
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
+				$urls[] = $attachment->Content();
+
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+				$id = $this->FacebookPhotoUpload($attachment);
+
+				if ($id) $media[] = $id;
+			}
+		}
+
+		if (sizeof($urls) != 0)
+			$data['link'] = $urls[0];
+
+		if (sizeof($media) != 0) {
+			foreach ($media as $i => &$image)
+				$data['attached_media[' . $i . ']'] = json_encode(array('media_fbid' => $image));
+		}
 
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data($data);
 
-		$response = $this->OAuthAPI(
-			'/' . $target . '/feed',
-			$request,
-			new QuarkDTO(new QuarkJSONIOProcessor())
-		);
+		$response = $this->OAuthAPI('/' . $target . '/feed', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
 
 		if (!isset($response->id))
 			return null;
@@ -392,5 +413,32 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * @param SocialNetworkPostAttachment $attachment = null
+	 * @param string $caption = ''
+	 * @param string $user = self::CURRENT_USER
+	 *
+	 * @return string|null
+	 * @throws OAuthAPIException
+	 */
+	public function FacebookPhotoUpload (SocialNetworkPostAttachment $attachment = null, $caption = '', $user = self::CURRENT_USER) {
+		if ($attachment == null | $attachment->Type() != SocialNetworkPostAttachment::TYPE_IMAGE) return null;
+
+		$data = array(
+			'url' => $attachment->Content(),
+			'published' => 'false'
+		);
+
+		if ($caption != '')
+			$data['caption'] = $caption;
+
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$request->Data($data);
+
+		$response = $this->OAuthAPI('/' . $user . '/photos', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+
+		return isset($response->id) ? $response->id : null;
 	}
 }

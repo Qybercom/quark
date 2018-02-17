@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Extensions\OAuth\OAuthError;
 use Quark\QuarkDate;
 use Quark\QuarkDTO;
 use Quark\QuarkURI;
@@ -16,12 +15,14 @@ use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthAPIException;
+use Quark\Extensions\OAuth\OAuthError;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 
 /**
  * Class Wordpress
@@ -53,6 +54,16 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	private $_token;
 
 	/**
+	 * @var string $_wordpressUrlPrefix = '<br /><br />'
+	 */
+	private $_wordpressUrlPrefix = '<br /><br />';
+
+	/**
+	 * @var string $_wordpressUrlDelimiter = ' '
+	 */
+	private $_wordpressUrlDelimiter = ' ';
+
+	/**
 	 * @param OAuthToken $token
 	 *
 	 * @return IQuarkOAuthConsumer
@@ -66,12 +77,19 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	/**
 	 * @param string $appId
 	 * @param string $appSecret
+	 * @param $options = null
 	 *
 	 * @return mixed
 	 */
-	public function OAuthApplication ($appId, $appSecret) {
+	public function OAuthApplication ($appId, $appSecret, $options = null) {
 		$this->_appId = $appId;
 		$this->_appSecret = $appSecret;
+
+		if (isset($options->WordpressURLPrefix))
+			$this->_wordpressUrlPrefix = $options->WordpressURLPrefix;
+
+		if (isset($options->WordpressURLDelimiter))
+			$this->_wordpressUrlDelimiter = $options->WordpressURLDelimiter;
 	}
 
 	/**
@@ -245,12 +263,28 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			$site = $response->primary_blog;
 		}
 
+		$urls = array();
+		$media = array();
+
+		$attachments = $post->Attachments();
+
+		foreach ($attachments as $i => &$attachment) {
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
+				$urls[] = $attachment->Content();
+
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+				// TODO: handle forcing of uploading
+				$media[] = $attachment->Content();
+			}
+		}
+
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 
 		$data = array(
 			'title' => $post->Title(),
-			'content' => $post->Content(),
-			//'status' => $post->Audience()
+			'content' => $post->Content() . (sizeof($urls) == 0 ? '' : $this->_wordpressUrlPrefix . implode($this->_wordpressUrlDelimiter, $urls)),
+			'media_urls' => $media
+			//'status' => $post->Audience()  // TODO: handle audience
 		);
 
 		// TODO: for v1.2 categories and categories_by_id are split
