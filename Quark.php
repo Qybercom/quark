@@ -244,7 +244,7 @@ class Quark {
 	 * @return string
 	 */
 	public static function Host ($endSlash = true) {
-		return self::NormalizePath(getcwd(), $endSlash);
+		return self::NormalizePath(realpath(getcwd()), $endSlash);
 	}
 
 	/**
