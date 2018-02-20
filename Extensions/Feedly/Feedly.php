@@ -142,6 +142,10 @@ class Feedly implements IQuarkExtension {
 					if (isset($item->visual->url)) $article->Cover($item->visual->url);
 					if (isset($item->thumbnail[0]->url)) $article->Cover($item->thumbnail[0]->url);
 
+					if (isset($item->categories) && is_array($item->categories))
+						foreach ($item->categories as $category)
+							$article->Category(new FeedlyCategory($category->id, $category->label));
+
 					$out[] = $article;
 				}
 

@@ -50,6 +50,11 @@ class FeedlyArticle {
 	private $_cover = '';
 
 	/**
+	 * @var FeedlyCategory[] $_categories = []
+	 */
+	private $_categories = array();
+
+	/**
 	 * @param string $url = ''
 	 * @param string $title = ''
 	 * @param string $content = ''
@@ -149,5 +154,24 @@ class FeedlyArticle {
 			$this->_cover = $cover;
 
 		return $this->_cover;
+	}
+
+	/**
+	 * @param FeedlyCategory $category = null
+	 *
+	 * @return FeedlyArticle
+	 */
+	public function Category (FeedlyCategory $category = null) {
+		if ($category != null)
+			$this->_categories[] = $category;
+
+		return $this;
+	}
+
+	/**
+	 * @return FeedlyCategory[]
+	 */
+	public function &Categories () {
+		return $this->_categories;
 	}
 }
