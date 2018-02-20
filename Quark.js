@@ -40,6 +40,7 @@ Quark.GuID = function () {
 
 /**
  * @param events
+ *
  * @constructor
  */
 Quark.Event = function (events) {
@@ -79,7 +80,7 @@ Quark.Event = function (events) {
 	/**
 	 * @param name
 	 * @param args
-	 * W
+	 *
 	 * @return {boolean}
 	 */
 	that.Dispatch = function (name, args) {
@@ -102,6 +103,7 @@ Quark.Cookie = {};
 
 /**
  * @param name
+ *
  * @return {string|undefined}
  */
 Quark.Cookie.Get = function (name) {
@@ -192,6 +194,16 @@ if (!Array.prototype.min) {
 		}
 	})();
 }
+
+/**
+ * https://stackoverflow.com/a/4026828/2097055
+ */
+if (!Array.prototype.diff)
+	(function () {
+		Array.prototype.diff = function(a) {
+			return this.filter(function(i) { return a.indexOf(i) < 0; });
+		};
+	})();
 
 /**
  * http://artkiev.com/blog/number_format-in-javascript.htm
@@ -475,18 +487,18 @@ Quark.DataView.WithBuffer = function (size) {
 // https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
 if (!String.prototype.padStart) {
-    String.prototype.padStart = function padStart(targetLength,padString) {
-        targetLength = targetLength>>0; //floor if number or convert non-number to 0;
-        padString = String(padString || ' ');
-        if (this.length > targetLength) {
-            return String(this);
-        }
-        else {
-            targetLength = targetLength-this.length;
-            if (targetLength > padString.length) {
-                padString += padString.repeat(targetLength/padString.length); //append to original to ensure we are longer than needed
-            }
-            return padString.slice(0,targetLength) + String(this);
-        }
-    };
+    String.prototype.padStart = function padStart (targetLength, padString) {
+		targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
+		padString = String(padString || ' ');
+
+		if (this.length > targetLength) return String(this);
+		else {
+			targetLength = targetLength - this.length;
+
+			if (targetLength > padString.length)
+				padString += padString.repeat(targetLength / padString.length); //append to original to ensure we are longer than needed
+
+			return padString.slice(0,targetLength) + String(this);
+		}
+	};
 }

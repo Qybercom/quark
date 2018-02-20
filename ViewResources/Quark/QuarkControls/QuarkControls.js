@@ -227,7 +227,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 
 		if (dialog.data('quark-dialog-id') !== that._id) return;
 
-		dialog.data('quark-dialog-object').Submit(dialog, action);
+		var container = dialog.data('quark-dialog-object') || that;
+		that.Submit(dialog, action);
 	});
 
 	$(document).on('click', '.quark-dialog-close', function (e) {
@@ -238,7 +239,8 @@ Quark.Controls.Dialog = function (selector, opt) {
 
 		if (dialog.data('quark-dialog-id') !== that._id) return;
 
-		dialog.data('quark-dialog-object').Close(dialog, action);
+		var container = dialog.data('quark-dialog-object') || that;
+		that.Close(dialog, action);
 	});
 
 	$(document).on('click', selector, function (e) {

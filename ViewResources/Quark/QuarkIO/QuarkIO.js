@@ -177,8 +177,8 @@ Quark.IO.Keyboard = function (selector) {
 		'arrowUp': 38,
 		'arrowRight': 39,
 		'arrowDown': 40,
-		'ins': 45,
-		'del': 46,
+		'insert': 45,
+		'delete': 46,
 		'0': 48,
 		'1': 49,
 		'2': 50,
@@ -246,8 +246,8 @@ Quark.IO.Keyboard = function (selector) {
 		'f11': 122,
 		'f12': 123,
 		'numLock': 144,
-		'scrLock': 145,
-		'prtScr': 154,
+		'scrollLock': 145,
+		'printScreen': 154,
 		'meta': 157,
 		'=': 187,
 		',': 188,
@@ -262,7 +262,9 @@ Quark.IO.Keyboard = function (selector) {
 	};
 
 	that._pressed = [];
+	that._pressedPrev = [];
 	that._events = [];
+	that._deferred = [];
 
 	$(document).on('keydown', that.Elem, function (e) {
 		if (that._pressed.indexOf(e.keyCode) < 0)
@@ -275,21 +277,53 @@ Quark.IO.Keyboard = function (selector) {
 			c = 0;
 
 			while (j < that._pressed.length) {
-				if (that._events[i].combination.indexOf(that._pressed[j]) >= 0)
+				if (that._events[i].code.indexOf(that._pressed[j]) >= 0)
 					c++;
 
 				j++;
 			}
 
-			if (c == that._events[i].combination.length)
-				that._events[i].callback(that._events[i]);
+			if (c == that._events[i].code.length && (!that._events[i].one || (that._events[i].one && that._pressed.diff(that._pressedPrev).length != 0))) {
+				if (!that._events[i].up) that._events[i].callback(that._events[i]);
+				else that._deferred.push(that._events[i]);
+			}
+
+			i++;
+		}
+
+		i = 0;
+		that._pressedPrev = [];
+
+		while (i < that._pressed.length) {
+			that._pressedPrev.push(that._pressed[i]);
 
 			i++;
 		}
 	});
 
 	$(document).on('keyup', that.Elem, function (e) {
-		var i = 0;
+		var i = 0, j = 0, c = 0;
+
+		while (i < that._deferred.length) {
+			j = 0;
+			c = 0;
+
+			while (j < that._pressed.length) {
+				if (that._deferred[i].code.indexOf(that._pressed[j]) >= 0)
+					c++;
+
+				j++;
+			}
+
+			if (c == that._deferred[i].code.length && that._deferred[i].up)
+				that._deferred[i].callback(that._deferred[i]);
+
+			that._deferred.splice(i, 1);
+
+			i++;
+		}
+
+		i = 0;
 
 		while (i < that._pressed.length) {
 			if (that._pressed[i] == e.keyCode)
@@ -297,20 +331,38 @@ Quark.IO.Keyboard = function (selector) {
 
 			i++;
 		}
+
+		that._pressedPrev = [];
 	});
 
 	/**
-	 * @param {Array} combination
-	 * @return {Array}
+	 * @param {string|string[]} combination
+	 *
+	 * @return {string|string[]}
 	 *
 	 * @private
 	 */
-	that._combination = function (combination) {
-		var i = 0, keys = [];
+	that._keys = function (combination) {
+		return typeof(combination) == 'string' ? combination.split('+') : combination;
+	};
+
+	/**
+	 * @param {string|string[]} combination
+	 *
+	 * @return {int[]}
+	 *
+	 * @private
+	 */
+	that._code = function (combination) {
+		combination = that._keys(combination);
+
+		var i = 0, key = '', keys = [];
 
 		while (i < combination.length) {
-			if (that.Keys[combination[i]] != undefined)
-				keys.push(that.Keys[combination[i]]);
+			key = combination[i].toLowerCase();
+
+			if (that.Keys[key] != undefined)
+				keys.push(that.Keys[key]);
 
 			i++;
 		}
@@ -319,22 +371,56 @@ Quark.IO.Keyboard = function (selector) {
 	};
 
 	/**
-	 * @param combination
+	 * @param {string|string[]} combination
 	 * @param {Function} callback
 	 */
 	that.Up = function (combination, callback) {
-		var keys = that._combination(combination);
-		console.log(keys);
+		that._events.push({
+			up: true,
+			keys: that._keys(combination),
+			code: that._code(combination),
+			callback: callback
+		});
 	};
 
 	/**
-	 * @param combination
+	 * @param {string|string[]} combination
+	 * @param {Function} callback
+	 */
+	that.UpOne = function (combination, callback) {
+		that._events.push({
+			up: true,
+			keys: that._keys(combination),
+			code: that._code(combination),
+			callback: callback,
+			one: true
+		});
+	};
+
+	/**
+	 * @param {string|string[]} combination
 	 * @param {Function} callback
 	 */
 	that.Down = function (combination, callback) {
 		that._events.push({
-			combination: that._combination(combination),
+			up: false,
+			keys: that._keys(combination),
+			code: that._code(combination),
 			callback: callback
+		});
+	};
+
+	/**
+	 * @param {string|string[]} combination
+	 * @param {Function} callback
+	 */
+	that.DownOne = function (combination, callback) {
+		that._events.push({
+			up: false,
+			keys: that._keys(combination),
+			code: that._code(combination),
+			callback: callback,
+			one: true
 		});
 	};
 };
