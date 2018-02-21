@@ -150,10 +150,11 @@ class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $preview
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post) {
+	public function SocialNetworkPublish (SocialNetworkPost $post, $preview) {
 		// TODO: Implement SocialNetworkPublish() method.
 	}
 

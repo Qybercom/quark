@@ -244,12 +244,13 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $preview
 	 * @param bool $primary = false
 	 * @param bool $categoriesById = true
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post, $primary = false, $categoriesById = true) {
+	public function SocialNetworkPublish (SocialNetworkPost $post, $preview, $primary = false, $categoriesById = true) {
 		$site = $post->Target();
 
 		if ($primary && !$site) {
@@ -278,11 +279,13 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			}
 		}
 
+		$post->Content($post->Content() . (sizeof($urls) == 0 ? '' : $this->_wordpressUrlPrefix . implode($this->_wordpressUrlDelimiter, $urls)));
+
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 
 		$data = array(
 			'title' => $post->Title(),
-			'content' => $post->Content() . (sizeof($urls) == 0 ? '' : $this->_wordpressUrlPrefix . implode($this->_wordpressUrlDelimiter, $urls)),
+			'content' => $post->Content(),
 			'media_urls' => $media
 			//'status' => $post->Audience()  // TODO: handle audience
 		);
@@ -293,19 +296,21 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$request->Data($data);
 
-		$response = $this->OAuthAPI('/sites/' . $site . '/posts/new', $request);
+		if (!$preview) {
+			$response = $this->OAuthAPI('/sites/' . $site . '/posts/new', $request);
 
-		if (!isset($response->ID)) return null;
+			if (!isset($response->ID)) return null;
 
-		$post->ID($response->ID);
-		$post->URL($response->URL);
-		$post->Author($response->author->name);
+			$post->ID($response->ID);
+			$post->URL($response->URL);
+			$post->Author($response->author->name);
 
-		$created = QuarkDate::GMTOf($response->date);
-		$post->DateCreated(QuarkDate::FromTimestamp($created->Timestamp()));
+			$created = QuarkDate::GMTOf($response->date);
+			$post->DateCreated(QuarkDate::FromTimestamp($created->Timestamp()));
 
-		$updated = QuarkDate::GMTOf($response->modified);
-		$post->DateUpdated(QuarkDate::FromTimestamp($updated->Timestamp()));
+			$updated = QuarkDate::GMTOf($response->modified);
+			$post->DateUpdated(QuarkDate::FromTimestamp($updated->Timestamp()));
+		}
 
 		return $post;
 	}

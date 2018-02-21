@@ -152,12 +152,13 @@ Quark.IO.Mouse._drag = function (e) {
  * @class Quark.IO.Keyboard
  *
  * @param selector
+ *
  * @constructor
  */
 Quark.IO.Keyboard = function (selector) {
 	var that = this;
 
-	that.Elem = $(selector);
+	that.Elem = $(selector || document);
 	that.Keys = {
 		'backSpace': 8,
 		'tab': 9,
@@ -267,6 +268,9 @@ Quark.IO.Keyboard = function (selector) {
 	that._deferred = [];
 
 	$(document).on('keydown', that.Elem, function (e) {
+		var target = $(e.target);
+		if (!target.is(that.Elem)) return;
+
 		if (that._pressed.indexOf(e.keyCode) < 0)
 			that._pressed.push(e.keyCode);
 
@@ -284,6 +288,8 @@ Quark.IO.Keyboard = function (selector) {
 			}
 
 			if (c == that._events[i].code.length && (!that._events[i].one || (that._events[i].one && that._pressed.diff(that._pressedPrev).length != 0))) {
+				that._events[i].eventDown = e;
+
 				if (!that._events[i].up) that._events[i].callback(that._events[i]);
 				else that._deferred.push(that._events[i]);
 			}
@@ -315,8 +321,11 @@ Quark.IO.Keyboard = function (selector) {
 				j++;
 			}
 
-			if (c == that._deferred[i].code.length && that._deferred[i].up)
+			if (c == that._deferred[i].code.length && that._deferred[i].up) {
+				that._deferred[i].eventUp = e;
+
 				that._deferred[i].callback(that._deferred[i]);
+			}
 
 			that._deferred.splice(i, 1);
 
@@ -421,6 +430,46 @@ Quark.IO.Keyboard = function (selector) {
 			code: that._code(combination),
 			callback: callback,
 			one: true
+		});
+	};
+
+	/**
+	 * @param {string|string[]} combination
+	 * @param {string} selector
+	 * @param {Function=} callback
+	 */
+	that.Shortcut = function (combination, selector, callback) {
+		that.UpOne(combination, function (e) {
+			var action = $(selector), ok = true;
+
+			if (action.length == 0) return;
+
+			if (callback instanceof Function) {
+				var result = callback(e, action);
+
+				ok = result === null || result;
+			}
+
+			if (ok) action[0].click();
+		});
+	};
+
+	/**
+	 * @param {string|string[]} combination
+	 * @param {string} url
+	 * @param {Function=} callback
+	 */
+	that.Navigate = function (combination, url, callback) {
+		that.UpOne(combination, function (e) {
+			var ok = true;
+
+			if (callback instanceof Function) {
+				var result = callback(e, url);
+
+				ok = result === null || result;
+			}
+
+			if (ok) window.location = url;
 		});
 	};
 };

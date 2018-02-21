@@ -325,10 +325,11 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $preview
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post) {
+	public function SocialNetworkPublish (SocialNetworkPost $post, $preview) {
 		// TODO: post from the voice of Page (need obtaining the Page access token)
 
 		$author = $post->Author();
@@ -369,12 +370,14 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data($data);
 
-		$response = $this->OAuthAPI('/' . $target . '/feed', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+		if (!$preview) {
+			$response = $this->OAuthAPI('/' . $target . '/feed', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
 
-		if (!isset($response->id))
-			return null;
+			if (!isset($response->id))
+				return null;
 
-		$post->ID($response->id);
+			$post->ID($response->id);
+		}
 
 		return $post;
 	}

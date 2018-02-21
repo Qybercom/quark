@@ -341,10 +341,11 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $preview
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post) {
+	public function SocialNetworkPublish (SocialNetworkPost $post, $preview) {
 		$author = $post->Author();
 		$target = $post->Target();
 		$audience = $post->Audience();
@@ -387,16 +388,18 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
 		$request->Data($query);
 
-		$response = $this->OAuthAPI(
-			$author == $target
-				? '/v1/people/~/shares?format=json'
-				: '/v1/companies/' . $target . '/shares?format=json',
-			$request
-		);
+		if (!$preview) {
+			$response = $this->OAuthAPI(
+				$author == $target
+					? '/v1/people/~/shares?format=json'
+					: '/v1/companies/' . $target . '/shares?format=json',
+				$request
+			);
 
-		if (!isset($response->updateUrl)) return null;
+			if (!isset($response->updateUrl)) return null;
 
-		$post->URL($response->updateUrl);
+			$post->URL($response->updateUrl);
+		}
 
 		return $post;
 	}

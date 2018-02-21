@@ -297,13 +297,14 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	/**
 	 * @param SocialNetworkPost $post
+	 * @param bool $preview
 	 *
 	 * https://dev.twitter.com/rest/reference/post/statuses/update
 	 * https://github.com/abraham/twitteroauth/issues/387
 	 *
 	 * @return SocialNetworkPost
 	 */
-	public function SocialNetworkPublish (SocialNetworkPost $post) {
+	public function SocialNetworkPublish (SocialNetworkPost $post, $preview) {
 		$urls = array();
 		$media = array();
 
@@ -320,25 +321,29 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			}
 		}
 
+		$post->Content($post->Content() . (sizeof($urls) == 0 ? '' : $this->_twitterUrlPrefix . implode($this->_twitterUrlDelimiter, $urls)));
+
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data(array(
-			'status' => $post->Content() . (sizeof($urls) == 0 ? '' : $this->_twitterUrlPrefix . implode($this->_twitterUrlDelimiter, $urls)),
+			'status' => $post->Content(),
 			'in_reply_to_status_id' => $post->Reply(),
 			'possibly_sensitive' => $post->Sensitive() ? 'true' : 'false',
 			'media_ids' => implode(',', $media)
 		));
 
-		$response = $this->OAuthAPI(
-			'/1.1/statuses/update.json',
-			$request,
-			new QuarkDTO(new QuarkJSONIOProcessor())
-		);
+		if (!$preview) {
+			$response = $this->OAuthAPI(
+				'/1.1/statuses/update.json',
+				$request,
+				new QuarkDTO(new QuarkJSONIOProcessor())
+			);
 
-		if (!isset($response->id_str))
-			return null;
+			if (!isset($response->id_str))
+				return null;
 
-		$post->ID($response->id_str);
-		$post->URL(self::URL_BASE . $response->user->screen_name . '/status/' . $response->id_str);
+			$post->ID($response->id_str);
+			$post->URL(self::URL_BASE . $response->user->screen_name . '/status/' . $response->id_str);
+		}
 
 		return $post;
 	}
