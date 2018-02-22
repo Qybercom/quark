@@ -152,14 +152,10 @@ Quark.IO.Mouse._drag = function (e) {
  * @class Quark.IO.Keyboard
  *
  * @param selector
- * @param opt
  *
  * @constructor
  */
-Quark.IO.Keyboard = function (selector, opt) {
-	opt = opt || {};
-		opt.collide = opt.collide == undefined ? true : opt.collide;
-
+Quark.IO.Keyboard = function (selector) {
 	var that = this;
 
 	that.Elem = $(selector || document);
@@ -272,9 +268,6 @@ Quark.IO.Keyboard = function (selector, opt) {
 	that._deferred = [];
 
 	$(document).on('keydown', that.Elem, function (e) {
-		var target = $(e.target);
-		if (opt.collide && !target.is(that.Elem)) return;
-
 		if (that._pressed.indexOf(e.keyCode) < 0)
 			that._pressed.push(e.keyCode);
 
