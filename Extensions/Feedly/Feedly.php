@@ -131,7 +131,7 @@ class Feedly implements IQuarkExtension {
 
 			if (isset($api->items) && is_array($api->items))
 				foreach ($api->items as $item) {
-					$article = new FeedlyArticle($item->originId, $item->title);
+					$article = new FeedlyArticle($item->originId, isset($item->title) ? $item->title : '');
 					$article->ID($item->id);
 
 					if (isset($item->author)) $article->Author($item->author);
