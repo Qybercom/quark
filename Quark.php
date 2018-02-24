@@ -9314,11 +9314,11 @@ trait QuarkModelBehavior {
 	
 	/**
 	 * @param string $field = ''
-	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]
 	 *
 	 * @return bool
 	 */
-	public function Unique ($field = '', $op = [QuarkModel::OPERATION_CREATE]) {
+	public function Unique ($field = '', $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]) {
 		return $this instanceof IQuarkModel ? QuarkField::Unique($this, $field, $op) : false;
 	}
 
@@ -9510,6 +9510,7 @@ class QuarkModel implements IQuarkContainer {
 	const OPERATION_SAVE = 'Save';
 	const OPERATION_REMOVE = 'Remove';
 	const OPERATION_EXPORT = 'Export';
+	const OPERATION_VALIDATE = 'Validate';
 
 	const SORT_ASC = 1;
 	const SORT_DESC = -1;
@@ -10154,8 +10155,13 @@ class QuarkModel implements IQuarkContainer {
 	 * @return bool
 	 */
 	public function Validate ($root = true) {
+		$operation = $this->_op;
+		$this->_op = self::OPERATION_VALIDATE;
+
 		$validate = self::_validate($this->_model);
+
 		$this->_errors = self::$_errorFlux;
+		$this->_op = $operation;
 
 		if ($root) self::$_errorFlux = array();
 
@@ -11498,11 +11504,11 @@ class QuarkField {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $field
-	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]
 	 *
 	 * @return bool
 	 */
-	public static function Unique (IQuarkModel $model, $field, $op = [QuarkModel::OPERATION_CREATE]) {
+	public static function Unique (IQuarkModel $model, $field, $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]) {
 		/**
 		 * @var QuarkModel $container
 		 */
