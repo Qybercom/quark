@@ -446,6 +446,15 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return 700;
+	}
+
+	/**
 	 * @param int $start = 0
 	 * @param int $count = self::MAX_COMPANIES
 	 * @param bool $admin = true

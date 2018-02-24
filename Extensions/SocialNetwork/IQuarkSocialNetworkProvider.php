@@ -58,4 +58,11 @@ interface IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPublishingChannel[]
 	 */
 	public function SocialNetworkPublishingChannels($user);
+
+	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit();
 }

@@ -264,6 +264,15 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
+
+	/**
 	 * @param string $user = ''
 	 * @param array $params = []
 	 *

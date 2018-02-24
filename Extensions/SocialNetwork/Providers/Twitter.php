@@ -367,6 +367,15 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return 280;
+	}
+
+	/**
 	 * @param string[] $users = []
 	 * @param string $criteria = self::CRITERIA_USERNAME
 	 *

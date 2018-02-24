@@ -206,6 +206,17 @@ if (!Array.prototype.diff)
 	})();
 
 /**
+ * https://stackoverflow.com/a/9716515/2097055
+ *
+ * @param value
+ *
+ * @returns {boolean}
+ */
+Quark.IsNumeric = function (value) {
+	return !isNaN(parseFloat(value)) && isFinite(value);
+};
+
+/**
  * http://artkiev.com/blog/number_format-in-javascript.htm
  *
  * @param {number|string} number

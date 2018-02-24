@@ -183,17 +183,21 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
 	 * @param string $base = self::URL_API
+	 * @param string $token = ''
 	 *
 	 * @return QuarkDTO|null
 	 *
 	 * @throws OAuthAPIException
 	 */
-	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = self::URL_API, $token = '') {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkJSONIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
 		if ($this->_token != null)
 			$request->URIInit(array('access_token' => $this->_token->access_token));
+
+		if ($token != '')
+			$request->URIInit(array('access_token' => $token));
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
@@ -336,6 +340,8 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$target = $post->Target();
 		$audience = $post->Audience();
 
+		$access_token = $post->AuthorPublic() != '' ? $this->FacebookPageAccessToken($target) : '';
+
 		$data = array(
 			'message' => $post->Content()
 		);
@@ -353,7 +359,7 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 				$urls[] = $attachment->Content();
 
 			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
-				$id = $this->FacebookPhotoUpload($attachment);
+				$id = $this->FacebookPhotoUpload($attachment, '', $target, $access_token);
 
 				if ($id) $media[] = $id;
 			}
@@ -371,7 +377,13 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$request->Data($data);
 
 		if (!$preview) {
-			$response = $this->OAuthAPI('/' . $target . '/feed', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+			$response = $this->OAuthAPI(
+				'/' . $target . '/feed',
+				$request,
+				new QuarkDTO(new QuarkJSONIOProcessor()),
+				self::URL_API,
+				$access_token
+			);
 
 			if (!isset($response->id))
 				return null;
@@ -419,14 +431,24 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
+
+	/**
 	 * @param SocialNetworkPostAttachment $attachment = null
 	 * @param string $caption = ''
 	 * @param string $user = self::CURRENT_USER
+	 * @param string $token = ''
 	 *
 	 * @return string|null
 	 * @throws OAuthAPIException
 	 */
-	public function FacebookPhotoUpload (SocialNetworkPostAttachment $attachment = null, $caption = '', $user = self::CURRENT_USER) {
+	public function FacebookPhotoUpload (SocialNetworkPostAttachment $attachment = null, $caption = '', $user = self::CURRENT_USER, $token = '') {
 		if ($attachment == null | $attachment->Type() != SocialNetworkPostAttachment::TYPE_IMAGE) return null;
 
 		$data = array(
@@ -440,8 +462,26 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 		$request->Data($data);
 
-		$response = $this->OAuthAPI('/' . $user . '/photos', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+		$response = $this->OAuthAPI('/' . $user . '/photos', $request, new QuarkDTO(new QuarkJSONIOProcessor()), self::URL_API, $token);
 
 		return isset($response->id) ? $response->id : null;
+	}
+
+	/**
+	 * @param string $page = ''
+	 *
+	 * @return string
+	 *
+	 * @throws OAuthAPIException
+	 */
+	public function FacebookPageAccessToken ($page = '') {
+		$request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
+		$request->URIParams(array(
+			'fields' => 'access_token'
+		));
+
+		$response = $this->OAuthAPI('/' . $page, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+
+		return isset($response->access_token) ? $response->access_token : '';
 	}
 }

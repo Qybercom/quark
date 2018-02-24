@@ -392,6 +392,15 @@ class Odnoklassniki implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
+
+	/**
 	 * @param array $params = []
 	 *
 	 * @return string

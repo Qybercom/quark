@@ -281,6 +281,15 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function DataProvider () {

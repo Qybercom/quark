@@ -206,6 +206,66 @@ Quark.UX.KeyboardNavigation = function (selector, opt) {
 
 /**
  * @param {string} selector
+ * @param opt
+ *
+ * @constructor
+ */
+Quark.UX.InputLimit = function (selector, opt) {
+	opt = opt || {};
+		opt.limit = opt.limit == undefined ? -1 : opt.limit;
+		opt.pass = opt.pass instanceof Array ? opt.pass : [8, 13, 37, 38, 39, 40];
+
+	$(document).on('keydown', selector, function (e) {
+		var input = $(this),
+			text = input.val(),
+			limit = opt.limit - text.length;
+
+		if (opt.keydown instanceof Function) {
+			var out = opt.keydown({
+				input: input,
+				opt: opt,
+				limit: limit,
+				event: e
+			});
+
+			if (Quark.IsNumeric(out))
+				limit = parseInt(out) - text.length;
+		}
+
+		if (limit <= 0 && opt.pass.indexOf(e.keyCode) == -1) {
+			var ok = true;
+
+			if (opt.crossed instanceof Function)
+				ok = opt.crossed({
+					input: input,
+					opt: opt,
+					limit: limit,
+					event: e
+				});
+
+			if (!ok && ok !== null) return;
+
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	});
+
+	$(document).on('input', selector, function (e) {
+		var input = $(this),
+			text = input.val();
+
+		if (opt.input instanceof Function) {
+			opt.input({
+				input: input,
+				opt: opt,
+				event: e
+			});
+		}
+	});
+};
+
+/**
+ * @param {string} selector
  * @param {Function} submit
  * @param {Function} type
  */

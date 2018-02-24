@@ -19,6 +19,7 @@ use Quark\Extensions\OAuth\OAuthAPIException;
 class SocialNetwork implements IQuarkOAuthConsumer {
 	const CURRENT_USER = '___current_user___';
 	const FRIENDS_ALL = -1;
+	const PUBLISHING_LIMIT_NONE = -1;
 
 	use OAuthConsumerBehavior;
 
@@ -144,5 +145,14 @@ class SocialNetwork implements IQuarkOAuthConsumer {
 		catch (OAuthAPIException $e) {
 			return $this->_error($e, 'PublishingChannels', 'Can not get publishing channels', array());
 		}
+	}
+
+	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function PublishingLengthLimit () {
+		return $this->_provider()->SocialNetworkPublishingLengthLimit();
 	}
 }

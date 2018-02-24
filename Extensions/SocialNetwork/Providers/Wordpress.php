@@ -343,4 +343,13 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		return $out;
 	}
+
+	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
 }

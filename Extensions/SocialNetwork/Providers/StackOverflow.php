@@ -166,4 +166,13 @@ class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	public function SocialNetworkPublishingChannels ($user) {
 		// TODO: Implement SocialNetworkPublishingChannels() method.
 	}
+
+	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
 }

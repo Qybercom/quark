@@ -26,6 +26,11 @@ class SocialNetworkPost {
 	private $_author = '';
 
 	/**
+	 * @var string $_authorPublic = ''
+	 */
+	private $_authorPublic = '';
+
+	/**
 	 * @var QuarkDate $_dateCreated
 	 */
 	private $_dateCreated;
@@ -120,6 +125,18 @@ class SocialNetworkPost {
 			$this->_author = $author;
 
 		return $this->_author;
+	}
+
+	/**
+	 * @param string $author = ''
+	 *
+	 * @return string
+	 */
+	public function AuthorPublic ($author = '') {
+		if (func_num_args() != 0)
+			$this->_authorPublic = $author;
+
+		return $this->_authorPublic;
 	}
 
 	/**

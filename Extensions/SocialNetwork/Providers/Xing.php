@@ -383,6 +383,15 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuarkMo
 	}
 
 	/**
+	 * Limit of the post length
+	 *
+	 * @return int
+	 */
+	public function SocialNetworkPublishingLengthLimit () {
+		return SocialNetwork::PUBLISHING_LIMIT_NONE;
+	}
+
+	/**
 	 * @param string $user = self::CURRENT_USER
 	 *
 	 * @return int|null
