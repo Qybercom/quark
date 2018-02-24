@@ -9314,11 +9314,11 @@ trait QuarkModelBehavior {
 	
 	/**
 	 * @param string $field = ''
-	 * @param string[] $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
 	 *
 	 * @return bool
 	 */
-	public function Unique ($field = '', $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]) {
+	public function Unique ($field = '', $op = [QuarkModel::OPERATION_CREATE]) {
 		return $this instanceof IQuarkModel ? QuarkField::Unique($this, $field, $op) : false;
 	}
 
@@ -11504,11 +11504,11 @@ class QuarkField {
 	/**
 	 * @param IQuarkModel $model
 	 * @param $field
-	 * @param string[] $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]
+	 * @param string[] $op = [QuarkModel::OPERATION_CREATE]
 	 *
 	 * @return bool
 	 */
-	public static function Unique (IQuarkModel $model, $field, $op = [QuarkModel::OPERATION_CREATE, QuarkModel::OPERATION_VALIDATE]) {
+	public static function Unique (IQuarkModel $model, $field, $op = [QuarkModel::OPERATION_CREATE]) {
 		/**
 		 * @var QuarkModel $container
 		 */
