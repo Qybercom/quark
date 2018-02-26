@@ -4890,7 +4890,7 @@ class QuarkService implements IQuarkContainer {
 		$this->_output->Merge($morph && $selected != null && $output instanceof QuarkView
 			? $output->ExtractVars()
 			: $output,
-			true, true, true
+			true, true
 		);
 		$this->_filterOutput();
 
@@ -5596,7 +5596,7 @@ class QuarkObject {
 	 * @return mixed
 	 */
 	public static function ClassConstValue ($class, $const) {
-		return self::ConstValue(is_object($class) ? get_class($class) : $class . '::' . $const);
+		return self::ConstValue((is_object($class) ? get_class($class) : $class) . '::' . $const);
 	}
 
 	/**
@@ -14337,6 +14337,18 @@ trait QuarkNetwork {
 	/**
 	 * @param resource $socket
 	 *
+	 * @return resource
+	 */
+	public function Socket ($socket = null) {
+		if (func_num_args() == 1)
+			$this->_socket = $socket;
+
+		return $this->_socket;
+	}
+
+	/**
+	 * @param resource $socket
+	 *
 	 * http://php.net/manual/ru/function.stream-socket-shutdown.php#109982
 	 * https://github.com/reactphp/socket/blob/master/src/Connection.php
 	 * http://chat.stackoverflow.com/transcript/message/7727858#7727858
@@ -14350,6 +14362,30 @@ trait QuarkNetwork {
 		stream_set_blocking($socket, false);
 
 		return fclose($socket);
+	}
+
+	/**
+	 * @param int $level = SOL_TCP
+	 * @param int $name = 0
+	 * @param $value = ''
+	 *
+	 * @return bool|mixed
+	 */
+	public function SocketOption ($level = SOL_TCP, $name = 0, $value = '') {
+		if (!function_exists('\socket_import_stream')) {
+			Quark::Log('[QuarkNetwork] Function \socket_import_stream does not exists. Cannot set ' . QuarkObject::ConstValue($level) . ':' . QuarkObject::ConstValue($name) . '=' . $value . ' to socket', Quark::LOG_WARN);
+
+			return false;
+		}
+
+		if (!$this->_socket) return false;
+
+		$socket = \socket_import_stream($this->_socket);
+		if (!$socket) return false;
+
+		return func_num_args() == 3
+			? \socket_set_option($socket, $level, $name, $value)
+			: \socket_get_option($socket, $level, $name);
 	}
 
 	/**
@@ -14505,18 +14541,6 @@ trait QuarkNetwork {
 	}
 
 	/**
-	 * @param $socket
-	 *
-	 * @return mixed
-	 */
-	public function Socket ($socket = null) {
-		if (func_num_args() == 1)
-			$this->_socket = $socket;
-
-		return $this->_socket;
-	}
-
-	/**
 	 * @param bool $text
 	 *
 	 * @return string|object
@@ -14539,10 +14563,13 @@ trait QuarkNetwork {
 class QuarkClient implements IQuarkEventable {
 	const EVENT_ERROR_CONNECT = 'ErrorConnect';
 	const EVENT_ERROR_CRYPTOGRAM = 'ErrorCryptogram';
+	const EVENT_ERROR_PROTOCOL = 'ErrorProtocol';
 
 	const EVENT_CONNECT = 'OnConnect';
 	const EVENT_DATA = 'OnData';
 	const EVENT_CLOSE = 'OnClose';
+
+	const MTU = 1500;
 
 	use QuarkNetwork {
 		Secure as private _secure;
@@ -14737,6 +14764,25 @@ class QuarkClient implements IQuarkEventable {
 	}
 
 	/**
+	 * @param string $data = ''
+	 * @param int $flags = 0
+	 * @param string $address = ''
+	 *
+	 * @return int
+	 */
+	public function SendTo ($data = '', $flags = 0, $address = '') {
+		$out = @stream_socket_sendto($this->_socket, $data, $flags, func_num_args() != 3
+			? ($this->_uri->host . ':' . $this->_uri->port)
+			: $address
+		);
+
+		$error = QuarkException::LastError();
+		if ($error) $this->TriggerErrorProtocol($error);
+
+		return $out;
+	}
+
+	/**
 	 * @param int $max = -1
 	 *
 	 * @return bool|string
@@ -14751,6 +14797,22 @@ class QuarkClient implements IQuarkEventable {
 		$data = @stream_get_contents($this->_socket, $max);
 
 		return strlen($data) != 0 ? $data : false;
+	}
+
+	/**
+	 * @param int $length = self::MTU
+	 * @param int $flags = 0
+	 * @param string &$address = ''
+	 *
+	 * @return string
+	 */
+	public function ReceiveFrom ($length = self::MTU, $flags = 0, &$address = '') {
+		$out = @stream_socket_recvfrom($this->_socket, $length, $flags, $address);
+
+		$error = QuarkException::LastError();
+		if ($error) $this->TriggerErrorProtocol($error);
+
+		return $out;
 	}
 
 	/**
@@ -14829,16 +14891,27 @@ class QuarkClient implements IQuarkEventable {
 	}
 
 	/**
+	 * Trigger `ErrorProtocol` event
+	 *
+	 * @param string $error = ''
+	 */
+	public function TriggerErrorProtocol ($error = '') {
+		$this->TriggerArgs(QuarkClient::EVENT_ERROR_PROTOCOL, array(&$this, $error));
+	}
+
+	/**
 	 * @param IQuarkNetworkTransport $transport
 	 * @param resource $socket
 	 * @param string $address
-	 * @param string $scheme
+	 * @param string $scheme = ''
 	 *
 	 * @return QuarkClient
 	 */
-	public static function ForServer (IQuarkNetworkTransport $transport, $socket, $address, $scheme) {
+	public static function ForServer (IQuarkNetworkTransport $transport, $socket, $address, $scheme = '') {
 		$uri = QuarkURI::FromURI($address);
-		$uri->scheme = $scheme;
+
+		if (func_num_args() == 4)
+			$uri->scheme = $scheme;
 
 		$client = new self($uri, clone $transport);
 		$client->_fromServer = true;
@@ -15079,11 +15152,8 @@ class QuarkServer implements IQuarkEventable {
 		$this->Timeout(0);
 		$this->Blocking(0);
 		
-		if (!function_exists('\socket_import_stream')) Quark::Log('[QuarkServer] Function \socket_import_stream does not exists. Cannot set TCP_NO_DELAY to main server socket', Quark::LOG_WARN);
-		else {
-			$sock = \socket_import_stream($this->_socket);
-			\socket_set_option($sock, SOL_TCP, TCP_NODELAY, true);
-		}
+		if ($socket->scheme == QuarkURI::WRAPPER_TCP)
+			$this->SocketOption(SOL_TCP, TCP_NODELAY, true);
 
 		$this->_read = array($this->_socket);
 		$this->_run = true;
@@ -15112,44 +15182,67 @@ class QuarkServer implements IQuarkEventable {
 		if (sizeof($this->_read) == 0)
 			$this->_read = array($this->_socket);
 
+		$stream = $this->_uri->SocketTransport() == QuarkURI::WRAPPER_TCP;
+
 		if (stream_select($this->_read, $this->_write, $this->_except, 0, 0) === false) return true;
 
 		if (in_array($this->_socket, $this->_read, true)) {
-			$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
-			
-			$client = QuarkClient::ForServer($this->_transport, $socket, $address, $this->URI()->scheme);
-			$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
+			if ($stream) {
+				$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
 
-			$client->Delegate(QuarkClient::EVENT_ERROR_CRYPTOGRAM, $this);
+				$client = QuarkClient::ForServer($this->_transport, $socket, $address, $this->URI()->scheme);
+				$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
 
-			if ($this->_uri->SocketURI()->Secure())
-				$client->Secure(true);
+				$client->Delegate(QuarkClient::EVENT_ERROR_CRYPTOGRAM, $this);
 
-			$client->Delegate(QuarkClient::EVENT_CONNECT, $this);
-			$client->Delegate(QuarkClient::EVENT_DATA, $this);
-			$client->Delegate(QuarkClient::EVENT_CLOSE, $this);
-			$client->Transport()->EventConnect($client);
+				if ($this->_uri->SocketURI()->Secure())
+					$client->Secure(true);
 
-			$this->_clients[] = $client;
+				$client->Delegate(QuarkClient::EVENT_CONNECT, $this);
+				$client->Delegate(QuarkClient::EVENT_DATA, $this);
+				$client->Delegate(QuarkClient::EVENT_CLOSE, $this);
+				$client->Transport()->EventConnect($client);
 
-			unset($socket, $address, $client);
+				$this->_clients[] = $client;
+
+				unset($socket, $address, $client);
+			}
+			else {
+				foreach ($this->_read as $key => &$socket) {
+					$client = QuarkClient::ForServer($this->_transport, $socket, $this->URI()->Socket());
+					$data = $client->ReceiveFrom(QuarkClient::MTU, 0, $address);
+
+					if ($data) {
+						$client->URI()->Endpoint($address);
+
+						$client->Delegate(QuarkClient::EVENT_DATA, $this);
+						$client->Delegate(QuarkClient::EVENT_ERROR_PROTOCOL, $this);
+
+						$client->TriggerData($data);
+					}
+				}
+
+				unset($key, $socket);
+			}
 		}
 
 		$this->_read = array();
 		$this->_write = array();
 		$this->_except = array();
 
-		foreach ($this->_clients as $key => &$client) {
-			if ($client->Closed()) {
-				unset($this->_clients[$key]);
-				$client->Close();
-				continue;
+		if ($stream) {
+			foreach ($this->_clients as $key => &$client) {
+				if ($client->Closed()) {
+					unset($this->_clients[$key]);
+					$client->Close();
+					continue;
+				}
+
+				$client->Pipe();
 			}
 
-			$client->Pipe();
+			unset($key, $client);
 		}
-
-		unset($key, $client);
 
 		return true;
 	}
@@ -15206,6 +15299,36 @@ class QuarkServer implements IQuarkEventable {
 		}
 
 		return $ok;
+	}
+
+	/**
+	 * @param string $group = ''
+	 * @param int $interface = 0
+	 * @param bool $reuseAddr = true
+	 */
+	public function MultiCastGroupJoin ($group = '', $interface = 0, $reuseAddr = true) {
+		if ($reuseAddr)
+			$this->SocketOption(SOL_SOCKET, SO_REUSEADDR, 1);
+
+		$this->SocketOption(IPPROTO_IP, MCAST_JOIN_GROUP, array(
+			'group' => $group,
+			'interface' => $interface
+		));
+	}
+
+	/**
+	 * @param string $group = ''
+	 * @param int $interface = 0
+	 * @param bool $reuseAddr = true
+	 */
+	public function MultiCastGroupLeave ($group = '', $interface = 0, $reuseAddr = true) {
+		if ($reuseAddr)
+			$this->SocketOption(SOL_SOCKET, SO_REUSEADDR, 0);
+
+		$this->SocketOption(IPPROTO_IP, MCAST_LEAVE_GROUP, array(
+			'group' => $group,
+			'interface' => $interface
+		));
 	}
 }
 
@@ -16917,6 +17040,8 @@ class QuarkURI {
 	const HOST_LOCALHOST = '127.0.0.1';
 	const HOST_ALL_INTERFACES = '0.0.0.0';
 
+	const PORT_ANY = 0;
+
 	/**
 	 * @var string $scheme
 	 */
@@ -17051,6 +17176,7 @@ class QuarkURI {
 	public static function FromEndpoint ($host, $port = null) {
 		$uri = new self();
 		$uri->Endpoint($host, $port);
+
 		return $uri;
 	}
 
@@ -17063,6 +17189,7 @@ class QuarkURI {
 	public static function FromFile ($location = '', $endSlash = false) {
 		$uri = new self();
 		$uri->path = Quark::NormalizePath($location, $endSlash);
+
 		return $uri;
 	}
 
@@ -17110,14 +17237,17 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param string $scheme = self::WRAPPER_TCP
+	 * @param int $port = self::PORT_ANY
+	 *
 	 * @return string|bool
 	 */
-	public function Socket () {
-		return (isset(self::$_transports[$this->scheme]) ? self::$_transports[$this->scheme] : 'tcp')
+	public function Socket ($scheme = self::WRAPPER_TCP, $port = self::PORT_ANY) {
+		return (isset(self::$_transports[$this->scheme]) ? self::$_transports[$this->scheme] : $scheme)
 		. '://'
 		. $this->host
 		. ':'
-		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : 80));
+		. (is_int($this->port) ? $this->port : (isset(self::$_ports[$this->scheme]) ? self::$_ports[$this->scheme] : $port));
 	}
 	
 	/**
@@ -17128,6 +17258,20 @@ class QuarkURI {
 	}
 
 	/**
+	 * @return string|null
+	 */
+	public function SocketTransport () {
+		return isset(self::$_transports[$this->scheme])
+			? (
+				self::$_transports[$this->scheme] == self::WRAPPER_SSL ||
+				self::$_transports[$this->scheme] == self::WRAPPER_TLS
+					? self::WRAPPER_TCP
+					: self::$_transports[$this->scheme]
+			)
+			: null;
+	}
+
+	/**
 	 * @param string $host
 	 * @param integer|null $port
 	 *
@@ -17135,6 +17279,21 @@ class QuarkURI {
 	 */
 	public function Endpoint ($host, $port = null) {
 		$this->host = $host;
+
+		$delimiter = substr_count($host, ':');
+
+		if ($delimiter != 0) {
+			$parts = explode(':', $host);
+			$partsCount = sizeof($parts);
+
+			if ($partsCount == 2) {
+				$this->host = $parts[0];
+				$this->port = $parts[1];
+			}
+			else {
+				// TODO: IPv6 support
+			}
+		}
 
 		if (func_num_args() == 2 || $port !== null)
 			$this->port = $port;
@@ -17512,6 +17671,15 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param string $scheme = ''
+	 *
+	 * @return string|null
+	 */
+	public static function TransportOf ($scheme = '') {
+		return isset(self::$_transports[$scheme]) ? self::$_transports[$scheme] : null;
+	}
+
+	/**
 	 * @param string $data = ''
 	 *
 	 * @return string
@@ -17543,7 +17711,7 @@ class QuarkURI {
 class QuarkDTO {
 	const HTTP_VERSION_1_0 = 'HTTP/1.0';
 	const HTTP_VERSION_1_1 = 'HTTP/1.1';
-	const HTTP_PROTOCOL_REQUEST = '#^([^\r\n]*) ([^\r\n]*) ([^\r\n]*)\r?\n((?:[^\r\n]+\r?\n)*)\r?\n(.*)#Uis';
+	const HTTP_PROTOCOL_REQUEST = '#^([^\r\n]*) ([^\r\n]*) ([^\r\n]*)\r?\n((?:[^\r\n]+\r?\n)*)\r?\n(.*?)#Uis';
 	const HTTP_PROTOCOL_RESPONSE = '#^([^\r\n\s]+) ([^\r\n]*)\r?\n((?:[^\r\n]+\r?\n)*)\r?\n(.*)#is';
 
 	const METHOD_GET = 'GET';
@@ -17749,9 +17917,9 @@ class QuarkDTO {
 	private $_signature = '';
 
 	/**
-	 * @var bool $_fullControl = false
+	 * @var callable $_headerControl = null
 	 */
-	private $_fullControl = false;
+	private $_headerControl = null;
 
 	/**
 	 * @var bool $_authorizationPrompt = false
@@ -17854,11 +18022,15 @@ class QuarkDTO {
 
 	/**
 	 * @param IQuarkIOProcessor $processor = null
+	 * @param string $status = self::STATUS_200_OK
 	 *
 	 * @return QuarkDTO
 	 */
-	public static function ForResponse (IQuarkIOProcessor $processor = null) {
-		return new self($processor);
+	public static function ForResponse (IQuarkIOProcessor $processor = null, $status = self::STATUS_200_OK) {
+		$out = new self($processor);
+		$out->Status($status);
+
+		return $out;
 	}
 
 	/**
@@ -17868,8 +18040,10 @@ class QuarkDTO {
 	 */
 	public static function ForRedirect ($url) {
 		$response = new self();
+
 		$response->Status(self::STATUS_302_FOUND);
 		$response->Header(self::HEADER_LOCATION, $url);
+
 		return $response;
 	}
 
@@ -17881,6 +18055,7 @@ class QuarkDTO {
 	public static function ForStatus ($status) {
 		$response = new self();
 		$response->Status($status);
+
 		return $response;
 	}
 
@@ -17913,13 +18088,15 @@ class QuarkDTO {
 	 * @param mixed $data
 	 * @param bool $processor = true
 	 * @param bool $status = true
-	 * @param bool $fullControl = false
+	 * @param callable $headerControl = null
 	 *
 	 * @return QuarkDTO
 	 */
-	public function Merge ($data = [], $processor = true, $status = true, $fullControl = false) {
+	public function Merge ($data = [], $processor = true, $status = true, callable $headerControl = null) {
 		if (!($data instanceof QuarkDTO)) $this->MergeData($data);
 		else {
+			$this->_raw = $data->Raw();
+
 			$this->_method = $data->Method();
 			$this->_boundary = $data->Boundary();
 			$this->_headers += $data->Headers();
@@ -17936,8 +18113,8 @@ class QuarkDTO {
 			if ($processor)
 				$this->_processor = $data->Processor();
 
-			if ($fullControl)
-				$this->_fullControl = $data->FullControl();
+			if ($headerControl != null)
+				$this->_headerControl = $data->HeaderControl();
 
 			$this->MergeData($data->Data());
 		}
@@ -18529,15 +18706,15 @@ class QuarkDTO {
 	}
 
 	/**
-	 * @param bool $fullControl = false
+	 * @param callable $headerControl = null
 	 *
-	 * @return bool
+	 * @return callable
 	 */
-	public function FullControl ($fullControl = false) {
+	public function HeaderControl (callable $headerControl = null) {
 		if (func_num_args() != 0)
-			$this->_fullControl = $fullControl;
+			$this->_headerControl = $headerControl;
 
-		return $this->_fullControl;
+		return $this->_headerControl;
 	}
 
 	/**
@@ -18722,17 +18899,15 @@ class QuarkDTO {
 		if (!isset($this->_headers[self::HEADER_AUTHORIZATION]) && $this->_authorization != null)
 			$this->_headers[self::HEADER_AUTHORIZATION] = $this->_authorization->Key() . ' ' . $this->_authorization->Value();
 
-		if (!$this->_fullControl) {
-			if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
-				$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
+		if (!isset($this->_headers[self::HEADER_CONTENT_LENGTH]))
+			$this->_headers[self::HEADER_CONTENT_LENGTH] = $this->_length;
 
-			$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
-				? $typeValue
-				: ($this->_multipart
-					? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
-					: $this->_processor->MimeType() . '; charset=' . $this->_charset
-				);
-		}
+		$this->_headers[self::HEADER_CONTENT_TYPE] = $typeSet
+			? $typeValue
+			: ($this->_multipart
+				? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
+				: $this->_processor->MimeType() . '; charset=' . $this->_charset
+			);
 
 		if ($client) {
 			$this->_headers[self::HEADER_HOST] = $this->_uri->host; // TODO: investigate including of port (RFC for HTTP/1.1)
@@ -18753,6 +18928,14 @@ class QuarkDTO {
 
 		foreach ($this->_headers as $key => $value)
 			$headers[] = $key . ': ' . $value;
+
+		if ($this->_headerControl != null) {
+			$control = $this->_headerControl;
+			$out = $control($headers);
+
+			if (is_array($out))
+				$headers = $out;
+		}
 
 		return $str ? implode("\r\n", $headers) : $headers;
 	}
@@ -19529,13 +19712,8 @@ class QuarkHTTPServerHost implements IQuarkEventable {
 					else {
 						$service = QuarkService::Custom($query, $this->_base, $this->_namespace, QuarkService::POSTFIX_SERVICE);
 
-						$service->Input()->Processor($this->_processorRequest);
-						$service->Output()->Processor($this->_processorResponse);
-
-						$request->Processor($service->Input()->Processor());
-						$service->Input()->Merge($request->UnserializeRequest($request->Raw()));
-						$service->Input()->Signature($request->Signature());
 						$service->InitProcessors();
+						$service->Input()->UnserializeRequest($request->Raw());
 
 						$body = QuarkHTTPServer::ServicePipeline($service);
 
@@ -21646,7 +21824,12 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	public function Encode ($data, $meta = true) {
 		if (!$this->_init) {
 			$this->_init = true;
-			$this->_root->Data($data instanceof QuarkXMLNode ? array($data) : $data);
+
+			if (!($data instanceof QuarkXMLNode)) $this->_root->Data($data);
+			else {
+				if ($data->IsRoot()) $this->_root = $data;
+				else $this->_root->Data(array($data));
+			}
 
 			$out = ($meta ? ('<?xml version="' . $this->_version . '" encoding="' . $this->_encoding . '" ?>') : '')
 				 . $this->_root->ToXML($this);
@@ -21806,6 +21989,11 @@ class QuarkXMLNode {
 	 * @var bool $_single = false
 	 */
 	private $_single = false;
+
+	/**
+	 * @var bool $_root = false
+	 */
+	private $_root = false;
 	
 	/**
 	 * @var $_data = null
@@ -21852,10 +22040,10 @@ class QuarkXMLNode {
 	 * @param bool $single = false
 	 */
 	public function __construct ($name = '', $data = [], $attributes = [], $single = false) {
-		$this->_name = $name;
-		$this->_data = is_scalar($data) ? $data : (object)$data;
-		$this->_attributes = (object)$attributes;
-		$this->_single = $single;
+		$this->Name($name);
+		$this->Data($data);
+		$this->Attributes($attributes);
+		$this->Single($single);
 	}
 
 	/**
@@ -21877,7 +22065,7 @@ class QuarkXMLNode {
 	 */
 	public function Data ($data = []) {
 		if (func_num_args() != 0)
-			$this->_data = (object)$data;
+			$this->_data = $data;
 		
 		return $this->_data;
 	}
@@ -21920,6 +22108,27 @@ class QuarkXMLNode {
 	}
 
 	/**
+	 * @param bool $root = false
+	 *
+	 * @return bool
+	 */
+	public function IsRoot ($root = false) {
+		if (func_num_args() != 0)
+			$this->_root = $root;
+
+		return $this->_root;
+	}
+
+	/**
+	 * @param string $key = ''
+	 *
+	 * @return mixed
+	 */
+	public function Get ($key = '') {
+		return isset($this->_data->$key) ? $this->_data->$key : null;
+	}
+
+	/**
 	 * @param QuarkXMLIOProcessor $processor
 	 * @param string $node
 	 *
@@ -21936,6 +22145,20 @@ class QuarkXMLNode {
 		return $this->_single
 			? ('<' . $node . $attributes . ' />')
 			: ('<' . $node . $attributes . '>' . $processor->Encode($this->_data) . '</' . $node . '>');
+	}
+
+	/**
+	 * @param string $name = ''
+	 * @param array|object $attributes = []
+	 * @param $data = []
+	 *
+	 * @return QuarkXMLNode
+	 */
+	public static function Root  ($name = '', $attributes = [], $data = []) {
+		$out = new self($name, $data, $attributes);
+		$out->IsRoot(true);
+
+		return $out;
 	}
 
 	/**
