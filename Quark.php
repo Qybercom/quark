@@ -344,6 +344,21 @@ class Quark {
 	}
 
 	/**
+	 * @param string $node = ''
+	 *
+	 * @return string
+	 */
+	public static function UuID ($node = '') {
+		$id = self::GuID();
+
+		return substr($id, 0, 8)
+			. '-' . substr($id, 8, 4)
+			. '-' . substr($id, 12, 4)
+			. '-' . substr($id, 16, 4)
+			. '-' . substr(func_num_args() == 0 ? self::GuID() : str_pad($node, 12, '0'), 0, 12);
+	}
+
+	/**
 	 * @param int $id
 	 * @param string $alphabet = self::ALPHABET_ALL
 	 * @param int $base = 2
@@ -15305,12 +15320,14 @@ class QuarkServer implements IQuarkEventable {
 	 * @param string $group = ''
 	 * @param int $interface = 0
 	 * @param bool $reuseAddr = true
+	 *
+	 * @return bool
 	 */
 	public function MultiCastGroupJoin ($group = '', $interface = 0, $reuseAddr = true) {
 		if ($reuseAddr)
 			$this->SocketOption(SOL_SOCKET, SO_REUSEADDR, 1);
 
-		$this->SocketOption(IPPROTO_IP, MCAST_JOIN_GROUP, array(
+		return $this->SocketOption(IPPROTO_IP, MCAST_JOIN_GROUP, array(
 			'group' => $group,
 			'interface' => $interface
 		));
@@ -15320,12 +15337,14 @@ class QuarkServer implements IQuarkEventable {
 	 * @param string $group = ''
 	 * @param int $interface = 0
 	 * @param bool $reuseAddr = true
+	 *
+	 * @return bool
 	 */
 	public function MultiCastGroupLeave ($group = '', $interface = 0, $reuseAddr = true) {
 		if ($reuseAddr)
 			$this->SocketOption(SOL_SOCKET, SO_REUSEADDR, 0);
 
-		$this->SocketOption(IPPROTO_IP, MCAST_LEAVE_GROUP, array(
+		return $this->SocketOption(IPPROTO_IP, MCAST_LEAVE_GROUP, array(
 			'group' => $group,
 			'interface' => $interface
 		));
