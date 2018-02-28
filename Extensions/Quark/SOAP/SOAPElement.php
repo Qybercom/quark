@@ -91,6 +91,15 @@ class SOAPElement {
 	}
 
 	/**
+	 * @param string $key = ''
+	 *
+	 * @return mixed
+	 */
+	public function Get ($key = '') {
+		return isset($this->_data->$key) ? $this->_data->$key : null;
+	}
+
+	/**
 	 * @return QuarkXMLNode
 	 */
 	public function ToXML () {

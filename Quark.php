@@ -2360,11 +2360,13 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		$service->Input()->Merge((object)$_GET);
 		$service->InitProcessors();
 
-		$input = array_replace_recursive(
+		$in = $service->Input()->Processor()->Decode(file_get_contents('php://input'));
+
+		$input = $service->Input()->Processor()->ForceInput() ? $in : array_replace_recursive(
 			$_GET,
 			$_POST,
 			QuarkFile::FromFiles($_FILES),
-			(array)json_decode(json_encode($service->Input()->Processor()->Decode(file_get_contents('php://input'))), true),
+			(array)json_decode(json_encode($in), true),
 			array()
 		);
 
@@ -21484,6 +21486,11 @@ interface IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Batch($raw, $fallback);
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput();
 }
 
 /**
@@ -21521,6 +21528,13 @@ class QuarkPlainIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Batch ($raw, $fallback) {
 		return array($raw);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
 	}
 }
 
@@ -21570,6 +21584,13 @@ class QuarkHTMLIOProcessor implements IQuarkIOProcessor {
 	public function Batch ($raw, $fallback) {
 		return array($raw);
 	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
+	}
 }
 
 /**
@@ -21615,6 +21636,13 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Batch ($raw, $fallback) {
 		return array($raw);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
 	}
 }
 
@@ -21665,6 +21693,13 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		}
 
 		return $fallback ? array($raw) : array();
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
 	}
 
 	/**
@@ -21731,6 +21766,11 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	private $_forceNull = true;
 
 	/**
+	 * @var bool $_forceInput = false
+	 */
+	private $_forceInput = false;
+
+	/**
 	 * @var bool $_init = false
 	 */
 	private $_init = false;
@@ -21749,15 +21789,17 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 * @param QuarkXMLNode $root = null
 	 * @param string $item = self::ITEM
 	 * @param bool $forceNull = true
+	 * @param bool $forceInput = false
 	 * @param string $version = self::VERSION_1_0
 	 * @param string $encoding = self::ENCODING_UTF_8
 	 */
-	public function __construct (QuarkXMLNode $root = null, $item = self::ITEM, $forceNull = true, $version = self::VERSION_1_0, $encoding = self::ENCODING_UTF_8) {
+	public function __construct (QuarkXMLNode $root = null, $item = self::ITEM, $forceNull = true, $forceInput = false, $version = self::VERSION_1_0, $encoding = self::ENCODING_UTF_8) {
 		\libxml_use_internal_errors(true);
 
 		$this->Root($root == null ? new QuarkXMLNode(self::ROOT) : $root);
 		$this->Item($item);
 		$this->ForceNull($forceNull);
+		$this->ForceInput($forceInput);
 		$this->Version($version);
 		$this->Encoding($encoding);
 	}
@@ -21796,6 +21838,18 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			$this->_forceNull = $forceNull;
 		
 		return $this->_forceNull;
+	}
+
+	/**
+	 * @param bool $forceInput = false
+	 *
+	 * @return bool
+	 */
+	public function ForceInput ($forceInput = false) {
+		if (func_num_args() != 0)
+			$this->_forceInput = $forceInput;
+
+		return $this->_forceInput;
 	}
 
 	/**
@@ -21985,6 +22039,19 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Batch ($raw, $fallback) {
 		return array($raw);
+	}
+
+	/**
+	 * @param QuarkXMLNode $root = null
+	 * @param string $item = self::ITEM
+	 * @param bool $forceNull = true
+	 * @param string $version = self::VERSION_1_0
+	 * @param string $encoding = self::ENCODING_UTF_8
+	 *
+	 * @return QuarkXMLIOProcessor
+	 */
+	public static function ForcedInput (QuarkXMLNode $root = null, $item = self::ITEM, $forceNull = true, $version = self::VERSION_1_0, $encoding = self::ENCODING_UTF_8) {
+		return new self($root, $item, $forceNull, true, $version, $encoding);
 	}
 }
 
@@ -22238,6 +22305,13 @@ class QuarkWDDXIOProcessor implements IQuarkIOProcessor {
 	public function Batch ($raw, $fallback) {
 		return array($raw);
 	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
+	}
 }
 
 /**
@@ -22393,6 +22467,13 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 	 */
 	public function Batch ($raw, $fallback) {
 		return array($raw);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
 	}
 }
 

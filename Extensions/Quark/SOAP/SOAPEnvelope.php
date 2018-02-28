@@ -136,25 +136,39 @@ class SOAPEnvelope {
 	public static function FromRequest (QuarkDTO $request = null, $key = self::KEY) {
 		if ($request == null) return null;
 
-		$key .= ':Envelope';
+		$data = $request->Data();
+		$found = '';
+
+		foreach ($data as $k => &$v) {
+			$kName = explode(':', $k);
+
+			if (sizeof($kName) == 2 && $kName[1] == 'Envelope') {
+				$found = $kName[0];
+				break;
+			}
+		}
+
+		$root = (func_num_args() == 2 ? $key : $found) . ':Envelope';
 
 		/**
 		 * @var QuarkXMLNode $envelope
 		 */
-		$envelope = $request->$key;
+		$envelope = $request->$root;
 		if (!$envelope || !($envelope instanceof QuarkXMLNode)) return null;
 
 		$out = new self($key);
 
-		$headers = $envelope->Get($key . ':Header');
-		if (QuarkObject::IsArrayOf($headers, new QuarkXMLNode()))
+		$headers = $envelope->Get($found . ':Header');
+		if (QuarkObject::isTraversable($headers))
 			foreach ($headers as $i => &$header)
-				$out->Header(SOAPElement::FromXML($header));
+				if ($header instanceof QuarkXMLNode)
+					$out->Header(SOAPElement::FromXML($header));
 
-		$body = $envelope->Get($key . ':Body');
-		if (QuarkObject::IsArrayOf($body, new QuarkXMLNode()))
+		$body = $envelope->Get($found . ':Body');
+		if (QuarkObject::isTraversable($body))
 			foreach ($body as $i => &$item)
-				$out->BodyItem(SOAPElement::FromXML($item));
+				if ($item instanceof QuarkXMLNode)
+					$out->BodyItem(SOAPElement::FromXML($item));
 
 		return $out;
 	}
