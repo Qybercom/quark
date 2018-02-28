@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Quark\SOAP;
 
+use Quark\QuarkDTO;
 use Quark\QuarkObject;
 use Quark\QuarkXMLNode;
 
@@ -124,5 +125,37 @@ class SOAPEnvelope {
 				$this->_key . ':Body' => $body
 			)
 		);
+	}
+
+	/**
+	 * @param QuarkDTO $request = null
+	 * @param string $key = self::KEY
+	 *
+	 * @return SOAPEnvelope
+	 */
+	public static function FromRequest (QuarkDTO $request = null, $key = self::KEY) {
+		if ($request == null) return null;
+
+		$key .= ':Envelope';
+
+		/**
+		 * @var QuarkXMLNode $envelope
+		 */
+		$envelope = $request->$key;
+		if (!$envelope || !($envelope instanceof QuarkXMLNode)) return null;
+
+		$out = new self($key);
+
+		$headers = $envelope->Get($key . ':Header');
+		if (QuarkObject::IsArrayOf($headers, new QuarkXMLNode()))
+			foreach ($headers as $i => &$header)
+				$out->Header(SOAPElement::FromXML($header));
+
+		$body = $envelope->Get($key . ':Body');
+		if (QuarkObject::IsArrayOf($body, new QuarkXMLNode()))
+			foreach ($body as $i => &$item)
+				$out->BodyItem(SOAPElement::FromXML($item));
+
+		return $out;
 	}
 }

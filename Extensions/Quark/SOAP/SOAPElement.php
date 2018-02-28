@@ -100,4 +100,18 @@ class SOAPElement {
 			array('xmlns:' . $this->_key => $this->_xmlns)
 		);
 	}
+
+	/**
+	 * @param QuarkXMLNode $xml = null
+	 *
+	 * @return SOAPElement
+	 */
+	public static function FromXML (QuarkXMLNode $xml = null) {
+		if ($xml == null) return null;
+
+		$name = explode(':', $xml->Name());
+		if (sizeof($name) != 2) return null;
+
+		return new self($name[0], $name[1], $xml->Attribute('xmlns'), $xml->Data());
+	}
 }
