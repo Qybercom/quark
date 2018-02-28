@@ -14917,20 +14917,20 @@ class QuarkClient implements IQuarkEventable {
 	}
 
 	/**
-	 * @param IQuarkNetworkTransport $transport
-	 * @param resource $socket
-	 * @param string $address
+	 * @param IQuarkNetworkTransport $transport = null
+	 * @param resource $socket = null
+	 * @param string $address = ''
 	 * @param string $scheme = ''
 	 *
 	 * @return QuarkClient
 	 */
-	public static function ForServer (IQuarkNetworkTransport $transport, $socket, $address, $scheme = '') {
+	public static function ForServer (IQuarkNetworkTransport $transport = null, $socket = null, $address = '', $scheme = '') {
 		$uri = QuarkURI::FromURI($address);
 
 		if (func_num_args() == 4)
 			$uri->scheme = $scheme;
 
-		$client = new self($uri, clone $transport);
+		$client = new self($uri, $transport == null ? null : clone $transport);
 		$client->_fromServer = true;
 
 		$client->Socket($socket);

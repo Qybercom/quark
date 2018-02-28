@@ -106,13 +106,21 @@ class SOAPEnvelope {
 	 * @return QuarkXMLNode
 	 */
 	public function Response () {
-		$headers = array();
-		foreach ($this->_headers as $header)
-			$headers[] = $header->ToXML();
+		$response = array();
 
-		$body = array();
-		foreach ($this->_body as $item)
-			$body[] = $item->ToXML();
+		if (sizeof($this->_headers) != 0) {
+			$response[$this->_key . ':Header'] = array();
+
+			foreach ($this->_headers as $header)
+				$response[$this->_key . ':Header'][] = $header->ToXML();
+		}
+
+		if (sizeof($this->_body) != 0) {
+			$response[$this->_key . ':Body'] = array();
+
+			foreach ($this->_body as $item)
+				$response[$this->_key . ':Body'] [] = $item->ToXML();
+		}
 
 		return QuarkXMLNode::Root(
 			$this->_key . ':Envelope',
@@ -120,10 +128,7 @@ class SOAPEnvelope {
 				'xmlns:' . $this->_key => self::SCHEMA_ENVELOPE,
 				$this->_key . ':encodingStyle' => self::SCHEMA_ENCODING
 			),
-			array(
-				$this->_key . ':Header' => $headers,
-				$this->_key . ':Body' => $body
-			)
+			$response
 		);
 	}
 
