@@ -155,13 +155,9 @@ class UPnPAnnouncer {
 				$this->TriggerArgs(self::EVENT_M_SEARCH, array(&$client, &$request));
 
 				$services = $this->_rootDescription->Services();
-				$ok = 0;
-				print_r($services);
 
 				foreach ($services as $i => &$service)
-					$ok += $client->SendTo($this->ReplyServiceDTO($service->ID())->SerializeResponse());
-
-				var_dump($ok);
+					$this->_unicast->SendTo($this->ReplyServiceDTO($service->ID())->SerializeResponse());
 			}
 
 			if ($request->Method() == self::METHOD_NOTIFY)

@@ -228,6 +228,7 @@ class UPnPConfig implements IQuarkExtensionConfig {
 				$this->_rootDescription->DeviceType($deviceType);
 
 			$providerAttributes = $provider->UPnPProviderAttributes();
+			$this->_rootDescription->Attributes(array());
 			if (is_array($providerAttributes))
 				foreach ($providerAttributes as $j => &$attribute)
 					$this->_rootDescription->Attribute($attribute);

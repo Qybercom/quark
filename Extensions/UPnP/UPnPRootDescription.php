@@ -392,11 +392,11 @@ class UPnPRootDescription {
 	 */
 	public function ToXML () {
 		$icons = array();
-		foreach ($this->_icons as $icon)
+		foreach ($this->_icons as $i => &$icon)
 			$icons[] = $icon->ToXML();
 
 		$services = array();
-		foreach ($this->_services as $service)
+		foreach ($this->_services as $i => &$service)
 			$services[] = $service->ToXML();
 
 		$attributes = array(
@@ -411,18 +411,16 @@ class UPnPRootDescription {
 		foreach ($this->_attributes as $i => &$attribute)
 			$device[] = new QuarkXMLNode($attribute->Key(), $attribute->Value());
 
-		$device = array_merge($device, array(
-			new QuarkXMLNode('UDN', 'uuid:' . $this->_uuID),
-			new QuarkXMLNode('friendlyName', $this->_friendlyName),
-			new QuarkXMLNode('deviceType', $this->_deviceType),
-			new QuarkXMLNode('manufacturer', $this->_manufacturer),
-			new QuarkXMLNode('manufacturerUrl', $this->_manufacturerUrl),
-			new QuarkXMLNode('modelName', $this->_modelName),
-			new QuarkXMLNode('modelDescription', $this->_modelDescription),
-			new QuarkXMLNode('modelNumber', $this->_modelNumber),
-			new QuarkXMLNode('modelUUL', $this->_modelURL),
-			new QuarkXMLNode('serialNumber', $this->_serialNumber)
-		));
+		$device[] = new QuarkXMLNode('UDN', 'uuid:' . $this->_uuID);
+		$device[] = new QuarkXMLNode('friendlyName', $this->_friendlyName);
+		$device[] = new QuarkXMLNode('deviceType', $this->_deviceType);
+		$device[] = new QuarkXMLNode('manufacturer', $this->_manufacturer);
+		$device[] = new QuarkXMLNode('manufacturerUrl', $this->_manufacturerUrl);
+		$device[] = new QuarkXMLNode('modelName', $this->_modelName);
+		$device[] = new QuarkXMLNode('modelDescription', $this->_modelDescription);
+		$device[] = new QuarkXMLNode('modelNumber', $this->_modelNumber);
+		$device[] = new QuarkXMLNode('modelURL', $this->_modelURL);
+		$device[] = new QuarkXMLNode('serialNumber', $this->_serialNumber);
 
 		if (sizeof($this->_icons) != 0)
 			$device[] = new QuarkXMLNode('iconList', $icons);
