@@ -1,10 +1,8 @@
 <?php
 namespace Quark\Extensions\UPnP;
 
-use Quark\Quark;
 use Quark\QuarkClient;
 use Quark\QuarkDate;
-use Quark\QuarkDateInterval;
 use Quark\QuarkDTO;
 use Quark\QuarkEvent;
 use Quark\QuarkServer;
@@ -31,8 +29,10 @@ class UPnPAnnouncer {
 
 	const EVENT_DATA = 'UPnP.data';
 	const EVENT_ERROR = 'UPnP.error';
-	const EVENT_NOTIFYING = 'UPnP.notifying';
+	const EVENT_NOTIFY = 'UPnP.notify';
+	const EVENT_SUBSCRIBE = 'UPnP.subscribe';
 	const EVENT_M_SEARCH = 'UPnP.m-search';
+	const EVENT_NOTIFY_OUT = 'UPnP.notify.out';
 
 	const METHOD_NOTIFY = 'NOTIFY';
 	const METHOD_SUBSCRIBE = 'SUBSCRIBE';
@@ -46,6 +46,9 @@ class UPnPAnnouncer {
 	const STATUS_BYEBYE = 'byebye';
 
 	const SERVICE_UPnP_ROOT_DEVICE = 'upnp:rootdevice';
+
+	const DEFAULT_NOTIFYING_TIMEOUT = 10;
+	const DEFAULT_NOTIFYING_MAX_AGE = 1800;
 
 	use QuarkEvent;
 
@@ -65,14 +68,14 @@ class UPnPAnnouncer {
 	private $_rootDescription;
 
 	/**
-	 * @var int $_notifyingTimeout = 10 (seconds)
+	 * @var int $_notifyingTimeout = self::DEFAULT_NOTIFYING_TIMEOUT (seconds)
 	 */
-	private $_notifyingTimeout = 10;
+	private $_notifyingTimeout = self::DEFAULT_NOTIFYING_TIMEOUT;
 
 	/**
-	 * @var int $_notifyingMaxAge = QuarkDateInterval::SECONDS_IN_HOUR (seconds)
+	 * @var int $_notifyingMaxAge = self::DEFAULT_NOTIFYING_MAX_AGE (seconds)
 	 */
-	private $_notifyingMaxAge = QuarkDateInterval::SECONDS_IN_HOUR;
+	private $_notifyingMaxAge = self::DEFAULT_NOTIFYING_MAX_AGE;
 
 	/**
 	 * @var QuarkDate $_notifyingLast
@@ -115,11 +118,11 @@ class UPnPAnnouncer {
 	}
 
 	/**
-	 * @param int $timeout = 10 (seconds)
+	 * @param int $timeout = self::DEFAULT_NOTIFYING_TIMEOUT (seconds)
 	 *
 	 * @return int
 	 */
-	public function NotifyingTimeout ($timeout = 10) {
+	public function NotifyingTimeout ($timeout = self::DEFAULT_NOTIFYING_TIMEOUT) {
 		if (func_num_args() != 0)
 			$this->_notifyingTimeout = $timeout;
 
@@ -127,11 +130,11 @@ class UPnPAnnouncer {
 	}
 
 	/**
-	 * @param int $maxAge = QuarkDateInterval::SECONDS_IN_HOUR (seconds)
+	 * @param int $maxAge = self::DEFAULT_NOTIFYING_MAX_AGE (seconds)
 	 *
 	 * @return int
 	 */
-	public function NotifyingMaxAge ($maxAge = QuarkDateInterval::SECONDS_IN_HOUR) {
+	public function NotifyingMaxAge ($maxAge = self::DEFAULT_NOTIFYING_MAX_AGE) {
 		if (func_num_args() != 0)
 			$this->_notifyingMaxAge = $maxAge;
 
@@ -148,14 +151,24 @@ class UPnPAnnouncer {
 			$request = new QuarkDTO();
 			$request->UnserializeRequest($data);
 
-			if ($request->Method() == UPnPAnnouncer::METHOD_M_SEARCH) {
+			if ($request->Method() == self::METHOD_M_SEARCH) {
 				$this->TriggerArgs(self::EVENT_M_SEARCH, array(&$client, &$request));
 
 				$services = $this->_rootDescription->Services();
+				$ok = 0;
+				print_r($services);
 
-				foreach ($services as $service)
-					$client->SendTo($this->ReplyServiceDTO($service->ID())->SerializeResponse());
+				foreach ($services as $i => &$service)
+					$ok += $client->SendTo($this->ReplyServiceDTO($service->ID())->SerializeResponse());
+
+				var_dump($ok);
 			}
+
+			if ($request->Method() == self::METHOD_NOTIFY)
+				$this->TriggerArgs(self::EVENT_NOTIFY, array(&$client, &$request));
+
+			if ($request->Method() == self::METHOD_SUBSCRIBE)
+				$this->TriggerArgs(self::EVENT_SUBSCRIBE, array(&$client, &$request));
 		});
 
 		$this->_broadcast->On(QuarkClient::EVENT_ERROR_PROTOCOL, function (QuarkClient $client, $error) {
@@ -175,7 +188,7 @@ class UPnPAnnouncer {
 			$now = QuarkDate::GMTNow();
 
 			if ($this->_notifyingLast == null || $this->_notifyingLast->Earlier($now->Offset('-' . $this->_notifyingTimeout . ' seconds', true))) {
-				$this->TriggerArgs(self::EVENT_NOTIFYING, array(&$this->_notifyingLast, &$now));
+				$this->TriggerArgs(self::EVENT_NOTIFY_OUT, array(&$this->_notifyingLast, &$now));
 				$this->Notify();
 
 				$this->_notifyingLast = $now;
@@ -191,7 +204,7 @@ class UPnPAnnouncer {
 	 * @return string
 	 */
 	public static function NameOf ($name = '') {
-		return php_uname('s') . ', UPnP/1.0, ' . $name;
+		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $name;
 	}
 
 	/**
@@ -200,7 +213,7 @@ class UPnPAnnouncer {
 	 * @return QuarkDTO
 	 */
 	private function _commonHeaders (QuarkDTO $dto) {
-		$dto->Header('CACHE-CONTROL', 'max-age=' . $this->_notifyingMaxAge);
+		$dto->Header('CACHE-CONTROL', 'max-age = ' . $this->_notifyingMaxAge);
 		$dto->Header('LOCATION', $this->_rootDescription->Location());
 		$dto->Header('SERVER', self::NameOf($this->_rootDescription->ModelName()));
 
@@ -220,12 +233,13 @@ class UPnPAnnouncer {
 		$request->URI(QuarkURI::FromURI('*'));
 		$request->Protocol(QuarkDTO::HTTP_VERSION_1_1);
 
+		$request->Header('HOST', self::UPnP_HOST . ':' . self::UPnP_PORT);
+
 		$request = $this->_commonHeaders($request);
 
-		$request->Header('HOST', self::UPnP_HOST . ':' . self::UPnP_PORT);
+		$request->Header('NTS', 'ssdp:' . $status);
 		$request->Header('NT', $nt);
 		$request->Header('USN', $usn);
-		$request->Header('NTS', 'ssdp:' . $status);
 
 		$request->HeaderControl(function ($headers) {
 			foreach ($headers as $i => &$header) {
@@ -265,15 +279,35 @@ class UPnPAnnouncer {
 	 * @return int
 	 */
 	public function Notify () {
+		$ok = 0;
 		$services = $this->_rootDescription->Services();
 
-		$ok = $this->_unicast->SendTo($n1 = $this->NotifyDeviceDTO()->SerializeRequest());
+		$ok += $this->_notify($this->NotifyDeviceDTO());
 
-		$ok += $this->_unicast->SendTo($n2 = $this->NotifyServiceDTO(UPnPRootDescription::ROOT_DEVICE)->SerializeRequest());
-		$ok += $this->_unicast->SendTo($n3 = $this->NotifyServiceDTO($this->_rootDescription->DeviceType())->SerializeRequest());
+		$ok += $this->_notify($this->NotifyServiceDTO(UPnPRootDescription::ROOT_DEVICE));
+		$ok += $this->_notify($this->NotifyServiceDTO($this->_rootDescription->DeviceType()));
 
-		foreach ($services as $i => &$service)
-			$ok += $this->_unicast->SendTo($n4 = $this->NotifyServiceDTO($service->Type())->SerializeRequest());
+		foreach ($services as $s => &$service)
+			$ok += $this->_notify($this->NotifyServiceDTO($service->Type()));
+
+		return $ok;
+	}
+
+	/**
+	 * @param QuarkDTO $notice = null
+	 *
+	 * @return bool|int
+	 */
+	private function _notify (QuarkDTO $notice = null) {
+		if ($notice == null) return false;
+
+		$ok = 0;
+		//$i = 0;
+
+		//while ($i < 6) {
+			$this->_unicast->SendTo($notice->SerializeRequest());
+			//$i++;
+		//}
 
 		return $ok;
 	}

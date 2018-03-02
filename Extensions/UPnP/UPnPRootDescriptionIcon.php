@@ -114,11 +114,11 @@ class UPnPRootDescriptionIcon {
 	 */
 	public function ToXML () {
 		return new QuarkXMLNode('icon', array(
-			'url' => $this->_url,
 			'mimeType' => $this->_type,
 			'width' => $this->_width,
 			'height' => $this->_height,
-			'depth' => $this->_depth
+			'depth' => $this->_depth,
+			'url' => $this->_url
 		));
 	}
 }

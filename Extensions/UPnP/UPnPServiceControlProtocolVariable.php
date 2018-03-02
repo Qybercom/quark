@@ -11,7 +11,10 @@ use Quark\QuarkXMLNode;
  */
 class UPnPServiceControlProtocolVariable {
 	const DATA_TYPE_STRING = 'string';
+	const DATA_TYPE_INT = 'int';
+	const DATA_TYPE_INT4 = 'i4';
 	const DATA_TYPE_UNSIGNED_INT4 = 'ui4';
+	const DATA_TYPE_BIN_BASE64 = 'bin.base64';
 
 	/**
 	 * @var string $_name = ''

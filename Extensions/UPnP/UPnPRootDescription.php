@@ -112,6 +112,11 @@ class UPnPRootDescription {
 	private $_services = array();
 
 	/**
+	 * @var string $_urlBase = null
+	 */
+	private $_urlBase = null;
+
+	/**
 	 * UPnPRootDescription constructor.
 	 */
 	public function __construct () {
@@ -371,6 +376,18 @@ class UPnPRootDescription {
 	}
 
 	/**
+	 * @param string $url = null
+	 *
+	 * @return string
+	 */
+	public function URLBase ($url = null) {
+		if (func_num_args() != 0)
+			$this->_urlBase = $url;
+
+		return $this->_urlBase;
+	}
+
+	/**
 	 * @return QuarkXMLNode
 	 */
 	public function ToXML () {
@@ -389,32 +406,40 @@ class UPnPRootDescription {
 		foreach ($this->_attributesXMLNS as $i => &$ns)
 			$attributes[$ns->Key()] = $ns->Value();
 
-		$device = array(
-			'UDN' => 'uuid:' . $this->_uuID,
-			'friendlyName' => $this->_friendlyName,
-			'deviceType' => $this->_deviceType,
-			'manufacturer' => $this->_manufacturer,
-			'manufacturerUrl' => $this->_manufacturerUrl,
-			'modelName' => $this->_modelName,
-			'modelDescription' => $this->_modelDescription,
-			'modelNumber' => $this->_modelNumber,
-			'modelUUL' => $this->_modelURL,
-			'serialNumber' => $this->_serialNumber,
-			'serviceList' => $services
-		);
+		$device = array();
 
 		foreach ($this->_attributes as $i => &$attribute)
-			$device[$attribute->Key()] = $attribute->Value();
+			$device[] = new QuarkXMLNode($attribute->Key(), $attribute->Value());
+
+		$device = array_merge($device, array(
+			new QuarkXMLNode('UDN', 'uuid:' . $this->_uuID),
+			new QuarkXMLNode('friendlyName', $this->_friendlyName),
+			new QuarkXMLNode('deviceType', $this->_deviceType),
+			new QuarkXMLNode('manufacturer', $this->_manufacturer),
+			new QuarkXMLNode('manufacturerUrl', $this->_manufacturerUrl),
+			new QuarkXMLNode('modelName', $this->_modelName),
+			new QuarkXMLNode('modelDescription', $this->_modelDescription),
+			new QuarkXMLNode('modelNumber', $this->_modelNumber),
+			new QuarkXMLNode('modelUUL', $this->_modelURL),
+			new QuarkXMLNode('serialNumber', $this->_serialNumber)
+		));
 
 		if (sizeof($this->_icons) != 0)
-			$device['iconList'] = $icons;
+			$device[] = new QuarkXMLNode('iconList', $icons);
 
-		return QuarkXMLNode::Root('root', $attributes, array(
+		$device[] = new QuarkXMLNode('serviceList', $services);
+
+		$xml = array(
 			'specVersion' => array(
 				'major' => $this->_versionMajor,
 				'minor' => $this->_versionMinor
 			),
 			'device' => $device
-		));
+		);
+
+		if ($this->_urlBase !== null)
+			$xml['URLBase'] = $this->_urlBase;
+
+		return QuarkXMLNode::Root('root', $attributes, $xml);
 	}
 }

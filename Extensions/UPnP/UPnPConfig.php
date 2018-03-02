@@ -122,6 +122,18 @@ class UPnPConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
+	 * @param UPnPRootDescriptionIcon $icon = null
+	 *
+	 * @return UPnPConfig
+	 */
+	public function Icon (UPnPRootDescriptionIcon $icon = null) {
+		if ($icon != null)
+			$this->_rootDescription->Icon($icon);
+
+		return $this;
+	}
+
+	/**
 	 * @param string $name
 	 */
 	public function Stacked ($name) {
@@ -146,6 +158,9 @@ class UPnPConfig implements IQuarkExtensionConfig {
 
 		if (isset($ini->Location))
 			$this->_rootDescription->Location($ini->Location);
+
+		if (isset($ini->URLBase))
+			$this->_rootDescription->URLBase($ini->URLBase);
 
 		if (isset($ini->URLServiceDescription))
 			$this->URLServiceDescription($ini->URLServiceDescription);

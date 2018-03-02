@@ -5405,18 +5405,24 @@ class QuarkObject {
 	/**
 	 * @param $source
 	 * @param $type
+	 * @param bool $implements = false
 	 *
 	 * @return bool
 	 */
-	public static function IsArrayOf ($source, $type) {
+	public static function IsArrayOf ($source, $type, $implements = false) {
 		if (!self::isIterative($source)) return false;
 
 		$scalar = is_scalar($type);
 		$typeof = gettype($type);
 
-		foreach ($source as $item) {
-			if ($scalar && gettype($item) != $typeof) return false;
-			if (!$scalar && !($item instanceof $type)) return false;
+		foreach ($source as $i => &$item) {
+			if ($implements) {
+				if (!self::is($item, $type)) return false;
+			}
+			else {
+				if ($scalar && gettype($item) != $typeof) return false;
+				if (!$scalar && !($item instanceof $type)) return false;
+			}
 		}
 
 		return true;

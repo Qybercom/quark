@@ -114,8 +114,8 @@ class UPnPServiceDescription {
 	 */
 	public function ToXML () {
 		return new QuarkXMLNode('service', array(
-			'serviceId' => $this->_id,
 			'serviceType' => $this->_type,
+			'serviceId' => $this->_id,
 			'SCPDURL' => $this->_urlDescription,
 			'controlURL' => $this->_urlControl,
 			'eventSubURL' => $this->_urlEvent

@@ -8,30 +8,15 @@ use Quark\IQuarkModelWithBeforeExtract;
 /**
  * Class GoogleMapPoint
  *
+ * @property float|int $lat = 0.0
+ * @property float|int $lng = 0.0
+ * @property float|int $width = -1
+ * @property string $address = ''
+ *
  * @package Quark\ViewResources\Google
  */
 class GoogleMapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithBeforeExtract {
 	const EARTH_RADIUS = 6372795;
-
-	/**
-	 * @var float|int $lat = 0.0
-	 */
-	public $lat = 0.0;
-
-	/**
-	 * @var float|int $lng = 0.0
-	 */
-	public $lng = 0.0;
-
-	/**
-	 * @var float|int $width = -1
-	 */
-	public $width = -1;
-
-	/**
-	 * @var string $_address
-	 */
-	private $_address;
 
 	/**
 	 * @param float|int $lat = 0.0
@@ -76,6 +61,7 @@ class GoogleMapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithB
 	 * @param GoogleMapPoint $with
 	 *
 	 * @link https://www.kobzarev.com/programming/calculation-of-distances-between-cities-on-their-coordinates.html
+	 *
 	 * @return float metres
 	 */
 	public function Distance (GoogleMapPoint $with) {
@@ -190,7 +176,7 @@ class GoogleMapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithB
 	 * @return string
 	 */
 	public function Compile () {
-		return $this->_address === null ? (((float)$this->lat) . ',' . ((float)$this->lng)) : $this->_address;
+		return $this->address === null ? (((float)$this->lat) . ',' . ((float)$this->lng)) : $this->address;
 	}
 
 	/**
@@ -200,7 +186,7 @@ class GoogleMapPoint implements IQuarkModel, IQuarkStrongModel, IQuarkModelWithB
 	 */
 	public static function FromLocation ($address) {
 		$point = new self();
-		$point->_address = $address;
+		$point->address = $address;
 
 		return $point;
 	}

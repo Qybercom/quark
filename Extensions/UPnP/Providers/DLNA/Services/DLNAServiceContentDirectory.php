@@ -16,6 +16,7 @@ use Quark\Extensions\UPnP\UPnPServiceDescription;
  */
 class DLNAServiceContentDirectory implements IQuarkUPnPProviderService {
 	const NAME = 'ContentDirectory';
+	const ID = 'urn:upnp-org:serviceId:ContentDirectory';
 	const TYPE = 'urn:schemas-upnp-org:service:ContentDirectory:1';
 
 	const VAR_SYSTEM_UPDATE_ID = 'SystemUpdateID';
@@ -79,7 +80,7 @@ class DLNAServiceContentDirectory implements IQuarkUPnPProviderService {
 	 */
 	public function UPnPServiceDescription () {
 		return new UPnPServiceDescription(
-			'urn:upnp-org:serviceId:' . self::NAME,
+			self::ID,
 			self::TYPE,
 			$this->_urlDescription . self::NAME,
 			$this->_urlControl . self::NAME,

@@ -1,12 +1,15 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA;
 
+use Quark\QuarkObject;
 use Quark\QuarkKeyValuePair;
+
 use Quark\Extensions\UPnP\IQuarkUPnPProvider;
 use Quark\Extensions\UPnP\IQuarkUPnPProviderService;
 
 use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceConnectionManager;
 use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceContentDirectory;
+use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceXMSMediaReceiverRegistrar;
 
 /**
  * Class DLNA
@@ -15,6 +18,35 @@ use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceContentDirectory;
  */
 class DLNA implements IQuarkUPnPProvider {
 	const UPnP_DEVICE_TYPE = 'urn:schemas-upnp-org:device:MediaServer:1';
+
+	/**
+	 * @var IQuarkUPnPProviderService[] $_services = []
+	 */
+	private $_services = array();
+
+	/**
+	 * @param IQuarkUPnPProviderService $service = null
+	 *
+	 * @return DLNA
+	 */
+	public function Service (IQuarkUPnPProviderService $service = null) {
+		if ($service != null)
+			$this->_services[] = $service;
+
+		return $this;
+	}
+
+	/**
+	 * @param IQuarkUPnPProviderService[] $services = []
+	 *
+	 * @return IQuarkUPnPProviderService[]
+	 */
+	public function Services ($services = []) {
+		if (func_num_args() != 0 && QuarkObject::IsArrayOf($services, 'Quark\\Extensions\\UPnP\\IQuarkUPnPProviderService', true))
+			$this->_services = $services;
+
+		return $this->_services;
+	}
 
 	/**
 	 * @param object $ini
@@ -38,7 +70,8 @@ class DLNA implements IQuarkUPnPProvider {
 	public function UPnPProviderAttributes () {
 		return array(
 			new QuarkKeyValuePair('dlna:X_DLNACAP', null),
-			new QuarkKeyValuePair('dlna:X_DLNADOC', 'DMS-1.50')
+			new QuarkKeyValuePair('dlna:X_DLNADOC', 'DMS-1.50'),
+			new QuarkKeyValuePair('dlna:X_DLNADOC', 'M-DMS-1.50')
 		);
 	}
 
@@ -56,9 +89,20 @@ class DLNA implements IQuarkUPnPProvider {
 	 * @return IQuarkUPnPProviderService[]
 	 */
 	public function UPnPProviderServices () {
-		return array(
+		return $this->_services;
+	}
+
+	/**
+	 * @return DLNA
+	 */
+	public static function Predefined () {
+		$out = new self();
+		$out->Services(array(
 			new DLNAServiceConnectionManager(),
-			new DLNAServiceContentDirectory()
-		);
+			new DLNAServiceContentDirectory(),
+			new DLNAServiceXMSMediaReceiverRegistrar()
+		));
+
+		return $out;
 	}
 }
