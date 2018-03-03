@@ -23,6 +23,8 @@ class DLNAElementItem implements IQuarkDLNAElement {
 	const UPnP_CLASS_GENERIC = 'object.item';
 	CONST UPnP_CLASS_IMAGE = 'object.item.imageItem';
 	CONST UPnP_CLASS_IMAGE_PHOTO = 'object.item.imageItem.photo';
+	CONST UPnP_CLASS_AUDIO = 'object.item.audioItem';
+	CONST UPnP_CLASS_AUDIO_MUSIC_TRACK = 'object.item.audioItem.musicTrack';
 	CONST UPnP_CLASS_VIDEO = 'object.item.videoItem';
 
 	const PROTOCOL_TRANSPORT_ALL = '*';

@@ -156,8 +156,11 @@ class UPnPAnnouncer {
 
 				$services = $this->_rootDescription->Services();
 
+				$this->_notifyReply($this->ReplyServiceDTO(UPnPRootDescription::ROOT_DEVICE));
+				$this->_notifyReply($this->ReplyServiceDTO($this->_rootDescription->DeviceType()));
+
 				foreach ($services as $i => &$service)
-					$this->_unicast->SendTo($this->ReplyServiceDTO($service->ID())->SerializeResponse());
+					$this->_notifyReply($this->ReplyServiceDTO($service->ID()));
 			}
 
 			if ($request->Method() == self::METHOD_NOTIFY)
@@ -295,17 +298,16 @@ class UPnPAnnouncer {
 	 * @return bool|int
 	 */
 	private function _notify (QuarkDTO $notice = null) {
-		if ($notice == null) return false;
+		return $notice == null ? false : $this->_unicast->SendTo($notice->SerializeRequest());
+	}
 
-		$ok = 0;
-		//$i = 0;
-
-		//while ($i < 6) {
-			$this->_unicast->SendTo($notice->SerializeRequest());
-			//$i++;
-		//}
-
-		return $ok;
+	/**
+	 * @param QuarkDTO $reply = null
+	 *
+	 * @return bool|int
+	 */
+	private function _notifyReply (QuarkDTO $reply = null) {
+		return $reply == null ? false : $this->_unicast->SendTo($reply->SerializeResponse());
 	}
 
 	/**

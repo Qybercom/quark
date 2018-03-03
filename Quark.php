@@ -12154,6 +12154,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const FORMAT_ISO = 'Y-m-d H:i:s';
 	const FORMAT_ISO_FULL = 'Y-m-d H:i:s.u';
 	const FORMAT_MS_DOS = '___quark_ms_dos___';
+	const FORMAT_HTTP_DATE = 'D, d M Y H:i:s'; // https://stackoverflow.com/a/21121453/2097055
 
 	const PRECISE_YEARS = 'Y-01-01 00:00:00';
 	const PRECISE_MONTHS = 'Y-m-01 00:00:00';
@@ -18933,7 +18934,7 @@ class QuarkDTO {
 			? $typeValue
 			: ($this->_multipart
 				? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
-				: $this->_processor->MimeType() . '; charset=' . $this->_charset
+				: $this->_processor->MimeType() //. '; charset=' . $this->_charset
 			);
 
 		if ($client) {
