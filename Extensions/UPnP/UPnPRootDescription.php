@@ -1,8 +1,11 @@
 <?php
 namespace Quark\Extensions\UPnP;
 
+use Quark\QuarkDate;
+use Quark\QuarkDTO;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
+use Quark\QuarkXMLIOProcessor;
 use Quark\QuarkXMLNode;
 
 /**
@@ -20,8 +23,9 @@ class UPnPRootDescription {
 	const DEFAULT_UUID = 'a6b50411-1554-39b3-4519-afa46c56b974';
 	const DEFAULT_FRIENDLY_NAME = 'Quark UPnP';
 	const DEFAULT_MANUFACTURER = 'Alex Furnica';
-	const DEFAULT_MANUFACTURER_URL = 'https://github.com/Qybercom/quark';
+	const DEFAULT_MANUFACTURER_URL = 'https://github.com/chief93';
 	const DEFAULT_MODEL_NAME = 'QuarkUPnP/1.0';
+	const DEFAULT_MODEL_DESCRIPTION = '';
 	const DEFAULT_MODEL_NUMBER = '1.0.0';
 	const DEFAULT_MODEL_URL = 'https://github.com/Qybercom/quark';
 	const DEFAULT_SERIAL_NUMBER = '';
@@ -72,9 +76,9 @@ class UPnPRootDescription {
 	private $_manufacturer = self::DEFAULT_MANUFACTURER;
 
 	/**
-	 * @var string $_manufacturerUrl = self::DEFAULT_MANUFACTURER_URL
+	 * @var string $_manufacturerURL = self::DEFAULT_MANUFACTURER_URL
 	 */
-	private $_manufacturerUrl = self::DEFAULT_MANUFACTURER_URL;
+	private $_manufacturerURL = self::DEFAULT_MANUFACTURER_URL;
 
 	/**
 	 * @var string $_modelName = self::DEFAULT_MODEL_NAME
@@ -82,9 +86,9 @@ class UPnPRootDescription {
 	private $_modelName = self::DEFAULT_MODEL_NAME;
 
 	/**
-	 * @var string $_modelDescription = ''
+	 * @var string $_modelDescription = self::DEFAULT_MODEL_DESCRIPTION
 	 */
-	private $_modelDescription = '';
+	private $_modelDescription = self::DEFAULT_MODEL_DESCRIPTION;
 
 	/**
 	 * @var string $_modelNumber = self::DEFAULT_MODEL_NUMBER
@@ -256,15 +260,15 @@ class UPnPRootDescription {
 	}
 
 	/**
-	 * @param string $manufacturerUrl = self::DEFAULT_MANUFACTURER_URL
+	 * @param string $url = self::DEFAULT_MANUFACTURER_URL
 	 *
 	 * @return string
 	 */
-	public function ManufacturerURL ($manufacturerUrl = self::DEFAULT_MANUFACTURER_URL) {
+	public function ManufacturerURL ($url = self::DEFAULT_MANUFACTURER_URL) {
 		if (func_num_args() != 0)
-			$this->_manufacturerUrl = $manufacturerUrl;
+			$this->_manufacturerURL = $url;
 
-		return $this->_manufacturerUrl;
+		return $this->_manufacturerURL;
 	}
 
 	/**
@@ -388,6 +392,13 @@ class UPnPRootDescription {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function ServerName () {
+		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName;
+	}
+
+	/**
 	 * @return QuarkXMLNode
 	 */
 	public function ToXML () {
@@ -415,7 +426,7 @@ class UPnPRootDescription {
 		$device[] = new QuarkXMLNode('friendlyName', $this->_friendlyName);
 		$device[] = new QuarkXMLNode('deviceType', $this->_deviceType);
 		$device[] = new QuarkXMLNode('manufacturer', $this->_manufacturer);
-		$device[] = new QuarkXMLNode('manufacturerUrl', $this->_manufacturerUrl);
+		$device[] = new QuarkXMLNode('manufacturerURL', $this->_manufacturerURL);
 		$device[] = new QuarkXMLNode('modelName', $this->_modelName);
 		$device[] = new QuarkXMLNode('modelDescription', $this->_modelDescription);
 		$device[] = new QuarkXMLNode('modelNumber', $this->_modelNumber);
@@ -439,5 +450,19 @@ class UPnPRootDescription {
 			$xml['URLBase'] = $this->_urlBase;
 
 		return QuarkXMLNode::Root('root', $attributes, $xml);
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function ToResponseDTO () {
+		$response = QuarkDTO::ForResponse(new QuarkXMLIOProcessor());
+		$response->Header('CONTENT-LANGUAGE', 'en-gb');
+		$response->Header('DATE', QuarkDate::GMTNow()->Format(QuarkDate::FORMAT_HTTP_DATE) . ' GMT');
+		$response->Header('Server', $this->ServerName());
+
+		$response->Data($this->ToXML());
+
+		return $response;
 	}
 }

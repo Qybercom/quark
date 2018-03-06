@@ -120,7 +120,7 @@ class DLNAServiceContentDirectory implements IQuarkUPnPProviderService {
 		);
 
 		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('Search')
-			->ArgumentIn('ObjectID',		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_OBJECT_ID))
+			->ArgumentIn('ContainerID',		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_OBJECT_ID))
 			->ArgumentIn('SearchCriteria',	$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_SEARCH_CRITERIA))
 			->ArgumentIn('Filter',			$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_FILTER))
 			->ArgumentIn('StartingIndex',	$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_INDEX))
@@ -132,7 +132,7 @@ class DLNAServiceContentDirectory implements IQuarkUPnPProviderService {
 			->ArgumentOut('UpdateID',		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_UPDATE_ID))
 		);
 
-		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('X_SetBookMark')
+		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('X_SetBookmark')
 			->ArgumentIn('CategoryType',	$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_CATEGORY_TYPE))
 			->ArgumentIn('RID',				$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_RID))
 			->ArgumentIn('ObjectID',		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_OBJECT_ID))

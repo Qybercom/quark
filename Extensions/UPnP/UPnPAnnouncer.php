@@ -155,12 +155,13 @@ class UPnPAnnouncer {
 				$this->TriggerArgs(self::EVENT_M_SEARCH, array(&$client, &$request));
 
 				$services = $this->_rootDescription->Services();
+				$address = $client->URI()->host . ':' . $client->URI()->port;
 
-				$this->_notifyReply($this->ReplyServiceDTO(UPnPRootDescription::ROOT_DEVICE));
-				$this->_notifyReply($this->ReplyServiceDTO($this->_rootDescription->DeviceType()));
+				$this->_notifyReply($this->ReplyServiceDTO(UPnPRootDescription::ROOT_DEVICE), $address);
+				$this->_notifyReply($this->ReplyServiceDTO($this->_rootDescription->DeviceType()), $address);
 
 				foreach ($services as $i => &$service)
-					$this->_notifyReply($this->ReplyServiceDTO($service->ID()));
+					$this->_notifyReply($this->ReplyServiceDTO($service->ID()), $address);
 			}
 
 			if ($request->Method() == self::METHOD_NOTIFY)
@@ -198,15 +199,6 @@ class UPnPAnnouncer {
 	}
 
 	/**
-	 * @param string $name = ''
-	 *
-	 * @return string
-	 */
-	public static function NameOf ($name = '') {
-		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $name;
-	}
-
-	/**
 	 * @param QuarkDTO $dto
 	 *
 	 * @return QuarkDTO
@@ -214,7 +206,7 @@ class UPnPAnnouncer {
 	private function _commonHeaders (QuarkDTO $dto) {
 		$dto->Header('CACHE-CONTROL', 'max-age = ' . $this->_notifyingMaxAge);
 		$dto->Header('LOCATION', $this->_rootDescription->Location());
-		$dto->Header('SERVER', self::NameOf($this->_rootDescription->ModelName()));
+		$dto->Header('SERVER', $this->_rootDescription->ServerName());
 
 		return $dto;
 	}
@@ -303,11 +295,12 @@ class UPnPAnnouncer {
 
 	/**
 	 * @param QuarkDTO $reply = null
+	 * @param string $address = ''
 	 *
 	 * @return bool|int
 	 */
-	private function _notifyReply (QuarkDTO $reply = null) {
-		return $reply == null ? false : $this->_unicast->SendTo($reply->SerializeResponse());
+	private function _notifyReply (QuarkDTO $reply = null, $address = '') {
+		return $reply == null ? false : $this->_unicast->SendTo($reply->SerializeResponse(), 0, $address);
 	}
 
 	/**

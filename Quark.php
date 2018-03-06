@@ -2375,16 +2375,17 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		if (isset($_POST[$service->Input()->Processor()->MimeType()]))
 			$service->Input()->Merge($service->Input()->Processor()->Decode($_POST[$service->Input()->Processor()->MimeType()]));
 
-		ob_start();
+		if ($service->Service() instanceof IQuarkUnbufferedService)
+			ob_implicit_flush(1);
 
-		echo QuarkHTTPServer::ServicePipeline($service, $input);
+		$service->On(QuarkService::EVENT_OUTPUT_HEADERS, function () use (&$service) {
+			$headers = $service->Output()->SerializeResponseHeadersToArray();
 
-		$headers = $service->Output()->SerializeResponseHeadersToArray();
+			foreach ($headers as $header)
+				header($header);
+		});
 
-		foreach ($headers as $header)
-			header($header);
-
-		ob_end_flush();
+		echo $service->Pipeline();
 
 		return true;
 	}
@@ -3204,6 +3205,18 @@ interface IQuarkSignedPostService extends IQuarkSignedService {
 	 * @return mixed
 	 */
 	public function SignatureCheckFailedOnPost(QuarkDTO $request);
+}
+
+/**
+ * Interface IQuarkUnbufferedService
+ *
+ * @package Quark
+ */
+interface IQuarkUnbufferedService extends IQuarkService {
+	/**
+	 * @return int
+	 */
+	public function OutputContentLength();
 }
 
 /**
@@ -4451,8 +4464,13 @@ class QuarkService implements IQuarkContainer {
 	const POSTFIX_SERVICE = 'Service';
 	const POSTFIX_PREDEFINED_SCENARIO = '';
 
+	const EVENT_OUTPUT_HEADERS = 'service.event.output.headers';
+	const EVENT_OUTPUT_BODY = 'service.event.output.body';
+
+	use QuarkEvent;
+
 	/**
-	 * @var IQuarkService|IQuarkAuthorizableService|IQuarkServiceWithAccessControl|IQuarkPolymorphicService $_service
+	 * @var IQuarkService|IQuarkAuthorizableService|IQuarkServiceWithAccessControl|IQuarkPolymorphicService|IQuarkUnbufferedService $_service
 	 */
 	private $_service;
 
@@ -4915,6 +4933,60 @@ class QuarkService implements IQuarkContainer {
 			$this->_output->Merge($this->_session->Output(), false, !($output instanceof QuarkDTO));
 
 		return $output;
+	}
+
+	/**
+	 * @param bool $unbuffered = true
+	 *
+	 * @return mixed|string
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function Pipeline ($unbuffered = true) {
+		$method = ucfirst(strtolower($this->_input->Method()));
+
+		if (!($this->_service instanceof IQuarkHTTPService))
+			throw new QuarkArchException('Method ' . $method . ' is not allowed for service ' . get_class($this->_service));
+
+		if (!method_exists($this->_service, $method) && $this->_service instanceof IQuarkAnyService)
+			$method = 'Any';
+
+		if ($unbuffered && $this->_service instanceof IQuarkUnbufferedService) {
+			$this->_output->Header(QuarkDTO::HEADER_CONTENT_LENGTH, $this->_service->OutputContentLength());
+
+			return $this->_pipeline($method, true);
+		}
+		else {
+			ob_start();
+			echo $this->_pipeline($method, false);
+			$out = ob_get_clean();
+
+			$this->_output->Header(QuarkDTO::HEADER_CONTENT_LENGTH, strlen($out));
+
+			$this->Trigger(self::EVENT_OUTPUT_HEADERS);
+
+			return $out;
+		}
+	}
+
+	/**
+	 * @param string $method = ''
+	 * @param bool $unbuffered = true
+	 *
+	 * @return mixed
+	 *
+	 * @throws QuarkArchException
+	 */
+	private function _pipeline ($method = '', $unbuffered = true) {
+		$auth = $this->Authorize(true);
+
+		if ($unbuffered)
+			$this->Trigger(self::EVENT_OUTPUT_HEADERS);
+
+		if ($auth)
+			$this->Invoke($method, array($this->_input), true);
+
+		return $this->_output->SerializeResponseBody();
 	}
 
 	/**
@@ -18934,7 +19006,7 @@ class QuarkDTO {
 			? $typeValue
 			: ($this->_multipart
 				? ($client ? self::MULTIPART_FORM_DATA : self::MULTIPART_MIXED) . '; boundary=' . $this->_boundary
-				: $this->_processor->MimeType() //. '; charset=' . $this->_charset
+				: $this->_processor->MimeType() . '; charset=' . $this->_charset
 			);
 
 		if ($client) {
@@ -19576,36 +19648,6 @@ class QuarkHTTPServer {
 
 		return $this->_request;
 	}
-
-	/**
-	 * @param QuarkService $service
-	 * @param array $input
-	 *
-	 * @return string
-	 * @throws QuarkArchException
-	 */
-	public static function ServicePipeline (QuarkService &$service, &$input = []) {
-		$method = ucfirst(strtolower($service->Input()->Method()));
-
-		if (!($service->Service() instanceof IQuarkHTTPService))
-			throw new QuarkArchException('Method ' . $method . ' is not allowed for service ' . get_class($service->Service()));
-
-		if (!method_exists($service->Service(), $method) && $service->Service() instanceof IQuarkAnyService)
-			$method = 'Any';
-
-		ob_start();
-
-		if ($service->Authorize(true))
-			$service->Invoke($method, $input !== null ? array($service->Input()) : array(), true);
-		
-		echo $service->Output()->SerializeResponseBody();
-		$length = ob_get_length();
-
-		if ($length !== false)
-			$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, $length);
-
-		return ob_get_clean();
-	}
 }
 
 /**
@@ -19743,7 +19785,9 @@ class QuarkHTTPServerHost implements IQuarkEventable {
 						$service->InitProcessors();
 						$service->Input()->UnserializeRequest($request->Raw());
 
-						$body = QuarkHTTPServer::ServicePipeline($service);
+						$body = $service->Pipeline(false);
+
+						$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, strlen($body));
 
 						if ($service->Output()->Header(QuarkDTO::HEADER_LOCATION)) {
 							$response = QuarkDTO::ForRedirect($service->Output()->Header(QuarkDTO::HEADER_LOCATION));
@@ -20433,6 +20477,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	const MODE_USER = 0711;
 	const MODE_DEFAULT = self::MODE_ANYONE;
 
+	const SEEK_FULL = -1;
+
 	/**
 	 * @var string $location = ''
 	 */
@@ -20502,7 +20548,17 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @var int $_permissions = self::MODE_DEFAULT
 	 */
 	protected $_permissions = self::MODE_DEFAULT;
+
+	/**
+	 * @var int $_seekStart = 0
+	 */
+	protected $_seekStart = 0;
 	
+	/**
+	 * @var int $_seekLength = self::SEEK_FULL
+	 */
+	protected $_seekLength = self::SEEK_FULL;
+
 	/**
 	 * @param bool $warn = true
 	 * 
@@ -20632,9 +20688,13 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if (!$this->Exists())
 			throw new QuarkArchException('Invalid file path "' . $this->location . '"');
 
-		// TODO: refactor
-		if (!Quark::MemoryAvailable()) Quark::Log('[QuarkFile::Load] Insufficient memory available for loading file "' . $this->location . '". Current memory limit in QuarkConfig::Alloc(): ' . Quark::Config()->Alloc() . 'MB.');
-		else $this->Content(file_get_contents($this->location), true, true);
+		$this->Content(
+			$this->_seekLength == self::SEEK_FULL
+				? file_get_contents($this->location, false, null, $this->_seekStart)
+				: file_get_contents($this->location, false, null, $this->_seekStart, $this->_seekLength),
+			true,
+			true
+		);
 
 		return $this;
 	}
@@ -20675,6 +20735,28 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			Quark::Log('[QuarkFile::_followParent] Can not create dir "' . $this->parent . '". Error: ' . QuarkException::LastError());
 
 		return $ok;
+	}
+
+	/**
+	 * @param int $start = 0
+	 * @param int $length = self::SEEK_FULL
+	 *
+	 * @return QuarkFile
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function Seek ($start = 0, $length = self::SEEK_FULL) {
+		$this->_seekStart = $start;
+		$this->_seekLength = $length;
+
+		return $this->Load();
+	}
+
+	/**
+	 * @return int
+	 */
+	public function SizeOnDisk () {
+		return filesize($this->location);
 	}
 
 	/**
@@ -22252,6 +22334,16 @@ class QuarkXMLNode {
 		$out->IsRoot(true);
 
 		return $out;
+	}
+
+	/**
+	 * @param string $name = ''
+	 * @param array|object $attributes = []
+	 *
+	 * @return QuarkXMLNode
+	 */
+	public static function SingleNode ($name = '', $attributes = []) {
+		return new self($name, null, $attributes, true);
 	}
 
 	/**

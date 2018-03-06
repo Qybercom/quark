@@ -1,29 +1,19 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 
-use Quark\QuarkObject;
-use Quark\QuarkXMLNode;
-
 use Quark\Extensions\UPnP\Providers\DLNA\Elements\DLNAElementItem;
 use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
 use Quark\Extensions\UPnP\UPnPProperty;
+use Quark\QuarkObject;
+use Quark\QuarkXMLNode;
 
 /**
- * Class DLNAElementResourceAudio
+ * Class DLNAElementResourceVideo
  *
  * @package Quark\Extensions\UPnP\Providers\DLNA\ElementResources
  */
-class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
-	const PROFILE_MPEG = 'http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
-
-	const BITRATE = 24000;
-	const SAMPLE_FREQUENCY = 44100;
-
-	const CHANNELS_1_0 = 1.0;
-	const CHANNELS_2_0 = 2.0;
-	const CHANNELS_2_1 = 2.1;
-	const CHANNELS_5_1 = 5.1;
-	const CHANNELS_7_1 = 7.1;
+class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
+	const PROFILE_MKV = 'http-get:*:video/x-matroska:DLNA.ORG_PN=MATROSKA;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
 
 	/**
 	 * @var string $_url = ''
@@ -41,24 +31,24 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 	private $_size = 0;
 
 	/**
+	 * @var int $_width = 0
+	 */
+	private $_width = 0;
+
+	/**
+	 * @var int $_height = 0
+	 */
+	private $_height = 0;
+
+	/**
 	 * @var string $_duration = ''
 	 */
 	private $_duration = '';
 
 	/**
-	 * @var float|int $_channels = self::CHANNELS_2_0
+	 * @var int $_bitRate = 0
 	 */
-	private $_channels = self::CHANNELS_2_0;
-
-	/**
-	 * @var int $_bitRate = self::BITRATE
-	 */
-	private $_bitRate = self::BITRATE;
-
-	/**
-	 * @var int $_sampleFrequency = self::SAMPLE_FREQUENCY
-	 */
-	private $_sampleFrequency = self::SAMPLE_FREQUENCY;
+	private $_bitRate = 0;
 
 	/**
 	 * @var string $_protocolInfo = ''
@@ -69,20 +59,20 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 	 * @param string $url = ''
 	 * @param string $type = ''
 	 * @param int $size = 0
+	 * @param int $width = 0
+	 * @param int $height = 0
 	 * @param string $duration = ''
-	 * @param float|int $channels = self::CHANNELS_2_0
-	 * @param int $bitRate = self::BITRATE
-	 * @param int $sampleFrequency = self::SAMPLE_FREQUENCY
+	 * @param int $bitRate = 0
 	 * @param string $info = ''
 	 */
-	public function __construct ($url = '', $type = '', $size = 0, $duration = '', $channels = self::CHANNELS_2_0, $bitRate = self::BITRATE, $sampleFrequency = self::SAMPLE_FREQUENCY, $info = '') {
+	public function __construct ($url = '', $type = '', $size = 0, $width = 0, $height = 0, $duration = '', $bitRate = 0, $info = '') {
 		$this->URL($url);
 		$this->Type($type);
 		$this->Size($size);
+		$this->Width($width);
+		$this->Height($height);
 		$this->Duration($duration);
-		$this->Channels($channels);
 		$this->BitRate($bitRate);
-		$this->SampleFrequency($sampleFrequency);
 
 		if ($info == '')
 			$this->ProtocolInfo(QuarkObject::ClassConstValue($this, 'PROFILE_' . strtoupper(array_reverse(explode('/', $type))[0])));
@@ -125,15 +115,27 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 	}
 
 	/**
-	 * @param string $info = ''
+	 * @param int $width = 0
 	 *
-	 * @return string
+	 * @return int
 	 */
-	public function ProtocolInfo ($info = '') {
+	public function Width ($width = 0) {
 		if (func_num_args() != 0)
-			$this->_protocolInfo = $info;
+			$this->_width = $width;
 
-		return $this->_protocolInfo;
+		return $this->_width;
+	}
+
+	/**
+	 * @param int $height = 0
+	 *
+	 * @return int
+	 */
+	public function Height ($height = 0) {
+		if (func_num_args() != 0)
+			$this->_height = $height;
+
+		return $this->_height;
 	}
 
 	/**
@@ -149,23 +151,11 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 	}
 
 	/**
-	 * @param float|int $channels = self::CHANNELS_2_0
-	 *
-	 * @return float|int
-	 */
-	public function Channels ($channels = self::CHANNELS_2_0) {
-		if (func_num_args() != 0)
-			$this->_channels = $channels;
-
-		return $this->_channels;
-	}
-
-	/**
-	 * @param int $bitRate = self::BITRATE
+	 * @param int $bitRate = 0
 	 *
 	 * @return int
 	 */
-	public function BitRate ($bitRate = self::BITRATE) {
+	public function BitRate ($bitRate = 0) {
 		if (func_num_args() != 0)
 			$this->_bitRate = $bitRate;
 
@@ -173,15 +163,15 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 	}
 
 	/**
-	 * @param int $sampleFrequency = self::SAMPLE_FREQUENCY
+	 * @param string $info = ''
 	 *
-	 * @return int
+	 * @return string
 	 */
-	public function SampleFrequency ($sampleFrequency = self::SAMPLE_FREQUENCY) {
+	public function ProtocolInfo ($info = '') {
 		if (func_num_args() != 0)
-			$this->_sampleFrequency = $sampleFrequency;
+			$this->_protocolInfo = $info;
 
-		return $this->_sampleFrequency;
+		return $this->_protocolInfo;
 	}
 
 	/**
@@ -191,9 +181,8 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 		return new QuarkXMLNode(DLNAElementItem::RESOURCE, $this->_url, array(
 			'bitrate' => $this->_bitRate,
 			'duration' => $this->_duration,
-			'nrAudioChannels' => $this->_channels,
 			'protocolInfo' => $this->_protocolInfo,
-			'sampleFrequency' => $this->_sampleFrequency,
+			'resolution' => $this->_width . 'x' . $this->_height,
 			'size' => $this->_size
 		));
 	}

@@ -1,6 +1,9 @@
 <?php
 namespace Quark\Extensions\UPnP;
 
+use Quark\QuarkDate;
+use Quark\QuarkDTO;
+use Quark\QuarkXMLIOProcessor;
 use Quark\QuarkXMLNode;
 
 /**
@@ -28,6 +31,11 @@ class UPnPServiceControlProtocol {
 	 * @var UPnPServiceControlProtocolAction[] $_actions = []
 	 */
 	private $_actions = array();
+
+	/**
+	 * @var string $_serverName = ''
+	 */
+	private $_serverName = '';
 
 	/**
 	 * @param int $version = self::VERSION_MAJOR
@@ -73,6 +81,18 @@ class UPnPServiceControlProtocol {
 	}
 
 	/**
+	 * @param string $name = ''
+	 *
+	 * @return string
+	 */
+	public function ServerName ($name = '') {
+		if (func_num_args() != 0)
+			$this->_serverName = $name;
+
+		return $this->_serverName;
+	}
+
+	/**
 	 * @return QuarkXMLNode
 	 */
 	public function ToXML () {
@@ -106,5 +126,19 @@ class UPnPServiceControlProtocol {
 				'serviceStateTable' => $variables
 			)
 		);
+	}
+
+	/**
+	 * @return QuarkDTO
+	 */
+	public function ToResponseDTO () {
+		$response = QuarkDTO::ForResponse(new QuarkXMLIOProcessor());
+		$response->Header('CONTENT-LANGUAGE', 'en-gb');
+		$response->Header('DATE', QuarkDate::GMTNow()->Format(QuarkDate::FORMAT_HTTP_DATE) . ' GMT');
+		$response->Header('Server', $this->_serverName);
+
+		$response->Data($this->ToXML());
+
+		return $response;
 	}
 }
