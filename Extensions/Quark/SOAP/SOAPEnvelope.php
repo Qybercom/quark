@@ -142,7 +142,7 @@ class SOAPEnvelope {
 		if ($request == null) return null;
 
 		$data = $request->Data();
-		$found = '';
+		$found = $key;
 
 		foreach ($data as $k => &$v) {
 			$kName = explode(':', $k);
@@ -153,12 +153,13 @@ class SOAPEnvelope {
 			}
 		}
 
-		$root = (func_num_args() == 2 ? $key : $found) . ':Envelope';
+		$root = $found . ':Envelope';
 
 		/**
 		 * @var QuarkXMLNode $envelope
 		 */
 		$envelope = $request->$root;
+
 		if (!$envelope || !($envelope instanceof QuarkXMLNode)) return null;
 
 		$out = new self($key);

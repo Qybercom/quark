@@ -266,7 +266,7 @@ class UPnPConfig implements IQuarkExtensionConfig {
 			$services = $provider->UPnPProviderServices();
 
 			foreach ($services as $j => &$service) {
-				if ($service->UPnPServiceName() == $name) continue;
+				if ($service->UPnPServiceName() != $name) continue;
 
 				$protocol = $service->UPnPServiceControlProtocol();
 				$protocol->ServerName($this->_rootDescription->ServerName());

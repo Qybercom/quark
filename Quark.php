@@ -15307,6 +15307,7 @@ class QuarkServer implements IQuarkEventable {
 				foreach ($this->_read as $key => &$socket) {
 					$client = QuarkClient::ForServer($this->_transport, $socket, $this->URI()->Socket());
 					$data = $client->ReceiveFrom(QuarkClient::MTU, 0, $address);
+					var_dump($address);
 
 					if ($data) {
 						$client->URI()->Endpoint($address);

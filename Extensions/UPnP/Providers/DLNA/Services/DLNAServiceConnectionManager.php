@@ -92,6 +92,11 @@ class DLNAServiceConnectionManager implements IQuarkUPnPProviderService {
 		$protocol = new UPnPServiceControlProtocol();
 
 		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('GetProtocolInfo')
+			->ArgumentOut('Source',					$this->UPnPServiceVariable(self::VAR_SINK_PROTOCOL_INFO))
+			->ArgumentOut('Sink',					$this->UPnPServiceVariable(self::VAR_SINK_PROTOCOL_INFO))
+		);
+
+		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('GetCurrentConnectionInfo')
 			->ArgumentIn('ConnectionID',			$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_CONNECTION_ID))
 			->ArgumentOut('RcsID',					$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_RCS_ID))
 			->ArgumentOut('AVTransportID',			$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_AV_TRANSPORT_ID))
@@ -100,11 +105,6 @@ class DLNAServiceConnectionManager implements IQuarkUPnPProviderService {
 			->ArgumentOut('PeerConnectionID',		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_CONNECTION_ID))
 			->ArgumentOut('Direction',				$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_DIRECTION))
 			->ArgumentOut('Status',					$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_CONNECTION_STATUS))
-		);
-
-		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('GetCurrentConnectionInfo')
-			->ArgumentOut('Source',					$this->UPnPServiceVariable(self::VAR_SINK_PROTOCOL_INFO))
-			->ArgumentOut('Sink',					$this->UPnPServiceVariable(self::VAR_SINK_PROTOCOL_INFO))
 		);
 
 		$protocol->Action(UPnPServiceControlProtocolAction::WithArguments('GetCurrentConnectionIDs')

@@ -55,7 +55,7 @@ class DLNAServiceContentDirectory implements IQuarkUPnPProviderService {
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_SORT_CRITERIA,		UPnPServiceControlProtocolVariable::DATA_TYPE_STRING);
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_FILTER,				UPnPServiceControlProtocolVariable::DATA_TYPE_STRING);
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_RESULT,				UPnPServiceControlProtocolVariable::DATA_TYPE_STRING);
-		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_INDEX,				UPnPServiceControlProtocolVariable::DATA_TYPE_STRING);
+		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_INDEX,				UPnPServiceControlProtocolVariable::DATA_TYPE_UNSIGNED_INT4);
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_COUNT,				UPnPServiceControlProtocolVariable::DATA_TYPE_UNSIGNED_INT4);
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_CATEGORY_TYPE,		UPnPServiceControlProtocolVariable::DATA_TYPE_UNSIGNED_INT4, '');
 		$this->UPnPServiceVariable(self::VAR_A_ARG_TYPE_RID,				UPnPServiceControlProtocolVariable::DATA_TYPE_UNSIGNED_INT4, '');

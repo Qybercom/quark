@@ -395,7 +395,7 @@ class UPnPRootDescription {
 	 * @return string
 	 */
 	public function ServerName () {
-		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName;
+		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName;// . '/' . $this->_modelNumber;
 	}
 
 	/**

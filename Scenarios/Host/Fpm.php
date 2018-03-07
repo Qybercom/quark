@@ -79,7 +79,7 @@ class Fpm implements IQuarkTask {
 
 		$http->On(QuarkHTTPServerHost::EVENT_HTTP_ERROR, function (QuarkDTO $request, QuarkDTO $response, $e = null) {
 			if (!($request->URI() instanceof QuarkURI)) {
-				Quark::Log('[SelfHostedFPM] Can not parse query', Quark::LOG_FATAL);
+				Quark::Log('[SelfHostedFPM] Can not parse query: ' . print_r($request, true), Quark::LOG_FATAL);
 				return;
 			}
 
@@ -102,6 +102,11 @@ class Fpm implements IQuarkTask {
 
 		if (Quark::Config()->SelfHostedFPMLog())
 			$http->On(QuarkHTTPServerHost::EVENT_RESPONSE, function (QuarkDTO $request, QuarkDTO $response) {
+				if (!($request->URI() instanceof QuarkURI)) {
+					Quark::Log('[SelfHostedFPM] Can not parse query: ' . print_r($request, true), Quark::LOG_FATAL);
+					return;
+				}
+
 				echo '[', QuarkDate::Now(), '] ', $request->Method(), ' ', $request->URI()->Query(), ' "', $response->Status(), '" (', $response->Header(QuarkDTO::HEADER_CONTENT_LENGTH), " bytes)\r\n";
 			});
 

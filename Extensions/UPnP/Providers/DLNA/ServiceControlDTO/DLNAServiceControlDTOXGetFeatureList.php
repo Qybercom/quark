@@ -23,7 +23,7 @@ class DLNAServiceControlDTOXGetFeatureList implements IQuarkUPnPProviderServiceC
 	const XSI_SCHEMA_LOCATION = ' urn:schemas-upnp-org:av:avs http://www.upnp.org/schemas/av/avs.xsd';
 
 	const FEATURE_SAMSUNG_BASIC_VIEW_ID = 'samsung.com_BASICVIEW';
-	const FEATURE_SAMSUNG_BASIC_VIEW_VERSION = 'samsung.com_BASICVIEW';
+	const FEATURE_SAMSUNG_BASIC_VIEW_VERSION = '1';
 
 	/**
 	 * @var QuarkXMLNode[] $_features = []
