@@ -8784,6 +8784,11 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	private $_pages = 0;
 
 	/**
+	 * @var int $_countAll = 0
+	 */
+	private $_countAll = 0;
+
+	/**
 	 * @param IQuarkModel|QuarkModelBehavior|mixed $type
 	 * @param array $source = []
 	 */
@@ -8826,6 +8831,17 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 		$this->_collection[] = !$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item);
 
 		return true;
+	}
+
+	/**
+	 * @param array|object $source = []
+	 *
+	 * @return QuarkCollection
+	 */
+	public function AddBySource ($source = []) {
+		$this->_collection[] = new QuarkModel($this->_type, $source);
+
+		return $this;
 	}
 
 	/**
@@ -9036,13 +9052,15 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 		$page = (int)$page;
 		if ($page < 1) $page = 1;
 
+		$this->_countAll = $this->Count($query);
+
 		if ($options[QuarkModel::OPTION_LIMIT] != QuarkModel::LIMIT_NO) {
 			$options[QuarkModel::OPTION_LIMIT] = (int)$options[QuarkModel::OPTION_LIMIT];
 
 			if ($options[QuarkModel::OPTION_LIMIT] < 1)
 				$options[QuarkModel::OPTION_LIMIT] = 1;
 
-			$pages = (int)ceil($this->Count($query) / $options[QuarkModel::OPTION_LIMIT]);
+			$pages = (int)ceil($this->_countAll / $options[QuarkModel::OPTION_LIMIT]);
 		}
 
 		if (!isset($options[QuarkModel::OPTION_SKIP]))
@@ -9054,6 +9072,18 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 		$out->Pages($pages);
 
 		return $out;
+	}
+
+	/**
+	 * @param int $count = 0
+	 *
+	 * @return int
+	 */
+	public function CountAll ($count = 0) {
+		if (func_num_args() != 0)
+			$this->_countAll = $count;
+
+		return $this->_countAll;
 	}
 
 	/**
@@ -10568,6 +10598,8 @@ class QuarkModel implements IQuarkContainer {
 		$pages = 1;
 		$page = (int)$page;
 		if ($page < 1) $page = 1;
+
+		$count = self::Count($model, $criteria);
 		
 		if ($options[self::OPTION_LIMIT] != self::LIMIT_NO) {
 			$options[self::OPTION_LIMIT] = (int)$options[self::OPTION_LIMIT];
@@ -10575,7 +10607,7 @@ class QuarkModel implements IQuarkContainer {
 			if ($options[self::OPTION_LIMIT] < 1)
 				$options[self::OPTION_LIMIT] = 1;
 		
-			$pages = (int)ceil(self::Count($model, $criteria) / $options[self::OPTION_LIMIT]);
+			$pages = (int)ceil($count / $options[self::OPTION_LIMIT]);
 		}
 		
 		if (!isset($options[self::OPTION_SKIP]))
@@ -10585,6 +10617,7 @@ class QuarkModel implements IQuarkContainer {
 		
 		$out->Page($page);
 		$out->Pages($pages);
+		$out->CountAll($count);
 		
 		return $out;
 	}
@@ -19787,8 +19820,6 @@ class QuarkHTTPServerHost implements IQuarkEventable {
 						$service->Input()->UnserializeRequest($request->Raw());
 
 						$body = $service->Pipeline(false);
-
-						$service->Output()->Header(QuarkDTO::HEADER_CONTENT_LENGTH, strlen($body));
 
 						if ($service->Output()->Header(QuarkDTO::HEADER_LOCATION)) {
 							$response = QuarkDTO::ForRedirect($service->Output()->Header(QuarkDTO::HEADER_LOCATION));

@@ -1,11 +1,13 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 
-use Quark\Extensions\UPnP\Providers\DLNA\Elements\DLNAElementItem;
-use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
-use Quark\Extensions\UPnP\UPnPProperty;
+use Quark\QuarkCollection;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
-use Quark\QuarkXMLNode;
+
+use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElementProperty;
 
 /**
  * Class DLNAElementResourceVideo
@@ -73,9 +75,6 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 		$this->Height($height);
 		$this->Duration($duration);
 		$this->BitRate($bitRate);
-
-		if ($info == '')
-			$this->ProtocolInfo(QuarkObject::ClassConstValue($this, 'PROFILE_' . strtoupper(array_reverse(explode('/', $type))[0])));
 	}
 
 	/**
@@ -175,27 +174,45 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 	}
 
 	/**
-	 * @return QuarkXMLNode
+	 * @return string
 	 */
-	public function DLNAElementResource () {
-		return new QuarkXMLNode(DLNAElementItem::RESOURCE, $this->_url, array(
-			'bitrate' => $this->_bitRate,
-			'duration' => $this->_duration,
-			'protocolInfo' => $this->_protocolInfo,
-			'resolution' => $this->_width . 'x' . $this->_height,
-			'size' => $this->_size
-		));
+	public function DLNAElementResourceURL () {
+		return $this->_url;
 	}
 
 	/**
-	 * @return UPnPProperty[]
+	 * @return QuarkKeyValuePair[]
 	 */
-	public function DLNAElementResourceUPnPProperties () {
+	public function DLNAElementResourceAttributes () {
+		if ($this->_protocolInfo == '')
+			$this->ProtocolInfo(QuarkObject::ClassConstValue($this, 'PROFILE_' . strtoupper(array_reverse(explode('/', $this->_type))[0])));
+
 		return array(
-			new UPnPProperty(
-				DLNAElementItem::PROPERTY_UPnP_CLASS,
-				DLNAElementItem::UPnP_CLASS_AUDIO
-			)
+			new QuarkKeyValuePair('bitrate', $this->_bitRate),
+			new QuarkKeyValuePair('duration', $this->_duration),
+			new QuarkKeyValuePair('protocolInfo', $this->_protocolInfo),
+			new QuarkKeyValuePair('resolution', $this->_width . 'x' . $this->_height),
+			new QuarkKeyValuePair('size', $this->_size)
 		);
+	}
+
+	/**
+	 * @return QuarkCollection|DLNAElementProperty[]
+	 */
+	public function DLNAElementResourceItemProperties () {
+		$out = new QuarkCollection(new DLNAElementProperty());
+
+		$out->AddBySource(array(
+			'name' => DLNAElement::PROPERTY_UPnP_CLASS,
+			'value' => DLNAElement::UPnP_CLASS_ITEM_VIDEO
+		));
+
+		$out->AddBySource(array(
+			'name' => DLNAElement::PROPERTY_RESOURCE,
+			'value' => $this->DLNAElementResourceURL(),
+			'attributes' => $this->DLNAElementResourceAttributes()
+		));
+
+		return $out;
 	}
 }

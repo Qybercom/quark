@@ -9,7 +9,7 @@ use Quark\Extensions\Quark\SOAP\SOAPElement;
 use Quark\Extensions\Quark\SOAP\SOAPEnvelope;
 
 use Quark\Extensions\UPnP\IQuarkUPnPProviderServiceControlDTO;
-use Quark\Extensions\UPnP\Providers\DLNA\Elements\DLNAElementItem;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
 use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceContentDirectory;
 
 /**
@@ -102,18 +102,19 @@ class DLNAServiceControlDTOXGetFeatureList implements IQuarkUPnPProviderServiceC
 	 */
 	public static function WithSamsungBasicView ($rootImages = '', $rootAudio = '', $rootVideo = '') {
 		$out = new self();
+
 		$out->Feature(self::FEATURE_SAMSUNG_BASIC_VIEW_ID, self::FEATURE_SAMSUNG_BASIC_VIEW_VERSION, array(
 			QuarkXMLNode::SingleNode('container', array(
 				'id' => $rootImages,
-				'type' => DLNAElementItem::UPnP_CLASS_IMAGE
+				'type' => DLNAElement::UPnP_CLASS_ITEM_IMAGE
 			)),
 			QuarkXMLNode::SingleNode('container', array(
 				'id' => $rootAudio,
-				'type' => DLNAElementItem::UPnP_CLASS_AUDIO
+				'type' => DLNAElement::UPnP_CLASS_ITEM_AUDIO
 			)),
 			QuarkXMLNode::SingleNode('container', array(
 				'id' => $rootVideo,
-				'type' => DLNAElementItem::UPnP_CLASS_VIDEO
+				'type' => DLNAElement::UPnP_CLASS_ITEM_VIDEO
 			))
 		));
 

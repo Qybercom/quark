@@ -97,6 +97,7 @@ class DLNA implements IQuarkUPnPProvider {
 	 */
 	public static function Predefined () {
 		$out = new self();
+
 		$out->Services(array(
 			new DLNAServiceConnectionManager(),
 			new DLNAServiceContentDirectory(),

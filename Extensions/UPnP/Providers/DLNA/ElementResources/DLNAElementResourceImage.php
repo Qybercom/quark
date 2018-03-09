@@ -1,12 +1,13 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 
+use Quark\QuarkCollection;
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
-use Quark\QuarkXMLNode;
 
-use Quark\Extensions\UPnP\UPnPProperty;
 use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
-use Quark\Extensions\UPnP\Providers\DLNA\Elements\DLNAElementItem;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElementProperty;
 
 /**
  * Class DLNAElementResourceImage
@@ -160,26 +161,41 @@ class DLNAElementResourceImage implements IQuarkDLNAElementResource {
 	}
 
 	/**
-	 * @return QuarkXMLNode
+	 * @return string
 	 */
-	public function DLNAElementResource () {
-		return new QuarkXMLNode(DLNAElementItem::RESOURCE, $this->_url, array(
-			'protocolInfo' => $this->_protocolInfo,
-			'size' => $this->_size,
-			'resolution' => $this->_width . 'x' . $this->_height,
-			'colorDepth' => $this->_colorDepth
-		));
+	public function DLNAElementResourceURL () {
+		return $this->_url;
 	}
 
 	/**
-	 * @return UPnPProperty[]
+	 * @return QuarkKeyValuePair[]
 	 */
-	public function DLNAElementResourceUPnPProperties () {
+	public function DLNAElementResourceAttributes () {
 		return array(
-			new UPnPProperty(
-				DLNAElementItem::PROPERTY_UPnP_CLASS,
-				DLNAElementItem::UPnP_CLASS_IMAGE
-			)
+			new QuarkKeyValuePair('protocolInfo', $this->_protocolInfo),
+			new QuarkKeyValuePair('size', $this->_size),
+			new QuarkKeyValuePair('resolution', $this->_width . 'x' . $this->_height),
+			new QuarkKeyValuePair('colorDepth', $this->_colorDepth)
 		);
+	}
+
+	/**
+	 * @return QuarkCollection|DLNAElementProperty[]
+	 */
+	public function DLNAElementResourceItemProperties () {
+		$out = new QuarkCollection(new DLNAElementProperty());
+
+		$out->AddBySource(array(
+			'name' => DLNAElement::PROPERTY_UPnP_CLASS,
+			'value' => DLNAElement::UPnP_CLASS_ITEM_IMAGE
+		));
+
+		$out->AddBySource(array(
+			'name' => DLNAElement::PROPERTY_RESOURCE,
+			'value' => $this->DLNAElementResourceURL(),
+			'attributes' => $this->DLNAElementResourceAttributes()
+		));
+
+		return $out;
 	}
 }

@@ -1,14 +1,17 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA\ServiceControlDTO;
 
+use Quark\QuarkCollection;
 use Quark\QuarkDTO;
+use Quark\QuarkModel;
+use Quark\QuarkXMLIOProcessor;
 use Quark\QuarkXMLNode;
 
 use Quark\Extensions\Quark\SOAP\SOAPEnvelope;
 use Quark\Extensions\Quark\SOAP\SOAPElement;
 
 use Quark\Extensions\UPnP\IQuarkUPnPProviderServiceControlDTO;
-use Quark\Extensions\UPnP\Providers\DLNA\DLNAItem;
+use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
 use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceContentDirectory;
 
 /**
@@ -17,14 +20,12 @@ use Quark\Extensions\UPnP\Providers\DLNA\Services\DLNAServiceContentDirectory;
  * @package Quark\Extensions\UPnP\Providers\DLNA\ServiceControlDTO
  */
 class DLNAServiceControlDTOBrowse implements IQuarkUPnPProviderServiceControlDTO {
-	const ROOT = '0';
-
 	const FILTER_ALL = '*';
 
 	/**
-	 * @var string $_objectID = self::ROOT
+	 * @var string $_objectID = DLNAElement::ELEMENT_CONTAINER_ROOT
 	 */
-	private $_objectID = self::ROOT;
+	private $_objectID = DLNAElement::ELEMENT_CONTAINER_ROOT;
 
 	/**
 	 * @var string $_browseFlag = ''
@@ -52,9 +53,9 @@ class DLNAServiceControlDTOBrowse implements IQuarkUPnPProviderServiceControlDTO
 	private $_requestedCount = 0;
 
 	/**
-	 * @var DLNAItem $_item
+	 * @var QuarkCollection|DLNAElement[] $_elements
 	 */
-	private $_item;
+	private $_elements;
 
 	/**
 	 * @var string $_updateID = null
@@ -62,11 +63,31 @@ class DLNAServiceControlDTOBrowse implements IQuarkUPnPProviderServiceControlDTO
 	private $_updateID = null;
 
 	/**
-	 * @param string $id = self::ROOT
+	 * @var QuarkXMLIOProcessor $_processor
+	 */
+	private $_processor;
+
+	/**
+	 * DLNAServiceControlDTOBrowse constructor.
+	 */
+	public function __construct () {
+		$this->_processor = new QuarkXMLIOProcessor(QuarkXMLNode::Root(
+			'DIDL-Lite',
+			array(
+				'xmlns' => 'urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/',
+				'xmlns:dc' => 'http://purl.org/dc/elements/1.1/',
+				'xmlns:dlna' => 'urn:schemas-dlna-org:metadata-1-0/',
+				'xmlns:upnp' => 'urn:schemas-upnp-org:metadata-1-0/upnp/'
+			)
+		));
+	}
+
+	/**
+	 * @param string $id = DLNAElement::ELEMENT_CONTAINER_ROOT
 	 *
 	 * @return string
 	 */
-	public function ObjectID ($id = self::ROOT) {
+	public function ObjectID ($id = DLNAElement::ELEMENT_CONTAINER_ROOT) {
 		if (func_num_args() != 0)
 			$this->_objectID = $id;
 
@@ -134,15 +155,15 @@ class DLNAServiceControlDTOBrowse implements IQuarkUPnPProviderServiceControlDTO
 	}
 
 	/**
-	 * @param DLNAItem $item = null
+	 * @param QuarkCollection|DLNAElement[] $elements = null
 	 *
-	 * @return DLNAItem
+	 * @return QuarkCollection
 	 */
-	public function Item (DLNAItem $item = null) {
+	public function &Elements (QuarkCollection $elements = null) {
 		if (func_num_args() != 0)
-			$this->_item = $item;
+			$this->_elements = $elements;
 
-		return $this->_item;
+		return $this->_elements;
 	}
 
 	/**
@@ -196,10 +217,16 @@ class DLNAServiceControlDTOBrowse implements IQuarkUPnPProviderServiceControlDTO
 	 * @return SOAPElement[]
 	 */
 	public function UPnPProviderServiceControlResponse () {
+		$elements = array();
+
+		foreach ($this->_elements as $element)
+			if ($element instanceof QuarkModel && $element->Model() instanceof DLNAElement)
+				$elements[] = $element->ToXML();
+
 		$data = array(
-			'Result' => $this->_item->ToXML(true),
-			'NumberReturned' => $this->_item->Count(),
-			'TotalMatches' => $this->_item->Count()
+			'Result' => str_replace('<', '&lt;', str_replace('>', '&gt;', $this->_processor->Encode($elements, false))),
+			'NumberReturned' => sizeof($this->_elements),
+			'TotalMatches' => $this->_elements->CountAll()
 		);
 
 		if ($this->_updateID !== null)

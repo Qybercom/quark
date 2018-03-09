@@ -1,9 +1,8 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA;
 
-use Quark\QuarkXMLNode;
-
-use Quark\Extensions\UPnP\UPnPProperty;
+use Quark\QuarkCollection;
+use Quark\QuarkKeyValuePair;
 
 /**
  * Interface IQuarkDLNAElementResource
@@ -12,12 +11,17 @@ use Quark\Extensions\UPnP\UPnPProperty;
  */
 interface IQuarkDLNAElementResource {
 	/**
-	 * @return QuarkXMLNode
+	 * @return string
 	 */
-	public function DLNAElementResource();
+	public function DLNAElementResourceURL();
 
 	/**
-	 * @return UPnPProperty[]
+	 * @return QuarkKeyValuePair[]
 	 */
-	public function DLNAElementResourceUPnPProperties();
+	public function DLNAElementResourceAttributes();
+
+	/**
+	 * @return QuarkCollection|DLNAElementProperty[]
+	 */
+	public function DLNAElementResourceItemProperties();
 }

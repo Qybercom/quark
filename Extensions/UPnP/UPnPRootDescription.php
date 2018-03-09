@@ -24,9 +24,9 @@ class UPnPRootDescription {
 	const DEFAULT_FRIENDLY_NAME = 'Quark UPnP';
 	const DEFAULT_MANUFACTURER = 'Alex Furnica';
 	const DEFAULT_MANUFACTURER_URL = 'https://github.com/chief93';
-	const DEFAULT_MODEL_NAME = 'QuarkUPnP/1.0';
-	const DEFAULT_MODEL_DESCRIPTION = '';
-	const DEFAULT_MODEL_NUMBER = '1.0.0';
+	const DEFAULT_MODEL_NAME = 'QuarkUPnP';
+	const DEFAULT_MODEL_DESCRIPTION = 'Support API of UPnP/DLNA for Quark';
+	const DEFAULT_MODEL_NUMBER = '1.0';
 	const DEFAULT_MODEL_URL = 'https://github.com/Qybercom/quark';
 	const DEFAULT_SERIAL_NUMBER = '';
 
@@ -395,7 +395,7 @@ class UPnPRootDescription {
 	 * @return string
 	 */
 	public function ServerName () {
-		return /*php_uname('s') . */'Linux, UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName;// . '/' . $this->_modelNumber;
+		return php_uname('s') . ', UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName . '/' . $this->_modelNumber;
 	}
 
 	/**
