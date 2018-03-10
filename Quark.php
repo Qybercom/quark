@@ -21053,6 +21053,19 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param bool $recursive = false
+	 *
+	 * @return QuarkCollection|QuarkFile[]
+	 */
+	public function Children ($recursive = false) {
+		$children = self::Directory($this->location, $recursive);
+
+		$this->isDir = $children !== null;
+
+		return $children;
+	}
+
+	/**
 	 * @return array
 	 */
 	public function Fields () {
@@ -21181,6 +21194,65 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		$source[$key]->PopulateWith(array(
 			$name => $value
 		));
+	}
+
+	/**
+	 * @param string $location = ''
+	 * @param bool $recursive = false
+	 *
+	 * @return QuarkCollection|QuarkFile[]
+	 */
+	public static function Directory ($location = '', $recursive = false) {
+		if (!is_dir($location)) return null;
+
+		/**
+		 * @var QuarkCollection|QuarkFile[] $out
+		 */
+		$out = new QuarkCollection(new self());
+
+		if ($recursive) {
+			$dir = new \RecursiveDirectoryIterator($location);
+			$fs = new \RecursiveIteratorIterator($dir);
+		}
+		else {
+			$dir = new \DirectoryIterator($location);
+			$fs = new \IteratorIterator($dir);
+		}
+
+		foreach ($fs as $file) {
+			/**
+			 * @var \FilesystemIterator $file
+			 */
+
+			$name = $file->getFilename();
+			if ($name == '.' || $name == '..') continue;
+
+			/**
+			 * @var QuarkModel|QuarkFile $item
+			 */
+			$item = new QuarkModel(new self());
+
+			$item->Location($file->getRealPath());
+			$item->isDir = $file->isDir();
+
+			$out[] = $item;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return QuarkFile
+	 */
+	public static function AsDirectory ($location = '') {
+		if (!is_dir($location)) return null;
+
+		$out = new self(rtrim($location, '/'));
+		$out->isDir = true;
+
+		return $out;
 	}
 }
 
@@ -22857,6 +22929,7 @@ class QuarkCertificate extends QuarkFile {
 	 */
 	private static function _error ($message = '', $openssl = true) {
 		Quark::Log('[QuarkCertificate] ' . $message . ($openssl ? '. OpenSSL error: "' . openssl_error_string() . '".' : ''), Quark::LOG_WARN);
+
 		return null;
 	}
 
