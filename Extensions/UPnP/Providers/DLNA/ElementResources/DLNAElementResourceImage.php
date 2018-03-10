@@ -2,12 +2,15 @@
 namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 
 use Quark\QuarkCollection;
+use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 
 use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElementProperty;
+
+use Quark\Extensions\MediaProcessing\GraphicsDraw\GDImage;
 
 /**
  * Class DLNAElementResourceImage
@@ -190,12 +193,31 @@ class DLNAElementResourceImage implements IQuarkDLNAElementResource {
 			'value' => DLNAElement::UPnP_CLASS_ITEM_IMAGE
 		));
 
+		$attributes = array();
+		$resourceAttributes = $this->DLNAElementResourceAttributes();
+
+		foreach ($resourceAttributes as $i => &$attribute)
+			$attributes[$attribute->Key()] = $attribute->Value();
+
 		$out->AddBySource(array(
 			'name' => DLNAElement::PROPERTY_RESOURCE,
 			'value' => $this->DLNAElementResourceURL(),
-			'attributes' => $this->DLNAElementResourceAttributes()
+			'attributes' => $attributes
 		));
 
 		return $out;
+	}
+
+	/**
+	 * @param QuarkFile $file = null
+	 *
+	 * @return DLNAElementResourceImage
+	 */
+	public static function FromFile (QuarkFile $file = null) {
+		if ($file == null) return null;
+
+		$image = GDImage::FromFile($file);
+
+		return new self($image->File()->WebLocation(), $image->File()->type, $image->File()->size, $image->Width(), $image->Height());
 	}
 }

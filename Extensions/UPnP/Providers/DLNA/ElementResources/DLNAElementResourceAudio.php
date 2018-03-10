@@ -217,10 +217,16 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 			'value' => DLNAElement::UPnP_CLASS_ITEM_AUDIO
 		));
 
+		$attributes = array();
+		$resourceAttributes = $this->DLNAElementResourceAttributes();
+
+		foreach ($resourceAttributes as $i => &$attribute)
+			$attributes[$attribute->Key()] = $attribute->Value();
+
 		$out->AddBySource(array(
 			'name' => DLNAElement::PROPERTY_RESOURCE,
 			'value' => $this->DLNAElementResourceURL(),
-			'attributes' => $this->DLNAElementResourceAttributes()
+			'attributes' => $attributes
 		));
 
 		return $out;

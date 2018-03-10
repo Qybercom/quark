@@ -1,8 +1,6 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA;
 
-use Quark\Extensions\MediaProcessing\GraphicsDraw\GDImage;
-use Quark\Extensions\UPnP\Providers\DLNA\ElementResources\DLNAElementResourceImage;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
@@ -11,6 +9,10 @@ use Quark\QuarkFile;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
 use Quark\QuarkXMLNode;
+
+use Quark\Extensions\UPnP\Providers\DLNA\ElementResources\DLNAElementResourceImage;
+
+use Quark\Extensions\MediaProcessing\GraphicsDraw\GDImage;
 
 /**
  * Class DLNAElement
@@ -86,6 +88,15 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 	 * @return QuarkModel|DLNAElement
 	 */
 	public function Title ($title = '') {
+		if (func_num_args() == 0) {
+			/**
+			 * @var QuarkModel|DLNAElementProperty $property
+			 */
+			$property = $this->properties->SelectOne(array('name' => self::PROPERTY_DC_TITLE));
+
+			return $property == null ? null : $property->value;
+		}
+
 		return $this->SingleProperty(self::PROPERTY_DC_TITLE, $title);
 	}
 
@@ -99,6 +110,15 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 	 * @return QuarkModel|DLNAElement
 	 */
 	public function Icon ($icon = '', $type = '', $size = 0, $width = 0, $height = 0) {
+		if (func_num_args() == 0) {
+			/**
+			 * @var QuarkModel|DLNAElementProperty $property
+			 */
+			$property = $this->properties->SelectOne(array('name' => self::PROPERTY_UPnP_ICON));
+
+			return $property == null ? null : $property->value;
+		}
+
 		return $this
 			->SingleProperty(self::PROPERTY_UPnP_ICON, $icon)
 			->SingleProperty(self::PROPERTY_UPnP_ALBUM_ART_URI, $icon, array(
