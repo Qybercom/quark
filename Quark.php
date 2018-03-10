@@ -761,15 +761,6 @@ class Quark {
 	}
 
 	/**
-	 * @return bool
-	 */
-	public static function MemoryAvailable () {
-		$alloc = self::$_config->Alloc();
-
-		return $alloc == 0 || memory_get_usage() <= $alloc * 1024 * 1024;
-	}
-
-	/**
 	 * @param int $unit = self::UNIT_KILOBYTE
 	 * @param int $precision = 2
 	 *
@@ -852,6 +843,7 @@ class QuarkConfig {
 	const INI_ENVIRONMENT = 'Environment:';
 	const INI_EXTENSION = 'Extension:';
 	const INI_CONFIGURATION = 'Configuration:';
+	const INI_PHP = 'PHP';
 
 	const SERVICES = 'services';
 	const VIEWS = 'views';
@@ -863,11 +855,6 @@ class QuarkConfig {
 	 * @var IQuarkCulture $_culture = null
 	 */
 	private $_culture = null;
-
-	/**
-	 * @var int $_alloc = 10 (megabytes)
-	 */
-	private $_alloc = 10;
 
 	/**
 	 * @var int $_tick = 10000 (microseconds)
@@ -1094,18 +1081,6 @@ class QuarkConfig {
 	}
 
 	/**
-	 * @param int $mb = 10 (megabytes)
-	 *
-	 * @return int
-	 */
-	public function &Alloc ($mb = 10) {
-		if (func_num_args() != 0)
-			$this->_alloc = $mb;
-
-		return $this->_alloc;
-	}
-
-	/**
 	 * @param int $ms = 10000 (microseconds)
 	 *
 	 * @return int
@@ -1139,6 +1114,19 @@ class QuarkConfig {
 			$this->_allowINIFallback = $fallback;
 		
 		return $this->_allowINIFallback;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $value = ''
+	 *
+	 * @return string
+	 */
+	public function PHP ($key = '', $value = '') {
+		if (func_num_args() == 2)
+			ini_set($key, $value);
+
+		return ini_get($key);
 	}
 
 	/**
@@ -1261,7 +1249,7 @@ class QuarkConfig {
 	 * @return string
 	 */
 	public function OpenSSLConfig ($location = '') {
-		// TODO: maybe deprecated
+		// TODO: maybe deprecated, see QuarkCertificate::OpenSSLConfig()
 
 		if (func_num_args() != 0)
 			$this->_openSSLConfig = $location;
@@ -1849,6 +1837,10 @@ class QuarkConfig {
 
 		if (!$ini) return;
 		$ini = (array)$ini;
+
+		if (isset($ini[self::INI_PHP]))
+			foreach ($ini[self::INI_PHP] as $key => &$value)
+				self::_iniOption($this, $key, $value);
 
 		if (isset($ini[self::INI_QUARK]))
 			foreach ($ini[self::INI_QUARK] as $key => &$value)

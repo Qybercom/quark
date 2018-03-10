@@ -1,11 +1,13 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA;
 
+use Quark\Extensions\MediaProcessing\GraphicsDraw\GDImage;
 use Quark\Extensions\UPnP\Providers\DLNA\ElementResources\DLNAElementResourceImage;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
 use Quark\QuarkCollection;
+use Quark\QuarkFile;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
 use Quark\QuarkXMLNode;
@@ -46,6 +48,13 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 	const UPnP_CLASS_ITEM_AUDIO = 'object.item.audioItem';
 	const UPnP_CLASS_ITEM_AUDIO_MUSIC_TRACK = 'object.item.audioItem.musicTrack';
 	const UPnP_CLASS_ITEM_VIDEO = 'object.item.videoItem';
+
+	const ATTRIBUTE_DLNA_PROFILE_ID = 'dlna:profileID';
+
+	const DLNA_PROFILE_JPEG_TN = 'JPEG_TN'; // 160x160
+	const DLNA_PROFILE_JPEG_SM = 'JPEG_SM'; // 640x480
+	const DLNA_PROFILE_JPEG_MED = 'JPEG_MED'; // 1024x768
+	const DLNA_PROFILE_JPEG_LRG = 'JPEG_LRG'; // 1920x1080
 
 	use QuarkModelBehavior;
 
@@ -93,9 +102,23 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 		return $this
 			->SingleProperty(self::PROPERTY_UPnP_ICON, $icon)
 			->SingleProperty(self::PROPERTY_UPnP_ALBUM_ART_URI, $icon, array(
-				'dlna:profileID' => 'JPEG_TN'
+				self::ATTRIBUTE_DLNA_PROFILE_ID => self::DLNA_PROFILE_JPEG_TN
 			))
 			->Resource(new DLNAElementResourceImage($icon, $type, $size, $width, $height));
+	}
+
+	/**
+	 * @param QuarkFile $icon = null
+	 *
+	 * @return QuarkModel|DLNAElement
+	 */
+	public function IconFromFile (QuarkFile $icon = null) {
+		if ($icon == null)
+			return $this->Container();
+
+		$image = GDImage::FromFile($icon);
+
+		return $this->Icon($icon->WebLocation(), $image->File()->type, $image->File()->size, $image->Width(), $image->Height());
 	}
 
 	/**

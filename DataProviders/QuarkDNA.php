@@ -110,9 +110,6 @@ class QuarkDNA implements IQuarkDataProvider, IQuarkGuIDSynchronizer {
 			$this->_storage = new QuarkFile($uri->path);
 
 			if ($this->_storage->Exists()) {
-				if (!Quark::MemoryAvailable())
-					throw new QuarkArchException('QuarkDNA: Database cannot be loaded because of reaching memory limit of ' . Quark::Config()->Alloc() . 'MB set in QuarkConfig::Alloc().');
-
 				$this->_storage->Load();
 			}
 			else {
