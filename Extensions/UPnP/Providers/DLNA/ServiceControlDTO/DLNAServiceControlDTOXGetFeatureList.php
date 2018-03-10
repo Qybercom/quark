@@ -94,13 +94,13 @@ class DLNAServiceControlDTOXGetFeatureList implements IQuarkUPnPProviderServiceC
 	}
 
 	/**
-	 * @param string $rootImages = ''
-	 * @param string $rootAudio = ''
-	 * @param string $rootVideo = ''
+	 * @param string $rootImages = DLNAElement::ELEMENT_CONTAINER_ROOT
+	 * @param string $rootAudio = DLNAElement::ELEMENT_CONTAINER_ROOT
+	 * @param string $rootVideo = DLNAElement::ELEMENT_CONTAINER_ROOT
 	 *
 	 * @return DLNAServiceControlDTOXGetFeatureList
 	 */
-	public static function WithSamsungBasicView ($rootImages = '', $rootAudio = '', $rootVideo = '') {
+	public static function WithSamsungBasicView ($rootImages = DLNAElement::ELEMENT_CONTAINER_ROOT, $rootAudio = DLNAElement::ELEMENT_CONTAINER_ROOT, $rootVideo = DLNAElement::ELEMENT_CONTAINER_ROOT) {
 		$out = new self();
 
 		$out->Feature(self::FEATURE_SAMSUNG_BASIC_VIEW_ID, self::FEATURE_SAMSUNG_BASIC_VIEW_VERSION, array(
