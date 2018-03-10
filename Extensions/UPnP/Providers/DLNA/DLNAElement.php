@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\UPnP\Providers\DLNA;
 
+use Quark\Extensions\UPnP\Providers\DLNA\ElementResources\DLNAElementResourceImage;
 use Quark\IQuarkModel;
 use Quark\IQuarkStrongModel;
 
@@ -81,11 +82,20 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 
 	/**
 	 * @param string $icon = ''
+	 * @param string $type = ''
+	 * @param int $size = 0
+	 * @param int $width = 0
+	 * @param int $height = 0
 	 *
 	 * @return QuarkModel|DLNAElement
 	 */
-	public function Icon ($icon = '') {
-		return $this->SingleProperty(self::PROPERTY_UPnP_ICON, $icon);
+	public function Icon ($icon = '', $type = '', $size = 0, $width = 0, $height = 0) {
+		return $this
+			->SingleProperty(self::PROPERTY_UPnP_ICON, $icon)
+			->SingleProperty(self::PROPERTY_UPnP_ALBUM_ART_URI, $icon, array(
+				'dlna:profileID' => 'JPEG_TN'
+			))
+			->Resource(new DLNAElementResourceImage($icon, $type, $size, $width, $height));
 	}
 
 	/**
@@ -126,12 +136,19 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 	 * @return QuarkModel|DLNAElement
 	 */
 	public function Resource (IQuarkDLNAElementResource $resource = null) {
-		if ($resource != null)
+		if ($resource != null) {
+			$pairs = $resource->DLNAElementResourceAttributes();
+			$attributes = array();
+
+			foreach ($pairs as $i => &$pair)
+				$attributes[$pair->Key()] = $pair->Value();
+
 			$this->Property(
 				self::PROPERTY_RESOURCE,
 				$resource->DLNAElementResourceURL(),
-				$resource->DLNAElementResourceAttributes()
+				$attributes
 			);
+		}
 
 		return $this->Container();
 	}
@@ -140,10 +157,11 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 	 * @param string $id = ''
 	 * @param string $parentID = self::ELEMENT_CONTAINER_ROOT
 	 * @param int $childCount = 0
+	 * @param string $UPnPClass = self::UPnP_CLASS_CONTAINER_STORAGE
 	 *
 	 * @return QuarkModel|DLNAElement
 	 */
-	public static function ItemContainer ($id = '', $parentID = self::ELEMENT_CONTAINER_ROOT, $childCount = 0) {
+	public static function ItemContainer ($id = '', $parentID = self::ELEMENT_CONTAINER_ROOT, $childCount = 0, $UPnPClass = self::UPnP_CLASS_CONTAINER_STORAGE) {
 		/**
 		 * @var QuarkModel|DLNAElement $out
 		 */
@@ -154,16 +172,19 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 		$out->container = true;
 		$out->childCount = $childCount;
 
+		$out->Property(self::PROPERTY_UPnP_CLASS, $UPnPClass);
+
 		return $out;
 	}
 
 	/**
 	 * @param string $id = ''
 	 * @param string $parentID = self::ELEMENT_CONTAINER_ROOT
+	 * @param string $UPnPClass = self::UPnP_CLASS_ITEM_GENERIC
 	 *
 	 * @return QuarkModel|DLNAElement
 	 */
-	public static function Item ($id = '', $parentID = self::ELEMENT_CONTAINER_ROOT) {
+	public static function Item ($id = '', $parentID = self::ELEMENT_CONTAINER_ROOT, $UPnPClass = self::UPnP_CLASS_ITEM_GENERIC) {
 		/**
 		 * @var QuarkModel|DLNAElement $out
 		 */
@@ -171,6 +192,8 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 
 		$out->id = $id;
 		$out->parentID = $parentID;
+
+		$out->Property(self::PROPERTY_UPnP_CLASS, $UPnPClass);
 
 		return $out;
 	}
