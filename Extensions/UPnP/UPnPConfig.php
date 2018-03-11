@@ -204,8 +204,15 @@ class UPnPConfig implements IQuarkExtensionConfig {
 		if (isset($ini->SerialNumber))
 			$this->_rootDescription->SerialNumber($ini->SerialNumber);
 
-		foreach ($this->_providers as $i => &$provider)
+		$abilities = array();
+
+		foreach ($this->_providers as $i => &$provider) {
 			$provider->UPnPProviderOptions($ini);
+
+			$abilities = array_merge($abilities, $provider->UPnPProviderDeviceAbilities());
+		}
+
+		$this->_rootDescription->DeviceAbilities($abilities);
 	}
 
 	/**

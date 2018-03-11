@@ -162,6 +162,8 @@ class UPnPAnnouncer {
 
 				foreach ($services as $i => &$service)
 					$this->_notifyReply($this->ReplyServiceDTO($service->ID()), $address);
+
+				unset($i, $service, $address, $services);
 			}
 
 			if ($request->Method() == self::METHOD_NOTIFY)
@@ -169,6 +171,8 @@ class UPnPAnnouncer {
 
 			if ($request->Method() == self::METHOD_SUBSCRIBE)
 				$this->TriggerArgs(self::EVENT_SUBSCRIBE, array(&$client, &$request));
+
+			unset($request, $data, $client);
 		});
 
 		$this->_broadcast->On(QuarkClient::EVENT_ERROR_PROTOCOL, function (QuarkClient $client, $error) {
@@ -191,8 +195,10 @@ class UPnPAnnouncer {
 				$this->TriggerArgs(self::EVENT_NOTIFY_OUT, array(&$this->_notifyingLast, &$now));
 				$this->Notify();
 
-				$this->_notifyingLast = $now;
+				$this->_notifyingLast = clone $now;
 			}
+
+			unset($now);
 		}
 
 		return $this->_broadcast->Pipe();
@@ -241,6 +247,8 @@ class UPnPAnnouncer {
 				if ($item[0] == QuarkDTO::HEADER_HOST) unset($headers[$i]);
 			}
 
+			unset($item, $i, $header);
+
 			return $headers;
 		});
 
@@ -280,6 +288,8 @@ class UPnPAnnouncer {
 
 		foreach ($services as $s => &$service)
 			$ok += $this->_notify($this->NotifyServiceDTO($service->Type()));
+
+		unset($s, $service, $services);
 
 		return $ok;
 	}
@@ -327,6 +337,8 @@ class UPnPAnnouncer {
 				if ($item[0] == QuarkDTO::HEADER_CONTENT_TYPE) unset($headers[$i]);
 				if ($item[0] == QuarkDTO::HEADER_CONTENT_LENGTH) unset($headers[$i]);
 			}
+
+			unset($item, $i, $header);
 
 			return $headers;
 		});

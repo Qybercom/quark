@@ -22,6 +22,11 @@ interface IQuarkUPnPProvider {
 	public function UPnPProviderDeviceType();
 
 	/**
+	 * @return string[]
+	 */
+	public function UPnPProviderDeviceAbilities();
+
+	/**
 	 * @return QuarkKeyValuePair[]
 	 */
 	public function UPnPProviderAttributes();

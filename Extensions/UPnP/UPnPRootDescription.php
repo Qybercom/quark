@@ -36,6 +36,11 @@ class UPnPRootDescription {
 	private $_location = '';
 
 	/**
+	 * @var string[] $_deviceAbilities = []
+	 */
+	private $_deviceAbilities = array();
+
+	/**
 	 * @var int $_versionMajor = self::VERSION_MAJOR
 	 */
 	private $_versionMajor = self::VERSION_MAJOR;
@@ -137,6 +142,18 @@ class UPnPRootDescription {
 			$this->_location = $location;
 
 		return $this->_location;
+	}
+
+	/**
+	 * @param string[] $abilities = []
+	 *
+	 * @return string[]
+	 */
+	public function DeviceAbilities ($abilities = []) {
+		if (func_num_args() != 0 && is_array($abilities))
+			$this->_deviceAbilities = $abilities;
+
+		return $this->_deviceAbilities;
 	}
 
 	/**
@@ -395,7 +412,7 @@ class UPnPRootDescription {
 	 * @return string
 	 */
 	public function ServerName () {
-		return php_uname('s') . ', UPnP/1.0 DLNADOC/1.50, ' . $this->_modelName . '/' . $this->_modelNumber;
+		return php_uname('s') . ', UPnP/1.0' . (sizeof($this->_deviceAbilities) == 0 ? '' : ' ' . implode(' ', $this->_deviceAbilities)) . ', ' . $this->_modelName . '/' . $this->_modelNumber;
 	}
 
 	/**

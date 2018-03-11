@@ -53,6 +53,7 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 
 	const ATTRIBUTE_DLNA_PROFILE_ID = 'dlna:profileID';
 
+	// TODO: need refactoring
 	const DLNA_PROFILE_JPEG_TN = 'JPEG_TN'; // 160x160
 	const DLNA_PROFILE_JPEG_SM = 'JPEG_SM'; // 640x480
 	const DLNA_PROFILE_JPEG_MED = 'JPEG_MED'; // 1024x768

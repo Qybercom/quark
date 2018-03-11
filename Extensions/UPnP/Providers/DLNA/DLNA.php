@@ -65,6 +65,15 @@ class DLNA implements IQuarkUPnPProvider {
 	}
 
 	/**
+	 * @return string[]
+	 */
+	public function UPnPProviderDeviceAbilities () {
+		return array(
+			'DLNADOC/1.50'
+		);
+	}
+
+	/**
 	 * @return QuarkKeyValuePair[]
 	 */
 	public function UPnPProviderAttributes () {
