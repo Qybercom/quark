@@ -15332,7 +15332,8 @@ class QuarkServer implements IQuarkEventable {
 				foreach ($this->_read as $key => &$socket) {
 					$client = QuarkClient::ForServer($this->_transport, $socket, $this->URI()->Socket());
 					$data = $client->ReceiveFrom(QuarkClient::MTU, 0, $address);
-					var_dump($address);
+
+					// TODO: need some handling of incorrect interface binding
 
 					if ($data) {
 						$client->URI()->Endpoint($address);
@@ -20781,6 +20782,20 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function SizeOnDisk () {
 		return filesize($this->location);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Type () {
+		return self::MimeOf($this->_content);
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function TypeOnDisk () {
+		return self::Mime($this->location);
 	}
 
 	/**

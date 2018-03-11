@@ -2,6 +2,7 @@
 namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 
 use Quark\QuarkCollection;
+use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 
@@ -230,5 +231,18 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 		));
 
 		return $out;
+	}
+
+	/**
+	 * @param QuarkFile $file = null
+	 *
+	 * @return DLNAElementResourceImage
+	 */
+	public static function FromFile (QuarkFile $file = null) {
+		if ($file == null) return null;
+
+		// TODO: add solution of manipulation with audio files
+
+		return new self($file->WebLocation(), $file->TypeOnDisk(), $file->SizeOnDisk());
 	}
 }
