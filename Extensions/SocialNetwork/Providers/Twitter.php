@@ -314,7 +314,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
 				$urls[] = $attachment->Content();
 
-			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE && !$preview) {
 				$id = $this->TwitterMediaUpload($attachment);
 
 				if ($id) $media[] = $id;
@@ -323,15 +323,15 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 		$post->Content($post->Content() . (sizeof($urls) == 0 ? '' : $this->_twitterUrlPrefix . implode($this->_twitterUrlDelimiter, $urls)));
 
-		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$request->Data(array(
-			'status' => $post->Content(),
-			'in_reply_to_status_id' => $post->Reply(),
-			'possibly_sensitive' => $post->Sensitive() ? 'true' : 'false',
-			'media_ids' => implode(',', $media)
-		));
-
 		if (!$preview) {
+			$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+			$request->Data(array(
+				'status' => $post->Content(),
+				'in_reply_to_status_id' => $post->Reply(),
+				'possibly_sensitive' => $post->Sensitive() ? 'true' : 'false',
+				'media_ids' => implode(',', $media)
+			));
+
 			$response = $this->OAuthAPI(
 				'/1.1/statuses/update.json',
 				$request,

@@ -18773,6 +18773,19 @@ class QuarkDTO {
 	}
 
 	/**
+	 * @param string $username = ''
+	 * @param string $password = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function AuthorizationBasic ($username = '', $password = '') {
+		return $this->Authorization(new QuarkKeyValuePair(
+			self::AUTHORIZATION_BASIC,
+			self::HTTPBasicAuthorization($username, $password)
+		));
+	}
+
+	/**
 	 * @param QuarkKeyValuePair $session
 	 *
 	 * @return QuarkKeyValuePair
@@ -21917,6 +21930,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		$valid = false;
 		if ($raw[0] == '{' && $raw[$last] == '}') $valid = true;
 		if ($raw[0] == '[' && $raw[$last] == ']') $valid = true;
+
 		if (!$valid) return false;
 
 		return true;

@@ -334,49 +334,47 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 * @return SocialNetworkPost
 	 */
 	public function SocialNetworkPublish (SocialNetworkPost $post, $preview) {
-		// TODO: post from the voice of Page (need obtaining the Page access token)
-
-		$author = $post->Author();
-		$target = $post->Target();
-		$audience = $post->Audience();
-
-		$access_token = $post->AuthorPublic() != '' ? $this->FacebookPageAccessToken($target) : '';
-
-		$data = array(
-			'message' => $post->Content()
-		);
-
-		if ($target == self::CURRENT_USER || $author == $target)
-			$data['privacy'] = /*$audience ? $audience : */$this->_audience; // TODO: handle audience
-
-		$urls = array();
-		$media = array();
-
-		$attachments = $post->Attachments();
-
-		foreach ($attachments as $i => &$attachment) {
-			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
-				$urls[] = $attachment->Content();
-
-			if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
-				$id = $this->FacebookPhotoUpload($attachment, '', $target, $access_token);
-
-				if ($id) $media[] = $id;
-			}
-		}
-
-		if (sizeof($urls) != 0)
-			$data['link'] = $urls[0];
-
-		if (sizeof($media) != 0) {
-			foreach ($media as $i => &$image)
-				$data['attached_media[' . $i . ']'] = json_encode(array('media_fbid' => $image));
-		}
-
-		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
-		$request->Data($data);
-
 		if (!$preview) {
+			$author = $post->Author();
+			$target = $post->Target();
+			$audience = $post->Audience();
+
+			$access_token = $post->AuthorPublic() != '' ? $this->FacebookPageAccessToken($target) : '';
+
+			$data = array(
+				'message' => $post->Content()
+			);
+
+			if ($target == self::CURRENT_USER || $author == $target)
+				$data['privacy'] = /*$audience ? $audience : */$this->_audience; // TODO: handle audience
+
+			$urls = array();
+			$media = array();
+
+			$attachments = $post->Attachments();
+
+			foreach ($attachments as $i => &$attachment) {
+				if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_URL)
+					$urls[] = $attachment->Content();
+
+				if ($attachment->Type() == SocialNetworkPostAttachment::TYPE_IMAGE) {
+					$id = $this->FacebookPhotoUpload($attachment, '', $target, $access_token);
+
+					if ($id) $media[] = $id;
+				}
+			}
+
+			if (sizeof($urls) != 0)
+				$data['link'] = $urls[0];
+
+			if (sizeof($media) != 0) {
+				foreach ($media as $i => &$image)
+					$data['attached_media[' . $i . ']'] = json_encode(array('media_fbid' => $image));
+			}
+
+			$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+			$request->Data($data);
+
 			$response = $this->OAuthAPI(
 				'/' . $target . '/feed',
 				$request,

@@ -4,11 +4,7 @@ namespace Quark\Extensions\SMS;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
-use Quark\QuarkDTO;
-use Quark\QuarkHTTPClient;
 use Quark\QuarkArchException;
-use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkPlainIOProcessor;
 
 /**
  * Class SMS
@@ -17,7 +13,7 @@ use Quark\QuarkPlainIOProcessor;
  */
 class SMS implements IQuarkExtension {
 	/**
-	 * @var SMSCenterConfig $_config
+	 * @var SMSConfig $_config
 	 */
 	private $_config;
 
@@ -32,15 +28,20 @@ class SMS implements IQuarkExtension {
 	private $_phones = array();
 
 	/**
-	 * @param string $config
-	 * @param string $message
-	 * @param array $phones
+	 * @param string $config = ''
+	 * @param string $message = ''
+	 * @param string[] $phones = []
+	 *
+	 * @throws QuarkArchException
 	 */
-	public function __construct ($config, $message = '', $phones = []) {
+	public function __construct ($config = '', $message = '', $phones = []) {
 		$this->Message($message);
 		$this->Phones($phones);
 
 		$this->_config = Quark::Config()->Extension($config);
+
+		if (!($this->_config instanceof SMSConfig))
+			throw new QuarkArchException('[SMS] Provided config is not a SMSConfig');
 	}
 
 	/**
@@ -56,31 +57,24 @@ class SMS implements IQuarkExtension {
 	}
 
 	/**
-	 * @param string $sender
+	 * @param string $phone = ''
 	 *
-	 * @return string
+	 * @return SMS
 	 */
-	public function Sender ($sender = '') {
-		if (func_num_args() == 1)
-			$this->_config->sender = $sender;
+	public function Phone ($phone = '') {
+		if (func_num_args() != 0)
+			$this->_phones[] = $phone;
 
-		return $this->_config->sender;
+		return $this;
 	}
 
 	/**
-	 * @param string $phone
-	 */
-	public function Phone ($phone) {
-		$this->_phones[] = $phone;
-	}
-
-	/**
-	 * @param array $phones
+	 * @param string[] $phones = []
 	 *
-	 * @return array
+	 * @return string[]
 	 */
 	public function Phones ($phones = []) {
-		if (func_num_args() == 1)
+		if (func_num_args() == 1 && is_array($phones))
 			$this->_phones = $phones;
 
 		return $this->_phones;
@@ -88,10 +82,16 @@ class SMS implements IQuarkExtension {
 
 	/**
 	 * @return bool
-	 * @throws QuarkArchException
 	 */
 	public function Send () {
-		return !isset($this->_main()->error);
+		try {
+			return strlen($this->_message) == 0 || sizeof($this->_phones) == 0 ? false : $this->_config->Provider()->SMSSend($this->_message, $this->_phones);
+		}
+		catch (QuarkArchException $e) {
+			Quark::Log($e->message, Quark::LOG_WARN);
+
+			return false;
+		}
 	}
 
 	/**
@@ -99,39 +99,13 @@ class SMS implements IQuarkExtension {
 	 * @throws QuarkArchException
 	 */
 	public function Cost () {
-		return (float)$this->_main('&cost=1')->cost;
-	}
+		try {
+			return $this->_config->Provider()->SMSCost($this->_message, $this->_phones);
+		}
+		catch (QuarkArchException $e) {
+			Quark::Log($e->message, Quark::LOG_WARN);
 
-	/**
-	 * @return int
-	 * @throws QuarkArchException
-	 */
-	public function Ping () {
-		return $this->_main('&ping=1')->id;
-	}
-
-	/**
-	 * @param string $append
-	 *
-	 * @return QuarkDTO|bool
-	 * @throws QuarkArchException
-	 */
-	private function _main ($append = '') {
-		if (strlen($this->_message) == 0)
-			throw new QuarkArchException('SMS: message length should be greater than 0');
-
-		return QuarkHTTPClient::To(
-			'http://smsc.ru/sys/send.php'
-			. '?login='. $this->_config->username
-			. '&psw=' . $this->_config->password
-			. '&phones=' . implode(',', $this->_phones)
-			. '&mes=' . $this->_message
-			. '&fmt=3'
-			. '&charset=utf-8'
-			. ($this->_config->sender != '' ? '&sender=' . $this->_config->sender : '')
-			. $append,
-			QuarkDTO::ForGET(new QuarkPlainIOProcessor()),
-			new QuarkDTO(new QuarkJSONIOProcessor())
-		);
+			return false;
+		}
 	}
 }

@@ -3,19 +3,19 @@ namespace Quark\Extensions\SMS\Providers;
 
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
+use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkPlainIOProcessor;
 
 use Quark\Extensions\SMS\IQuarkSMSProvider;
 
 /**
- * Class SMSCenter
+ * Class Twilio
  *
  * @package Quark\Extensions\SMS\Providers
  */
-class SMSCenter implements IQuarkSMSProvider {
-	const URL_API = 'http://smsc.ru/sys/send.php';
+class Twilio implements IQuarkSMSProvider {
+	const URL_API = 'https://api.twilio.com/2010-04-01';
 
 	/**
 	 * @var string $_appID = ''
@@ -33,25 +33,23 @@ class SMSCenter implements IQuarkSMSProvider {
 	private $_appName = null;
 
 	/**
+	 * @param string $url = ''
 	 * @param array|object $params = []
 	 *
 	 * @return QuarkDTO
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function API ($params = []) {
-		$request = QuarkDTO::ForGET(new QuarkPlainIOProcessor());
-		$request->URIParams(array_merge(array(
-			'login' => $this->_appID,
-			'psw' => $this->_appSecret,
-			'fmt' => 3,
-			'charset' => 'utf-8'
-		), $params));
+	public function API ($url = '', $params = []) {
+		$request = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
 
-		$response = QuarkHTTPClient::To(self::URL_API, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+		$request->AuthorizationBasic($this->_appID, $this->_appSecret);
+		$request->Data($params);
 
-		if (isset($response->error))
-			throw new QuarkArchException('SMSCenter API error: ' . print_r($response->error, true));
+		$response = QuarkHTTPClient::To(self::URL_API . $url, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+
+		if (isset($response->status) && isset($response->message))
+			throw new QuarkArchException('Twilio API error: ' . $response->status . '(' . $response->code . '):' . $response->message);
 
 		return $response;
 	}
@@ -85,15 +83,23 @@ class SMSCenter implements IQuarkSMSProvider {
 	 * @return bool
 	 */
 	public function SMSSend ($message, $phones) {
-		$query = array(
-			'mes' => $message,
-			'phones' => implode(',', $phones)
-		);
+		$ok = 0;
 
-		if ($this->_appName !== null)
-			$query['sender'] = $this->_appName;
+		foreach ($phones as $i => &$phone) {
+			$query = array(
+				'To' => $phone,
+				'Body' => $message
+			);
 
-		return $this->API() != null;
+			if ($this->_appName !== null)
+				$query['From'] = $this->_appName;
+
+			$response = $this->API('/Accounts/' . $this->_appID . '/Messages.json', $query);
+
+			if ($response != null) $ok++;
+		}
+
+		return $ok;
 	}
 
 	/**
@@ -103,17 +109,6 @@ class SMSCenter implements IQuarkSMSProvider {
 	 * @return float
 	 */
 	public function SMSCost ($message, $phones) {
-		$query = array(
-			'mes' => $message,
-			'phones' => implode(',', $phones),
-			'cost' => 1
-		);
-
-		if ($this->_appName)
-			$query['sender'] = $this->_appName;
-
-		$response = $this->API();
-
-		return isset($response->cost) ? $response->cost : null;
+		// TODO: Implement SMSCost() method.
 	}
 }
