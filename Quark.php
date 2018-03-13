@@ -1840,7 +1840,7 @@ class QuarkConfig {
 
 		if (isset($ini[self::INI_PHP]))
 			foreach ($ini[self::INI_PHP] as $key => &$value)
-				self::_iniOption($this, $key, $value);
+				$this->PHP($key, $value);
 
 		if (isset($ini[self::INI_QUARK]))
 			foreach ($ini[self::INI_QUARK] as $key => &$value)
