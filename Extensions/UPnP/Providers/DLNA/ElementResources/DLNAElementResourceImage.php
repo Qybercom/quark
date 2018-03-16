@@ -4,7 +4,6 @@ namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 use Quark\QuarkCollection;
 use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
-use Quark\QuarkObject;
 
 use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
@@ -76,7 +75,7 @@ class DLNAElementResourceImage implements IQuarkDLNAElementResource {
 		$this->ColorDepth($colorDepth);
 
 		if ($info == '')
-			$this->ProtocolInfo(QuarkObject::ClassConstValue($this, 'PROFILE_' . strtoupper(array_reverse(explode('/', $type))[0])));
+			$this->ProtocolInfo(DLNAElement::ProfileByConst($this, $type));
 	}
 
 	/**

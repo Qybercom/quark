@@ -4,7 +4,6 @@ namespace Quark\Extensions\UPnP\Providers\DLNA\ElementResources;
 use Quark\QuarkCollection;
 use Quark\QuarkFile;
 use Quark\QuarkKeyValuePair;
-use Quark\QuarkObject;
 
 use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
@@ -19,6 +18,7 @@ use Quark\Extensions\MediaProcessing\FFmpeg\FFmpegInfo;
  */
 class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 	const PROFILE_MKV = 'http-get:*:video/x-matroska:DLNA.ORG_PN=MATROSKA;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
+	const PROFILE_X_MATROSKA = 'http-get:*:video/x-matroska:DLNA.ORG_PN=MATROSKA;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
 
 	/**
 	 * @var string $_url = ''
@@ -78,6 +78,9 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 		$this->Height($height);
 		$this->Duration($duration);
 		$this->BitRate($bitRate);
+
+		if ($info == '')
+			$this->ProtocolInfo(DLNAElement::ProfileByConst($this, $type));
 	}
 
 	/**
@@ -187,9 +190,6 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 	 * @return QuarkKeyValuePair[]
 	 */
 	public function DLNAElementResourceAttributes () {
-		if ($this->_protocolInfo == '')
-			$this->ProtocolInfo(QuarkObject::ClassConstValue($this, 'PROFILE_' . strtoupper(array_reverse(explode('/', $this->_type))[0])));
-
 		return array(
 			new QuarkKeyValuePair('bitrate', $this->_bitRate),
 			new QuarkKeyValuePair('duration', $this->_duration),

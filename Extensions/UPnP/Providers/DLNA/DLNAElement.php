@@ -8,6 +8,7 @@ use Quark\QuarkCollection;
 use Quark\QuarkFile;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
+use Quark\QuarkObject;
 use Quark\QuarkXMLNode;
 
 use Quark\Extensions\UPnP\Providers\DLNA\ElementResources\DLNAElementResourceImage;
@@ -289,5 +290,15 @@ class DLNAElement implements IQuarkModel, IQuarkStrongModel {
 				'restricted' => $this->restricted ? 'true' : 'false'
 			));
 		}
+	}
+
+	/**
+	 * @param IQuarkDLNAElementResource $resource = null
+	 * @param string $type = ''
+	 *
+	 * @return string
+	 */
+	public static function ProfileByConst (IQuarkDLNAElementResource $resource = null, $type = '') {
+		return $resource == null ? null : QuarkObject::ClassConstValue($resource, 'PROFILE_' . str_replace('-', '_', strtoupper(array_reverse(explode('/', $type))[0])));
 	}
 }
