@@ -51,13 +51,13 @@ class FFmpeg implements IQuarkExtension {
 		$out = json_decode(implode('', $this->_shellOutput));
 		if (!isset($out->format) || !isset($out->streams)) return null;
 
-		$info = new FFmpegInfo($out->format->filename, $out->format->size);
+		$info = new FFmpegInfo($out->format->filename, (int)$out->format->size);
 
 		if (isset($out->format->format_name)) $info->FormatName($out->format->format_name);
 		if (isset($out->format->format_long_name)) $info->FormatNameLong($out->format->format_long_name);
 		if (isset($out->format->start_time)) $info->Start($out->format->start_time);
 		if (isset($out->format->duration)) $info->Duration(QuarkDateInterval::FromSeconds($out->format->duration));
-		if (isset($out->format->bit_rate)) $info->BitRate($out->format->bit_rate);
+		if (isset($out->format->bit_rate)) $info->BitRate((int)$out->format->bit_rate);
 		if (isset($out->format->tags->title)) $info->TagTitle($out->format->tags->title);
 		if (isset($out->format->tags->encoder)) $info->TagEncoder($out->format->tags->encoder);
 		if (isset($out->format->tags->creation_time)) $info->TagCreated(QuarkDate::GMTOf($out->format->tags->creation_time));

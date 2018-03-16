@@ -228,7 +228,7 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 	/**
 	 * @param QuarkFile $file = null
 	 *
-	 * @return DLNAElementResourceImage
+	 * @return DLNAElementResourceVideo
 	 */
 	public static function FromFile (QuarkFile $file = null) {
 		if ($file == null) return null;
@@ -250,10 +250,11 @@ class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 
 			// TODO: investigate differences between FFmpeg output and Serviio
 
-			//$this->BitRate($info->BitRate());
-			$this->Duration($duration->Hours() . ':' . $duration->minutes . ':' . $duration->seconds);
-			//$this->Width($streams[0]->Width());
-			//$this->Height($streams[0]->Height());
+			$this->BitRate($info->BitRate());
+			$this->Size($info->Size());
+			$this->Duration($duration->Hours(false) . ':' . $duration->Format('i:s') . '.000');
+			$this->Width($streams[0]->Width());
+			$this->Height($streams[0]->Height());
 		}
 
 		return $this;

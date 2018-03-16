@@ -401,26 +401,26 @@ class FFmpegStream {
 
 		$out = new self();
 
-		if (isset($info->index)) $out->Index($info->index);
+		if (isset($info->index)) $out->Index((int)$info->index);
 		if (isset($info->codec_name)) $out->CodecName($info->codec_name);
 		if (isset($info->codec_long_name)) $out->CodecNameLong($info->codec_long_name);
 		if (isset($info->codec_type)) $out->CodecType($info->codec_type);
 		if (isset($info->codec_tag)) $out->CodecTag($info->codec_tag);
 		if (isset($info->sample_fmt)) $out->SampleFormat($info->sample_fmt);
 		if (isset($info->sample_rate)) $out->SampleBitRate($info->sample_rate);
-		if (isset($info->channels)) $out->ChannelCount($info->channels);
+		if (isset($info->channels)) $out->ChannelCount((int)$info->channels);
 		if (isset($info->channel_layout)) $out->ChannelLayout($info->channel_layout);
 		if (isset($info->bits_per_sample)) $out->SampleBitCount($info->bits_per_sample);
 		if (isset($info->r_frame_rate)) $out->FrameRate($info->r_frame_rate);
 		if (isset($info->pix_fmt)) $out->PixelFormat($info->pix_fmt);
-		if (isset($info->width)) $out->Width($info->width);
-		if (isset($info->height)) $out->Height($info->height);
+		if (isset($info->width)) $out->Width((int)$info->width);
+		if (isset($info->height)) $out->Height((int)$info->height);
 		if (isset($info->sample_aspect_ratio)) $out->AspectRatioSample($info->sample_aspect_ratio);
 		if (isset($info->display_aspect_ratio)) $out->AspectRatioDisplay($info->display_aspect_ratio);
 		if (isset($info->field_order)) $out->FieldOrder($info->field_order);
 		if (isset($info->start_pts)) $out->Start($info->start_pts);
 		if (isset($info->duration)) $out->Duration(QuarkDateInterval::FromSeconds($info->duration));
-		if (isset($info->bit_rate)) $out->BitRate($info->bit_rate);
+		if (isset($info->bit_rate)) $out->BitRate((int)$info->bit_rate);
 		if (isset($info->tags->title)) $out->TagTitle($info->tags->title);
 		if (isset($info->tags->language)) $out->TagLanguage($info->tags->language);
 
