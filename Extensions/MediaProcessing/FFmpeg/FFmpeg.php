@@ -53,7 +53,6 @@ class FFmpeg implements IQuarkExtension {
 
 		$info = new FFmpegInfo($out->format->filename, $out->format->size);
 
-		Quark::Trace($out);
 		if (isset($out->format->format_name)) $info->FormatName($out->format->format_name);
 		if (isset($out->format->format_long_name)) $info->FormatNameLong($out->format->format_long_name);
 		if (isset($out->format->start_time)) $info->Start($out->format->start_time);

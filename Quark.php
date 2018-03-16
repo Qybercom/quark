@@ -13048,7 +13048,7 @@ class QuarkDateInterval {
 		return
 			($sign ? ($this->_positive ? '+' : '-') : '') .
 			QuarkDate::Convert(
-				$f = str_pad(abs($this->years), 4, '0', STR_PAD_LEFT) . '-' .
+				str_pad(abs($this->years), 4, '0', STR_PAD_LEFT) . '-' .
 				str_pad(abs($this->months), 2, '0', STR_PAD_LEFT) . '-' .
 				str_pad(abs($this->days), 2, '0', STR_PAD_LEFT) . ' ' .
 				str_pad(abs($this->hours), 2, '0', STR_PAD_LEFT) . ':' .

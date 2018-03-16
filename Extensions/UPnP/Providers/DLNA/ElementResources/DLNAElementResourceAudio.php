@@ -10,6 +10,8 @@ use Quark\Extensions\UPnP\Providers\DLNA\IQuarkDLNAElementResource;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElement;
 use Quark\Extensions\UPnP\Providers\DLNA\DLNAElementProperty;
 
+use Quark\Extensions\MediaProcessing\FFmpeg\FFmpegInfo;
+
 /**
  * Class DLNAElementResourceAudio
  *
@@ -244,5 +246,24 @@ class DLNAElementResourceAudio implements IQuarkDLNAElementResource {
 		// TODO: add solution of manipulation with audio files
 
 		return new self($file->WebLocation(), $file->TypeOnDisk(), $file->SizeOnDisk());
+	}
+
+	/**
+	 * @param FFmpegInfo| $info = null
+	 *
+	 * @return DLNAElementResourceAudio
+	 */
+	public function FFmpegInfo (FFmpegInfo $info = null) {
+		if ($info != null) {
+			$duration = $info->Duration();
+			$streams = $info->Streams();
+
+			// TODO: investigate differences between FFmpeg output and Serviio
+
+			//$this->BitRate($info->BitRate());
+			$this->Duration($duration->Hours() . ':' . $duration->minutes . ':' . $duration->seconds);
+		}
+
+		return $this;
 	}
 }
