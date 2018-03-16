@@ -189,13 +189,13 @@ class UPnPAnnouncer {
 	 */
 	public function Pipe () {
 		if ($this->_notifyingTimeout >= 0) {
-			$now = QuarkDate::GMTNow();
+			$now = QuarkDate::Now();
 
 			if ($this->_notifyingLast == null || $this->_notifyingLast->Earlier($now->Offset('-' . $this->_notifyingTimeout . ' seconds', true))) {
 				$this->TriggerArgs(self::EVENT_NOTIFY_OUT, array(&$this->_notifyingLast, &$now));
 				$this->Notify();
 
-				$this->_notifyingLast = clone $now;
+				$this->_notifyingLast = $now;
 			}
 
 			unset($now);
@@ -209,12 +209,12 @@ class UPnPAnnouncer {
 	 *
 	 * @return QuarkDTO
 	 */
-	private function _commonHeaders (QuarkDTO $dto) {
+	private function _commonHeaders (QuarkDTO &$dto) {
 		$dto->Header('CACHE-CONTROL', 'max-age = ' . $this->_notifyingMaxAge);
 		$dto->Header('LOCATION', $this->_rootDescription->Location());
 		$dto->Header('SERVER', $this->_rootDescription->ServerName());
 
-		return $dto;
+		unset($dto);
 	}
 
 	/**
@@ -232,7 +232,7 @@ class UPnPAnnouncer {
 
 		$request->Header('HOST', self::UPnP_HOST . ':' . self::UPnP_PORT);
 
-		$request = $this->_commonHeaders($request);
+		$this->_commonHeaders($request);
 
 		$request->Header('NTS', 'ssdp:' . $status);
 		$request->Header('NT', $nt);
@@ -325,7 +325,7 @@ class UPnPAnnouncer {
 
 		$response->Header('EXT', '');
 
-		$response = $this->_commonHeaders($response);
+		$this->_commonHeaders($response);
 
 		$response->Header('ST', $service);
 		$response->Header('USN', 'uuid:' . $this->_rootDescription->UuID() . '::' . $service);

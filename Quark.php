@@ -14900,6 +14900,8 @@ class QuarkClient implements IQuarkEventable {
 		$error = QuarkException::LastError();
 		if ($error) $this->TriggerErrorProtocol($error);
 
+		unset($error, $data);
+
 		return $out;
 	}
 
@@ -19075,6 +19077,8 @@ class QuarkDTO {
 
 			if (is_array($out))
 				$headers = $out;
+
+			unset($out);
 		}
 
 		return $str ? implode("\r\n", $headers) : $headers;
