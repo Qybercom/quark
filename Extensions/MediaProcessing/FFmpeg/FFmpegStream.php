@@ -13,6 +13,9 @@ class FFmpegStream {
 	const CODEC_VIDEO = 'video';
 
 	const CHANNEL_LAYOUT_STEREO = 'stereo';
+	const CHANNEL_LAYOUT_5_1_SIDE = '5.1(side)';
+
+	const FIELD_ORDER_PROGRESSIVE = 'progressive';
 
 	/**
 	 * @var int $_index = 0
@@ -40,9 +43,9 @@ class FFmpegStream {
 	private $_codecTag = '';
 
 	/**
-	 * @var string $_sampleFmt = ''
+	 * @var string $_sampleFormat = ''
 	 */
-	private $_sampleFmt = '';
+	private $_sampleFormat = '';
 
 	/**
 	 * @var int $_sampleBitRate = 0
@@ -70,6 +73,36 @@ class FFmpegStream {
 	private $_frameRate = '0/0';
 
 	/**
+	 * @var string $_pixelFormat = ''
+	 */
+	private $_pixelFormat = '';
+
+	/**
+	 * @var int $_width = 0
+	 */
+	private $_width = 0;
+
+	/**
+	 * @var int $_height = 0
+	 */
+	private $_height = 0;
+
+	/**
+	 * @var string $_aspectRatioSample = ''
+	 */
+	private $_aspectRatioSample = '';
+
+	/**
+	 * @var string $_aspectRatioDisplay = ''
+	 */
+	private $_aspectRatioDisplay = '';
+
+	/**
+	 * @var string $_fieldOrder = ''
+	 */
+	private $_fieldOrder = '';
+
+	/**
 	 * @var int $_bitRate = 0
 	 */
 	private $_bitRate = 0;
@@ -83,6 +116,16 @@ class FFmpegStream {
 	 * @var QuarkDateInterval $_duration
 	 */
 	private $_duration;
+
+	/**
+	 * @var string $_tagTitle = ''
+	 */
+	private $_tagTitle = '';
+
+	/**
+	 * @var string $_tagLanguage = ''
+	 */
+	private $_tagLanguage = '';
 
 	/**
 	 * @param int $index = 0
@@ -145,15 +188,15 @@ class FFmpegStream {
 	}
 
 	/**
-	 * @param string $fmt = ''
+	 * @param string $format = ''
 	 *
 	 * @return string
 	 */
-	public function SampleFmt ($fmt = '') {
+	public function SampleFormat ($format = '') {
 		if (func_num_args() != 0)
-			$this->_sampleFmt = $fmt;
+			$this->_sampleFormat = $format;
 
-		return $this->_sampleFmt;
+		return $this->_sampleFormat;
 	}
 
 	/**
@@ -217,6 +260,78 @@ class FFmpegStream {
 	}
 
 	/**
+	 * @param string $format = ''
+	 *
+	 * @return string
+	 */
+	public function PixelFormat ($format = '') {
+		if (func_num_args() != 0)
+			$this->_pixelFormat = $format;
+
+		return $this->_pixelFormat;
+	}
+
+	/**
+	 * @param int $width = 0
+	 *
+	 * @return int
+	 */
+	public function Width ($width = 0) {
+		if (func_num_args() != 0)
+			$this->_width = $width;
+
+		return $this->_width;
+	}
+
+	/**
+	 * @param int $height = 0
+	 *
+	 * @return int
+	 */
+	public function Height ($height = 0) {
+		if (func_num_args() != 0)
+			$this->_height = $height;
+
+		return $this->_height;
+	}
+
+	/**
+	 * @param string $ratio = ''
+	 *
+	 * @return string
+	 */
+	public function AspectRatioSample ($ratio = '') {
+		if (func_num_args() != 0)
+			$this->_aspectRatioSample = $ratio;
+
+		return $this->_aspectRatioSample;
+	}
+
+	/**
+	 * @param string $ratio = ''
+	 *
+	 * @return string
+	 */
+	public function AspectRatioDisplay ($ratio = '') {
+		if (func_num_args() != 0)
+			$this->_aspectRatioDisplay = $ratio;
+
+		return $this->_aspectRatioDisplay;
+	}
+
+	/**
+	 * @param string $fieldOrder = ''
+	 *
+	 * @return string
+	 */
+	public function FieldOrder ($fieldOrder = '') {
+		if (func_num_args() != 0)
+			$this->_fieldOrder = $fieldOrder;
+
+		return $this->_fieldOrder;
+	}
+
+	/**
 	 * @param string $rate = '0/0'
 	 *
 	 * @return string
@@ -253,6 +368,30 @@ class FFmpegStream {
 	}
 
 	/**
+	 * @param string $title = ''
+	 *
+	 * @return string
+	 */
+	public function TagTitle ($title = '') {
+		if (func_num_args() != 0)
+			$this->_tagTitle = $title;
+
+		return $this->_tagTitle;
+	}
+
+	/**
+	 * @param string $language = ''
+	 *
+	 * @return string
+	 */
+	public function TagLanguage ($language = '') {
+		if (func_num_args() != 0)
+			$this->_tagLanguage = $language;
+
+		return $this->_tagLanguage;
+	}
+
+	/**
 	 * @param array|object $info = []
 	 *
 	 * @return FFmpegStream
@@ -267,15 +406,23 @@ class FFmpegStream {
 		if (isset($info->codec_long_name)) $out->CodecNameLong($info->codec_long_name);
 		if (isset($info->codec_type)) $out->CodecType($info->codec_type);
 		if (isset($info->codec_tag)) $out->CodecTag($info->codec_tag);
-		if (isset($info->sample_fmt)) $out->SampleFmt($info->sample_fmt);
+		if (isset($info->sample_fmt)) $out->SampleFormat($info->sample_fmt);
 		if (isset($info->sample_rate)) $out->SampleBitRate($info->sample_rate);
 		if (isset($info->channels)) $out->ChannelCount($info->channels);
 		if (isset($info->channel_layout)) $out->ChannelLayout($info->channel_layout);
 		if (isset($info->bits_per_sample)) $out->SampleBitCount($info->bits_per_sample);
 		if (isset($info->r_frame_rate)) $out->FrameRate($info->r_frame_rate);
+		if (isset($info->pix_fmt)) $out->PixelFormat($info->pix_fmt);
+		if (isset($info->width)) $out->Width($info->width);
+		if (isset($info->height)) $out->Height($info->height);
+		if (isset($info->sample_aspect_ratio)) $out->AspectRatioSample($info->sample_aspect_ratio);
+		if (isset($info->display_aspect_ratio)) $out->AspectRatioDisplay($info->display_aspect_ratio);
+		if (isset($info->field_order)) $out->FieldOrder($info->field_order);
 		if (isset($info->start_pts)) $out->Start($info->start_pts);
 		if (isset($info->duration)) $out->Duration(QuarkDateInterval::FromSeconds($info->duration));
 		if (isset($info->bit_rate)) $out->BitRate($info->bit_rate);
+		if (isset($info->tags->title)) $out->TagTitle($info->tags->title);
+		if (isset($info->tags->language)) $out->TagLanguage($info->tags->language);
 
 		return $out;
 	}
