@@ -9,6 +9,7 @@ use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkURI;
 
 /**
  * Class AceStream
@@ -60,6 +61,46 @@ class AceStream implements IQuarkExtension {
 	 */
 	public function __construct ($name = '') {
 		$this->_config = Quark::Config()->Extension($name);
+	}
+
+	/**
+	 * @param string $hash = ''
+	 * @param bool $json = false
+	 *
+	 * @return string
+	 */
+	private function _stream ($hash = '', $json = false) {
+		return $this->_config->LocalURI() . '/ace/getstream?infohash=' . $hash . ($json ? '&format=json' : '');
+	}
+
+	/**
+	 * @param string $hash = ''
+	 *
+	 * @return string
+	 */
+	public function StreamHTTPProgressive ($hash = '') {
+		return $this->_stream($hash);
+	}
+
+	/**
+	 * @param string $hash = ''
+	 *
+	 * @return AceStreamStream
+	 */
+	public function Stream ($hash = '') {
+		$response = $this->API($this->_stream($hash, true));
+		if (!isset($response->response)) return null;
+
+		$out = new AceStreamStream();
+
+		$out->Session($response->response->playback_session_id);
+		$out->Live($response->response->is_live);
+
+		$out->URIPlayback(QuarkURI::FromURI($this->_config->LocalURI() . QuarkURI::FromURI($response->response->playback_url)->Query()));
+		$out->URICommand(QuarkURI::FromURI($this->_config->LocalURI() . QuarkURI::FromURI($response->response->command_url)->Query()));
+		$out->URIStat(QuarkURI::FromURI($this->_config->LocalURI() . QuarkURI::FromURI($response->response->stat_url)->Query()));
+
+		return $out;
 	}
 
 	/**
@@ -152,12 +193,12 @@ class AceStream implements IQuarkExtension {
 
 	/**
 	 * @param string $query = ''
-	 * @param int $page = 1
+	 * @param int $page = 0
 	 * @param int $count = self::PAGE_SIZE_DEFAULT
 	 *
 	 * @return QuarkCollection|AceStreamChannelGroup[]
 	 */
-	public function SearchGroup ($query = '', $page = 1, $count = self::PAGE_SIZE_DEFAULT) {
+	public function SearchGroup ($query = '', $page = 0, $count = self::PAGE_SIZE_DEFAULT) {
 		$response = $this->SearchRaw(array(
 			'query' => $query,
 			'page' => $page,
