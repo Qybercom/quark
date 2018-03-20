@@ -250,7 +250,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 			dialog = $(button.attr('quark-dialog')),
 			action = function () { that.Open(dialog, button.attr('href'), button); };
 
-		if (opt.call instanceof Function && opt.call(button, dialog) === false)
+		if (opt.call instanceof Function && opt.call(button, dialog, e) === false)
 			return;
 
 		if (button.attr('quark-dialog-exclusive') != 'true') action();
