@@ -4,6 +4,7 @@ namespace Quark\DataProviders;
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
 
+use Quark\IQuarkModelWithDataProvider;
 use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkKeyValuePair;
@@ -156,6 +157,22 @@ interface IQuarkMongoDBDriver {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []);
+
+	/**
+	 * @param array|object $command
+	 *
+	 * @return mixed
+	 */
+	public function Command($command);
+
+	/**
+	 * @param string $collection
+	 * @param array|object $pipeline
+	 * @param array|object $options
+	 *
+	 * @return mixed
+	 */
+	public function Aggregate($collection, $pipeline, $options);
 }
 
 /**
@@ -393,6 +410,37 @@ class MongoDB implements IQuarkDataProvider {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
 		return $this->_driver->Count($model, $criteria, $limit, $skip, $options);
+	}
+
+	/**
+	 * @param array|object $command = []
+	 *
+	 * @return mixed
+	 */
+	public function Command ($command = []) {
+		return $this->_driver->Command($command);
+	}
+
+	/**
+	 * @param string $collection = ''
+	 * @param array|object $pipeline = []
+	 * @param array|object $options = []
+	 *
+	 * @return mixed
+	 */
+	public function AggregateRaw ($collection = '', $pipeline = [], $options = []) {
+		return $this->_driver->Aggregate($collection, $pipeline, $options);
+	}
+
+	/**
+	 * @param IQuarkModelWithDataProvider $model
+	 * @param array|object $pipeline = []
+	 * @param array|object $options = []
+	 *
+	 * @return mixed
+	 */
+	public function Aggregate (IQuarkModelWithDataProvider $model, $pipeline = [], $options = []) {
+		return $this->_driver->Aggregate(QuarkModel::CollectionName($model, $options), $pipeline, $options);
 	}
 }
 
@@ -763,6 +811,32 @@ class _MongoDB_php_mongo implements IQuarkMongoDBDriver {
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
 		return $this->_collection($model, $options)->count($criteria, sizeof($options) != 0 ? $options : null);
 	}
+
+	/**
+	 * http://php.net/manual/ru/mongodb.command.php
+	 *
+	 * @param array|object $command
+	 *
+	 * @return mixed
+	 */
+	public function Command ($command) {
+		return $this->_connection->command($command);
+	}
+
+	/**
+	 * @param string $collection
+	 * @param array|object $pipeline
+	 * @param array|object $options
+	 *
+	 * @return mixed
+	 */
+	public function Aggregate ($collection, $pipeline, $options) {
+		return $this->Command(array_merge(array(
+			'aggregate' => $collection,
+			'pipeline' => $pipeline,
+			'allowDiskUse' => true
+		), $options));
+	}
 }
 
 
@@ -968,7 +1042,7 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 			return $this->_connection->executeCommand($this->DBName(), new Command($command));
 		}
 		catch (\Exception $e) {
-			Quark::Log('[MongoDB::Command] Can not proceed command: ' . $e->getMessage() . ($this->_log ? ' - ' . print_r($e, true) : ''));
+			Quark::Log('[MongoDB::CommandRaw] Can not proceed command: ' . $e->getMessage() . ($this->_log ? ' - ' . print_r($e, true) : ''));
 			return null;
 		}
 	}
@@ -1244,5 +1318,26 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 		$out = $result->toArray();
 
 		return is_array($out) && isset($out[0]->n) ? $out[0]->n : 0;
+	}
+
+	/**
+	 * @param string $collection
+	 * @param array|object $pipeline
+	 * @param array|object $options
+	 *
+	 * @return mixed
+	 */
+	public function Aggregate ($collection, $pipeline, $options) {
+		$result = $this->Command(array_merge(array(
+			'aggregate' => $collection,
+			'pipeline' => $pipeline,
+			'allowDiskUse' => true
+		), $options));
+
+		if (!$result) return array();
+
+		$out = $result->toArray();
+
+		return is_array($out) && isset($out[0]->result) ? $out[0]->result : array();
 	}
 }

@@ -9218,6 +9218,22 @@ trait QuarkModelBehavior {
 	}
 
 	/**
+	 * @return IQuarkDataProvider
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function DataProviderLink () {
+		if (!($this instanceof IQuarkModel))
+			throw new QuarkArchException('[QuarkModelBehavior::DataProviderLink] Class ' . get_class($this) . ' is not an IQuarkModel');
+
+		/**
+		 * @var IQuarkModel $this
+		 */
+
+		return QuarkModel::Provider($this);
+	}
+
+	/**
 	 * @param bool $runtime = true
 	 *
 	 * @return array|null
@@ -9837,6 +9853,20 @@ class QuarkModel implements IQuarkContainer {
 			$source->URI(QuarkURI::FromURI($uri));
 
 		return $uri || !$source->Connected() ? $source->Connect() : $source;
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param string $uri = ''
+	 *
+	 * @return IQuarkDataProvider
+	 *
+	 * @throws QuarkArchException
+	 */
+	public static function Provider (IQuarkModel $model, $uri = '') {
+		$source = self::_provider($model, $uri);
+
+		return $source == null ? null : $source->Provider();
 	}
 
 	/**
