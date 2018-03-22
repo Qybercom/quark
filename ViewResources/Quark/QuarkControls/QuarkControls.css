@@ -256,3 +256,65 @@
 	display: inline-block;
 	margin: 0 3px 0 0;
 }
+
+
+
+
+
+
+.quark-navigator {
+	display: inline-block;
+	line-height: 32px;
+	letter-spacing: -3px;
+}
+
+.quark-navigator-item {
+	display: inline-block;
+	font-size: 12px;
+	line-height: 12px;
+	padding: 10px 0;
+	margin: 0 5px 5px 0;
+	width: 34px;
+	border: 1px solid rgb(230, 230, 230);
+	border-radius: 3px;
+	color: rgb(30,30,30);
+	cursor: pointer;
+	vertical-align: middle;
+	text-align: center;
+	text-decoration: none;
+	letter-spacing: normal;
+}
+
+.quark-navigator-item.selected {
+	background: rgb(150,200,255);
+}
+
+.quark-navigator-item:hover {
+	background: rgb(150,200,255);
+}
+
+.quark-navigator-item.back {
+
+}
+
+.quark-navigator-item.back.start {
+
+}
+
+.quark-navigator-item.forward {
+
+}
+
+.quark-navigator-item.forward.end {
+
+}
+
+.quark-navigator-item.disabled {
+	background: rgb(240,240,240);
+	color: rgb(200,200,200);
+	cursor: default;
+}
+
+.quark-navigator-item:last-child {
+	margin: 0 0 5px 0;
+}
