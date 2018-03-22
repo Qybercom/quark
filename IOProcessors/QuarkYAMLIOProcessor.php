@@ -58,4 +58,11 @@ class QuarkYAMLIOProcessor implements IQuarkIOProcessor {
 	public function Batch ($raw, $fallback) {
 		return preg_split(self::BATCH, "\n" . $raw);
 	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
+	}
 }

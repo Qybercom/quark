@@ -258,6 +258,13 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		return false;
+	}
+
+	/**
 	 * @param object $sample = null
 	 * @param string[] $force = []
 	 * @param string $separatorBit = self::SEPARATOR_BIT_DOT
