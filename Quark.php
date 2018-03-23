@@ -9230,7 +9230,7 @@ trait QuarkModelBehavior {
 		 * @var IQuarkModel $this
 		 */
 
-		return QuarkModel::Provider($this);
+		return QuarkModel::DataProvider($this);
 	}
 
 	/**
@@ -9863,7 +9863,7 @@ class QuarkModel implements IQuarkContainer {
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function Provider (IQuarkModel $model, $uri = '') {
+	public static function DataProvider (IQuarkModel $model, $uri = '') {
 		$source = self::_provider($model, $uri);
 
 		return $source == null ? null : $source->Provider();

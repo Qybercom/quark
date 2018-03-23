@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\Feedly;
 
+use Quark\Extensions\OAuth\OAuthToken;
 use Quark\IQuarkExtension;
 
 use Quark\Quark;
@@ -53,6 +54,20 @@ class Feedly implements IQuarkExtension {
 		$this->_errorLast = $e->Error();
 
 		return $out;
+	}
+
+	/**
+	 * @param bool $force = false
+	 *
+	 * @return OAuthToken
+	 */
+	public function RefreshToken ($force = false) {
+		/**
+		 * @var FeedlyAPI $provider
+		 */
+		$provider = $this->_provider;
+
+		return $force || $this->_token->Expired() ? $provider->OAuthTokenRefresh() : $this->_token;
 	}
 
 	/**

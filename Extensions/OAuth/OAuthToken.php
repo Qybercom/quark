@@ -129,7 +129,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		$now = QuarkDate::GMTNow();
 
-		return $now->Later($this->refreshed->Offset('+' . $this->expires_in . ' seconds'));
+		return $now->Later($this->refreshed->Offset('+' . $this->expires_in . ' seconds', true));
 	}
 
 	/**

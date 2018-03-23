@@ -118,6 +118,34 @@ class FeedlyAPI implements IQuarkOAuthProvider {
 	}
 
 	/**
+	 * @return QuarkModel|OAuthToken
+	 *
+	 * @throws OAuthAPIException
+	 */
+	public function OAuthTokenRefresh () {
+		$req = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+		$req->Data(array(
+			'client_id' => $this->_appId,
+			'client_secret' => $this->_appSecret,
+			'refresh_token' => $this->_token->refresh_token,
+			'grant_type' =>OAuthConfig::GRANT_REFRESH_TOKEN
+		));
+
+		$api = $this->OAuthAPI('/v3/auth/token', $req);
+
+		if (!isset($api->access_token)) return null;
+
+		/**
+		 * @var QuarkModel|OAuthToken $token
+		 */
+		$token = new QuarkModel(new OAuthToken($this->_token->config), $api->Data());
+		$token->refresh_token = $this->_token->refresh_token;
+		$token->api_user = $api->id; // TODO: make this for all providers which return id during auth
+
+		return $token;
+	}
+
+	/**
 	 * @param string $url
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
