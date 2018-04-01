@@ -952,9 +952,14 @@ class QuarkConfig {
 	private $_openSSLConfig = '';
 
 	/**
-	 * @var callable $_ready = null
+	 * @var bool $_ready = false
 	 */
-	private $_ready = null;
+	private $_ready = false;
+
+	/**
+	 * @var callable $_readyCallback = null
+	 */
+	private $_readyCallback = null;
 
 	/**
 	 * @var array $_location
@@ -1220,9 +1225,8 @@ class QuarkConfig {
 	 * @return QuarkModel|IQuarkApplicationSettingsModel
 	 */
 	public function &ApplicationSettings (IQuarkApplicationSettingsModel $model = null) {
-		if (func_num_args() != 0 && $model != null)
-			$this->_settingsApp = new QuarkModel($model);
-		else $this->_loadSettings();
+		if (func_num_args() == 0 || $model == null) $this->_loadSettings();
+		else $this->_settingsApp = $this->_ready ? new QuarkModel($model) : $model;
 
 		return $this->_settingsApp;
 	}
@@ -1819,7 +1823,7 @@ class QuarkConfig {
 	 */
 	public function ConfigReady (callable $callback = null) {
 		if (func_num_args() != 0) {
-			$this->_ready = $callback;
+			$this->_readyCallback = $callback;
 			return;
 		}
 		
@@ -1830,7 +1834,7 @@ class QuarkConfig {
 		if (!$file->Exists() && $this->_allowINIFallback) return;
 		
 		$ini = $file->Load()->Decode(new QuarkINIIOProcessor());
-		$callback = $this->_ready;
+		$callback = $this->_readyCallback;
 
 		if ($callback != null)
 			$callback($this, $ini);
@@ -1936,6 +1940,10 @@ class QuarkConfig {
 				$this->Dedicated($key, $value);
 
 		unset($environment, $environments, $extension, $extensions, $options, $callback, $ini, $key, $value);
+
+		$this->_ready = true;
+
+		$this->ApplicationSettings($this->_settingsApp);
 	}
 	
 	/**
@@ -6612,12 +6620,14 @@ class QuarkView implements IQuarkContainer {
 	 * @param string $name = 'timezone'
 	 * @param string $selected = null
 	 * @param string $format = QuarkCultureISO::TIME
+	 * @param string $class = 'quark-input'
+	 * @param string $id = ''
 	 *
 	 * @return string
 	 */
-	public function TimezoneSelector ($name = 'timezone', $selected = null, $format = QuarkCultureISO::TIME) {
+	public function TimezoneSelector ($name = 'timezone', $selected = null, $format = QuarkCultureISO::TIME, $class = 'quark-input', $id = '') {
 		$zones = QuarkDate::TimezoneList();
-		$out = '<select class="quark-input" name=' . $name . '>';
+		$out = '<select' . ($class ? ' class="' . $class . '"' : '') . ' ' . ($id ? ' id="' . $id . '"' : '') . ' name=' . $name . '>';
 
 		foreach ($zones as $zone => &$offset)
 			$out .= '<option value="' . $zone . '"' . ($selected === $zone ? ' selected="selected"' : '') . '>(UTC ' . $offset->Format($format, true) . ') ' . $zone . '</option>';

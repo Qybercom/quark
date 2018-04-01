@@ -473,6 +473,8 @@ Quark.Controls.Toggle = function (selector, opt) {
 		elem.removeClass(enabled ? 'fa-toggle-off off' : 'fa-toggle-on on');
 		elem.addClass(enabled ? 'fa-toggle-on on' : 'fa-toggle-off off');
 		elem.attr('quark-enabled', enabled ? 'true' : 'false');
+		elem.attr('title', enabled ? opt.enabled.title : opt.disabled.title);
+		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
 
 		if (elem.attr('disabled') === 'disabled')
 			that.Available(elem, false);
@@ -527,12 +529,7 @@ Quark.Controls.Toggle = function (selector, opt) {
 	 * @param elem
 	 */
 	that.State = function (elem) {
-		var enabled = elem.attr('quark-enabled') !== 'true';
-
-		elem.attr('title', enabled ? opt.enabled.title : opt.disabled.title);
-		elem.html(enabled ? opt.enabled.html : opt.disabled.html);
-
-		that._attr(enabled, elem);
+		that._attr(elem.attr('quark-enabled') !== 'true', elem);
 	};
 };
 
