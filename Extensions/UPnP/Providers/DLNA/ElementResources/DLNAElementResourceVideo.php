@@ -19,6 +19,8 @@ use Quark\Extensions\MediaProcessing\FFmpeg\FFmpegInfo;
 class DLNAElementResourceVideo implements IQuarkDLNAElementResource {
 	const PROFILE_MKV = 'http-get:*:video/x-matroska:DLNA.ORG_PN=MATROSKA;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
 	const PROFILE_X_MATROSKA = 'http-get:*:video/x-matroska:DLNA.ORG_PN=MATROSKA;DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01500000000000000000000000000000';
+	const PROFILE_MP4 = 'http-get:*:video/mp4';
+	const PROFILE_AVI = 'http-get:*:video/avi';
 
 	/**
 	 * @var string $_url = ''

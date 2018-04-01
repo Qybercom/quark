@@ -7805,6 +7805,22 @@ trait QuarkCollectionBehavior {
 
 		return $this->_secure;
 	}
+
+	/**
+	 * @param callable $iterator = null
+	 *
+	 * @return $this
+	 */
+	public function Each (callable $iterator = null) {
+		if ($iterator != null) {
+			foreach ($this->_collection as $i => &$item)
+				$this->_collection[$i] = $iterator($item);
+
+			unset($i, $item, $iterator);
+		}
+
+		return $this;
+	}
 	
 	/**
 	 * @param $document = null
@@ -19208,7 +19224,7 @@ class QuarkDTO {
 	 */
 	private function _unserializeHeaders ($raw) {
 		if (preg_match_all('#(.*)\: (.*)\n#Uis', $raw . "\r\n", $headers, PREG_SET_ORDER))
-			foreach ($headers as $header)
+			foreach ($headers as $i => &$header)
 				$this->Header($header[1], $header[2]);
 
 		return $this;

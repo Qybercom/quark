@@ -2,7 +2,7 @@
 namespace Quark\Extensions\AceStream;
 
 use Quark\IQuarkModel;
-use Quark\IQuarkStrongModel;
+use Quark\IQuarkStrongModelWithRuntimeFields;
 
 use Quark\QuarkDate;
 
@@ -20,9 +20,11 @@ use Quark\QuarkDate;
  * @property bool $in_playlist
  * @property string $icon
  *
+ * @property string $config
+ *
  * @package Quark\Extensions\AceStream
  */
-class AceStreamChannel implements IQuarkModel, IQuarkStrongModel {
+class AceStreamChannel implements IQuarkModel, IQuarkStrongModelWithRuntimeFields {
 	const STATUS_GREEN = 2;
 	const STATUS_YELLOW = 1;
 
@@ -49,5 +51,23 @@ class AceStreamChannel implements IQuarkModel, IQuarkStrongModel {
 	 */
 	public function Rules () {
 		// TODO: Implement Rules() method.
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function RuntimeFields () {
+		return array(
+			'config' => ''
+		);
+	}
+
+	/**
+	 * @return AceStreamStream
+	 */
+	public function Stream () {
+		$ace = new AceStream($this->config);
+
+		return $ace->Stream($this->infohash);
 	}
 }

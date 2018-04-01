@@ -9,6 +9,7 @@ use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkModel;
 use Quark\QuarkURI;
 
 /**
@@ -93,7 +94,9 @@ class AceStream implements IQuarkExtension {
 
 		$out = new AceStreamStream();
 
-		$out->Session($response->response->playback_session_id);
+		if (isset($response->response->playback_session_id))
+			$out->Session($response->response->playback_session_id);
+
 		$out->Live($response->response->is_live);
 
 		$out->URIPlayback(QuarkURI::FromURI($this->_config->LocalURI() . QuarkURI::FromURI($response->response->playback_url)->Query()));
@@ -186,7 +189,8 @@ class AceStream implements IQuarkExtension {
 			$out->Pages(ceil($response->total / $count));
 
 		if (isset($response->results) && is_array($response->results))
-			$out->PopulateModelsWith($response->results);
+			$out->PopulateModelsWith($response->results)
+				->Change(array(), array('config' => $this->_config->ExtensionName()));
 
 		return $out;
 	}
@@ -213,7 +217,15 @@ class AceStream implements IQuarkExtension {
 			$out->Pages(ceil($response->total / $count));
 
 		if (isset($response->results) && is_array($response->results))
-			$out->PopulateModelsWith($response->results);
+			$out->PopulateModelsWith($response->results)
+				->Each(function ($item) {
+					/**
+					 * @var QuarkModel|AceStreamChannelGroup $item
+					 */
+					$item->items->Change(array(), array('config' => $this->_config->ExtensionName()));
+
+					return $item;
+				});
 
 		return $out;
 	}
