@@ -22,6 +22,7 @@
 }
 
 #ChatKit-history .ChatKit-message {
+	margin: 0 0 10px 0;
 }
 
 #ChatKit-history .ChatKit-message .ChatKit-avatar {
@@ -60,7 +61,7 @@
 	border-top-right-radius: 5px;
 }
 
-#ChatKit-history .ChatKit-message .ChatKit-payload:nth-last-child(3) {
+#ChatKit-history .ChatKit-message .ChatKit-payload:nth-last-child(2) {
 	border-bottom-left-radius: 5px;
 	border-bottom-right-radius: 5px;
 }
@@ -81,6 +82,7 @@
 	color: rgb(200, 210, 210);
 	font-size: 10px;
 	margin: 0 0 0 5px;
+	text-align: left;
 }
 
 #ChatKit-message-template {

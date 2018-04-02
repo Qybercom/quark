@@ -6316,6 +6316,8 @@ class QuarkView implements IQuarkContainer {
 			}
 		}
 
+		unset($i, $resource);
+
 		return $out;
 	}
 
