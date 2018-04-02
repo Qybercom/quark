@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SSLAuthority\Providers;
+namespace Quark\Extensions\CertificateAuthority\Providers;
 
 use Quark\Quark;
 use Quark\QuarkDateInterval;
@@ -7,14 +7,14 @@ use Quark\QuarkCertificate;
 use Quark\QuarkCipherKeyPair;
 use Quark\QuarkObject;
 
-use Quark\Extensions\SSLAuthority\IQuarkSSLAuthorityProvider;
+use Quark\Extensions\CertificateAuthority\IQuarkCertificateAuthorityProvider;
 
 /**
  * Class SelfSignedAuthority
  *
- * @package Quark\Extensions\SSLAuthority\Providers
+ * @package Quark\Extensions\CertificateAuthority\Providers
  */
-class SelfSignedAuthority implements IQuarkSSLAuthorityProvider {
+class SelfSignedAuthority implements IQuarkCertificateAuthorityProvider {
 	/**
 	 * @var int $_period = QuarkDateInterval::DAYS_IN_YEAR
 	 */

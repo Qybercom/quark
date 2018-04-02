@@ -6,9 +6,9 @@ use Quark\IQuarkTask;
 use Quark\Quark;
 use Quark\QuarkCLIBehavior;
 
-use Quark\Extensions\SSLAuthority\SSLAuthority;
-use Quark\Extensions\SSLAuthority\SSLAuthorityConfig;
-use Quark\Extensions\SSLAuthority\Providers\LetsEncrypt;
+use Quark\Extensions\CertificateAuthority\CertificateAuthority;
+use Quark\Extensions\CertificateAuthority\CertificateAuthorityConfig;
+use Quark\Extensions\CertificateAuthority\Providers\LetsEncrypt;
 
 /**
  * Class Certificate
@@ -28,7 +28,7 @@ class Certificate implements IQuarkTask {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		Quark::Config()->Extension(self::EXTENSION, new SSLAuthorityConfig(new LetsEncrypt($this->HasFlag('staging', 's'))));
+		Quark::Config()->Extension(self::EXTENSION, new CertificateAuthorityConfig(new LetsEncrypt($this->HasFlag('staging', 's'))));
 		Quark::Config()->ExtensionOptions(self::EXTENSION);
 		
 		$domains = $this->ServiceArg(0);
@@ -47,8 +47,8 @@ class Certificate implements IQuarkTask {
 			$this->ShellProcessStatus(Quark::LOG_OK, 'Saved to ' . $target . ".\r\n"),
 			$this->ShellProcessStatus(Quark::LOG_FATAL, 'See application log for details.' . "\r\n"),
 			function () use (&$domains, &$target) {
-				$ssl = new SSLAuthority(self::EXTENSION);
-				$certificate = $ssl->SignDomains(explode(',', $domains));
+				$authority = new CertificateAuthority(self::EXTENSION);
+				$certificate = $authority->SignDomains(explode(',', $domains));
 
 				return $certificate != null && $certificate->SaveTo($target);
 			}

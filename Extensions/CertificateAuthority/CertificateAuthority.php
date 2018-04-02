@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SSLAuthority;
+namespace Quark\Extensions\CertificateAuthority;
 
 use Quark\IQuarkExtension;
 
@@ -8,13 +8,13 @@ use Quark\QuarkCertificate;
 use Quark\QuarkCertificateSAN;
 
 /**
- * Class SSLAuthority
+ * Class CertificateAuthority
  *
- * @package Quark\Extensions\SSLAuthority
+ * @package Quark\Extensions\CertificateAuthority
  */
-class SSLAuthority implements IQuarkExtension {
+class CertificateAuthority implements IQuarkExtension {
 	/**
-	 * @var SSLAuthorityConfig $_config
+	 * @var CertificateAuthorityConfig $_config
 	 */
 	private $_config;
 
@@ -77,8 +77,10 @@ class SSLAuthority implements IQuarkExtension {
 		$certificate = QuarkCertificate::ForDomainCSR($domains[0], $passphrase);
 		$domains = array_slice($domains, 1);
 
-		foreach ($domains as $domain)
+		foreach ($domains as $i => &$domain)
 			$certificate->AltName(new QuarkCertificateSAN($domain));
+
+		unset($i, $domain);
 
 		return $this->CertificateRequest($certificate);
 	}

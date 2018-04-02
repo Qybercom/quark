@@ -1,14 +1,14 @@
 <?php
-namespace Quark\Extensions\SSLAuthority;
+namespace Quark\Extensions\CertificateAuthority;
 
 use Quark\QuarkCertificate;
 
 /**
- * Interface IQuarkSSLAuthorityProvider
+ * Interface IQuarkCertificateAuthorityProvider
  *
- * @package Quark\Extensions\SSLAuthority
+ * @package Quark\Extensions\CertificateAuthority
  */
-interface IQuarkSSLAuthorityProvider {
+interface IQuarkCertificateAuthorityProvider {
 	/**
 	 * @param object $options
 	 *

@@ -1636,11 +1636,14 @@ class QuarkConfig {
 				if ($this->_localizationDictionary == null)
 					$this->_localizationDictionary = new \stdClass();
 
-				if (QuarkObject::isTraversable($details))
-					foreach ($details as $key => $block) {
+				if (QuarkObject::isTraversable($details)) {
+					foreach ($details as $key => &$block) {
 						$outKey = $domain . $this->_localizationDetailsDelimiter . $key;
 						$this->_localizationDictionary->$outKey = $block;
 					}
+
+					unset($key, $block);
+				}
 			}
 		}
 
@@ -2338,7 +2341,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 			$authBasic = 1;
 		}
 
-		foreach ($_SERVER as $name => $value) {
+		foreach ($_SERVER as $name => &$value) {
 			$name = str_replace('CONTENT_', 'HTTP_CONTENT_', $name);
 			$name = str_replace('PHP_AUTH_DIGEST', 'HTTP_AUTHORIZATION', $name, $authDigest);
 
@@ -2351,6 +2354,8 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 			if (substr($name, 0, 5) == 'HTTP_')
 				$headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = ($name == 'HTTP_AUTHORIZATION' ? $authType : '') . $value;
 		}
+
+		unset($name, $value);
 
 		$service->Input()->Method(ucfirst(strtolower($_SERVER['REQUEST_METHOD'])));
 		$service->Input()->Headers($headers);
@@ -2381,8 +2386,10 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		$service->On(QuarkService::EVENT_OUTPUT_HEADERS, function () use (&$service) {
 			$headers = $service->Output()->SerializeResponseHeadersToArray();
 
-			foreach ($headers as $header)
+			foreach ($headers as $i => &$header)
 				header($header);
+
+			unset($i, $header, $headers);
 		});
 
 		echo $service->Pipeline();
@@ -4077,10 +4084,13 @@ trait QuarkCLIBehavior {
 
 		$args = array_slice($args, 1);
 
-		if (!$flags)
+		if (!$flags) {
 			foreach ($args as $i => &$arg)
 				if (strlen($arg) != 0 && $arg[0] == '-')
 					unset($args[$i]);
+
+			unset($i, $arg);
+		}
 
 		return array_values($args);
 	}
@@ -4529,17 +4539,21 @@ class QuarkService implements IQuarkContainer {
 
 		$buffer = array();
 
-		foreach ($path as $item) {
+		foreach ($path as $i => &$item) {
 			if (strlen(trim($item)) == 0) continue;
 
 			$section = explode('-', trim($item));
 			$out = array();
 
-			foreach ($section as $elem)
+			foreach ($section as $j => &$elem)
 				$out[] = ucfirst($elem);
+
+			unset($j, $elem);
 
 			$buffer[] = implode('', $out);
 		}
+
+		unset($i, $item);
 
 		$route = $buffer;
 		unset($buffer);
@@ -4908,12 +4922,15 @@ class QuarkService implements IQuarkContainer {
 		if ($morph) {
 			$processors = $this->_service->Processors($this->_input);
 
-			if (is_array($processors))
-				foreach ($processors as $processor) {
+			if (is_array($processors)) {
+				foreach ($processors as $i => &$processor) {
 					if (!($processor instanceof IQuarkIOProcessor)) continue;
 					if ($processor->MimeType() == $this->_input->ExpectedType())
 						$selected = $processor;
 				}
+
+				unset($i, $processor, $processors);
+			}
 		}
 		
 		$this->_filterInput();
@@ -5266,8 +5283,10 @@ trait QuarkContainerBehavior {
 		$out = new \stdClass();
 		$locales = $this->LocalizationDictionaryOf($key);
 
-		foreach ($locales as $key => $locale)
+		foreach ($locales as $i => &$locale)
 			$out->$key = $this->Template($locale, $data);
+
+		unset($i, $locale);
 
 		return $out;
 	}
@@ -5340,9 +5359,10 @@ class QuarkObject {
 				$iterator($key, $model, $parent);
 			}
 			else {
-				foreach ($source as $k => $v) {
+				foreach ($source as $k => $v)
 					self::Walk($v, $iterator, $key . ($key == '' ? $k : '[' . $k . ']'), $source);
-				}
+
+				unset($k, $v);
 			}
 
 			unset($k, $v);
@@ -5360,7 +5380,7 @@ class QuarkObject {
 		$dirs = array();
 		$files = array();
 
-		foreach ($paths as $link) {
+		foreach ($paths as $i => &$link) {
 			$path = explode('/', $link);
 
 			if (sizeof($path) == 1) $files[] = new QuarkKeyValuePair($prefix . '/' . $link, $link);
@@ -5372,11 +5392,17 @@ class QuarkObject {
 			}
 		}
 
-		foreach ($dirs as $key => $link)
+		unset($i, $link);
+
+		foreach ($dirs as $key => &$link)
 			$out[$key] = self::TreeBuilder($link, $prefix . '/' . $key);
 
-		foreach ($files as $file)
+		unset($key, $link);
+
+		foreach ($files as $i => &$file)
 			$out[] = $file;
+
+		unset($i, $file);
 
 		return $out;
 	}
@@ -5523,7 +5549,7 @@ class QuarkObject {
 
 		$faces = class_implements($class);
 
-		foreach ($interface as $face)
+		foreach ($interface as &$face)
 			if (in_array($face, $faces, true)) return true;
 
 		return false;
@@ -5539,8 +5565,10 @@ class QuarkObject {
 		$output = array();
 		$classes = get_declared_classes();
 
-		foreach ($classes as $class)
+		foreach ($classes as $i => &$class)
 			if (self::is($class, $interface) && ($filter != null ? $filter($class) : true)) $output[] = $class;
+
+		unset($i, $class);
 
 		return $output;
 	}
@@ -5560,12 +5588,16 @@ class QuarkObject {
 		$tree = $parents ? class_parents($class) : array();
 		$tree[] = $class;
 
-		foreach ($tree as $node) {
+		foreach ($tree as $i => &$node) {
 			$uses = class_uses($node);
 
-			foreach ($uses as $use)
+			foreach ($uses as $j => &$use)
 				if ($use == $trait) return true;
+
+			unset($j, $use);
 		}
+
+		unset($i, $node);
 
 		return false;
 	}
@@ -5654,7 +5686,7 @@ class QuarkObject {
 
 		if (!isset($defined['user']) || !is_array($defined['user'])) return null;
 
-		foreach ($defined['user'] as $key => $val)
+		foreach ($defined['user'] as $key => &$val)
 			if ($val === $value) return $key;
 
 		return null;
@@ -5678,7 +5710,7 @@ class QuarkObject {
 	public static function ClassConstByValue ($class, $value) {
 		$defined = self::ClassConstants($class);
 
-		foreach ($defined as $key => $const)
+		foreach ($defined as $key => &$const)
 			if ($const == $value) return $key;
 
 		return null;
@@ -6337,9 +6369,12 @@ class QuarkView implements IQuarkContainer {
 	 * @return QuarkView
 	 */
 	private function _resources ($resources = []) {
-		if (is_array($resources))
-			foreach ($resources as $resource)
+		if (is_array($resources)) {
+			foreach ($resources as $i => &$resource)
 				$this->_resource($resource);
+
+			unset($i, $resource, $resources);
+		}
 
 		return $this;
 	}
@@ -6843,13 +6878,15 @@ class QuarkView implements IQuarkContainer {
 		if ($node == null)
 			$node = function ($text) { return '<div class="group-name">' . $text . '</div>'; };
 
-		foreach ($menu as $key => $element) {
+		foreach ($menu as $key => &$element) {
 			if (!is_array($element)) $out .= $button($element->Key(), $element->Value());
 			else {
 				$out .= '<div class="quark-button-group">' . $node($key)
 					. self::TreeMenu($element, $button, $node)
 					. '</div>';
 			}
+
+			unset($key, $element);
 		}
 
 		return $out;
@@ -6868,9 +6905,11 @@ class QuarkView implements IQuarkContainer {
 		$errors = $model->RawValidationErrors();
 		$out = '';
 
-		foreach ($errors as $error)
+		foreach ($errors as $i => &$error)
 			if ($error->Key() == $field)
 				$out .= str_replace('{error}', $error->Value()->Of(Quark::CurrentLanguage()), $template);
+
+		unset($i, $error);
 
 		return $out;
 	}
@@ -7917,12 +7956,14 @@ trait QuarkCollectionBehavior {
 	private function _matchDocument ($role, $document, $query, $append = null) {
 		$out = true;
 		
-		foreach ($query as $state => $expected) {
+		foreach ($query as $state => &$expected) {
 			$hook = str_replace('$', $role, $state);
 			$out &= method_exists($this, $hook)
 				? $this->$hook($document, $expected, $append)
 				: false;
-		};
+		}
+
+		unset($state, $expected);
 		
 		return $out;
 	}
@@ -7959,8 +8000,10 @@ trait QuarkCollectionBehavior {
 	private function _aggregate_and ($document, $rule) {
 		$state = true;
 		
-		foreach ($rule as $item)
+		foreach ($rule as $i => &$item)
 			$state &= $this->Match($document, $item);
+
+		unset($i, $item);
 					
 		return $state;
 	}
@@ -7975,8 +8018,10 @@ trait QuarkCollectionBehavior {
 	private function _aggregate_nand ($document, $rule) {
 		$state = true;
 		
-		foreach ($rule as $item)
+		foreach ($rule as $i => &$item)
 			$state &= $this->Match($document, $item);
+
+		unset($i, $item);
 					
 		return !$state;
 	}
@@ -7991,8 +8036,10 @@ trait QuarkCollectionBehavior {
 	private function _aggregate_or ($document, $rule) {
 		$state = false;
 		
-		foreach ($rule as $item)
+		foreach ($rule as $i => &$item)
 			$state |= $this->Match($document, $item);
+
+		unset($i, $item);
 					
 		return $state;
 	}
@@ -8007,8 +8054,10 @@ trait QuarkCollectionBehavior {
 	private function _aggregate_nor ($document, $rule) {
 		$state = false;
 		
-		foreach ($rule as $item)
+		foreach ($rule as $i => &$item)
 			$state |= $this->Match($document, $item);
+
+		unset($i, $item);
 					
 		return !$state;
 	}
@@ -8023,8 +8072,10 @@ trait QuarkCollectionBehavior {
 	private function _aggregate_not ($document, $rule) {
 		$state = true;
 		
-		foreach ($rule as $item)
+		foreach ($rule as $i => &$item)
 			$state &= !$this->Match($document, $item);
+
+		unset($i, $item);
 					
 		return $state;
 	}
@@ -8061,8 +8112,10 @@ trait QuarkCollectionBehavior {
 	private function _array_elemMatch ($property, $expected) {
 		$out = false;
 		
-		foreach ($property as $item)
+		foreach ($property as $i => &$item)
 			$out |= $this->Match($item, $expected);
+
+		unset($i, $item);
 		
 		return $out;
 	}
@@ -8079,7 +8132,7 @@ trait QuarkCollectionBehavior {
 	private function _array_all ($property, $expected) {
 		$out = true;
 		
-		foreach ($expected as $item) {
+		foreach ($expected as $i => &$item) {
 			if (is_scalar($item) || is_null($item)) {
 				$out &= in_array($item, $property);
 				continue;
@@ -8090,9 +8143,13 @@ trait QuarkCollectionBehavior {
 			if (isset($item['$elemMatch']))
 				$query = $item['$elemMatch'];
 			
-			foreach ($property as $entry)
+			foreach ($property as $j => &$entry)
 				$out &= $this->Match($entry, $query);
+
+			unset($j, $entry);
 		}
+
+		unset($i, $item);
 		
 		return $out;
 	}
@@ -8341,7 +8398,7 @@ trait QuarkCollectionBehavior {
 				/** @noinspection PhpUnusedLocalVariableInspection */
 				$b = (object)$b;
 		
-				foreach ($sort as $key => $mode) {
+				foreach ($sort as $key => &$mode) {
 					$accessor = str_replace('.', '->', str_replace('->', '', $key));
 					
 					$elem_a = eval('return isset($a->' . $accessor . ') ? $a->' . $accessor . ' : null;');
@@ -8375,6 +8432,8 @@ trait QuarkCollectionBehavior {
 					if ($dir == QuarkModel::SORT_DESC) $res = -$res;
 					break;
 				}
+
+				unset($key, $mode);
 				
 				return $res;
 			});
@@ -10398,15 +10457,20 @@ class QuarkModel implements IQuarkContainer {
 		
 		$out = array();
 		
-		foreach ($fields as $key => $value)
+		foreach ($fields as $key => &$value)
 			$out[] = $key;
+
+		unset($key, $value);
 		
 		if ($runtime && $this->_model instanceof IQuarkStrongModelWithRuntimeFields) {
 			$fields = $this->_model->RuntimeFields();
 			
-			if (QuarkObject::isAssociative($fields))
-				foreach ($fields as $key => $value)
+			if (QuarkObject::isAssociative($fields)) {
+				foreach ($fields as $key => &$value)
 					$out[] = $key;
+
+				unset($key, $value);
+			}
 		}
 		
 		return $out;
@@ -10424,16 +10488,21 @@ class QuarkModel implements IQuarkContainer {
 		
 		$out = array();
 		
-		foreach ($fields as $key => $value)
+		foreach ($fields as $key => &$value)
 			if (!in_array($key, $exclude))
 				$out[] = $value;
+
+		unset($key, $value);
 		
 		if ($runtime && $this->_model instanceof IQuarkStrongModelWithRuntimeFields) {
 			$fields = $this->_model->RuntimeFields();
 			
-			if (QuarkObject::isAssociative($fields))
-				foreach ($fields as $key => $value)
+			if (QuarkObject::isAssociative($fields)) {
+				foreach ($fields as $key => &$value)
 					$out[] = $value;
+
+				unset($key, $value);
+			}
 		}
 		
 		return $out;
@@ -10448,9 +10517,11 @@ class QuarkModel implements IQuarkContainer {
 		$out = array();
 		$fields = $this->FieldKeys($runtime);
 		
-		foreach ($this->_model as $key => $value)
+		foreach ($this->_model as $key => &$value)
 			if (!($this->_model instanceof IQuarkStrongModel) || in_array($key, $fields))
 				$out[] = $key;
+
+		unset($key, $value);
 		
 		return $out;
 	}
@@ -10465,9 +10536,11 @@ class QuarkModel implements IQuarkContainer {
 		$out = array();
 		$fields = $this->FieldKeys($runtime);
 		
-		foreach ($this->_model as $key => $value)
+		foreach ($this->_model as $key => &$value)
 			if (!in_array($key, $exclude) && (!($this->_model instanceof IQuarkStrongModel) || in_array($key, $fields)))
 				$out[] = $value;
+
+		unset($key, $value);
 		
 		return $out;
 	}
@@ -10576,9 +10649,12 @@ class QuarkModel implements IQuarkContainer {
 
 		$raw = self::_provider($model)->Find($model, $criteria, $options);
 
-		if ($raw != null)
-			foreach ($raw as $item)
+		if ($raw != null) {
+			foreach ($raw as $i => &$item)
 				$records[] = self::_record($model, $item, $options, $after);
+
+			unset($i, $item);
+		}
 
 		if (isset($options[self::OPTION_REVERSE]))
 			$records = array_reverse($records);
@@ -11717,7 +11793,7 @@ class QuarkField {
 
 		if (!is_array($key)) return false;
 
-		foreach ($key as $item)
+		foreach ($key as $i => &$item)
 			if (!($item instanceof $model)) return false;
 
 		return true;
@@ -11734,8 +11810,10 @@ class QuarkField {
 
 		$ok = true;
 
-		foreach ($rules as $rule)
+		foreach ($rules as $i => &$rule)
 			$ok = $ok && $rule;
+
+		unset($i, $rule);
 
 		return $ok;
 	}
@@ -11779,8 +11857,10 @@ class QuarkField {
 	public static function ValidationErrors ($language = QuarkLanguage::ANY) {
 		$out = array();
 
-		foreach (self:: $_errors as $error)
+		foreach (self:: $_errors as $i => &$error)
 			$out[] = $error->Value()->Of($language);
+
+		unset($i, $error);
 
 		return $out;
 	}
@@ -12041,11 +12121,13 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 		$empty = true;
 		$_empty = null;
 
-		foreach ($this->values as $language => $value) {
+		foreach ($this->values as $language => &$value) {
 			$ok = $assert($value, $language);
 			$out &= $ok === null ? true : $ok;
 			$empty = false;
 		}
+
+		unset($language, $value);
 
 		if ($empty && $onEmpty != null) {
 			$_empty = $onEmpty();
@@ -12531,6 +12613,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 				$out |= $i == 5 ? $sum >> $offsets[$i] : $sum << $offsets[$i];
 			}
 
+			unset($i, $component, $date);
+
 			return $out;
 		}
 
@@ -12751,6 +12835,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 
 		foreach ($zones as $i => &$zone)
 			$out[$zone] = QuarkDateInterval::FromSeconds(self::TimezoneOffset($zone));
+
+		unset($i, $zone, $zones);
 
 		return $out;
 	}
@@ -13121,8 +13207,10 @@ class QuarkDateInterval {
 	public function Modifier () {
 		$out = '';
 
-		foreach (self::$_units as $unit)
+		foreach (self::$_units as $i => &$unit)
 			$out .= $this->{$unit . 's'} . ' ' . $unit . 's ';
+
+		unset($i, $unit);
 
 		return $out;
 	}
@@ -13155,6 +13243,8 @@ class QuarkDateInterval {
 
 			$seconds += ($modifier[1] != '-' ? 1 : -1) * $interval->Seconds();
 		}
+
+		unset($i, $modifier, $modifiers);
 
 		if ($seconds == 0) return $this;
 
@@ -15189,6 +15279,8 @@ class QuarkClient implements IQuarkEventable {
 		foreach ($this->_channels as $i => &$c)
 			if ($channel == $c)
 				unset($this->_channels[$i]);
+
+		unset($i, $c);
 		
 		return $this;
 	}
@@ -15458,7 +15550,7 @@ class QuarkServer implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Has (QuarkClient $client) {
-		foreach ($this->_clients as $item)
+		foreach ($this->_clients as $i => &$item)
 			if ($item->ConnectionURI()->URI() == $client->ConnectionURI()->URI()) return true;
 
 		return false;
@@ -15478,6 +15570,8 @@ class QuarkServer implements IQuarkEventable {
 
 			$ok &= $client->Send($data);
 		}
+
+		unset($i, $client);
 
 		return $ok;
 	}
@@ -15663,9 +15757,12 @@ class QuarkPeer {
 	 * @return QuarkClient[]|bool
 	 */
 	public function &Peers ($peers = [], $unique = true, $loopBack = false) {
-		if (func_num_args() != 0 && is_array($peers))
-			foreach ($peers as $peer)
+		if (func_num_args() != 0 && is_array($peers)) {
+			foreach ($peers as $i => &$peer)
 				$this->Peer($peer, $unique, $loopBack);
+
+			unset($i, $peer);
+		}
 
 		return $this->_peers;
 	}
@@ -16284,8 +16381,10 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private function _log ($action = '', $message = '', $args = []) {
 		$append = '';
 
-		foreach ($args as $arg)
+		foreach ($args as $i => &$arg)
 			$append .= ' * ' . $arg . "\r\n";
+
+		unset($i, $arg);
 
 		echo '[', date('Y-m-d H:i:s'), '] [', $action, '] ', $message, "\r\n", $append;
 	}
@@ -16339,11 +16438,13 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$environment = Quark::Environment();
 		$host = Quark::Config()->StreamHost();
 		
-		foreach ($environment as $env)
+		foreach ($environment as $i => &$env)
 			if ($env instanceof QuarkStreamEnvironment && $env->EnvironmentName() == $name)
 				return $host == ''
 					? $env->ServerURI()->ConnectionURI()
 					: $env->ServerURI()->ConnectionURI($host);
+
+		unset($i, $env);
 
 		return null;
 	}
@@ -17338,8 +17439,10 @@ class QuarkURI {
 
 		$out = new self();
 
-		foreach ($url as $key => $value)
+		foreach ($url as $key => &$value)
 			$out->$key = $value;
+
+		unset($key, $value);
 
 		if ($rand)
 			$out->port = 0;
@@ -17610,17 +17713,16 @@ class QuarkURI {
 		$route = explode('/', trim(Quark::NormalizePath(preg_replace('#\.php$#Uis', '', $query), false)));
 		$buffer = array();
 
-		foreach ($route as $component) {
+		foreach ($route as $i => &$component) {
 			$item = trim($component);
 
 			if (strlen($item) != 0)
 				$buffer[] = $decode ? urldecode($item) : $item;
 		}
 
-		$route = $buffer;
-		unset($buffer);
+		unset($i, $component);
 
-		return $route;
+		return $buffer;
 	}
 
 	/**
@@ -17732,7 +17834,7 @@ class QuarkURI {
 	 * @return bool
 	 */
 	public function Equal (QuarkURI $uri) {
-		foreach ($this as $key => $value)
+		foreach ($this as $key => &$value)
 			if ($uri->$key != $value) return false;
 
 		return true;
@@ -18445,7 +18547,7 @@ class QuarkDTO {
 		if (func_num_args() == 1 && is_array($headers)) {
 			$assoc = QuarkObject::isAssociative($headers);
 
-			foreach ($headers as $key => $value) {
+			foreach ($headers as $key => &$value) {
 				if (!$assoc) {
 					$header = explode(': ', $value);
 					$key = $header[0];
@@ -18454,6 +18556,8 @@ class QuarkDTO {
 
 				$this->Header($key, $value);
 			}
+
+			unset($key, $value);
 		}
 
 		return $this->_headers;
@@ -19124,8 +19228,10 @@ class QuarkDTO {
 				$this->_headers[self::HEADER_CONTENT_LANGUAGE] = QuarkLanguage::SerializeContentLanguage($this->_languages);
 		}
 
-		foreach ($this->_headers as $key => $value)
+		foreach ($this->_headers as $key => &$value)
 			$headers[] = $key . ': ' . $value;
+
+		unset($key, $value);
 
 		if ($this->_headerControl != null) {
 			$control = $this->_headerControl;
@@ -19233,9 +19339,12 @@ class QuarkDTO {
 	 * @return QuarkDTO
 	 */
 	private function _unserializeHeaders ($raw) {
-		if (preg_match_all('#(.*)\: (.*)\n#Uis', $raw . "\r\n", $headers, PREG_SET_ORDER))
+		if (preg_match_all('#(.*)\: (.*)\n#Uis', $raw . "\r\n", $headers, PREG_SET_ORDER)) {
 			foreach ($headers as $i => &$header)
 				$this->Header($header[1], $header[2]);
+
+			unset($i, $header, $headers);
+		}
 
 		return $this;
 	}
@@ -19257,13 +19366,17 @@ class QuarkDTO {
 					$this->_data = QuarkObject::Merge($this->_data, $this->_processor->Decode($chunk));
 					usleep(QuarkThreadSet::TICK);
 				}
+
+				unset($i, $chunk);
 			}
 		}
 		else {
 			$parts = explode('--' . $this->_boundary, $raw);
 
-			foreach ($parts as $part)
+			foreach ($parts as $i => &$part)
 				$this->_unserializePart($part);
+
+			unset($i, $part);
 		}
 
 		return $this;
@@ -19278,9 +19391,12 @@ class QuarkDTO {
 		if (preg_match('#^(.*)\n\s\n(.*)$#Uis', $raw, $found)) {
 			$head = array();
 
-			if (preg_match_all('#(.*)\: (.*)\n#Uis', trim($raw) . "\r\n", $headers, PREG_SET_ORDER))
-				foreach ($headers as $header)
+			if (preg_match_all('#(.*)\: (.*)\n#Uis', trim($raw) . "\r\n", $headers, PREG_SET_ORDER)) {
+				foreach ($headers as $i => &$header)
 					$head[$header[1]] = trim($header[2]);
+
+				unset($i, $header, $headers);
+			}
 
 			if (isset($head[self::HEADER_CONTENT_DISPOSITION])) {
 				$value = $head[self::HEADER_CONTENT_DISPOSITION];
@@ -20144,12 +20260,14 @@ class QuarkCookie {
 		$out = array();
 		$cookies = array_merge(explode(',', $header), explode(';', $header));
 
-		foreach ($cookies as $raw) {
+		foreach ($cookies as $i => &$raw) {
 			$cookie = explode('=', trim($raw));
 
 			if (sizeof($cookie) == 2)
 				$out[] = new QuarkCookie($cookie[0], $cookie[1]);
 		}
+
+		unset($i, $raw, $cookie, $cookies);
 
 		return $out;
 	}
@@ -20164,7 +20282,7 @@ class QuarkCookie {
 
 		$instance = new QuarkCookie();
 
-		foreach ($cookie as $component) {
+		foreach ($cookie as $i => &$component) {
 			$item = explode('=', $component);
 
 			$key = trim($item[0]);
@@ -20177,6 +20295,8 @@ class QuarkCookie {
 			}
 		}
 
+		unset($i, $component, $item);
+
 		return $instance;
 	}
 
@@ -20188,8 +20308,10 @@ class QuarkCookie {
 	public static function SerializeCookies ($cookies = []) {
 		$out = '';
 
-		foreach ($cookies as $cookie)
+		foreach ($cookies as $i => &$cookie)
 			$out .= $cookie->name . '=' . $cookie->value . '; ';
+
+		unset($i, $cookie);
 
 		return substr($out, 0, strlen($out) - 2);
 	}
@@ -20201,15 +20323,15 @@ class QuarkCookie {
 	 */
 	public function Serialize ($full = false) {
 		$out = $this->name . '=' . $this->value;
-
 		if (!$full) return $out;
-		else {
-			foreach ($this as $field => $value)
-				if (strlen(trim($value)) != 0 && $field != 'name' && $field != 'value')
-					$out .= '; ' . $field . '=' . $value;
 
-			return $out;
-		}
+		foreach ($this as $field => &$value)
+			if (strlen(trim($value)) != 0 && $field != 'name' && $field != 'value')
+				$out .= '; ' . $field . '=' . $value;
+
+		unset($key, $value);
+
+		return $out;
 	}
 }
 
@@ -20330,13 +20452,15 @@ class QuarkLanguage {
 		$out = array();
 		$languages = explode(',', $header);
 
-		foreach ($languages as $raw) {
+		foreach ($languages as $i => &$raw) {
 			$language = explode(';', $raw);
 			$loc = explode('-', $language[0]);
 			$q = explode('=', sizeof($language) == 1 ? 'q=1' : $language[1]);
 
 			$out[] = new QuarkLanguage($language[0], array_reverse($q)[0], array_reverse($loc)[0]);
 		}
+
+		unset($i, $raw, $language, $loc, $q, $languges);
 
 		return $out;
 	}
@@ -20350,8 +20474,10 @@ class QuarkLanguage {
 		$out = array();
 		$languages = explode(',', $header);
 
-		foreach ($languages as $raw)
+		foreach ($languages as $i => &$raw)
 			$out[] = new QuarkLanguage(trim($raw));
+
+		unset($i, $raw, $languages);
 
 		return $out;
 	}
@@ -20369,8 +20495,10 @@ class QuarkLanguage {
 		/**
 		 * @var QuarkLanguage[] $languages
 		 */
-		foreach ($languages as $language)
+		foreach ($languages as $i => &$language)
 			$out[] = $language->Name() . ';q=' . $language->Quantity();
+
+		unset($i, $language);
 
 		return implode(',', $out);
 	}
@@ -20388,8 +20516,10 @@ class QuarkLanguage {
 		/**
 		 * @var QuarkLanguage[] $languages
 		 */
-		foreach ($languages as $language)
+		foreach ($languages as $i => &$language)
 			$out[] = $language->Name();
+
+		unset($i, $language);
 
 		return implode(',', $out);
 	}
@@ -20538,23 +20668,27 @@ class QuarkMIMEType {
 		$out = array();
 		$types = explode(',', $header);
 
-		foreach ($types as $raw) {
+		foreach ($types as $i => &$raw) {
 			$type = explode(';', trim($raw));
 			$item = new QuarkMIMEType($type[0]);
 			
 			if (sizeof($type) > 1) {
 				$params = array_slice($type, 1);
 				
-				foreach ($params as $param) {
+				foreach ($params as $j => &$param) {
 					$pair = explode('=', trim($param));
 
 					if (sizeof($pair) == 2)
 						$item->Param($pair[0], $pair[1]);
 				}
+
+				unset($j, $param, $pair, $params);
 			}
 
 			$out[] = $item;
 		}
+
+		unset($i, $raw, $type, $types);
 
 		return $out;
 	}
@@ -21218,19 +21352,25 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public static function FromFiles ($files) {
 		$output = array();
 		
-        foreach ($files as $name => $value) {
+        foreach ($files as $name => &$value) {
 			$output[$name] = array();
 			
-			foreach ($value as $param => $data) {
+			foreach ($value as $param => &$data) {
 				if (!is_array($data)) {
 					self::_file_populate($output, $name, $param, $data);
 					continue;
 				}
 				
-				foreach ($data as $k => $v)
+				foreach ($data as $k => &$v)
 					self::_file_buffer($output[$name], $param, $k, $v);
+
+				unset($k, $v);
 			}
+
+			unset($param, $data);
         }
+
+		unset($name, $value);
 
 		return $output;
 	}
@@ -21262,8 +21402,10 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			return;
 		}
 
-		foreach ($value as $i => $v)
+		foreach ($value as $i => &$v)
 			self::_file_buffer($item[$index], $name, $i, $v);
+
+		unset($i, $v);
 	}
 
 	/**
@@ -21325,6 +21467,8 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 			$out[] = $item;
 		}
+
+		unset($file, $dir, $fs);
 
 		return $out;
 	}
@@ -22203,10 +22347,12 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 		}
 
 		if (QuarkObject::isAssociative($data)) {
-			foreach ($data as $key => $value)
+			foreach ($data as $key => &$value)
 				$out .= $value instanceof QuarkXMLNode
 					? $value->ToXML($this, $key)
 					: '<' . $key . '>' . $this->Encode($value) . '</' . $key . '>';
+
+			unset($key, $value);
 
 			return $out;
 		}
@@ -22249,7 +22395,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 				$this->_root->Attributes(self::DecodeAttributes($xml[0][2]));
 		}
 
-		foreach ($xml as $value) {
+		foreach ($xml as $k => &$value) {
 			$key = $value[1];
 			$buffer = null;
 
@@ -22286,6 +22432,8 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			}
 		}
 
+		unset($k, $value, $xml);
+
 		return QuarkObject::isIterative($out) ? $out : (object)$out;
 	}
 
@@ -22299,8 +22447,10 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 		$out = array();
 
-		foreach ($attributes as $attribute)
+		foreach ($attributes as $i => &$attribute)
 			$out[$attribute[1]] = $attribute[2];
+
+		unset($i, $attribute, $attributes);
 
 		return (object)$out;
 	}
@@ -22498,9 +22648,11 @@ class QuarkXMLNode {
 		$attributes = '';
 		$node = $this->_name == '' ? $node : $this->_name;
 
-		foreach ($this->_attributes as $key => $value)
+		foreach ($this->_attributes as $key => &$value)
 			if ($value !== null || ($value === null && $processor->ForceNull()))
 				$attributes .= ' ' . $key . '="'. $value . '"';
+
+		unset($key, $value);
 
 		return $this->_single
 			? ('<' . $node . $attributes . ' />')
@@ -22664,7 +22816,7 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 		$out = '';
 		
-		foreach ($data as $name => $section) {
+		foreach ($data as $name => &$section) {
 			if (!is_array($section) && !is_object($section)) {
 				$out .= $name . ' = ' . QuarkObject::Stringify($section) . "\r\n";
 				continue;
@@ -22672,11 +22824,15 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 			
 			$out .= '[' . $name . ']' . "\r\n";
 			
-			foreach ($section as $key => $value)
+			foreach ($section as $key => &$value)
 				$out .= $key . ' = ' . QuarkObject::Stringify($value) . "\r\n";
+
+			unset($key, $value);
 			
 			$out .= "\r\n";
 		}
+
+		unset($name, $section);
 		
 		return $out;
 	}
@@ -22706,8 +22862,10 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 		$out = array();
 
-		foreach ($ini as $value)
+		foreach ($ini as $key => &$value)
 			$out[$value[1]] = self::DecodePairs($value[2], $this->_cast);
+
+		unset($key, $value, $ini);
 
 		return QuarkObject::Merge($out);
 	}
@@ -22723,7 +22881,7 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 		$out = array();
 
-		foreach ($pairs as $pair) {
+		foreach ($pairs as $i => &$pair) {
 			$value = trim($pair[2]);
 
 			if ($cast) {
@@ -22739,6 +22897,8 @@ class QuarkINIIOProcessor implements IQuarkIOProcessor {
 
 			$out[trim($pair[1])] = $value;
 		}
+
+		unset($i, $pair, $pairs);
 		
 		return QuarkObject::Merge($out);
 	}
@@ -22968,8 +23128,10 @@ class QuarkCertificate extends QuarkFile {
 
 		$data = array();
 
-		foreach ($this as $property => $value)
+		foreach ($this as $property => &$value)
 			if (in_array($property, self::$_allowed, true)) $data[$property] = $value;
+
+		unset($property, $value);
 
 		$csr = @openssl_csr_new($data, $this->_key->PrivateKey(false), $config);
 		if (!$csr)
@@ -23212,12 +23374,14 @@ class QuarkCertificateSAN {
 		$out = array();
 		$sans = explode(',', $altName);
 
-		foreach ($sans as $item) {
+		foreach ($sans as $i => &$item) {
 			$san = explode(':', $item);
 
 			if (sizeof($san) == 2)
 				$out[] = new self($san[1], $san[0]);
 		}
+
+		unset($i, $item, $san, $sans);
 
 		return $out;
 	}
@@ -24259,7 +24423,7 @@ class QuarkSQL {
 
 		$output = array();
 
-		foreach ($condition as $key => $rule) {
+		foreach ($condition as $key => &$rule) {
 			$field = $this->Field($key);
 			$value = $this->Value($rule);
 
@@ -24299,6 +24463,8 @@ class QuarkSQL {
 			}
 		}
 
+		unset($key, $rule);
+
 		return ($glue == '' ? ' WHERE ' : '') . implode($glue == '' ? ' AND ' : $glue, $output);
 	}
 
@@ -24313,7 +24479,7 @@ class QuarkSQL {
 		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
 			$output .= ' ORDER BY ';
 
-			foreach ($options[QuarkModel::OPTION_SORT] as $key => $order) {
+			foreach ($options[QuarkModel::OPTION_SORT] as $key => &$order) {
 				switch ($order) {
 					case 1: $sort = 'ASC'; break;
 					case -1: $sort = 'DESC'; break;
@@ -24322,6 +24488,8 @@ class QuarkSQL {
 
 				$output .= $this->Field($key) . ' ' . $sort . ',';
 			}
+
+			unset($key, $order);
 
 			$output = trim($output, ',');
 		}
@@ -24378,10 +24546,12 @@ class QuarkSQL {
 		$keys = array();
 		$values = array();
 
-		foreach ($model as $key => $value) {
+		foreach ($model as $key => &$value) {
 			$keys[] = $this->Field($key);
 			$values[] = $this->Value($value);
 		}
+
+		unset($key, $value);
 
 		return $this->Query(
 			$model,
@@ -24578,11 +24748,13 @@ class QuarkSource extends QuarkFile {
 		$source = preg_replace('/\s+/', ' ', $source);
 		$source = str_replace('<?php', '<?php ', $source);
 
-		foreach ($trim as $rule) {
+		foreach ($trim as $i => &$rule) {
 			$source = str_replace(' ' . $rule . ' ', $rule, $source);
 			$source = str_replace(' ' . $rule, $rule, $source);
 			$source = str_replace($rule . ' ', $rule, $source);
 		}
+
+		unset($i, $rule);
 
 		return trim($source);
 	}

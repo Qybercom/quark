@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SSLAuthority\Providers;
+namespace Quark\Extensions\CertificateAuthority\Providers;
 
 use Quark\IQuarkGetService;
 use Quark\IQuarkModel;
@@ -20,16 +20,16 @@ use Quark\QuarkCollection;
 use Quark\QuarkFile;
 use Quark\QuarkObject;
 
-use Quark\Extensions\SSLAuthority\IQuarkSSLAuthorityProvider;
+use Quark\Extensions\CertificateAuthority\IQuarkCertificateAuthorityProvider;
 
 /**
  * https://github.com/analogic/lescript
  *
  * Class LetsEncrypt
  *
- * @package Quark\Extensions\SSLAuthority\Providers
+ * @package Quark\Extensions\CertificateAuthority\Providers
  */
-class LetsEncrypt implements IQuarkSSLAuthorityProvider {
+class LetsEncrypt implements IQuarkCertificateAuthorityProvider {
 	const URL_PRODUCTION = 'https://acme-v01.api.letsencrypt.org';
 	const URL_STAGING = 'https://acme-staging.api.letsencrypt.org';
 	const URL_AGREEMENT = 'https://letsencrypt.org/documents/LE-SA-v1.1.1-August-1-2016.pdf';

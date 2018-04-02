@@ -1,5 +1,5 @@
 <?php
-namespace Quark\Extensions\SSLAuthority;
+namespace Quark\Extensions\CertificateAuthority;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfigWithForcedOptions;
@@ -7,28 +7,28 @@ use Quark\IQuarkExtensionConfigWithForcedOptions;
 /**
  * Class SSLAuthorityConfig
  *
- * @package Quark\Extensions\SSLAuthority
+ * @package Quark\Extensions\CertificateAuthority
  */
-class SSLAuthorityConfig implements IQuarkExtensionConfigWithForcedOptions {
+class CertificateAuthorityConfig implements IQuarkExtensionConfigWithForcedOptions {
 	/**
 	 * @var string $_name
 	 */
 	private $_name = '';
 
 	/**
-	 * @var IQuarkSSLAuthorityProvider $_provider
+	 * @var IQuarkCertificateAuthorityProvider $_provider
 	 */
 	private $_provider;
 
 	/**
-	 * @param IQuarkSSLAuthorityProvider $provider
+	 * @param IQuarkCertificateAuthorityProvider $provider
 	 */
-	public function __construct (IQuarkSSLAuthorityProvider $provider) {
+	public function __construct (IQuarkCertificateAuthorityProvider $provider) {
 		$this->_provider = $provider;
 	}
 
 	/**
-	 * @return IQuarkSSLAuthorityProvider
+	 * @return IQuarkCertificateAuthorityProvider
 	 */
 	public function &Provider () {
 		return $this->_provider;
@@ -61,6 +61,6 @@ class SSLAuthorityConfig implements IQuarkExtensionConfigWithForcedOptions {
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		return new SSLAuthority($this->_name);
+		return new CertificateAuthority($this->_name);
 	}
 }
