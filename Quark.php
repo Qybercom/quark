@@ -20460,7 +20460,7 @@ class QuarkLanguage {
 			$out[] = new QuarkLanguage($language[0], array_reverse($q)[0], array_reverse($loc)[0]);
 		}
 
-		unset($i, $raw, $language, $loc, $q, $languges);
+		unset($i, $raw, $language, $loc, $q, $languages);
 
 		return $out;
 	}
