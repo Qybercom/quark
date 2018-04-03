@@ -20,6 +20,25 @@ class BitTorrentEncode implements IQuarkIOProcessor {
 	private $_plain = false;
 
 	/**
+	 * @param bool $plain = false
+	 */
+	public function __construct ($plain = false) {
+		$this->Plain($plain);
+	}
+
+	/**
+	 * @param bool $plain = false
+	 *
+	 * @return bool
+	 */
+	public function Plain ($plain = false) {
+		if (func_num_args() != 0)
+			$this->_plain = $plain;
+
+		return $this->_plain;
+	}
+
+	/**
 	 * @return string
 	 */
 	public function MimeType () {
