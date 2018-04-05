@@ -3,8 +3,8 @@ namespace Quark\DataProviders;
 
 use Quark\IQuarkDataProvider;
 use Quark\IQuarkModel;
-
 use Quark\IQuarkModelWithDataProvider;
+
 use Quark\Quark;
 use Quark\QuarkDate;
 use Quark\QuarkKeyValuePair;
@@ -186,7 +186,6 @@ class MongoDB implements IQuarkDataProvider {
 	/**
 	 * https://docs.mongodb.com/v3.0/reference/operator/query/type/
 	 */
-
 	const TYPE_DOUBLE = 1;
 	const TYPE_STRING = 2;
 	const TYPE_OBJECT = 3;
@@ -268,6 +267,57 @@ class MongoDB implements IQuarkDataProvider {
 			throw new QuarkArchException('[MongoDB::QueryByCreationDate] Illegal modifier. Expected one of $lt, $lte, $eq (since MongoDB v3.0), $gte, $gt, got (' . gettype($mod) . ') ' . print_r($mod, true));
 
 		return array($key => array($mod => self::IdOfDate($date)));
+	}
+
+	/**
+	 * https://dbamohsin.wordpress.com/2014/11/25/mongodb-exception-cant-convert-from-bson-type-string-to-date/
+	 *
+	 * @param string $field = ''
+	 * @param string $precision = QuarkDate::UNIT_MICROSECOND
+	 *
+	 * @return array
+	 */
+	public static function DateFromString ($field = '', $precision = QuarkDate::UNIT_MICROSECOND) {
+		$date = QuarkDate::Units();
+
+		$out = array();
+
+		foreach ($date as $unit => &$range) {
+			$out[$unit] = array('$substr' => array_merge(array($field), $range));
+
+			if ($unit == $precision) break;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param string $field = ''
+	 * @param string $precision = QuarkDate::UNIT_MICROSECOND
+	 * @param string $format = QuarkDate::FORMAT_ISO_FULL
+	 *
+	 * @return string[]
+	 */
+	public static function DateFromStringPrecision ($field = '', $precision = QuarkDate::UNIT_MICROSECOND, $format = QuarkDate::FORMAT_ISO_FULL) {
+		$date = QuarkDate::Units();
+		$delimiters = preg_split('#\\w#i', $format, -1, PREG_SPLIT_NO_EMPTY);
+
+		$out = array();
+		$i = 0;
+
+		/** @noinspection PhpUnusedLocalVariableInspection */
+		foreach ($date as $unit => &$range) {
+			$out[] = $field . '.' . $unit;
+
+			if ($unit == $precision) break;
+
+			if (isset($delimiters[$i]))
+				$out[] = $delimiters[$i];
+
+			$i++;
+		}
+
+		return array('$concat' => $out);
 	}
 
 	/**

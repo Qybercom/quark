@@ -12400,6 +12400,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const PRECISE_MINUTES = 'Y-m-d H:i:00';
 	const PRECISE_SECONDS = 'Y-m-d H:i:s';
 
+	const UNIT_YEAR = 'Y';
+	const UNIT_MONTH = 'm';
+	const UNIT_DAY = 'd';
+	const UNIT_HOUR = 'H';
+	const UNIT_MINUTE = 'i';
+	const UNIT_SECOND = 's';
+	const UNIT_MICROSECOND = 'u';
+
 	const UNKNOWN_YEAR = '0000';
 
 	const LIMIT_UNIX = 1970;
@@ -12866,6 +12874,22 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		}, $out);
 		
 		return preg_replace('#' . $in . '#Uis', $out, $date);
+	}
+
+	/**
+	 * @return array
+	 */
+	public static function Units () {
+		// TODO: add formatting support
+		return array(
+			self::UNIT_YEAR => array(0, 4),
+			self::UNIT_MONTH => array(5, 2),
+			self::UNIT_DAY => array(8, 2),
+			self::UNIT_HOUR => array(11, 2),
+			self::UNIT_MINUTE => array(14, 2),
+			self::UNIT_SECOND => array(17, 2),
+			self::UNIT_MICROSECOND => array(20, 6)
+		);
 	}
 
 	/**
