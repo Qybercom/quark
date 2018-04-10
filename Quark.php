@@ -29,6 +29,8 @@ class Quark {
 	const UNIT_KILOBYTE = 1024;
 	const UNIT_MEGABYTE = 1048576;
 	const UNIT_GIGABYTE = 1073741824;
+	const UNIT_TERABYTE = 1099511627776;
+	const UNIT_PETABYTE = 1125899906842624;
 
 	const ALPHABET_ALL = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 	const ALPHABET_LETTERS = 'abcdefghijklmnopqrstuvwxyz';
@@ -787,9 +789,31 @@ class Quark {
 			case self::UNIT_KILOBYTE: return 'KB'; break;
 			case self::UNIT_MEGABYTE: return 'MB'; break;
 			case self::UNIT_GIGABYTE: return 'GB'; break;
+			case self::UNIT_TERABYTE: return 'TB'; break;
+			case self::UNIT_PETABYTE: return 'PB'; break;
 		}
 
 		return '-';
+	}
+
+	/**
+	 * @param int $bytes = 0
+	 * @param int $precision = 2
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function MemoryCalculate ($bytes = 0, $precision = 2) {
+		if     ($bytes >= self::UNIT_PETABYTE) $unit = self::UNIT_PETABYTE;
+		elseif ($bytes >= self::UNIT_TERABYTE) $unit = self::UNIT_TERABYTE;
+		elseif ($bytes >= self::UNIT_GIGABYTE) $unit = self::UNIT_GIGABYTE;
+		elseif ($bytes >= self::UNIT_MEGABYTE) $unit = self::UNIT_MEGABYTE;
+		elseif ($bytes >= self::UNIT_KILOBYTE) $unit = self::UNIT_KILOBYTE;
+		else $unit = self::UNIT_BYTE;
+
+		return new QuarkKeyValuePair(
+			self::MemoryUnit($unit),
+			round($bytes / $unit, $precision)
+		);
 	}
 
 	/**

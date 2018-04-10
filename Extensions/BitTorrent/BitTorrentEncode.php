@@ -3,6 +3,7 @@ namespace Quark\Extensions\BitTorrent;
 
 use Quark\IQuarkIOProcessor;
 
+use Quark\QuarkKeyValuePair;
 use Quark\QuarkObject;
 use Quark\QuarkPlainIOProcessor;
 
@@ -51,10 +52,10 @@ class BitTorrentEncode implements IQuarkIOProcessor {
 	 * @return string
 	 */
 	public function Encode ($data) {
-		if (is_bool($data)) return 'd' . ($data ? 1 : 0) . 'e';
-		if (is_int($data)) return 'd' . $data . 'e';
-		if (is_float($data)) return 'd' . ((int)$data) . 'e';
-		if (is_string($data)) return strlen($data) . ':' . $data;
+		if ($data === null) return null;
+
+		if (is_bool($data)) return 'i' . ($data ? 1 : 0) . 'e';
+		if (is_int($data)) return 'i' . $data . 'e';
 
 		if (QuarkObject::isIterative($data)) {
 			$out = 'l';
@@ -78,7 +79,7 @@ class BitTorrentEncode implements IQuarkIOProcessor {
 			return $out . 'e';
 		}
 
-		return null;
+		return strlen($data) . ':' . $data;
 	}
 
 	/**
@@ -87,7 +88,138 @@ class BitTorrentEncode implements IQuarkIOProcessor {
 	 * @return mixed
 	 */
 	public function Decode ($raw) {
-		// TODO: Implement Decode() method.
+		$out = self::DecodeAuto($raw);
+
+		return $out != null ? $out->Key() : null;
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function DecodeAuto ($raw = '') {
+		$found = ($out = self::DecodeDictionary($raw))
+			  || ($out = self::DecodeList($raw))
+			  || ($out = self::DecodeInt($raw))
+			  || ($out = self::DecodeString($raw));
+
+		return $found ? $out : null;
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function DecodeInt ($raw = '') {
+		$length = strlen($raw);
+
+		if ($length == 0) return null;
+		if ($raw[0] != 'i') return null;
+
+		$i = 1;
+		$out = '';
+
+		while ($i < $length) {
+			if ($raw[$i] == 'e') break;
+
+			$out .= $raw[$i];
+			$i++;
+		}
+
+		return new QuarkKeyValuePair((int)$out, $i + 1);
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function DecodeString ($raw = '') {
+		$length = strlen($raw);
+
+		if ($length == 0) return null;
+		if (!is_numeric($raw[0])) return null;
+
+		$i = 0;
+		$len = '';
+
+		while ($i < $length) {
+			if ($raw[$i] == ':') break;
+
+			$len .= $raw[$i];
+			$i++;
+		}
+
+		$buffer = substr($raw, $i + 1, (int)$len);
+
+		return new QuarkKeyValuePair($buffer, strlen($len) + strlen($buffer) + 1);
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function DecodeList ($raw = '') {
+		$length = strlen($raw);
+
+		if ($length == 0) return null;
+		if ($raw[0] != 'l') return null;
+
+		$i = 1;
+		$out = array();
+
+		while ($i <= $length) {
+			$item = self::DecodeAuto(substr($raw, $i));
+
+			if ($item != null) {
+				$out[] = $item->Key();
+				$i += $item->Value();
+
+				continue;
+			}
+
+			break;
+		}
+
+		return new QuarkKeyValuePair($out, $i + 1);
+	}
+
+	/**
+	 * @param string $raw = ''
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public static function DecodeDictionary ($raw = '') {
+		$length = strlen($raw);
+
+		if ($length == 0) return null;
+		if ($raw[0] != 'd') return null;
+
+		$i = 1;
+		$out = array();
+
+		while ($i <= $length) {
+			$key = self::DecodeString(substr($raw, $i));
+			if ($key == null) break;
+
+			$i += $key->Value();
+
+			$value = self::DecodeAuto(substr($raw, $i));
+
+			if ($value != null) {
+				$out[$key->Key()] = $value->Key();
+				$i += $value->Value();
+
+				continue;
+			}
+
+			break;
+		}
+
+		return new QuarkKeyValuePair($out, $i + 1);
 	}
 
 	/**
