@@ -144,12 +144,16 @@ class SOAPEnvelope {
 		$data = $request->Data();
 		$found = $key;
 
-		foreach ($data as $k => &$v) {
-			$kName = explode(':', $k);
+		if (QuarkObject::isTraversable($data)) {
+			/** @noinspection PhpUnusedLocalVariableInspection */
 
-			if (sizeof($kName) == 2 && $kName[1] == 'Envelope') {
-				$found = $kName[0];
-				break;
+			foreach ($data as $k => &$v) {
+				$kName = explode(':', $k);
+
+				if (sizeof($kName) == 2 && $kName[1] == 'Envelope') {
+					$found = $kName[0];
+					break;
+				}
 			}
 		}
 
