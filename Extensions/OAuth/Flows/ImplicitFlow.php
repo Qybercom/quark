@@ -34,11 +34,6 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 	private $_state = '';
 
 	/**
-	 * @var string $_signature = ''
-	 */
-	private $_signature = '';
-
-	/**
 	 * @param QuarkDTO $request
 	 *
 	 * @return bool
@@ -51,11 +46,10 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 			&& isset($request->response_type)
 			&& $request->response_type == OAuthConfig::RESPONSE_TOKEN;
 
-		$this->_oauthFlowInit($request);
+		$this->_oAuthFlowInit($request);
 
 		$this->_redirect = urldecode($request->redirect_uri);
 		$this->_state = $request->state;
-		$this->_signature = $request->Signature();
 
 		return $this->_authorize;
 	}
@@ -79,7 +73,7 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 	 * @return bool
 	 */
 	public function OAuthFlowRequiresAuthentication () {
-		return $this->_authorize && $this->_signature != $this->_session->Signature();
+		return $this->_authorize;
 	}
 
 	/**
@@ -99,7 +93,7 @@ class ImplicitFlow implements IQuarkOAuthFlow {
 	/**
 	 * @return string
 	 */
-	public function OAuthFlowSignature () {
-		return $this->_signature;
+	public function OAuthFlowModelProcessMethod () {
+		return 'OAuthFlowImplicit';
 	}
 }

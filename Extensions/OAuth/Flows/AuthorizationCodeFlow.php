@@ -45,11 +45,6 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	private $_state = '';
 
 	/**
-	 * @var string $_signature = ''
-	 */
-	private $_signature = '';
-
-	/**
 	 * @param QuarkDTO $request
 	 *
 	 * @return bool
@@ -66,12 +61,11 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 			&& isset($request->grant_type)
 			&& $request->grant_type == OAuthConfig::GRANT_AUTHORIZATION_CODE;
 
-		$this->_oauthFlowInit($request);
+		$this->_oAuthFlowInit($request);
 
 		$this->_redirect = urldecode($request->redirect_uri);
 		$this->_code = $request->code;
 		$this->_state = $request->state;
-		$this->_signature = $request->Signature();
 
 		return $this->_stageAuthorize || $this->_stageToken;
 	}
@@ -80,7 +74,7 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	 * @return bool
 	 */
 	public function OAuthFlowRequiresAuthentication () {
-		return $this->_stageAuthorize && $this->_signature != $this->_session->Signature();
+		return $this->_stageAuthorize;
 	}
 
 	/**
@@ -151,7 +145,7 @@ class AuthorizationCodeFlow implements IQuarkOAuthFlow {
 	/**
 	 * @return string
 	 */
-	public function OAuthFlowSignature () {
-		return $this->_signature;
+	public function OAuthFlowModelProcessMethod () {
+		return 'OAuthFlowAuthorizationCode';
 	}
 }

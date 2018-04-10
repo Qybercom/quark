@@ -1,5 +1,6 @@
 <?php
 namespace Quark\Extensions\OAuth;
+
 use Quark\QuarkDTO;
 
 /**

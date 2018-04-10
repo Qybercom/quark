@@ -12,7 +12,7 @@ interface IQuarkOAuthAuthorizableModel extends IQuarkAuthorizableModel {
 	/**
 	 * @return OAuthToken
 	 */
-	public function OAuthModelSuccess();
+	public function OAuthModelToken();
 
 	/**
 	 * @return OAuthError

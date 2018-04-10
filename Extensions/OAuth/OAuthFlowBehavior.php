@@ -29,7 +29,7 @@ trait OAuthFlowBehavior {
 	/**
 	 * @param QuarkDTO $request
 	 */
-	private function _oauthFlowInit (QuarkDTO $request) {
+	private function _oAuthFlowInit (QuarkDTO $request) {
 		$this->_client = new QuarkKeyValuePair($request->client_id, $request->client_secret);
 		$this->_scope = explode(',', $request->scope);
 	}
@@ -40,7 +40,6 @@ trait OAuthFlowBehavior {
 	public function OAuthFlowClient () {
 		return $this->_client;
 	}
-
 	/**
 	 * @param QuarkSession $session = null
 	 *

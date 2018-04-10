@@ -37,7 +37,7 @@ class PasswordCredentialsFlow implements IQuarkOAuthFlow {
 			&& isset($request->grant_type)
 			&& $request->grant_type == OAuthConfig::GRANT_PASSWORD;
 
-		$this->_oauthFlowInit($request);
+		$this->_oAuthFlowInit($request);
 
 		$this->_user = new QuarkKeyValuePair($request->username, $request->password);
 
@@ -68,5 +68,12 @@ class PasswordCredentialsFlow implements IQuarkOAuthFlow {
 	 */
 	public function OAuthFlowUser () {
 		return $this->_user;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OAuthFlowModelProcessMethod () {
+		return 'OAuthFlowPasswordCredentials';
 	}
 }

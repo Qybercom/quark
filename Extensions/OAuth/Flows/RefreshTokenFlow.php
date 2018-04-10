@@ -36,7 +36,7 @@ class RefreshTokenFlow implements IQuarkOAuthFlow {
 			&& isset($request->grant_type)
 			&& $request->grant_type == OAuthConfig::GRANT_REFRESH_TOKEN;
 
-		$this->_oauthFlowInit($request);
+		$this->_oAuthFlowInit($request);
 
 		$this->_refresh = $request->refresh_token;
 
@@ -67,5 +67,12 @@ class RefreshTokenFlow implements IQuarkOAuthFlow {
 	 */
 	public function OAuthFlowRefreshToken () {
 		return $this->_refresh;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OAuthFlowModelProcessMethod () {
+		return 'OAuthFlowRefreshToken';
 	}
 }

@@ -31,7 +31,7 @@ class ClientCredentialsFlow implements IQuarkOAuthFlow {
 			&& isset($request->grant_type)
 			&& $request->grant_type == OAuthConfig::GRANT_CLIENT_CREDENTIALS;
 
-		$this->_oauthFlowInit($request);
+		$this->_oAuthFlowInit($request);
 
 		return $client;
 	}
@@ -53,5 +53,12 @@ class ClientCredentialsFlow implements IQuarkOAuthFlow {
 		$response->Data($token->ExtractOAuth());
 
 		return $response;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OAuthFlowModelProcessMethod () {
+		return 'OAuthFlowClientCredentials';
 	}
 }

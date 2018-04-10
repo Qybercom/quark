@@ -36,14 +36,19 @@ interface IQuarkOAuthFlow {
 	public function OAuthFlowClient();
 
 	/**
+	 * @return string[]
+	 */
+	public function OAuthFlowScope();
+
+	/**
+	 * @return string
+	 */
+	public function OAuthFlowModelProcessMethod();
+
+	/**
 	 * @param QuarkSession $session = null
 	 *
 	 * @return QuarkSession
 	 */
 	public function OAuthFlowSession(QuarkSession $session = null);
-
-	/**
-	 * @return string[]
-	 */
-	public function OAuthFlowScope();
 }

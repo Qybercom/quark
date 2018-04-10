@@ -4,10 +4,12 @@ namespace Quark\Extensions\OAuth;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
+use Quark\Quark;
 use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkObject;
 use Quark\QuarkSession;
 
 use Quark\Extensions\OAuth\Flows\AuthorizationCodeFlow;
@@ -45,9 +47,9 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	private $_input;
 
 	/**
-	 * @var OAuthToken $_success
+	 * @var OAuthToken $_token
 	 */
-	private $_success;
+	private $_token;
 
 	/**
 	 * @var OAuthError $_error
@@ -71,6 +73,24 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	}
 
 	/**
+	 * @param IQuarkOAuthAuthorizableModel $model
+	 * @param IQuarkOAuthFlow $flow = null
+	 *
+	 * @return mixed
+	 */
+	public function OAuthFlowProcess (IQuarkOAuthAuthorizableModel $model, IQuarkOAuthFlow $flow = null) {
+		$method = $flow->OAuthFlowModelProcessMethod();
+
+		if (!method_exists($model, $method)) {
+			Quark::Log('[OAuthServer] Suggested method ' . $method . ' was not found in model ' . QuarkObject::ClassOf($model), Quark::LOG_WARN);
+
+			return null;
+		}
+
+		return $model->$method($flow);
+	}
+
+	/**
 	 * @param string $status = QuarkDTO::STATUS_400_BAD_REQUEST
 	 *
 	 * @return QuarkDTO
@@ -86,7 +106,7 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 		));
 
 		if ($this->_error->Description()) $response->error_description = $this->_error->Description();
-		if ($this->_error->Uri()) $response->error_uri = $this->_error->Description();
+		if ($this->_error->URI()) $response->error_uri = $this->_error->URI();
 		if ($this->_error->State()) $response->state = $this->_error->State();
 
 		return $response;
@@ -96,12 +116,12 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	 * @return QuarkDTO
 	 */
 	public function OAuthSuccess () {
-		if (!($this->_success instanceof OAuthToken)) {
+		if (!($this->_token instanceof OAuthToken)) {
 			$this->_error = new OAuthError(OAuthError::INVALID_REQUEST);
 			return $this->OAuthError();
 		}
 
-		$out = $this->_flow->OAuthFlowSuccess($this->_success);
+		$out = $this->_flow->OAuthFlowSuccess($this->_token);
 
 		if ($out instanceof QuarkDTO) return $out;
 
@@ -133,7 +153,7 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider($this->_input->AuthorizationProvider());
-		$output->Data($this->_flow ? $this->_flow : $input->Authorization());
+		$output->Data(new OAuthFlow($this->_flow, $input->Authorization()));
 
 		return $output;
 	}
@@ -152,7 +172,7 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 		if (!($model instanceof IQuarkOAuthAuthorizableModel))
 			throw new QuarkArchException('[OAuthServer::Login] Model of class ' . get_class($model) . ' is not a IQuarkOAuthAuthorizableModel');
 
-		$this->_success = $model->OAuthModelSuccess();
+		$this->_token = $model->OAuthModelToken();
 		$this->_error = $model->OAuthModelError();
 
 		if ($this->_error)
