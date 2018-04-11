@@ -46,6 +46,16 @@ class Quark {
 	 * @var bool $_init = false
 	 */
 	private static $_init = false;
+
+	/**
+	 * @var int $_argc = 0
+	 */
+	private static $_argc = 0;
+
+	/**
+	 * @var string[] $_argv = []
+	 */
+	private static $_argv = array();
 	
 	/**
 	 * @var QuarkConfig $_config
@@ -120,6 +130,14 @@ class Quark {
 			self::Import(self::Host());
 			
 			self::$_init = true;
+
+			self::$_argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
+			self::$_argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
+
+			self::Environment(self::CLI()
+				? new QuarkCLIEnvironment(self::$_argc, self::$_argv)
+				: new QuarkFPMEnvironment(self::$_argc, self::$_argv)
+			);
 		}
 		
 		return self::$_init;
@@ -136,15 +154,7 @@ class Quark {
 		self::$_config = $config ? $config : new QuarkConfig();
 		self::$_config->ConfigReady();
 
-		$argc = isset($_SERVER['argc']) ? $_SERVER['argc'] : 0;
-		$argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : array();
-
-		$threads = new QuarkThreadSet($argc, $argv);
-
-		self::Environment(self::CLI()
-			? new QuarkCLIEnvironment($argc, $argv)
-			: new QuarkFPMEnvironment($argc, $argv)
-		);
+		$threads = new QuarkThreadSet(self::$_argc, self::$_argv);
 
 		$threads->Threads(self::$_environment);
 

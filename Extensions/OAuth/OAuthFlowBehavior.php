@@ -58,8 +58,15 @@ trait OAuthFlowBehavior {
 	 * @return string[]
 	 */
 	public function OAuthFlowScope ($scope = '') {
-		if (func_num_args() != 0)
-			$this->_scope = is_array($scope) ? $scope : explode(',', $scope);
+		if (func_num_args() != 0) {
+			if (is_array($scope)) $this->_scope = $scope;
+			else {
+				$scope = trim($scope);
+
+				if (strlen($scope) != 0)
+					$this->_scope = explode(',', $scope);
+			}
+		}
 
 		return $this->_scope;
 	}

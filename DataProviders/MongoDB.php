@@ -44,6 +44,13 @@ interface IQuarkMongoDBDriver {
 	public static function _id($id);
 
 	/**
+	 * @param $id
+	 *
+	 * @return \MongoId|ObjectID
+	 */
+	public static function ObjectID($id);
+
+	/**
 	 * @param QuarkDate $date = null
 	 *
 	 * @return \MongoId|ObjectID
@@ -227,12 +234,30 @@ class MongoDB implements IQuarkDataProvider {
 	}
 
 	/**
+	 * @param $id
+	 *
+	 * @return bool
+	 */
+	public static function IsValidId ($id = '') {
+		return self::_callStatic('IsValidId', array($id));
+	}
+
+	/**
 	 * @param $id = null
 	 *
 	 * @return string
 	 */
 	public static function _id ($id = null) {
 		return $id == null ? null : self::_callStatic('_id', array($id));
+	}
+
+	/**
+	 * @param $id = null
+	 *
+	 * @return \MongoId|ObjectID
+	 */
+	public static function ObjectID ($id = null) {
+		return $id == null ? null : self::_callStatic('ObjectID', array($id));
 	}
 
 	/**
@@ -548,6 +573,15 @@ class _MongoDB_php_mongo implements IQuarkMongoDBDriver {
 	}
 
 	/**
+	 * @param $id
+	 *
+	 * @return \MongoId
+	 */
+	public static function ObjectID ($id) {
+		return new \MongoId($id);
+	}
+
+	/**
 	 * http://stackoverflow.com/a/13594408/2097055
 	 *
 	 * @param QuarkDate $date
@@ -677,6 +711,7 @@ class _MongoDB_php_mongo implements IQuarkMongoDBDriver {
 			throw new QuarkArchException('MongoDB connection not pooled');
 
 		$collection = QuarkModel::CollectionName($model, $options);
+
 		return $this->_connection->$collection;
 	}
 
@@ -979,6 +1014,15 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 			return (string)$source->_id->{'$oid'};
 
 		return '';
+	}
+
+	/**
+	 * @param $id
+	 *
+	 * @return ObjectID
+	 */
+	public static function ObjectID ($id) {
+		return new ObjectID($id);
 	}
 
 	/**

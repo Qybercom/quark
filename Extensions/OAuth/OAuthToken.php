@@ -77,6 +77,7 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public function Provider () {
 		$this->OAuthConfig()->Consumer($this);
+
 		return $this->OAuthConfig()->Provider();
 	}
 
@@ -237,5 +238,14 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public static function FromMeta ($meta = '', $config = '') {
 		return new QuarkModel(func_num_args() == 2 ? new OAuthToken($config) : new OAuthToken(), self::MetaDecode($meta));
+	}
+
+	/**
+	 * @param array|object $params = []
+	 *
+	 * @return OAuthToken
+	 */
+	public static function Build ($params = []) {
+		return self::FromMeta(self::MetaEncode($params))->Model();
 	}
 }
