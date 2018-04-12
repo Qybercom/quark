@@ -24561,6 +24561,18 @@ class QuarkSQL {
 					$output[] = ' (' . $value . ') ';
 					break;
 
+				case '`$in`':
+					// TODO: support native for DBs 'IN' (for the moment - huge differences for different DB providers)
+					// TODO: for examle https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
+
+					$values = [];
+
+					foreach ($rule as $i => &$val)
+						$values[] = $this->Value($val);
+
+					$output[] = ' IN (' . implode($values, ',') . ') ';
+					break;
+
 				default:
 					$output[] = (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
 					break;
