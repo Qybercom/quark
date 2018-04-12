@@ -5266,17 +5266,21 @@ trait QuarkContainerBehavior {
 	}
 
 	/**
+	 * @param string $regex = ''
+	 *
 	 * @return array
 	 */
-	public function Constants () {
-		return QuarkObject::ClassConstants(get_called_class());
+	public function Constants ($regex = '') {
+		return QuarkObject::ClassConstants(get_called_class(), $regex);
 	}
 
 	/**
+	 * @param string $regex = ''
+	 *
 	 * @return array
 	 */
-	public static function ClassConstants () {
-		return QuarkObject::ClassConstants(get_called_class());
+	public static function ClassConstants ($regex = '') {
+		return QuarkObject::ClassConstants(get_called_class(), $regex);
 	}
 
 	/**
@@ -5531,6 +5535,7 @@ class QuarkObject {
 		if (!$object || empty($object)) return true;
 
 		$object = (array)$object;
+
 		return empty($object);
 	}
 
@@ -5762,12 +5767,23 @@ class QuarkObject {
 
 	/**
 	 * @param string|object $class
+	 * @param string $regex = ''
 	 *
 	 * @return array
 	 */
-	public static function ClassConstants ($class) {
+	public static function ClassConstants ($class, $regex = '') {
 		$reflection = new \ReflectionClass($class);
-		return $reflection->getConstants();
+
+		$constants = $reflection->getConstants();
+		if ($regex == '') return $constants;
+
+		$out = array();
+
+		foreach ($constants as $key => &$value)
+			if (preg_match($regex, $key))
+				$out[$key] = $value;
+
+		return $out;
 	}
 
 	/**
@@ -9565,6 +9581,17 @@ trait QuarkModelBehavior {
 	public function LocalizedAssert ($rule, $message = '', $field = '') {
 		return QuarkField::LocalizedAssert($rule, $message, $field);
 	}
+
+	/**
+	 * @param $key
+	 * @param string $regex = ''
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public function PropertyIsConst ($key, $regex = '', $nullable = false) {
+		return QuarkField::In($key, array_values($this->Constants($regex)), $nullable);
+	}
 	
 	/**
 	 * @param string $field = ''
@@ -11826,7 +11853,6 @@ class QuarkField {
 	 */
 	public static function CollectionOf ($key, $model, $nullable = false) {
 		if ($nullable && $key == null) return true;
-
 		if (!is_array($key)) return false;
 
 		foreach ($key as $i => &$item)
@@ -17388,6 +17414,8 @@ class QuarkURI {
 
 	const PORT_ANY = 0;
 
+	const PATTERN_URL = '#([a-zA-Z0-9\-\+\.]+)\:\/\/(([^\s]*?)(\:([^\s]*?))?\@)?([^\s\/\?\:]+)(\:([\d]+))?([^\s\?]+)?(\?([^\s\#]*))?(\#([^\s]*))?#is';
+
 	/**
 	 * @var string $scheme
 	 */
@@ -18024,6 +18052,22 @@ class QuarkURI {
 	 */
 	public static function TransportOf ($scheme = '') {
 		return isset(self::$_transports[$scheme]) ? self::$_transports[$scheme] : null;
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param bool $uri = false
+	 *
+	 * @return string[]|QuarkURI[]
+	 */
+	public static function URLs ($data = '', $uri = false) {
+		$out = array();
+
+		if (preg_match_all(self::PATTERN_URL, $data, $found, PREG_SET_ORDER))
+			foreach ($found as $i => &$url)
+				$out[] = $uri ? self::FromURI($url[0]) : $url[0];
+
+		return $out;
 	}
 
 	/**

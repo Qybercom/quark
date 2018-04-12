@@ -9,6 +9,7 @@ use Quark\QuarkArchException;
 use Quark\QuarkDTO;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkModel;
 use Quark\QuarkObject;
 use Quark\QuarkSession;
 
@@ -221,5 +222,42 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 				new RefreshTokenFlow()
 			);
 		}
+	}
+
+	/**
+	 * @param $target = null
+	 *
+	 * @throws QuarkArchException
+	 */
+	private static function _oAuthCheck ($target = null) {
+		if (!($target instanceof IQuarkAuthorizableModel))
+			throw new QuarkArchException('[OAuthAuthorizableModelBehavior] Model of class ' . get_class($target) . ' is not a IQuarkAuthorizableModel');
+	}
+
+	/**
+	 * @param QuarkModel|IQuarkOAuthAuthorizableModel $app = null
+	 * @param $fallback = []
+	 *
+	 * @return OAuthError|bool
+	 *
+	 * @throws QuarkArchException
+	 */
+	public static function AuthenticationCriteria ($app = null, $fallback = []) {
+		if ($app == null) return $fallback;
+		self::_oAuthCheck($app instanceof QuarkModel ? $app->Model() : $app);
+
+		$error = $app->OAuthModelError();
+
+		return $error ? $error : true;
+	}
+
+	/**
+	 * @param $criteria = null
+	 * @param $fallback = []
+	 *
+	 * @return QuarkDTO|mixed
+	 */
+	public static function AuthenticationFailed ($criteria = null, $fallback = []) {
+		return $criteria instanceof OAuthError ? $criteria->DTO() : $fallback;
 	}
 }

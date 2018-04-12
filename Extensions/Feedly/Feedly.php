@@ -146,7 +146,13 @@ class Feedly implements IQuarkExtension {
 
 			if (isset($api->items) && is_array($api->items))
 				foreach ($api->items as $item) {
-					$article = new FeedlyArticle($item->originId, isset($item->title) ? $item->title : '');
+					$urls = QuarkURI::URLs($item->originId);
+					$url = isset($urls[0]) ? $urls[0] : '';
+
+					if (isset($item->alternate->href))
+						$url = $item->alternate->href;
+
+					$article = new FeedlyArticle($url, isset($item->title) ? $item->title : '');
 					$article->ID($item->id);
 
 					if (isset($item->author)) $article->Author($item->author);
