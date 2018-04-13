@@ -3,6 +3,7 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+
 use Quark\QuarkDTO;
 
 /**
@@ -16,11 +17,13 @@ class OAuthConfig implements IQuarkExtensionConfig {
 
 	const RESPONSE_CODE = 'code';
 	const RESPONSE_TOKEN = 'token';
+	const RESPONSE_DEVICE_CODE = 'device_code';
 
 	const GRANT_AUTHORIZATION_CODE = 'authorization_code';
 	const GRANT_PASSWORD = 'password';
 	const GRANT_CLIENT_CREDENTIALS = 'client_credentials';
 	const GRANT_REFRESH_TOKEN = 'refresh_token';
+	const GRANT_DEVICE_CODE = 'device_code';
 
 	/**
 	 * @var IQuarkOAuthProvider $_provider

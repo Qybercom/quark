@@ -26,6 +26,10 @@ use Quark\QuarkObject;
  * @property int $expires_in = 0
  * @property string $oauth_token_secret
  * @property string $api_user
+ * @property string $verification_uri
+ * @property string $user_code
+ * @property string $device_code
+ * @property int $interval
  *
  * @package Quark\Extensions\OAuth
  */
@@ -95,7 +99,11 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			'code' => '',
 			'expires_in' => 0,
 			'oauth_token_secret' => '',
-			'api_user' => ''
+			'api_user' => '',
+			'verification_uri' => '',
+			'user_code' => '',
+			'device_code' => '',
+			'interval' => ''
 		);
 	}
 

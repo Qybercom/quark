@@ -3207,6 +3207,21 @@ interface IQuarkServiceWithAccessControl {
 interface IQuarkSignedService { }
 
 /**
+ * Interface IQuarkServiceWithSignatureControl
+ *
+ * @package Quark
+ */
+interface IQuarkServiceWithSignatureControl extends IQuarkSignedService {
+	/**
+	 * @param QuarkDTO $request
+	 * @param QuarkSession $session
+	 *
+	 * @return bool
+	 */
+	public function SignatureControl(QuarkDTO $request, QuarkSession $session);
+}
+
+/**
  * Interface IQuarkSignedAnyService
  *
  * @package Quark
@@ -4912,6 +4927,7 @@ class QuarkService implements IQuarkContainer {
 
 		if (!$checkSignature) return true;
 		if (!($this->_service instanceof IQuarkSignedService)) return true;
+		if ($this->_service instanceof IQuarkServiceWithSignatureControl && $this->_service->SignatureControl($this->_input, $this->_session)) return true;
 
 		$method = ucfirst(strtolower($this->_input->Method()));
 		$action = 'SignatureCheckFailedOn' . $method;
@@ -18676,56 +18692,54 @@ class QuarkDTO {
 	public function Header ($key, $value = '') {
 		$value = trim($value);
 
-		if (func_num_args() == 2)
+		if (func_num_args() == 2) {
 			$this->_headers[$key] = $value;
 
-		switch ($key) {
-			case self::HEADER_AUTHORIZATION:
-				if (preg_match('#^(.*) (.*)$#Uis', $value, $auth))
-					$this->_authorization = new QuarkKeyValuePair($auth[1], $auth[2]);
-				break;
+			switch ($key) {
+				case self::HEADER_AUTHORIZATION:
+					if (preg_match('#^(.*) (.*)$#Uis', $value, $auth))
+						$this->_authorization = new QuarkKeyValuePair($auth[1], $auth[2]);
+					break;
 
-			case self::HEADER_COOKIE:
-				$this->_cookies = QuarkCookie::FromCookie($value);
-				break;
+				case self::HEADER_COOKIE:
+					$this->_cookies = QuarkCookie::FromCookie($value);
+					break;
 
-			case self::HEADER_SET_COOKIE:
-				$this->_cookies[] = QuarkCookie::FromSetCookie($value);
-				break;
+				case self::HEADER_SET_COOKIE:
+					$this->_cookies[] = QuarkCookie::FromSetCookie($value);
+					break;
 
-			case self::HEADER_ACCEPT_LANGUAGE:
-				$this->_languages = QuarkLanguage::FromAcceptLanguage($value);
-				break;
+				case self::HEADER_ACCEPT_LANGUAGE:
+					$this->_languages = QuarkLanguage::FromAcceptLanguage($value);
+					break;
 
-			case self::HEADER_CONTENT_LANGUAGE:
-				$this->_languages = QuarkLanguage::FromContentLanguage($value);
-				break;
+				case self::HEADER_CONTENT_LANGUAGE:
+					$this->_languages = QuarkLanguage::FromContentLanguage($value);
+					break;
 
-			case self::HEADER_CONTENT_LENGTH:
-				$this->_length = $value;
-				break;
+				case self::HEADER_CONTENT_LENGTH:
+					$this->_length = $value;
+					break;
 
-			case self::HEADER_CONTENT_TYPE:
-				$type = explode('; charset=', $value);
-				$boundary = explode('; boundary=', $value);
+				case self::HEADER_CONTENT_TYPE:
+					$type = explode('; charset=', $value);
+					$boundary = explode('; boundary=', $value);
 
-				if (sizeof($type) == 2)
-					$this->_charset = $type[1];
+					if (sizeof($type) == 2) $this->_charset = $type[1];
+					if (sizeof($boundary) == 2) $this->_boundary = $boundary[1];
 
-				if (sizeof($boundary) == 2)
-					$this->_boundary = $boundary[1];
+					$this->_multipart = strpos($type[0], 'multipart/') !== false;
 
-				$this->_multipart = strpos($type[0], 'multipart/') !== false;
+					if (sizeof($this->_types) == 0)
+						$this->_types = QuarkMIMEType::FromHeader($value);
+					break;
 
-				if (sizeof($this->_types) == 0)
+				case self::HEADER_ACCEPT:
 					$this->_types = QuarkMIMEType::FromHeader($value);
-				break;
+					break;
 
-			case self::HEADER_ACCEPT:
-				$this->_types = QuarkMIMEType::FromHeader($value);
-				break;
-
-			default: break;
+				default: break;
+			}
 		}
 
 		return isset($this->_headers[$key]) ? $this->_headers[$key] : null;
@@ -24563,7 +24577,7 @@ class QuarkSQL {
 
 				case '`$in`':
 					// TODO: support native for DBs 'IN' (for the moment - huge differences for different DB providers)
-					// TODO: for examle https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
+					// TODO: for example https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
 
 					$values = [];
 

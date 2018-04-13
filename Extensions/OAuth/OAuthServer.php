@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\OAuth;
 
+use Quark\Extensions\OAuth\Flows\DeviceCodeFlow;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
@@ -219,7 +220,8 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 				new ImplicitFlow(),
 				new PasswordCredentialsFlow(),
 				new ClientCredentialsFlow(),
-				new RefreshTokenFlow()
+				new RefreshTokenFlow(),
+				new DeviceCodeFlow()
 			);
 		}
 	}
@@ -227,28 +229,31 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	/**
 	 * @param $target = null
 	 *
-	 * @throws QuarkArchException
+	 * @return bool
 	 */
 	private static function _oAuthCheck ($target = null) {
-		if (!($target instanceof IQuarkAuthorizableModel))
-			throw new QuarkArchException('[OAuthAuthorizableModelBehavior] Model of class ' . get_class($target) . ' is not a IQuarkAuthorizableModel');
+		return $target instanceof IQuarkOAuthAuthorizableModel;
 	}
 
 	/**
 	 * @param QuarkModel|IQuarkOAuthAuthorizableModel $app = null
 	 * @param $fallback = []
+	 * @param string[] $scope = []
 	 *
 	 * @return OAuthError|bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public static function AuthenticationCriteria ($app = null, $fallback = []) {
-		if ($app == null) return $fallback;
-		self::_oAuthCheck($app instanceof QuarkModel ? $app->Model() : $app);
+	public static function AuthenticationCriteria ($app = null, $fallback = [], $scope = []) {
+		if ($app == null || !self::_oAuthCheck($app instanceof QuarkModel ? $app->Model() : $app)) return $fallback;
 
 		$error = $app->OAuthModelError();
+		if ($error) return $error;
 
-		return $error ? $error : true;
+		if (!$app->OAuthModelCheckScope($scope))
+			return new OAuthError(OAuthError::ACCESS_DENIED);
+
+		return true;
 	}
 
 	/**

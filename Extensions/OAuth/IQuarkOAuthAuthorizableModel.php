@@ -18,4 +18,11 @@ interface IQuarkOAuthAuthorizableModel extends IQuarkAuthorizableModel {
 	 * @return OAuthError
 	 */
 	public function OAuthModelError();
+
+	/**
+	 * @param string[] $scope
+	 *
+	 * @return bool
+	 */
+	public function OAuthModelCheckScope($scope);
 }

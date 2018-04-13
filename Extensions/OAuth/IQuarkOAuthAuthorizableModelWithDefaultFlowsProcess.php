@@ -3,6 +3,7 @@ namespace Quark\Extensions\OAuth;
 
 use Quark\Extensions\OAuth\Flows\AuthorizationCodeFlow;
 use Quark\Extensions\OAuth\Flows\ClientCredentialsFlow;
+use Quark\Extensions\OAuth\Flows\DeviceCodeFlow;
 use Quark\Extensions\OAuth\Flows\ImplicitFlow;
 use Quark\Extensions\OAuth\Flows\PasswordCredentialsFlow;
 use Quark\Extensions\OAuth\Flows\RefreshTokenFlow;
@@ -47,4 +48,11 @@ interface IQuarkOAuthAuthorizableModelWithDefaultFlowsProcess extends IQuarkOAut
 	 * @return mixed
 	 */
 	public function OAuthFlowRefreshToken(RefreshTokenFlow $flow);
+
+	/**
+	 * @param DeviceCodeFlow $flow
+	 *
+	 * @return mixed
+	 */
+	public function OAuthFlowDeviceCode(DeviceCodeFlow $flow);
 }

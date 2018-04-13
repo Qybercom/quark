@@ -1,8 +1,6 @@
 <?php
 namespace Quark\Extensions\OAuth;
 
-use Quark\IQuarkAuthorizableModel;
-
 use Quark\Quark;
 use Quark\QuarkArchException;
 
@@ -79,8 +77,8 @@ trait OAuthAuthorizableModelBehavior {
 	 * @throws QuarkArchException
 	 */
 	private function _oAuthCheck () {
-		if (!($this instanceof IQuarkAuthorizableModel))
-			throw new QuarkArchException('[OAuthAuthorizableModelBehavior] Model of class ' . get_class($this) . ' is not a IQuarkAuthorizableModel');
+		if (!($this instanceof IQuarkOAuthAuthorizableModel))
+			throw new QuarkArchException('[OAuthAuthorizableModelBehavior] Model of class ' . get_class($this) . ' is not a IQuarkOAuthAuthorizableModel');
 	}
 
 	/**
@@ -221,5 +219,27 @@ trait OAuthAuthorizableModelBehavior {
 	 */
 	public function OAuthErrorUnsupportedResponseType ($description = '', $uri = '', $state = '') {
 		return $this->OAuthError(new OAuthError(OAuthError::UNSUPPORTED_RESPONSE_TYPE, $description, $uri, $state));
+	}
+
+	/**
+	 * @param string $description = ''
+	 * @param string $uri = ''
+	 * @param string $state = ''
+	 *
+	 * @return null
+	 */
+	public function OAuthErrorSlowDown ($description = '', $uri = '', $state = '') {
+		return $this->OAuthError(new OAuthError(OAuthError::SLOW_DOWN, $description, $uri, $state));
+	}
+
+	/**
+	 * @param string $description = ''
+	 * @param string $uri = ''
+	 * @param string $state = ''
+	 *
+	 * @return null
+	 */
+	public function OAuthErrorAuthorizationPending ($description = '', $uri = '', $state = '') {
+		return $this->OAuthError(new OAuthError(OAuthError::AUTHORIZATION_PENDING, $description, $uri, $state));
 	}
 }

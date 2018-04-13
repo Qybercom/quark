@@ -20,6 +20,8 @@ class OAuthError {
 	const INVALID_TOKEN = 'invalid_token';
 	const UNSUPPORTED_GRANT_TYPE = 'unsupported_grant_type';
 	const UNSUPPORTED_RESPONSE_TYPE = 'unsupported_response_type';
+	const SLOW_DOWN = 'slow_down';
+	const AUTHORIZATION_PENDING = 'authorization_pending';
 
 	/**
 	 * @var string $_error = ''
