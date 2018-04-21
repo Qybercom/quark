@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\OAuth;
 
-use Quark\Extensions\OAuth\Flows\DeviceCodeFlow;
 use Quark\IQuarkAuthorizableModel;
 use Quark\IQuarkAuthorizationProvider;
 
@@ -19,6 +18,8 @@ use Quark\Extensions\OAuth\Flows\ClientCredentialsFlow;
 use Quark\Extensions\OAuth\Flows\ImplicitFlow;
 use Quark\Extensions\OAuth\Flows\PasswordCredentialsFlow;
 use Quark\Extensions\OAuth\Flows\RefreshTokenFlow;
+use Quark\Extensions\OAuth\Flows\DeviceCodeFlow;
+use Quark\Extensions\OAuth\Flows\InternalSessionFlow;
 
 /**
  * Class OAuthServer
@@ -93,15 +94,18 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	}
 
 	/**
-	 * @param string $status = QuarkDTO::STATUS_400_BAD_REQUEST
+	 * @param bool $dto = true
 	 *
-	 * @return QuarkDTO
+	 * @return QuarkDTO|OAuthError
 	 */
-	public function OAuthError ($status = QuarkDTO::STATUS_400_BAD_REQUEST) {
+	public function OAuthError ($dto = true) {
 		if ($this->_error == null)
 			$this->_error = new OAuthError(OAuthError::INVALID_REQUEST, 'Unsupported authorization flow');
 
-		$response = QuarkDTO::ForStatus($status);
+		if (!$dto)
+			return $this->_error;
+
+		$response = QuarkDTO::ForStatus(QuarkDTO::STATUS_400_BAD_REQUEST);
 		$response->Processor(new QuarkJSONIOProcessor());
 		$response->Data((object)array(
 			'error' => $this->_error->Error()
@@ -115,21 +119,51 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 	}
 
 	/**
-	 * @return QuarkDTO
+	 * @param bool $dto = true
+	 *
+	 * @return QuarkDTO|OAuthToken
 	 */
-	public function OAuthSuccess () {
+	public function OAuthSuccess ($dto = true) {
 		if (!($this->_token instanceof OAuthToken)) {
 			$this->_error = new OAuthError(OAuthError::INVALID_REQUEST);
-			return $this->OAuthError();
+			return $this->OAuthError($dto);
 		}
 
 		$out = $this->_flow->OAuthFlowSuccess($this->_token);
 
-		if ($out instanceof QuarkDTO) return $out;
+		if ($out instanceof QuarkDTO) return $dto ? $out : $this->_token;
 
 		$this->_error = $out;
 
-		return $this->OAuthError();
+		return $this->OAuthError($dto);
+	}
+
+	/**
+	 * @param string $config = ''
+	 * @param QuarkSession $session = null
+	 *
+	 * @return OAuthToken|OAuthError
+	 */
+	public static function InternalSession ($config = '', QuarkSession $session = null) {
+		if ($session == null) return null;
+
+		$user = $session->User();
+		if ($user == null) return null;
+
+		$oauth = QuarkSession::Init($config, new QuarkDTO());
+		$flow = new InternalSessionFlow($user->Model());
+
+		/**
+		 * @var OAuthServer $server
+		 */
+		$server = $oauth->Source()->Provider();
+
+		if (!$oauth->Login($flow))
+			return $server->OAuthError(false);
+
+		$server->_flow = $flow;
+
+		return $server->OAuthSuccess(false);
 	}
 
 	/**
@@ -199,13 +233,14 @@ class OAuthServer implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkKeyValuePair $id
+	 * @param $data
+	 * @param bool $commit
 	 *
 	 * @return bool
 	 */
-	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
-		// TODO: Implement SessionCommit() method.
+	public function SessionData ($name, QuarkKeyValuePair $id, $data, $commit) {
+		// TODO: Implement SessionData() method.
 	}
 
 	/**

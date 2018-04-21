@@ -14149,6 +14149,7 @@ class QuarkSession {
 		if (func_num_args() == 0) return;
 
 		$this->_source = clone $source;
+
 		self::$_current = &$this;
 	}
 
@@ -14295,10 +14296,12 @@ class QuarkSession {
 	}
 
 	/**
-	 * @return bool
+	 * @param $data = []
+	 *
+	 * @return mixed
 	 */
-	public function Commit () {
-		return $this->_source->Provider()->SessionCommit($this->_source->Name(), $this->_session(), $this->ID());
+	public function Data ($data = []) {
+		return $this->_source->Provider()->SessionData($this->_source->Name(), $this->ID(), $data, func_num_args() != 0);
 	}
 	
 	/**
@@ -14363,7 +14366,6 @@ class QuarkSession {
 		 * @var QuarkSessionSource $source
 		 */
 		$source = Quark::Stack($provider);
-
 		if ($source == null) return null;
 
 		$session = new self($source);
@@ -14399,10 +14401,10 @@ class QuarkSession {
 		 * @var QuarkSessionSource $source
 		 */
 		$source = Quark::Stack($id->Key());
-
 		if ($source == null) return null;
 
 		$input = new QuarkDTO();
+		$input->Authorization($id);
 		$input->AuthorizationProvider($id);
 
 		$session = new self($source);
@@ -14462,12 +14464,13 @@ interface IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkKeyValuePair $id
+	 * @param $data
+	 * @param bool $commit
 	 *
 	 * @return bool
 	 */
-	public function SessionCommit($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id);
+	public function SessionData($name, QuarkKeyValuePair $id, $data, $commit);
 
 	/**
 	 * @param object $ini
@@ -14514,7 +14517,6 @@ interface IQuarkAuthorizableModel extends IQuarkModel {
 	 * @return bool
 	 */
 	public function Logout($name, QuarkKeyValuePair $id);
-
 }
 
 /**
@@ -16686,6 +16688,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 				$service->Input()->MergeData($input);
 
 			if ($session != null) {
+				$service->Input()->Authorization(QuarkKeyValuePair::FromField($session));
 				$service->Input()->AuthorizationProvider(QuarkKeyValuePair::FromField($session));
 
 				if ($connected)

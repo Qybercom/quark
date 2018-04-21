@@ -2,7 +2,6 @@
 namespace Quark\AuthorizationProviders;
 
 use Quark\IQuarkAuthorizableModel;
-use Quark\IQuarkAuthorizableModelWithRuntimeFields;
 use Quark\IQuarkAuthorizationProvider;
 use Quark\IQuarkModel;
 use Quark\IQuarkModelWithCustomCollectionName;
@@ -11,6 +10,7 @@ use Quark\IQuarkModelWithDataProvider;
 use Quark\Quark;
 use Quark\QuarkCookie;
 use Quark\QuarkGenericModel;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkDTO;
 use Quark\QuarkModel;
@@ -54,6 +54,11 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	private $_init = false;
 
 	/**
+	 * @var QuarkJSONIOProcessor $_processor
+	 */
+	private $_processor;
+
+	/**
 	 * @param string $storage = self::STORAGE
 	 * @param string $cookie = self::COOKIE_NAME
 	 * @param string $collection = self::COLLECTION
@@ -63,6 +68,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$this->_cookie = $cookie;
 		$this->_collection = $collection;
 		$this->_init = func_num_args() != 0;
+		$this->_processor = new QuarkJSONIOProcessor();
 	}
 
 	/**
@@ -92,13 +98,10 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		if ($record == null) return null;
 
-		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields)
-			$record->user->PopulateWith($record->session);
-
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider($session);
 		$output->Signature($record->signature);
-		$output->Data($record->user);
+		$output->Data($this->_processor->Decode($record->user));
 
 		if ($cookie != null)
 			$output->Cookie($cookie);
@@ -123,7 +126,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			'sid' => Quark::GuID(),
 			'signature' => Quark::GuID(),
 			'lifetime' => $lifetime,
-			'user' => $model
+			'user' => $this->_processor->Encode($model)
 		));
 
 		if (!$session->Create()) {
@@ -167,12 +170,13 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkKeyValuePair $id
+	 * @param $data
+	 * @param bool $commit
 	 *
 	 * @return bool
 	 */
-	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
+	public function SessionData ($name, QuarkKeyValuePair $id, $data, $commit) {
 		/**
 		 * @var QuarkModel|Session $session
 		 */
@@ -181,23 +185,15 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			'sid' => $id->Value()
 		));
 
-		if ($session == null) return false;
+		if ($session == null) return null;
 
-		$session->user->PopulateWith($model);
-		$session->session = (object)$session->session;
+		if ($commit) {
+			$session->session = json_encode($data);
 
-		if ($model instanceof IQuarkAuthorizableModelWithRuntimeFields) {
-			$fields = $model->RuntimeFields();
-			$out = $session->user->ExportGeneric($model);
-
-			if (!isset($session->session))
-				$session->session = new \stdClass();
-
-			foreach ($fields as $key => $value)
-				$session->session->$key = isset($out->$key) ? $out->$key : null;
+			if (!$session->Save()) return null;
 		}
 
-		return $session->Save();
+		return $this->_processor->Decode($session->session);
 	}
 
 	/**
@@ -241,8 +237,8 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			'sid' => '',
 			'signature' => '',
 			'lifetime' => 0,
-			'user' => new QuarkGenericModel(),
-			'session' => new \stdClass()
+			'user' => '',
+			'session' => ''
 		);
 	}
 

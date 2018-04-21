@@ -163,6 +163,8 @@ class OAuthConfig implements IQuarkExtensionConfig {
 	 * @return string|null
 	 */
 	public static function URLAllowed (QuarkDTO $request) {
+		if ($request->URI() == null) return null;
+
 		$url = $request->URI()->ReverseRoute(0);
 
 		return in_array($url, self::URLS()) ? $url : null;

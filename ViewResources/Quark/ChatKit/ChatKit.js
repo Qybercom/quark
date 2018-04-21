@@ -197,7 +197,7 @@ var ChatKit = function (opt) {
  * @return {string}
  */
 ChatKit.LocalTime = function (date, format) {
-	format = format || '<b>HH:mm:ss</b>' + ' ' + 'DD.MM.YYYY';
+	format = format || '<b>HH:mm:ss</b>' + '[&nbsp;]' + 'DD.MM.YYYY';
 
 	return moment(moment.utc(date).toDate()).format(format);
 };

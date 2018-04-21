@@ -329,7 +329,7 @@ Quark.Controls.File = function (selector, opt) {
 			data: {
 				_s: $(this).attr('quark-signature')
 			}
-		}), $(this));
+		}), $(this), e);
 	});
 };
 
@@ -338,8 +338,9 @@ Quark.Controls.File = function (selector, opt) {
  * @param {string} name
  * @param opt
  * @param uploader
+ * @param originalEvent
  */
-Quark.Controls.File.To = function (url, name, opt, uploader) {
+Quark.Controls.File.To = function (url, name, opt, uploader, originalEvent) {
 	opt = Quark.Extend(opt, {
 		multiple: false,
 		json: true,
@@ -384,10 +385,10 @@ Quark.Controls.File.To = function (url, name, opt, uploader) {
 		.on('click', function (e) {
 			$(this).val('');
 
-			opt.beforeSelect($(this));
+			opt.beforeSelect($(this), e, originalEvent);
 		})
 		.on('change', function (e) {
-			opt.beforeSubmit($(this));
+			opt.beforeSubmit($(this), e, originalEvent);
 
 			if ($(this).val().length !== 0)
 				form.submit();

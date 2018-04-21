@@ -5,6 +5,7 @@ use Quark\Extensions\OAuth\Flows\AuthorizationCodeFlow;
 use Quark\Extensions\OAuth\Flows\ClientCredentialsFlow;
 use Quark\Extensions\OAuth\Flows\DeviceCodeFlow;
 use Quark\Extensions\OAuth\Flows\ImplicitFlow;
+use Quark\Extensions\OAuth\Flows\InternalSessionFlow;
 use Quark\Extensions\OAuth\Flows\PasswordCredentialsFlow;
 use Quark\Extensions\OAuth\Flows\RefreshTokenFlow;
 
@@ -55,4 +56,11 @@ interface IQuarkOAuthAuthorizableModelWithDefaultFlowsProcess extends IQuarkOAut
 	 * @return mixed
 	 */
 	public function OAuthFlowDeviceCode(DeviceCodeFlow $flow);
+
+	/**
+	 * @param InternalSessionFlow $flow
+	 *
+	 * @return mixed
+	 */
+	public function OAuthFlowInternalSession(InternalSessionFlow $flow);
 }

@@ -77,13 +77,14 @@ class BasicAuth implements IQuarkAuthorizationProvider {
 
 	/**
 	 * @param string $name
-	 * @param IQuarkAuthorizableModel $model
 	 * @param QuarkKeyValuePair $id
+	 * @param $data
+	 * @param bool $commit
 	 *
 	 * @return bool
 	 */
-	public function SessionCommit ($name, IQuarkAuthorizableModel $model, QuarkKeyValuePair $id) {
-		// TODO: Implement SessionCommit() method.
+	public function SessionData ($name, QuarkKeyValuePair $id, $data, $commit) {
+		// TODO: Implement SessionData() method.
 	}
 
 	/**
