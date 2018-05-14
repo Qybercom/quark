@@ -2519,41 +2519,8 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	 * @param array $argv = []
 	 */
 	public function __construct ($argc = 0, $argv = []) {
-		if (!Quark::CLI()) return;
-
-		$dedicated = $argc > 1 && ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS);
-		if (!($argc <= 1 || $dedicated)) return;
-
-		$this->_queued = true;
-		$tasks = $dedicated
-			? Quark::Config()->Dedicated($argc > 2 ? $argv[2] : '')
-			: Quark::Config()->DedicatedAll();
-
-		$dir = new \RecursiveDirectoryIterator(Quark::Host());
-		$fs = new \RecursiveIteratorIterator($dir);
-
-		foreach ($fs as $file) {
-			/**
-			 * @var \FilesystemIterator $file
-			 */
-
-			if ($file->isDir() || !strstr($file->getFilename(), 'Service.php')) continue;
-
-			$class = QuarkObject::ClassIn($file->getPathname());
-
-			/**
-			 * @var IQuarkService $service
-			 */
-			$service = new $class();
-			if (!($service instanceof IQuarkService)) continue;
-			if ($dedicated && !QuarkService::URLMatch($service, $tasks)) continue;
-			if (!$dedicated && QuarkService::URLMatch($service, $tasks)) continue;
-
-			if ($service instanceof IQuarkScheduledTask)
-				$this->_tasks[] = new QuarkTask($service);
-
-			unset($service);
-		}
+		if ($argc <= 1 || $argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS)
+			$this->_queued = true;
 	}
 
 	/**
@@ -2614,8 +2581,23 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 	public function Thread ($argc = 0, $argv = []) {
 		Quark::CurrentEnvironment($this);
 
+		$dedicated = $argc > 1 && ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS);
+
+		if ($this->_queued && !$this->_started) {
+			$tasks = $dedicated
+				? Quark::Config()->Dedicated($argc >= 2 ? $argv[2] : '')
+				: Quark::Config()->DedicatedAll();
+
+			$this->_tasks = QuarkService::Suite(Quark::Host(), function ($service) use (&$dedicated, $tasks) {
+				if ($dedicated && !QuarkService::URLMatch($service, $tasks)) return false;
+				if (!$dedicated && QuarkService::URLMatch($service, $tasks)) return false;
+
+				return $service instanceof IQuarkScheduledTask;
+			});
+		}
+
 		if ($argc > 1) {
-			if ($argv[1] == QuarkTask::DEDICATED || $argv[1] == QuarkTask::DEDICATED_ALIAS) {
+			if ($dedicated) {
 				if (!$this->_started) {
 					$this->_started = true;
 
@@ -4558,6 +4540,10 @@ class QuarkService implements IQuarkContainer {
 	 */
 	private $_outputFilter;
 
+	public static function Instance ($path = '') {
+		// TODO: Use this to instantiate a service from a file
+	}
+
 	/**
 	 * @param string $service
 	 * @param string $base = ''
@@ -4632,17 +4618,17 @@ class QuarkService implements IQuarkContainer {
 			$path = self::_bundle($service, $base, $postfix);
 		}
 
+		if (!file_exists($path))
+			throw QuarkHTTPException::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND, 'Unknown service file ' . $path);
+
 		$class = str_replace('/', '\\', ($namespace ? '/' . $namespace : '') . '/' . $service . $postfix);
 
-		if (!file_exists($path))
-			throw QuarkHTTPException::ForStatus(QuarkDTO::STATUS_404_NOT_FOUND, 'Unknown service file ' . $path, $class);
+		unset($length, $path, $service, $index, $route);
 
 		$bundle = new $class();
 
 		if (!($bundle instanceof IQuarkService))
 			throw new QuarkArchException('Class ' . $class . ' is not an IQuarkService');
-
-		unset($class, $length, $path, $service, $index, $route);
 
 		return $bundle;
 	}
@@ -4658,6 +4644,35 @@ class QuarkService implements IQuarkContainer {
 	 */
 	public static function Custom ($uri, $base = null, $namespace = '', $postfix = '', $routes = []) {
 		return new self($uri, null, null, $base, $namespace, $postfix, $routes);
+	}
+
+	public static function Suite ($base = '', callable $filter = null) {
+		$dir = new \RecursiveDirectoryIterator($base);
+		$fs = new \RecursiveIteratorIterator($dir);
+
+		$out = array();
+
+		foreach ($fs as $file) {
+			/**
+			 * @var \FilesystemIterator $file
+			 */
+			// TODO: REFACTOR
+			if ($file->isDir() || !strstr($file->getFilename(), 'Service.php')) continue;
+
+			$class = QuarkObject::ClassIn($file->getPathname());
+
+			/**
+			 * @var IQuarkService $service
+			 */
+			$service = new $class();
+
+			if ($service instanceof IQuarkService && ($filter == null || $filter($service)))
+				$out[] = new QuarkTask($service);
+
+			unset($service);
+		}
+
+		return $out;
 	}
 
 	/**
