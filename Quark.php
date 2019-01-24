@@ -7969,7 +7969,9 @@ trait QuarkCollectionBehavior {
 		$outChanged = false;
 		
 		foreach ($query as $key => &$rule) {
-			$len = sizeof($key);
+			$len = QuarkObject::isTraversable($key)
+				? sizeof($key)
+				: strlen((string)$key);
 			
 			if ($len == 0) continue;
 			
@@ -24536,7 +24538,8 @@ class QuarkSQL {
 	 * @return bool|float|int|string
 	 */
 	public function Value ($value) {
-		if ($value === null) $value = self::NULL;
+		// TODO: need refactor
+		//if ($value === null) $value = self::NULL;
 		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());
 		if (is_array($value)) $value = json_encode($value);
 		if (!is_scalar($value)) $value = null;
@@ -24549,12 +24552,13 @@ class QuarkSQL {
 	}
 
 	/**
-	 * @param        $condition
-	 * @param string $glue
+	 * @param $condition
+	 * @param string $glue = ''
+	 * @param string $target = ''
 	 *
 	 * @return string
 	 */
-	public function Condition ($condition, $glue = '') {
+	public function Condition ($condition, $glue = '', $target = '') {
 		if (!is_array($condition) || sizeof($condition) == 0) return '';
 
 		$output = array();
@@ -24564,36 +24568,37 @@ class QuarkSQL {
 			$value = $this->Value($rule);
 
 			if (is_array($rule))
-				$value = $this->Condition($rule, ' AND ');
+				$value = $this->Condition($rule, ' AND ', $field);
 
 			switch ($field) {
-				case '`$lte`': $output[] = '<=' . $value; break;
-				case '`$lt`': $output[] = '<' . $value; break;
-				case '`$gt`': $output[] = '>' . $value; break;
-				case '`$gte`': $output[] = '>=' . $value; break;
-				case '`$ne`': $output[] = ($value == self::NULL ? ' IS NOT ' : '<>') . $value; break;
+				case $this->Field('$eq'): $output[] = $target . ($value === null ? ' IS ' . self::NULL : '=' . $value); break;
+				case $this->Field('$lte'): $output[] = $target . '<=' . $value; break;
+				case $this->Field('$lt'): $output[] = $target . '<' . $value; break;
+				case $this->Field('$gt'): $output[] = $target . '>' . $value; break;
+				case $this->Field('$gte'): $output[] = $target . '>=' . $value; break;
+				case $this->Field('$ne'): $output[] = $target . ($value === null ? ' IS NOT ' . self::NULL : '<>' . $value); break;
 
-				case '`$regex`':
+				case $this->Field('$regex'):
 					$regEx = new QuarkRegEx($rule);
-					$output[] = ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
+					$output[] = $target . ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
 					break;
 
-				case '`$and`':
+				case $this->Field('$and'):
 					$value = $this->Condition($rule, ' AND ');
 					$output[] = ' (' . $value . ') ';
 					break;
 
-				case '`$or`':
+				case $this->Field('$or'):
 					$value = $this->Condition($rule, ' OR ');
 					$output[] = ' (' . $value . ') ';
 					break;
 
-				case '`$nor`':
+				case $this->Field('$nor'):
 					$value = $this->Condition($rule, ' NOT OR ');
 					$output[] = ' (' . $value . ') ';
 					break;
 
-				case '`$in`':
+				case $this->Field('$in'):
 					// TODO: support native for DBs 'IN' (for the moment - huge differences for different DB providers)
 					// TODO: for example https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
 
@@ -24602,11 +24607,11 @@ class QuarkSQL {
 					foreach ($rule as $i => &$val)
 						$values[] = $this->Value($val);
 
-					$output[] = ' IN (' . implode($values, ',') . ') ';
+					$output[] = $target . ' IN (' . implode($values, ',') . ') ';
 					break;
 
 				default:
-					$output[] = (is_string($key) ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
+					$output[] = (is_string($key) && !is_array($rule)  ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
 					break;
 			}
 		}
