@@ -14,7 +14,7 @@ class DefaultTheme implements IWysiBBTheme {
 	 * @return string
 	 */
 	public function Location () {
-		return 'http://cdn.wysibb.com/css/default/wbbtheme.css';
+		return 'https://cdn.wysibb.com/css/default/wbbtheme.css';
 	}
 
 	/**

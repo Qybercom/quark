@@ -17,6 +17,7 @@ use Quark\QuarkCSSViewResourceType;
  */
 class GoogleFont implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkMultipleViewResource {
 	const FAMILY_OPEN_SANS = 'Open Sans';
+	const FAMILY_OPEN_SANS_CONDENSED = 'Open Sans Condensed';
 	const FAMILY_ROBOTO = 'Roboto';
 	const FAMILY_MATERIAL_ICONS = 'Material Icons';
 	const FAMILY_MONTSERRAT = 'Montserrat';
@@ -105,7 +106,7 @@ class GoogleFont implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 	 * @return string
 	 */
 	public function Location () {
-		return str_replace(' ', '+', '//fonts.googleapis.com/css?family='
+		return str_replace(' ', '+', 'https://fonts.googleapis.com/css?family='
 			. $this->_family
 			. (sizeof($this->_weights) != 0 ? ':' . implode(',', $this->_weights) : '')
 			. (sizeof($this->_subsets) != 0 ? '&amp;subset=' . implode(',', $this->_subsets) : ''));

@@ -6846,11 +6846,11 @@ class QuarkView implements IQuarkContainer {
 		if ($data instanceof QuarkModel)
 			$data = $data->Model();
 
-		foreach ($data as $key => &$value) {
+		foreach ($data as $key => $value) {
 			$append = $prefix . $key;
 			$source = QuarkObject::isTraversable($value) && !is_callable($value)
 				? self::_tpl($source, $value, $append . '.')
-				: (is_scalar($value) || !is_callable($value)
+				: (!is_callable($value)
 					? preg_replace('#\{' . $append . '\}#Uisu', $value, $source)
 					: preg_replace_callback('#\{' . $append . '\}#Uisu', function ($matches) use (&$value, &$key, &$append) { return $value($matches, $key, $append); }, $source)
 				);
@@ -10432,7 +10432,7 @@ class QuarkModel implements IQuarkContainer {
 				return $out;
 		}
 
-		if ($model instanceof IQuarkModelWithDefaultExtract)
+		if ($fields == null && $model instanceof IQuarkModelWithDefaultExtract)
 			$fields = $model->DefaultExtract($fields, $weak);
 
 		foreach ($model as $key => $value) {
@@ -12162,9 +12162,16 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 
 		$default = $this->default;
 
-		return isset($this->values->$language)
-			? (string)$this->values->$language
-			: (isset($this->values->$default) ? $this->values->$default : '');
+		if (isset($this->values->$language))
+			return (string)$this->values->$language;
+
+		$family = explode('-', $language);
+		$language = $family[0];
+
+		if (isset($this->values->$language))
+			return (string)$this->values->$language;
+
+		return isset($this->values->$default) ? $this->values->$default : '';
 	}
 
 	/**
@@ -20986,6 +20993,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 
 		if ($extension[0] == 'jpeg') $extension[0] = 'jpg';
 		if ($mime == 'text/plain') $extension[0] = 'txt';
+		if ($mime == 'audio/x-m4a') $extension[0] = 'm4a';
 
 		return sizeof($extension) == 2 && substr_count($extension[0], '-') == 0 ? $extension[0] : null;
 	}
@@ -22327,6 +22335,11 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	private $_forceInput = false;
 
 	/**
+	 * @var bool $_forceNode = false
+	 */
+	private $_forceNode = false;
+
+	/**
 	 * @var bool $_init = false
 	 */
 	private $_init = false;
@@ -22406,6 +22419,18 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 			$this->_forceInput = $forceInput;
 
 		return $this->_forceInput;
+	}
+
+	/**
+	 * @param bool $forceNode = false
+	 *
+	 * @return bool
+	 */
+	public function ForceNode ($forceNode = false) {
+		if (func_num_args() != 0)
+			$this->_forceNode = $forceNode;
+
+		return $this->_forceNode;
 	}
 
 	/**
@@ -22548,7 +22573,7 @@ class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 
 			$attributes = self::DecodeAttributes($value[2]);
 
-			if ($attributes !== null) {
+			if ($this->_forceNode || $attributes !== null) {
 				$buffer = new QuarkXMLNode($key, $buffer, $attributes);
 				$buffer->Single(!isset($value[7]));
 			}
@@ -24538,6 +24563,7 @@ class QuarkSQL {
 	 * @return bool|float|int|string
 	 */
 	public function Value ($value) {
+		if ($value === null) return self::NULL;
 		// TODO: need refactor
 		//if ($value === null) $value = self::NULL;
 		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());

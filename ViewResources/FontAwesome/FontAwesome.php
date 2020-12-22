@@ -42,7 +42,7 @@ class FontAwesome implements IQuarkSpecifiedViewResource, IQuarkForeignViewResou
 	 * @return string
 	 */
 	public function Location () {
-		return '//maxcdn.bootstrapcdn.com/font-awesome/' . $this->_version . '/css/font-awesome.min.css';
+		return 'https://maxcdn.bootstrapcdn.com/font-awesome/' . $this->_version . '/css/font-awesome.min.css';
 	}
 
 	/**

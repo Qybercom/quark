@@ -47,7 +47,7 @@ class ChartJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
-		return '//cdnjs.cloudflare.com/ajax/libs/Chart.js/' . $this->_version . '/Chart.min.js';
+		return 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/' . $this->_version . '/Chart.min.js';
 	}
 
 	/**

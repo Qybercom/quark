@@ -47,7 +47,7 @@ class jQueryCore implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 	 */
 	public function Location () {
 		return $this->_cdnJS
-			? ('//cdnjs.cloudflare.com/ajax/libs/jquery/' . $this->_version . '/jquery.min.js')
+			? ('https://cdnjs.cloudflare.com/ajax/libs/jquery/' . $this->_version . '/jquery.min.js')
 			: ('https://code.jquery.com/jquery-' . $this->_version . '.min.js');
 	}
 

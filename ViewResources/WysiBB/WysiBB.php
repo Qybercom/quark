@@ -58,7 +58,7 @@ class WysiBB implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, 
 	 * @return string
 	 */
 	public function Location () {
-		return 'http://cdn.wysibb.com/js/jquery.wysibb.min.js';
+		return 'https://cdn.wysibb.com/js/jquery.wysibb.min.js';
 	}
 
 	/**

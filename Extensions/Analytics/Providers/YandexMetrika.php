@@ -1,15 +1,14 @@
 <?php
-namespace Quark\Extensions\Analytics\Providers;
+namespace Quark\Extensions\Analytics\YandexMetrika;
 
 use Quark\IQuarkViewResource;
-use Quark\QuarkGenericViewResource;
 
 use Quark\Extensions\Analytics\IQuarkAnalyticsProvider;
 
 /**
  * Class YandexMetrika
  *
- * @package Quark\Extensions\Analytics\Providers
+ * @package Quark\Extensions\Analytics\YandexMetrika
  */
 class YandexMetrika implements IQuarkAnalyticsProvider {
 	const TYPE = 'analytics.ym';
@@ -72,10 +71,7 @@ class YandexMetrika implements IQuarkAnalyticsProvider {
 	 * @return IQuarkViewResource[]
 	 */
 	public function AnalyticsProviderViewDependencies () {
-		$js = QuarkGenericViewResource::ForeignJS('https://mc.yandex.ru/metrika/watch.js');
-		$js->Type()->Async(true);
-
-		return array($js);
+		return array();
 	}
 
 	/**
@@ -84,13 +80,28 @@ class YandexMetrika implements IQuarkAnalyticsProvider {
 	public function AnalyticsProviderViewFragment () {
 		return '
 			<script type="text/javascript">
-				window[\'yandex_metrika_callbacks\'].push(function() {
-					window.yaCounter' . $this->_id . ' = new Ya.Metrika({
-						id:' . $this->_id . ',
-						clickmap:true,
-						trackLinks:true,
-						accurateTrackBounce:true,
-						webvisor:' . ($this->_webvisor ? 'true' : 'false') . '
+				window.addEventListener(\'load\', function () {
+					if (typeof(ym) == \'function\') return;
+					if (typeof(Ya) != \'undefined\') return;
+
+					(function (m, e, t, r, i, k, a) {
+						m[i] = m[i] || function () {
+							(m[i].a = m[i].a || []).push(arguments);
+						};
+						m[i].l = 1 * new Date();
+						k = e.createElement(t),
+						k.async = 1,
+						k.src = r,
+						a = e.getElementsByTagName(t)[0],
+						a.parentNode.insertBefore(k,a);
+					})
+					(window, document, \'script\', \'https://mc.yandex.ru/metrika/tag.js\', \'ym\');
+
+					ym(' . $this->_id . ', \'init\', {
+						clickmap: true,
+						trackLinks: true,
+						accurateTrackBounce: true,
+						webvisor: ' . ($this->_webvisor ? 'true' : 'false') . '
 					});
 				});
 			</script>

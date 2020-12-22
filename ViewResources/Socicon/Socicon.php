@@ -1,6 +1,7 @@
 <?php
 namespace Quark\ViewResources\Socicon;
 
+use Quark\IQuarkLocalViewResource;
 use Quark\IQuarkSpecifiedViewResource;
 use Quark\IQuarkForeignViewResource;
 use Quark\IQuarkViewResource;
@@ -16,7 +17,7 @@ use Quark\QuarkGenericViewResource;
  *
  * @package Quark\ViewResources\Socicon
  */
-class Socicon implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource, IQuarkViewResourceWithDependencies {
+class Socicon implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithDependencies {
 	/**
 	 * @return IQuarkViewResourceType
 	 */
@@ -28,8 +29,16 @@ class Socicon implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource,
 	 * @return string
 	 */
 	public function Location () {
+		return __DIR__ . '/Socicon.css';
 		//return 'https://d1azc1qln24ryf.cloudfront.net/114779/Socicon/style-cf.css';
-		return 'https://s3.amazonaws.com/icomoon.io/114779/Socicon/style.css?u8vidh';
+		//return 'https://s3.amazonaws.com/icomoon.io/114779/Socicon/style.css?u8vidh';
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Minimize () {
+		return true;
 	}
 
 	/**

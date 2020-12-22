@@ -2,6 +2,7 @@
 namespace Quark\Extensions\CDN\Providers;
 
 use Quark\IQuarkModel;
+use Quark\IQuarkModelWithCustomCollectionName;
 use Quark\IQuarkModelWithDataProvider;
 
 use Quark\Quark;
@@ -18,15 +19,18 @@ use Quark\Extensions\CDN\IQuarkCDNProvider;
 /**
  * Class QuarkSelfCDN
  *
- * @property string $id = ''
+ * @property string $rid = ''
  * @property string $app = ''
  * @property string $origin = ''
  * @property string[] $hosts = []
  *
  * @package Quark\Extensions\CDN\Providers
  */
-class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDataProvider {
+class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDataProvider, IQuarkModelWithCustomCollectionName {
 	const STORAGE = 'quark.cdn';
+	const STORAGE_FILENAME = 'cdn.qd';
+
+	const COLLECTION = 'QuarkSelfCDN';
 
 	/**
 	 * @var string $_webHost = ''
@@ -42,6 +46,11 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 * @var string $_storage
 	 */
 	private $_storage = '';
+
+	/**
+	 * @var string $_collection = self::COLLECTION
+	 */
+	private $_collection = self::COLLECTION;
 
 	/**
 	 * @var bool $_init = false
@@ -91,6 +100,9 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 			$this->_storage = QuarkObject::ConstValue($ini->Storage);
 			$this->_init = true;
 		}
+
+		if (isset($ini->Collection))
+			$this->_collection = $ini->Collection;
 	}
 
 	/**
@@ -113,6 +125,9 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 
 			return false;
 		}
+
+		if (!is_array($item->hosts))
+			$item->hosts = array();
 
 		if (!$file->Exists()) $file->Location($hostFs);
 		elseif (in_array($host, $item->hosts)) return $hostWeb;
@@ -140,7 +155,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 			Quark::GuID()
 		));
 
-		$file->Location($this->_fsHost . '/' . $parent);
+		$file->Location($this->_fsHost . '/' . $parent . ($file->extension ? ('.' . $file->extension) : ''));
 
 		if (!$file->SaveContent(QuarkFile::MODE_DEFAULT, true)) return false;
 
@@ -151,13 +166,13 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 		 * @var QuarkModel|QuarkSelfCDN $resource
 		 */
 		$resource = new QuarkModel($this, array(
-			'id' => $id,
+			'rid' => $id,
 			'app' => $this->_appId,
 			'origin' => $origin,
 			'hosts' => array(sha1($origin))
 		));
 
-		return $resource->Create() ? $resource->id : false;
+		return $resource->Create() ? $resource->rid : false;
 	}
 
 	/**
@@ -168,7 +183,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 */
 	public function CDNResourceUpdate ($id, QuarkFile $file) {
 		$resource = $this->_resource($id);
-		
+
 		if ($resource == null) return false;
 
 		$origin = $this->_host($id);
@@ -198,7 +213,7 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 */
 	public function DataProvider () {
 		if (!$this->_init) {
-			QuarkDNA::RuntimeStorage($this->_storage, 'cdn.qd');
+			QuarkDNA::RuntimeStorage($this->_storage, self::STORAGE_FILENAME);
 			$this->_init = true;
 		}
 
@@ -206,11 +221,18 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	}
 
 	/**
+	 * @return string
+	 */
+	public function CollectionName () {
+		return $this->_collection;
+	}
+
+	/**
 	 * @return mixed
 	 */
 	public function Fields () {
 		return array(
-			'id' => '',
+			'rid' => '',
 			'app' => '',
 			'origin' => '',
 			'hosts' => array()
@@ -241,12 +263,12 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	 */
 	private function _resource ($id) {
 		$resource = QuarkModel::FindOne($this, array(
-			'id' => $id,
+			'rid' => $id,
 			'app' => $this->_appId
 		));
 
 		if ($resource == null)
-			Quark::Log('[QuarkSelfCDN] Resource with id "' . $id . '" for application "' . $this->_appId . '" not found', Quark::LOG_WARN);
+			Quark::Log('[QuarkSelfCDN] Resource with rid "' . $id . '" for application "' . $this->_appId . '" not found', Quark::LOG_WARN);
 
 		return $resource;
 	}

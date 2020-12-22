@@ -190,7 +190,7 @@ class Mail implements IQuarkExtension {
 			$this->_log('[Mail] Cryptogram enabling error. ' . $error);
 		});
 		
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient &$client) {
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
 			$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
 			$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
 

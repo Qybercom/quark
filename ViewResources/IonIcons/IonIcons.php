@@ -39,7 +39,7 @@ class IonIcons implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource
 	 * @return string
 	 */
 	public function Location () {
-		return '//code.ionicframework.com/ionicons/' . $this->_version . '/css/ionicons.min.css';
+		return 'https://code.ionicframework.com/ionicons/' . $this->_version . '/css/ionicons.min.css';
 	}
 
 	/**
