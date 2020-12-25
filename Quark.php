@@ -20994,6 +20994,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 		if ($extension[0] == 'jpeg') $extension[0] = 'jpg';
 		if ($mime == 'text/plain') $extension[0] = 'txt';
 		if ($mime == 'audio/x-m4a') $extension[0] = 'm4a';
+		if ($mime == 'audio/mpeg') $extension[0] = 'mp3';
 
 		return sizeof($extension) == 2 && substr_count($extension[0], '-') == 0 ? $extension[0] : null;
 	}
