@@ -129,17 +129,20 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 		if (!is_array($item->hosts))
 			$item->hosts = array();
 
-		if (!$file->Exists()) $file->Location($hostFs);
-		elseif (in_array($host, $item->hosts)) return $hostWeb;
+		if (!$file->Exists()) {
+			$file->Location($hostFs);
 
-		$origin = QuarkHTTPClient::Download($item->origin);
-		if (!$origin) return false;
+			$origin = QuarkHTTPClient::Download($item->origin);
+			if (!$origin) return false;
 
-		$file->Content($origin->Content());
-		if (!$file->SaveContent()) return false;
+			$file->Content($origin->Content());
+			if (!$file->SaveContent()) return false;
 
-		$item->hosts[] = $host;
-		return $item->Save() ? $hostWeb : false;
+			$item->hosts[] = $host;
+			if (!$item->Save()) return false;
+		}
+
+		return in_array($host, $item->hosts) ? $hostWeb : false;
 	}
 
 	/**

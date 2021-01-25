@@ -6,10 +6,13 @@ use Quark\IQuarkDataProvider;
 use Quark\IQuarkSQLDataProvider;
 
 use Quark\Quark;
+use Quark\QuarkCollection;
 use Quark\QuarkDate;
 use Quark\QuarkException;
 use Quark\QuarkField;
+use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
+use Quark\QuarkLocalizedString;
 use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
@@ -168,9 +171,18 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		if ($records) {
 			$out = \pg_fetch_all($records);
 
-			if ($out)
-				foreach ($out as $record)
+			if ($out) {
+				$fields = (object)$model->Fields();
+
+				foreach ($out as $record) {
+					foreach ($record as $key => &$value) {
+						if (isset($fields->$key) && ($fields->$key instanceof QuarkCollection || ($fields->$key instanceof IQuarkModel && !($fields->$key instanceof QuarkLocalizedString)) || is_array($fields->$key)) && QuarkJSONIOProcessor::IsValid($value))
+							$record[$key] = json_decode($value);
+					}
+
 					$output[] = $record;
+				}
+			}
 		}
 
 		return $output;
