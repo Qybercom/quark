@@ -20403,13 +20403,18 @@ class QuarkCookie {
 	 */
 	public static function FromCookie ($header = '') {
 		$out = array();
-		$cookies = array_merge(explode(',', $header), explode(';', $header));
+		$cookies = array_merge(explode(';', $header));
+		$delimiter = false;
 
 		foreach ($cookies as $i => &$raw) {
-			$cookie = explode('=', trim($raw));
+			$raw = trim($raw);
+			$delimiter = strpos($raw, '=');
+			if ($delimiter === false) continue;
 
-			if (sizeof($cookie) == 2)
-				$out[] = new QuarkCookie($cookie[0], $cookie[1]);
+			$out[] = new QuarkCookie(
+				substr($raw, 0, $delimiter),
+				substr($raw, $delimiter + 1)
+			);
 		}
 
 		unset($i, $raw, $cookie, $cookies);

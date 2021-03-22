@@ -137,7 +137,7 @@ Quark.Cookie.Set = function (name, value, opt) {
         expires = opt.expires = d;
     }
 
-    if(expires && expires.toUTCString)
+    if (expires && expires.toUTCString)
         opt.expires = expires.toUTCString();
 
     value = encodeURIComponent(value);
