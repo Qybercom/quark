@@ -2,20 +2,20 @@
 namespace Quark\Extensions\OAuth\Providers;
 
 use Quark\Quark;
+use Quark\QuarkURI;
+use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
-use Quark\QuarkURI;
-use Quark\QuarkDTO;
 use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthClient;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
-use Quark\Extensions\OAuth\OAuthConfig;
 
 /**
  * Class GoogleOAuth
@@ -34,6 +34,9 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 	const SCOPE_USERINFO_EMAIL = 'userinfo.email';
 	const SCOPE_PLUS_LOGIN = 'plus.login';
 	const SCOPE_PLUS_ME = 'plus.me';
+
+	const PROMPT_CONSENT = 'consent';
+	const PROMPT_SELECT_ACCOUNT = 'select_account';
 
 	/**
 	 * @var string $_appId
@@ -93,8 +96,9 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 			'state' => Quark::GuID(),
 			'scope' => implode(' ', array_map(function ($elem) { return self::URL_OAUTH_SCOPE . $elem; }, $scope)),
 			'response_type' => OAuthConfig::RESPONSE_CODE,
-			'access_type' => self::ACCESS_OFFLINE
-			//'include_granted_scopes' => 'true' // for incremental auth
+			'access_type' => self::ACCESS_OFFLINE,
+			//'include_granted_scopes' => 'true', // for incremental auth
+			'prompt' => self::PROMPT_CONSENT
 		));
 	}
 
@@ -146,6 +150,9 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 
 		if ($this->_token != null)
 			$request->Authorization(new QuarkKeyValuePair('Bearer', $this->_token->access_token));
+
+		if ($base === null)
+			$base = self::URL_API;
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 

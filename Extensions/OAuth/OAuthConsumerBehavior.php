@@ -82,12 +82,13 @@ trait OAuthConsumerBehavior {
 	 * @param string $url = ''
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
+	 * @param string $base = null
 	 *
 	 * @return mixed
 	 */
-	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null) {
+	public function OAuthAPI ($url = '', QuarkDTO $request = null, QuarkDTO $response = null, $base = null) {
 		try {
-			return $this->_provider->OAuthAPI($url, $request, $response);
+			return $this->_provider->OAuthAPI($url, $request, $response, $base);
 		}
 		catch (OAuthAPIException $e) {
 			Quark::Log('[' . QuarkObject::ClassOf($this) . '.' . QuarkObject::ClassOf($this->_provider) . '] API error:');

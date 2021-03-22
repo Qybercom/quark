@@ -1,9 +1,8 @@
 <?php
 namespace Quark\Extensions\OAuth\Providers;
 
-use Quark\Extensions\OAuth\OAuthAPIException;
-use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Quark;
+use Quark\QuarkURI;
 use Quark\QuarkDTO;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkHTTPClient;
@@ -12,9 +11,10 @@ use Quark\QuarkModel;
 
 use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
+use Quark\Extensions\OAuth\OAuthConfig;
 use Quark\Extensions\OAuth\OAuthClient;
 use Quark\Extensions\OAuth\OAuthToken;
-use Quark\QuarkURI;
+use Quark\Extensions\OAuth\OAuthAPIException;
 
 /**
  * Class YandexOAuth
@@ -125,6 +125,9 @@ class YandexOAuth implements IQuarkOAuthProvider {
 
 		if ($this->_token != null)
 			$request->URIInit(array('oauth_token' => $this->_token->access_token));
+
+		if ($base === null)
+			$base = self::URL_API;
 
 		$api = QuarkHTTPClient::To($base . $url, $request, $response);
 
