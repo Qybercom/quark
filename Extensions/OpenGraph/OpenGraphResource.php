@@ -23,6 +23,8 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 	const PROPERTY_OG_TITLE = 'og:title';
 	const PROPERTY_OG_DESCRIPTION = 'og:description';
 	const PROPERTY_OG_IMAGE = 'og:image';
+	const PROPERTY_OG_IMAGE_WIDTH = 'og:image:width';
+	const PROPERTY_OG_IMAGE_HEIGHT = 'og:image:height';
 	const PROPERTY_ARTICLE_AUTHOR = 'article:author';
 	const PROPERTY_ARTICLE_PUBLISHER = 'article:publisher';
 	const PROPERTY_ARTICLE_PUBLISHED = 'article:published';
@@ -127,5 +129,12 @@ class OpenGraphResource implements IQuarkViewResource, IQuarkInlineViewResource 
 		$og->Property(self::PROPERTY_OG_IMAGE, $image);
 
 		return $og;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Minimize () {
+		// TODO: Implement Minimize() method.
 	}
 }
