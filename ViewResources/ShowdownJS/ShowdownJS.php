@@ -116,7 +116,7 @@ class ShowdownJS implements IQuarkSpecifiedViewResource, IQuarkForeignViewResour
 
 		$content = preg_replace('#\n\>(.*)#', '<blockquote>$1</blockquote>', $content);
 		$content = preg_replace('#\n ?[\-\*] (.*)#', '<ul><li>$1</li></ul>', $content);
-		$content = preg_replace('#\n ?[0-9*]\. (.*)#', '<ol><li>$1</li></ol>', $content);
+		$content = preg_replace('#\n ?[0-9]+\. (.*)#', '<ol><li>$1</li></ol>', $content);
 
 		$content = preg_replace('#\!\[(.*)\]\((.*)\)#Uis', '<img src="$2" class="showdown-image" alt="$1" />', $content);
 		$content = preg_replace('#\[(.*)\]\((.*)\)#Uis', '<a href="$2" class="quark-button">$1</a>', $content);
