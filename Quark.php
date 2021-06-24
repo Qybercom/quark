@@ -12680,8 +12680,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param QuarkDate|null $then
-	 * @param int $offset
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
 	 *
 	 * @return bool
 	 */
@@ -12693,8 +12693,47 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param QuarkDate|null $then
-	 * @param int $offset
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
+	 *
+	 * @return bool
+	 */
+	public function EarlierEqual (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
+
+		return $this->Interval($then) >= $offset;
+	}
+
+	/**
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
+	 *
+	 * @return bool
+	 */
+	public function Equal (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
+
+		return $this->Interval($then) == $offset;
+	}
+
+	/**
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
+	 *
+	 * @return bool
+	 */
+	public function LaterEqual (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
+
+		return $this->Interval($then) <= $offset;
+	}
+
+	/**
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
 	 *
 	 * @return bool
 	 */
@@ -12706,7 +12745,20 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param string $format
+	 * @param QuarkDate $then = null
+	 * @param int $offset = 0
+	 *
+	 * @return bool
+	 */
+	public function NotEqual (QuarkDate $then = null, $offset = 0) {
+		if ($then == null)
+			$then = self::Now();
+
+		return $this->Interval($then) != $offset;
+	}
+
+	/**
+	 * @param string $format = ''
 	 *
 	 * @return string
 	 */
@@ -12751,8 +12803,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 */
 	public function InTimezone ($timezone = self::CURRENT, $copy = false) {
 		$this->_timezone = $timezone;
+		$offset = self::TimezoneOffset($timezone);
 
-		return $this->Offset('+' . self::TimezoneOffset($timezone) . ' seconds', $copy);
+		return $this->Offset(($offset < 0 ? '-' : '') . $offset . ' seconds', $copy);
 	}
 
 	/**
@@ -12788,6 +12841,25 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 			$this->_nullable = $is;
 
 		return $this;
+	}
+
+	/**
+	 * @param QuarkDate $now = null
+	 *
+	 * @return QuarkDateInterval[]
+	 */
+	public function Timezones (QuarkDate &$now = null) {
+		return self::TimezoneListByNow($this, $now);
+	}
+
+	/**
+	 * @param QuarkDate $start
+	 * @param QuarkDate $end
+	 *
+	 * @return bool
+	 */
+	public function IntervalMatch (QuarkDate &$start, QuarkDate &$end) {
+		return $this->Interval($start) < 0 && $this->Interval($end) >= 0;
 	}
 
 	/**
@@ -12949,6 +13021,53 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 		unset($i, $zone, $zones);
 
 		return $out;
+	}
+
+	/**
+	 * @param QuarkDate $date = null
+	 * @param QuarkDate $now = null
+	 *
+	 * @return QuarkDateInterval[]
+	 */
+	public static function TimezoneListByNow (QuarkDate &$date = null, QuarkDate &$now = null) {
+		if ($now == null)
+			$now = self::GMTNow();
+
+		$out = self::TimezoneList();
+
+		foreach ($out as $zone => &$interval)
+			if ($now->InTimezone($zone)->NotEqual($date))
+				unset($out[$zone]);
+
+		return $out;
+	}
+
+	/**
+	 * @param int $offset = 0
+	 *
+	 * @return QuarkDateInterval[]
+	 */
+	public static function TimezoneListByOffset ($offset = 0) {
+		$out = self::TimezoneList();
+
+		foreach ($out as $zone => &$interval)
+			if ($interval->Seconds() != $offset)
+				unset($out[$zone]);
+
+		return $out;
+	}
+
+	/**
+	 * @param QuarkDate $start = null
+	 * @param QuarkDate $end = null
+	 *
+	 * @return QuarkDate
+	 */
+	public static function Random (QuarkDate &$start = null, QuarkDate &$end = null) {
+		if ($start == null) $start = self::FromTimestamp(0);
+		if ($end == null) $end = self::FromTimestamp(PHP_INT_MAX);
+
+		return self::FromTimestamp(mt_rand(abs($start->Timestamp()), abs($end->Timestamp())));
 	}
 
 	/**
