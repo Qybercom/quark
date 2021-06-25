@@ -12877,6 +12877,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @deprecated
+	 *
 	 * @return string
 	 */
 	public static function NowUSecGMT () {
@@ -12884,7 +12886,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param string $format
+	 * @return string
+	 */
+	public static function NowUSecUTC () {
+		return gmdate('Y-m-d H:i:s') . '.' . self::Microtime();
+	}
+
+	/**
+	 * @param string $format = ''
 	 *
 	 * @return QuarkDate
 	 */
@@ -12896,7 +12905,21 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param string $format
+	 * @param string $format = ''
+	 *
+	 * @return QuarkDate
+	 */
+	public static function NowUTC ($format = '') {
+		$date = self::FromFormat($format, self::NowUSecGMT());
+		$date->_timezone = self::GMT;
+
+		return $date;
+	}
+
+	/**
+	 * @deprecated
+	 *
+	 * @param string $format = ''
 	 *
 	 * @return QuarkDate
 	 */
@@ -12918,6 +12941,8 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @deprecated
+	 *
 	 * @param string $date
 	 * @param bool $ignoreTimezone = false
 	 *
