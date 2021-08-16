@@ -37,6 +37,7 @@ class Quark {
 	const ALPHABET_PASSWORD = 'abcdefgpqstxyzABCDEFGHKMNPQRSTXYZ123456789';
 	const ALPHABET_PASSWORD_LOW = 'abcdefgpqstxyz123456789';
 	const ALPHABET_PASSWORD_LETTERS = 'abcdefgpqstxyz';
+	const ALPHABET_BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
 
 	const TEMP_FILE_PREFIX = 'qtf';
 
@@ -650,8 +651,8 @@ class Quark {
 	 * @return string
 	 */
 	public static function CurrentLanguageFamily () {
-		return self::$_currentLanguage != QuarkLanguage::ANY && !preg_match('#[a-z]{2}\-[A-Z]{2}#Uis', self::$_currentLanguage)
-			? strtolower(self::$_currentLanguage) . '-' . strtoupper(self::$_currentLanguage)
+		return self::$_currentLanguage != QuarkLanguage::ANY && preg_match('#^([a-z]{2})\-[A-Z]{2}$#is', self::$_currentLanguage, $found)
+			? strtolower($found[1])
 			: '';
 	}
 
@@ -1786,18 +1787,21 @@ class QuarkConfig {
 		$locale = $this->_localization($key);
 
 		$lang_current = Quark::CurrentLanguage();
-		$lang_any = QuarkLanguage::ANY;
 		$lang_family = Quark::CurrentLanguageFamily();
+		$lang_any = QuarkLanguage::ANY;
 
-		return isset($locale->$key->$lang_current)
-			? $locale->$key->$lang_current
-			: (!$strict && $this->_localizationByFamily && isset($locale->$lang_family)
-				? $locale->$lang_family
-				: (!$strict && isset($locale->$key->$lang_any)
-					? $locale->$key->$lang_any
-					: ''
-				)
-			);
+		if (isset($locale->$key->$lang_current))
+			return $locale->$key->$lang_current;
+
+		if (!$strict) {
+			if (isset($locale->$key->$lang_family) && $this->_localizationByFamily)
+				return $locale->$key->$lang_family;
+
+			if (isset($locale->$key->$lang_any))
+				return $locale->$key->$lang_any;
+		}
+
+		return '';
 	}
 	
 	/**
@@ -6055,6 +6059,133 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function Localized () {
+		return $this->__call('Localized', func_get_args());
+	}
+
+	/**
+	 * @param IQuarkViewFragment $fragment
+	 *
+	 * @return string
+	 */
+	public function Fragment (IQuarkViewFragment $fragment) {
+		return $this->__call('Fragment', func_get_args());
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function Link ($uri, $signed = false) {
+		return $this->__call('Link', func_get_args());
+	}
+
+	/**
+	 * @param string $uri
+	 * @param bool $signed = false
+	 *
+	 * @return string
+	 */
+	public function FullLink ($uri, $signed = false) {
+		return $this->__call('FullLink', func_get_args());
+	}
+
+	/**
+	 * @param string $uri
+	 * @param string $button
+	 * @param string $method = QuarkDTO::METHOD_POST
+	 * @param string $formStyle = self::SIGNED_ACTION_FORM_STYLE
+	 *
+	 * @return string
+	 */
+	public function SignedAction ($uri, $button, $method = QuarkDTO::METHOD_POST, $formStyle = QuarkView::SIGNED_ACTION_FORM_STYLE) {
+		return $this->__call('SignedAction', func_get_args());
+	}
+
+	/**
+	 * @param bool $field = true
+	 *
+	 * @return mixed
+	 */
+	public function Signature ($field = true) {
+		return $this->__call('Signature', func_get_args());
+	}
+
+	/**
+	 * @param string $path = ''
+	 * @param bool $full = true
+	 *
+	 * @return string
+	 */
+	public function WebLocation ($path = '', $full = true) {
+		return $this->__call('WebLocation', func_get_args());
+	}
+
+	/**
+	 * @param string $name = ''
+	 *
+	 * @return IQuarkExtension
+	 */
+	public function Extension ($name = '') {
+		return $this->__call('Extension', func_get_args());
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 *
+	 * @return string
+	 */
+	public function Language ($language = QuarkLanguage::ANY) {
+		return $this->__call('Language', func_get_args());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Languages () {
+		return $this->__call('Languages', func_get_args());
+	}
+
+	/**
+	 * @return string
+	 */
+	public function LanguageControlAttributes () {
+		return $this->__call('Languages', func_get_args());
+	}
+
+	/**
+	 * @param string $language = QuarkLanguage::ANY
+	 * @param string[] $languages = []
+	 *
+	 * @return string
+	 */
+	public function Localization ($language = QuarkLanguage::ANY, $languages = []) {
+		return $this->__call('Localization', func_get_args());
+	}
+
+	/**
+	 * @param QuarkModel $model = null
+	 * @param string $field = ''
+	 * @param string $template = QuarkView::FIELD_ERROR_TEMPLATE
+	 *
+	 * @return string
+	 */
+	public function FieldError (QuarkModel $model = null, $field = '', $template = QuarkView::FIELD_ERROR_TEMPLATE) {
+		return $this->__call('FieldError', func_get_args());
+	}
+
+	/**
+	 * @return mixed
+	 */
+	public function Compile () {
+		return $this->__call('Compile', func_get_args());
+	}
+
+	/**
 	 * @param string $location
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
@@ -6106,77 +6237,6 @@ trait QuarkViewBehavior {
 	 */
 	public function InlineJS ($code = '', $minimize = true) {
 		return new QuarkInlineJSViewResource($code, $minimize);
-	}
-
-	/**
-	 * @param string $uri
-	 * @param bool $signed = false
-	 *
-	 * @return string
-	 */
-	public function Link ($uri, $signed = false) {
-		return $this->__call('Link', func_get_args());
-	}
-
-	/**
-	 * @param string $uri
-	 * @param bool $signed = false
-	 *
-	 * @return string
-	 */
-	public function FullLink ($uri, $signed = false) {
-		return $this->__call('FullLink', func_get_args());
-	}
-
-	/**
-	 * @param bool $field = true
-	 *
-	 * @return mixed
-	 */
-	public function Signature ($field = true) {
-		return $this->__call('Signature', func_get_args());
-	}
-
-	/**
-	 * @param string $name = ''
-	 *
-	 * @return IQuarkExtension
-	 */
-	public function Extension ($name = '') {
-		return $this->__call('Extension', func_get_args());
-	}
-
-	/**
-	 * @param string $language = QuarkLanguage::ANY
-	 *
-	 * @return string
-	 */
-	public function Language ($language = QuarkLanguage::ANY) {
-		return $this->__call('Language', func_get_args());
-	}
-
-	/**
-	 * @return string
-	 */
-	public function Languages () {
-		return $this->__call('Languages', func_get_args());
-	}
-
-	/**
-	 * @param string $language = QuarkLanguage::ANY
-	 * @param string[] $languages = []
-	 *
-	 * @return string
-	 */
-	public function Localization ($language = QuarkLanguage::ANY, $languages = []) {
-		return $this->__call('Localization', func_get_args());
-	}
-
-	/**
-	 * @return mixed
-	 */
-	public function Compile () {
-		return $this->__call('Compile', func_get_args());
 	}
 }
 
@@ -6926,6 +6986,13 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function LanguageControlAttributes () {
+		return ' quark-language="' . $this->Language() . '" quark-languages="' . implode(', ', $this->Languages()) . '"';
+	}
+
+	/**
 	 * @param string $language = QuarkLanguage::ANY
 	 * @param string[] $languages = []
 	 * 
@@ -6976,8 +7043,8 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param QuarkModel $model
-	 * @param string $field
+	 * @param QuarkModel $model = null
+	 * @param string $field = ''
 	 * @param string $template = self::FIELD_ERROR_TEMPLATE
 	 *
 	 * @return string
@@ -8061,7 +8128,7 @@ trait QuarkCollectionBehavior {
 	 */
 	private function _matchTarget ($target, $rule) {
 		if (is_scalar($rule) || is_null($rule) || is_object($rule))
-			return $target == $rule;
+			return is_object($target) && !is_object($rule) ? false : $target == $rule; // solution for 502 of incompatible types
 		
 		$isoDate = null;
 		$matcher = '_array_';
@@ -10812,6 +10879,8 @@ class QuarkModel implements IQuarkContainer {
 	 * @return QuarkCollection|array
 	 */
 	public static function FindByPage (IQuarkModel $model, $page = 1, $criteria = [], $options = []) {
+		$optionsCount = $options;
+
 		if (!isset($options[self::OPTION_LIMIT]))
 			$options[self::OPTION_LIMIT] = self::LIMIT_PAGED;
 		
@@ -10819,7 +10888,7 @@ class QuarkModel implements IQuarkContainer {
 		$page = (int)$page;
 		if ($page < 1) $page = 1;
 
-		$count = self::Count($model, $criteria);
+		$count = self::Count($model, $criteria, 0, 0, $optionsCount);
 		
 		if ($options[self::OPTION_LIMIT] != self::LIMIT_NO) {
 			$options[self::OPTION_LIMIT] = (int)$options[self::OPTION_LIMIT];
@@ -12569,14 +12638,15 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return string
 	 */
 	public function __toString () {
-		return $this->DateTime();
+		return (string)$this->DateTime();
 	}
 
 	/**
 	 * cloning behavior
 	 */
 	public function __clone () {
-		$this->_date = clone $this->_date;
+		if ($this->_date != null)
+			$this->_date = clone $this->_date;
 	}
 
 	/**
@@ -12621,28 +12691,28 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	 * @return string
 	 */
 	public function DateTime () {
-		return $this->_date->format($this->_culture->DateTimeFormat());
+		return $this->_date == null ? null : $this->_date->format($this->_culture->DateTimeFormat());
 	}
 
 	/**
 	 * @return string
 	 */
 	public function Date () {
-		return $this->_date->format($this->_culture->DateFormat());
+		return $this->_date == null ? null : $this->_date->format($this->_culture->DateFormat());
 	}
 
 	/**
 	 * @return string
 	 */
 	public function Time () {
-		return $this->_date->format($this->_culture->TimeFormat());
+		return $this->_date == null ? null : $this->_date->format($this->_culture->TimeFormat());
 	}
 
 	/**
 	 * @return int
 	 */
 	public function Timestamp () {
-		return $this->_date->getTimestamp();
+		return $this->_date == null ? null : $this->_date->getTimestamp();
 	}
 
 	/**
@@ -23299,8 +23369,8 @@ class QuarkXSSFilter implements IQuarkIOFilter {
  * @package Quark
  */
 class QuarkCertificate extends QuarkFile {
-	const ALGO_SHA256 = 'sha256';
-	const ALGO_SHA512 = 'sha512';
+	const ALGORITHM_SHA256 = 'sha256';
+	const ALGORITHM_SHA512 = 'sha512';
 
 	const DEFAULT_BITS = 4096;
 
@@ -23426,15 +23496,15 @@ class QuarkCertificate extends QuarkFile {
 	}
 
 	/**
-	 * @param string $algo = self::ALGO_SHA512
+	 * @param string $algorithm = self::ALGORITHM_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 * @param bool $text = false
 	 *
 	 * @return string|null
 	 */
-	public function SigningRequest ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA, $text = false) {
-		$config = self::OpenSSLConfig($algo, $length, $type, $this->subjectAltName);
+	public function SigningRequest ($algorithm = self::ALGORITHM_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA, $text = false) {
+		$config = self::OpenSSLConfig($algorithm, $length, $type, $this->subjectAltName);
 
 		if (!($this->_key instanceof QuarkCipherKeyPair))
 			return self::_error('SigningRequest: Private key is invalid');
@@ -23457,14 +23527,14 @@ class QuarkCertificate extends QuarkFile {
 	}
 
 	/**
-	 * @param string $algo = self::ALGO_SHA512
+	 * @param string $algorithm = self::ALGORITHM_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 *
 	 * @return string|null
 	 */
-	public function SigningRequestWithText ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
-		return $this->SigningRequest($algo, $length, $type, true);
+	public function SigningRequestWithText ($algorithm = self::ALGORITHM_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		return $this->SigningRequest($algorithm, $length, $type, true);
 	}
 
 	/**
@@ -23505,21 +23575,21 @@ class QuarkCertificate extends QuarkFile {
 	}
 
 	/**
-	 * @param string $algo = self::ALGO_SHA512
+	 * @param string $algorithm = self::ALGORITHM_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 * @param string $altName = ''
 	 *
 	 * @return array
 	 */
-	public static function OpenSSLConfig ($algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA, $altName = '') {
+	public static function OpenSSLConfig ($algorithm = self::ALGORITHM_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA, $altName = '') {
 		$conf = array(
 			'req' => array(
 				'x509_extensions' => 'v3_ca',
 				'req_extensions' => 'v3_req',
 				'distinguished_name' => 'req_distinguished_name',
-				'default_md' => $algo,
-				'digest_alg' => $algo,
+				'default_md' => $algorithm,
+				'digest_alg' => $algorithm,
 				'default_bits' => (int)$length,
 				'private_key_bits' => (int)$length,
 				'private_key_type' => $type,
@@ -23532,7 +23602,7 @@ class QuarkCertificate extends QuarkFile {
 			),
 			'CA_default' => array(
 				'copy_extensions' => 'copy',
-				'default_md' => $algo
+				'default_md' => $algorithm
 			),
 			'v3_req' => array(
 				'basicConstraints' => 'CA:FALSE',
@@ -23571,20 +23641,20 @@ class QuarkCertificate extends QuarkFile {
 	/**
 	 * @param string $commonName = ''
 	 * @param string $passphrase = null
-	 * @param string $algo = self::ALGO_SHA512
+	 * @param string $algorithm = self::ALGORITHM_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 *
 	 * @return QuarkCertificate
 	 */
-	public static function ForCSR ($commonName = '', $passphrase = null, $algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+	public static function ForCSR ($commonName = '', $passphrase = null, $algorithm = self::ALGORITHM_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
 		if (strlen($commonName) == 0)
 			return self::_error('ForCSR: CommonName must not be empty');
 
 		$certificate = new self();
 
 		$certificate->_passphrase = $passphrase;
-		$certificate->_key = QuarkCipherKeyPair::GenerateNew($passphrase, $algo, $length, $type);
+		$certificate->_key = QuarkCipherKeyPair::GenerateNew($passphrase, $algorithm, $length, $type);
 
 		$certificate->countryName = self::DEFAULT_COUNTRY_NAME;
 		$certificate->stateOrProvinceName = self::DEFAULT_STATE;
@@ -23600,14 +23670,14 @@ class QuarkCertificate extends QuarkFile {
 	/**
 	 * @param string $commonName = ''
 	 * @param string $passphrase = null
-	 * @param string $algo = self::ALGO_SHA512
+	 * @param string $algorithm = self::ALGORITHM_SHA512
 	 * @param int $length = self::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 *
 	 * @return QuarkCertificate
 	 */
-	public static function ForDomainCSR ($commonName = '', $passphrase = null, $algo = self::ALGO_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
-		$certificate = self::ForCSR($commonName, $passphrase, $algo, $length, $type);
+	public static function ForDomainCSR ($commonName = '', $passphrase = null, $algorithm = self::ALGORITHM_SHA512, $length = self::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		$certificate = self::ForCSR($commonName, $passphrase, $algorithm, $length, $type);
 
 		if ($certificate != null)
 			$certificate->AltName(new QuarkCertificateSAN($commonName));
@@ -24042,17 +24112,30 @@ class QuarkCipherKeyPair extends QuarkFile {
 
 	/**
 	 * @param string $passphrase = null
-	 * @param string $algo = QuarkCertificate::ALGO_SHA512
+	 * @param string $algorithm = QuarkCertificate::ALGORITHM_SHA512
 	 * @param int $length = QuarkCertificate::DEFAULT_BITS
 	 * @param int $type = OPENSSL_KEYTYPE_RSA
 	 *
 	 * @return QuarkCipherKeyPair
 	 */
-	public static function GenerateNew ($passphrase = null, $algo = QuarkCertificate::ALGO_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
-		$config = QuarkCertificate::OpenSSLConfig($algo, $length, $type);
+	public static function GenerateNew ($passphrase = null, $algorithm = QuarkCertificate::ALGORITHM_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		$config = QuarkCertificate::OpenSSLConfig($algorithm, $length, $type);
 		$out = new self('', false, null, $config);
 
 		return $out->Generate($passphrase) ? $out : null;
+	}
+
+	/**
+	 * @param array $params = []
+	 * @param string $passphrase = null
+	 * @param $config = null
+	 *
+	 * @return null|QuarkCipherKeyPair
+	 */
+	public static function GenerateNewByParams ($params = [], $passphrase = null, $config = null) {
+		$out = new self('', false, null, $config);
+
+		return $out->GenerateByParams($params, $passphrase) ? $out : null;
 	}
 
 	/**
@@ -24094,6 +24177,13 @@ class QuarkCipherKeyPair extends QuarkFile {
 		if (!isset($details['key'])) return null;
 
 		return $pem ? $details['key'] : openssl_pkey_get_public($details['key']);
+	}
+
+	/**
+	 * @return array
+	 */
+	public function PublicKeyDetails () {
+		return openssl_pkey_get_details($this->PublicKey(false));
 	}
 
 	/**
@@ -24140,6 +24230,13 @@ class QuarkCipherKeyPair extends QuarkFile {
 	}
 
 	/**
+	 * @return array
+	 */
+	public function PrivateKeyDetails () {
+		return openssl_pkey_get_details($this->PrivateKey(false));
+	}
+
+	/**
 	 * @param IQuarkEncryptionProtocol $cipher = null
 	 *
 	 * @return QuarkCipher|IQuarkEncryptionProtocol
@@ -24169,19 +24266,8 @@ class QuarkCipherKeyPair extends QuarkFile {
 		return $this->_cipherPrivate->Decrypt($this->PrivateKey(false), $data);
 	}
 
-	/**
-	 * @param string $passphrase = null
-	 * @param string $algo = QuarkCertificate::ALGO_SHA512
-	 * @param int $length = QuarkCertificate::DEFAULT_BITS
-	 * @param int $type = OPENSSL_KEYTYPE_RSA
-	 *
-	 * @return bool
-	 */
-	public function Generate ($passphrase = null, $algo = QuarkCertificate::ALGO_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
-		if (func_num_args() > 1)
-			$this->_config = QuarkCertificate::OpenSSLConfig($algo, $length, $type);
-
-		$key = openssl_pkey_new($this->_config);
+	private function _generate ($passphrase = null, $config = []) {
+		$key = openssl_pkey_new($config);
 
 		if (!$key)
 			return self::_error('Generate: Cannot generate new private key');
@@ -24192,6 +24278,40 @@ class QuarkCipherKeyPair extends QuarkFile {
 		$this->_init = true;
 
 		return true;
+	}
+
+	/**
+	 * @param string $passphrase = null
+	 * @param string $algorithm = QuarkCertificate::ALGORITHM_SHA512
+	 * @param int $length = QuarkCertificate::DEFAULT_BITS
+	 * @param int $type = OPENSSL_KEYTYPE_RSA
+	 *
+	 * @return bool
+	 */
+	public function Generate ($passphrase = null, $algorithm = QuarkCertificate::ALGORITHM_SHA512, $length = QuarkCertificate::DEFAULT_BITS, $type = OPENSSL_KEYTYPE_RSA) {
+		if (func_num_args() > 1)
+			$this->_config = QuarkCertificate::OpenSSLConfig($algorithm, $length, $type);
+
+		return $this->_generate($passphrase, $this->_config);
+	}
+
+	/**
+	 * @param array $params = []
+	 * @param string $passphrase = null
+	 * @param $config = null
+	 *
+	 * @return bool
+	 */
+	public function GenerateByParams ($params = [], $passphrase = null, $config = null) {
+		if (func_num_args() < 3)
+			$config = $this->_config;
+
+		if ($config == null)
+			$config = array();
+
+		$config = array_replace_recursive($config, $params);
+
+		return $this->_generate($passphrase, $config);
 	}
 
 	/**

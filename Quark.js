@@ -3,6 +3,9 @@
  */
 var Quark = Quark || {};
 
+Quark.Language = navigator.language || navigator.userLanguage;
+Quark.LanguageFamily = Quark.Language.split('-')[0];
+
 Quark.EventValidateError = 'quark.validation.error';
 Quark.EventSubmitError = 'quark.submit.error';
 Quark.EventSubmitSuccess = 'quark.submit.success';
@@ -107,18 +110,18 @@ Quark.Cookie = {};
  * @return {string|undefined}
  */
 Quark.Cookie.Get = function (name) {
-    var cookies = document.cookie.split('; '), i = 0, cookie = [];
+	var cookies = document.cookie.split('; '), i = 0, cookie = [];
 
-    while (i < cookies.length) {
-        cookie = cookies[i].trim().split('=');
+	while (i < cookies.length) {
+		cookie = cookies[i].trim().split('=');
 
-        if (cookie.length == 2 && cookie[0] == name)
-            return decodeURIComponent(cookie[1]);
+		if (cookie.length == 2 && cookie[0] == name)
+			return decodeURIComponent(cookie[1]);
 
-        i++;
-    }
+		i++;
+	}
 
-    return undefined;
+	return undefined;
 };
 
 /**
@@ -127,53 +130,53 @@ Quark.Cookie.Get = function (name) {
  * @param opt
  */
 Quark.Cookie.Set = function (name, value, opt) {
-    opt = opt || {};
+	opt = opt || {};
 
-    var expires = opt.expires;
+	var expires = opt.expires;
 
-    if (typeof expires == 'number' && expires) {
-        var d = new Date();
-        d.setTime(d.getTime() + expires * 1000);
-        expires = opt.expires = d;
-    }
+	if (typeof expires == 'number' && expires) {
+		var d = new Date();
+		d.setTime(d.getTime() + expires * 1000);
+		expires = opt.expires = d;
+	}
 
-    if (expires && expires.toUTCString)
-        opt.expires = expires.toUTCString();
+	if (expires && expires.toUTCString)
+		opt.expires = expires.toUTCString();
 
-    value = encodeURIComponent(value);
+	value = encodeURIComponent(value);
 
-    var cookie = name + '=' + value;
+	var cookie = name + '=' + value;
 
-    for (var property in opt) {
-        cookie += '; ' + property;
+	for (var property in opt) {
+		cookie += '; ' + property;
 
-        var val = opt[property];
+		var val = opt[property];
 
-        if (val !== true)
-            cookie += '=' + val;
-    }
+		if (val !== true)
+			cookie += '=' + val;
+	}
 
-    document.cookie = cookie;
+	document.cookie = cookie;
 };
 
 /**
  * @param name
  */
 Quark.Cookie.Remove = function (name) {
-    Quark.Cookie.Set(name, null, {
-        expires: -1
-    });
+	Quark.Cookie.Set(name, null, {
+		expires: -1
+	});
 };
 
 /**
  * https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/String/Trim
  */
 if (!String.prototype.trim) {
-    (function () {
-        String.prototype.trim = function () {
-            return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
-        };
-    })();
+	(function () {
+		String.prototype.trim = function () {
+			return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+		};
+	})();
 }
 
 /**
@@ -498,7 +501,7 @@ Quark.DataView.WithBuffer = function (size) {
 // https://github.com/uxitten/polyfill/blob/master/string.polyfill.js
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/padStart
 if (!String.prototype.padStart) {
-    String.prototype.padStart = function padStart (targetLength, padString) {
+	String.prototype.padStart = function padStart (targetLength, padString) {
 		targetLength = targetLength >> 0; //floor if number or convert non-number to 0;
 		padString = String(padString || ' ');
 
@@ -513,3 +516,40 @@ if (!String.prototype.padStart) {
 		}
 	};
 }
+
+/**
+ * https://stackoverflow.com/a/14167041/2097055
+ *
+ * @param {string} url
+ * @param {string=} windowName
+ * @param {object=} windowFeatures
+ * @param {number=} windowCloseTimeout
+ */
+Quark.Print = function (url, windowName, windowFeatures, windowCloseTimeout) {
+	windowName = windowName || 'Print';
+	windowFeatures = windowFeatures || {
+		left: 100, top: 100,
+		width: 1024, height: 768
+	};
+		windowFeatures.toolbar = windowFeatures.toolbar || 0;
+		windowFeatures.resizable = windowFeatures.resizable || 0;
+
+	windowCloseTimeout = windowCloseTimeout || 500;
+
+	var windowFeaturesOut = JSON.stringify(windowFeatures)
+		.replace(/{/g, '')
+		.replace(/}/g, '')
+		.replace(/:/g, '=')
+		.replace(/,/g, ', ')
+		.replace(/"/g, '');
+
+	var windowTarget = window.open(url, windowName, windowFeaturesOut);
+
+	windowTarget.addEventListener('load', function () {
+		windowTarget.print();
+
+		setTimeout(function(){
+			windowTarget.close();
+		}, windowCloseTimeout);
+	}, true);
+};

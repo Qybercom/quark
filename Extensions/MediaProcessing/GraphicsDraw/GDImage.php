@@ -69,18 +69,20 @@ class GDImage implements IQuarkExtension {
 
 	/**
 	 * @param QuarkFile|string $image
+	 * @param bool $load = true
 	 *
 	 * @return GDImage
 	 */
-	public static function FromFile ($image = '') {
+	public static function FromFile ($image = '', $load = true) {
 		if (is_string($image))
 			$image = new QuarkFile($image, true);
 
 		if (!($image instanceof QuarkFile)) return null;
+		if ($load && !$image->Loaded()) $image->Load();
 
 		$img = new GDImage();
 		$img->File($image);
-		$img->Content($image->Load()->Content());
+		$img->Content($image->Content());
 
 		return $img;
 	}
@@ -254,6 +256,22 @@ class GDImage implements IQuarkExtension {
 		$this->_image = $dst;
 
 		return $ok && $this->_apply();
+	}
+
+	/**
+	 * @param int $width
+	 * @param int $height = -1
+	 * @param int $mode = IMG_BILINEAR_FIXED
+	 *
+	 * @return bool
+	 */
+	public function Scale ($width, $height = -1, $mode = IMG_BILINEAR_FIXED) {
+		$image = imagescale($this->_image, $width, $height, $mode);
+		if (!$image) return false;
+
+		$this->_image = $image;
+
+		return $this->_apply();
 	}
 
 	/**

@@ -41,6 +41,15 @@ class RSA implements IJOSEJWKAlgorithmProvider {
 	}
 
 	/**
+	 * @param JWK $jwk
+	 *
+	 * @return JWK
+	 */
+	public function JOSEJWKAlgorithmProviderGenerate (JWK $jwk) {
+		// TODO: Implement JOSEJWKAlgorithmProviderGenerate() method.
+	}
+
+	/**
 	 * @param string $data = ''
 	 *
 	 * @return string

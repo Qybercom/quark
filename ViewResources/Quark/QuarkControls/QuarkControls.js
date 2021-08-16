@@ -784,6 +784,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			language = '',
 			languages = elem.attr('quark-languages'),
 			selected = elem.attr('quark-language'),
+			selected_family = selected == undefined ? null : selected.split('-')[0],
 			select = '<select class="quark-input quark-language-select" name="' + that._name(elem.attr('name'), '_language') + '">',
 			json = _decode(val),
 			i = 0;
@@ -794,7 +795,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 			languages.unshift('*');
 
 		while (i < languages.length) {
-			select += '<option value="' + languages[i] + '"' + (json[selected] !== undefined && languages[i] === selected ? ' selected="selected"' : '') + '>'
+			select += '<option value="' + languages[i] + '"' + ((json[selected] !== undefined && languages[i] === selected) || (json[selected_family] !== undefined && languages[i] === selected_family) || languages[i] === Quark.Language || languages[i] === Quark.LanguageFamily ? ' selected="selected"' : '') + '>'
 					+ (opt.labels[languages[i]] !== undefined ? opt.labels[languages[i]] : languages[i])
 					+ '</option>';
 
@@ -806,7 +807,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		var copy = elem.clone();
 		copy
 			.attr('name', that._name(copy.attr('name'), '_localized'))
-			.val(json !== null && json[selected] !== undefined ? json[selected] : (json['*'] !== undefined ? json['*'] : ''));
+			.val(json !== null && (json[selected] !== undefined ? json[selected] : (json[selected_family] !== undefined ? json[selected_family] : (json['*'] !== undefined ? json['*'] : ''))));
 
 		elem
 			.css('display', 'none')

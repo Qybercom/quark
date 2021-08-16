@@ -13,6 +13,9 @@ use Quark\Extensions\JOSE\JWK\JWK;
 /**
  * Class JWT
  *
+ * https://github.com/Spomky-Labs/base64url/blob/v2.x/src/Base64Url.php
+ * https://gist.github.com/nathggns/6652997
+ *
  * @package Quark\Extensions\JOSE
  */
 class JWT {
@@ -94,14 +97,23 @@ class JWT {
 	 *
 	 * @return JWK
 	 */
-	public function JWK (IJOSEJWKProvider $provider = null) {
+	public function JWKRetrieve (IJOSEJWKProvider $provider = null) {
 		return $provider == null ? null : $provider->JOSEJWKProviderKeyExtract($this->_headerData);
+	}
+
+	/**
+	 * @param JWK $jwk = null
+	 *
+	 * @return JWK
+	 */
+	public function JWKGenerate (JWK $jwk = null) {
+		return $jwk == null ? null : $jwk->Generate();
 	}
 
 	/**
 	 * @return IJOSEJWAAlgorithmProvider
 	 */
-	public function JWA () {
+	public function JWARetrieve () {
 		return isset($this->_headerData->alg) ? self::JWAByName($this->_headerData->alg) : null;
 	}
 
@@ -164,10 +176,10 @@ class JWT {
 	 * @return bool
 	 */
 	public function ValidSignature (IJOSEJWKProvider $provider = null) {
-		$jwk = $this->JWK($provider);
+		$jwk = $this->JWKRetrieve($provider);
 		if ($jwk == null) return false;
 
-		$jwa = $this->JWA();
+		$jwa = $this->JWARetrieve();
 		if ($jwa == null) return false;
 
 		return $jwa->JOSEJWAAlgorithmSignatureCheck(
@@ -203,6 +215,15 @@ class JWT {
 		if (isset($payload->exp) && ($timestamp - $timeout) >= $payload->exp) return false; // token is not expired
 
 		return true;
+	}
+
+	/**
+	 * @param string $input
+	 *
+	 * @return string
+	 */
+	public static function Base64Encode ($input) {
+		return strtr(base64_encode($input), '+/', '-_');
 	}
 
 	/**

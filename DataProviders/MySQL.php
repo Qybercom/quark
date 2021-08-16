@@ -40,8 +40,10 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	const SCHEMA_TYPE_MRG_MYISAM = 'MRG_MYISAM';
 	const SCHEMA_TYPE_MYISAM = 'MYISAM';
 
-	const DEFAULT_CHARSET = 'utf8';
-	const DEFAULT_COLLATE = 'utf8_bin';
+	const DEFAULT_CHARSET = 'utf8mb4';
+	const DEFAULT_COLLATE = 'utf8mb4_unicode_520_ci';
+	//const DEFAULT_CHARSET = 'utf8';
+	//const DEFAULT_COLLATE = 'utf8_bin';
 	const DEFAULT_AUTOINCREMENT = 1;
 
 	const TYPE_INT = 'INT';
@@ -96,6 +98,12 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 
 		$options = $uri->Options();
 
+		$connection_charset = self::DEFAULT_CHARSET;
+		if (isset($options[self::OPTION_SCHEMA_CHARSET])) {
+			$connection_charset = $options[self::OPTION_SCHEMA_CHARSET];
+			unset($options[self::OPTION_SCHEMA_CHARSET]);
+		}
+
 		foreach ($options as $key => $value) {
 			if (!$this->_connection->options($key, $value))
 				throw new QuarkArchException('MySQLi option set error');
@@ -110,7 +118,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 		))
 			throw new QuarkConnectionException($uri, Quark::LOG_FATAL, QuarkException::LastError());
 
-		$this->_connection->set_charset(self::DEFAULT_CHARSET);
+		$this->_connection->set_charset($connection_charset);
 		$this->_sql = new QuarkSQL($this);
 	}
 

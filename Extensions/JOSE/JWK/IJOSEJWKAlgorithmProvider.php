@@ -13,4 +13,11 @@ interface IJOSEJWKAlgorithmProvider {
 	 * @return JWK
 	 */
 	public function JOSEJWKAlgorithmProviderRetrieve(JWK $jwk);
+
+	/**
+	 * @param JWK $jwk
+	 *
+	 * @return JWK
+	 */
+	public function JOSEJWKAlgorithmProviderGenerate(JWK $jwk);
 }
