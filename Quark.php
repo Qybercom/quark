@@ -12554,6 +12554,7 @@ class QuarkSecuredString implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymo
  */
 class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterPopulate, IQuarkModelWithBeforeExtract {
 	const NOW = 'now';
+	const UTC = 'UTC';
 	const GMT = 'UTC';
 	const CURRENT = '';
 
@@ -20569,15 +20570,18 @@ class QuarkCookie {
 	public $secure = '';
 
 	/**
-	 * @param string $name
-	 * @param string $value
+	 * @param string $name = ''
+	 * @param string $value = ''
 	 * @param int $lifetime = self::EXPIRES_SESSION
+	 * @param string $domain = ''
 	 */
-	public function __construct ($name = '', $value = '', $lifetime = self::EXPIRES_SESSION) {
+	public function __construct ($name = '', $value = '', $lifetime = self::EXPIRES_SESSION, $domain = '') {
 		$this->name = $name;
 		$this->value = $value;
 
 		$this->Lifetime($lifetime);
+
+		$this->domain = $domain;
 	}
 
 	/**
