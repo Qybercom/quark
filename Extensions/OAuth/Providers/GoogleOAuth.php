@@ -148,7 +148,7 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 		if ($request == null) $request = QuarkDTO::ForGET(new QuarkFormIOProcessor());
 		if ($response == null) $response = new QuarkDTO(new QuarkJSONIOProcessor());
 
-		if ($this->_token != null)
+		if ($this->_token != null && isset($this->_token->access_token)) // TODO: verify flow, sometimes 'undefined property access_token'
 			$request->Authorization(new QuarkKeyValuePair('Bearer', $this->_token->access_token));
 
 		if ($base === null)

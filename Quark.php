@@ -11848,7 +11848,7 @@ class QuarkField {
 		if ($nullable && $key == null) return true;
 		if (!is_string($key)) return false;
 
-		return preg_match('#^\+[0-9]#', $key);
+		return preg_match('#^\+[0-9]+$#', $key);
 	}
 
 	/**
@@ -20529,6 +20529,10 @@ class QuarkCookie {
 	const EXPIRES_FORMAT = 'D, d-M-Y H:i:s';
 	const EXPIRES_SESSION = 0;
 
+	const SAME_SITE_STRICT = 'Strict';
+	const SAME_SITE_LAX = 'Lax';
+	const SAME_SITE_NONE = 'None';
+
 	/**
 	 * @var string $name = ''
 	 */
@@ -20540,9 +20544,9 @@ class QuarkCookie {
 	public $value = '';
 
 	/**
-	 * @var string $expires = ''
+	 * @var string $expires = null
 	 */
-	public $expires = '';
+	public $expires = null;
 
 	/**
 	 * @var int $MaxAge = 0
@@ -20555,19 +20559,24 @@ class QuarkCookie {
 	public $path = '/';
 
 	/**
-	 * @var string $domain = ''
+	 * @var string $domain = null
 	 */
-	public $domain = '';
+	public $domain = null;
 
 	/**
-	 * @var string $HttpOnly = ''
+	 * @var bool $HttpOnly = false
 	 */
-	public $HttpOnly = '';
+	public $HttpOnly = false;
 
 	/**
-	 * @var string $secure = ''
+	 * @var bool $Secure = false
 	 */
-	public $secure = '';
+	public $Secure = false;
+
+	/**
+	 * @var string $SameSite = self::SAME_SITE_NONE
+	 */
+	public $SameSite = self::SAME_SITE_NONE;
 
 	/**
 	 * @param string $name = ''
@@ -20690,16 +20699,25 @@ class QuarkCookie {
 	 * @return string
 	 */
 	public function Serialize ($full = false) {
-		$out = $this->name . '=' . $this->value;
-		if (!$full) return $out;
+		$out = '';
 
-		foreach ($this as $field => &$value)
-			if (strlen(trim($value)) != 0 && $field != 'name' && $field != 'value')
-				$out .= '; ' . $field . '=' . $value;
+		if ($full) {
+			foreach ($this as $field => &$value) {
+				if ($field == 'name' || $field == 'value') continue;
+				if ($field == 'SameSite' && !$this->Secure) continue;
+				if ($value === null || $value === false) continue;
 
-		unset($key, $value);
+				if ($value === true)
+					$out .= '; ' . $field;
 
-		return $out;
+				if (is_string($value) && $value != '')
+					$out .= '; ' . $field . '=' . $value;
+			}
+
+			unset($key, $value);
+		}
+
+		return $this->name . '=' . $this->value . $out;
 	}
 }
 
