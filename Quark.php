@@ -20574,23 +20574,20 @@ class QuarkCookie {
 	public $Secure = false;
 
 	/**
-	 * @var string $SameSite = self::SAME_SITE_NONE
+	 * @var string $SameSite = self::SAME_SITE_LAX
 	 */
-	public $SameSite = self::SAME_SITE_NONE;
+	public $SameSite = self::SAME_SITE_LAX;
 
 	/**
 	 * @param string $name = ''
 	 * @param string $value = ''
 	 * @param int $lifetime = self::EXPIRES_SESSION
-	 * @param string $domain = ''
 	 */
-	public function __construct ($name = '', $value = '', $lifetime = self::EXPIRES_SESSION, $domain = '') {
+	public function __construct ($name = '', $value = '', $lifetime = self::EXPIRES_SESSION) {
 		$this->name = $name;
 		$this->value = $value;
 
 		$this->Lifetime($lifetime);
-
-		$this->domain = $domain;
 	}
 
 	/**
@@ -20614,8 +20611,7 @@ class QuarkCookie {
 				return 0;
 			}
 
-			$expires = QuarkDate::GMTNow();
-			$expires->Offset('+' . $seconds . ' seconds');
+			$expires = QuarkDate::GMTNow()->Offset('+' . $seconds . ' seconds', true);
 
 			$this->expires = $expires->Format(self::EXPIRES_FORMAT);
 		}

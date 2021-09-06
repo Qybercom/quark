@@ -49,6 +49,21 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 	private $_cookieDomain = '';
 
 	/**
+	 * @var string $_cookieSameSite = QuarkCookie::SAME_SITE_LAX
+	 */
+	private $_cookieSameSite = QuarkCookie::SAME_SITE_LAX;
+
+	/**
+	 * @var bool $_cookieSecure = false
+	 */
+	private $_cookieSecure = false;
+
+	/**
+	 * @var bool $_cookieHTTPOnly = false
+	 */
+	private $_cookieHTTPOnly = false;
+
+	/**
 	 * @var string $_collection = self::COLLECTION
 	 */
 	private $_collection = self::COLLECTION;
@@ -144,7 +159,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$output = new QuarkDTO();
 		$output->AuthorizationProvider(new QuarkKeyValuePair($name, $session->sid));
 		$output->Signature($session->signature);
-		$output->Cookie(new QuarkCookie($this->_cookieName, $session->sid, $lifetime, $this->_cookieDomain));
+		$output->Cookie($this->Cookie($session->sid, $lifetime));
 
 		return $output;
 	}
@@ -168,7 +183,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		if ($session == null || !$session->Remove()) return null;
 
 		$output = new QuarkDTO();
-		$output->Cookie(new QuarkCookie($this->_cookieName, $id->Value(), -3600));
+		$output->Cookie($this->Cookie($id->Value(), -3600));
 
 		return $output;
 	}
@@ -218,6 +233,15 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 
 		if (isset($ini->CookieDomain))
 			$this->_cookieDomain = $ini->CookieDomain;
+
+		if (isset($ini->CookieSameSite))
+			$this->_cookieSameSite = $ini->CookieSameSite;
+
+		if (isset($ini->CookieSecure))
+			$this->_cookieSecure = $ini->CookieSecure;
+
+		if (isset($ini->CookieHTTPOnly))
+			$this->_cookieHTTPOnly = $ini->CookieHTTPOnly;
 	}
 
 	/**
@@ -261,5 +285,22 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 			$this->name != '',
 			$this->sid != ''
 		);
+	}
+
+	/**
+	 * @param string $value = ''
+	 * @param int $lifetime = 0
+	 *
+	 * @return QuarkCookie
+	 */
+	public function Cookie ($value = '', $lifetime = 0) {
+		$cookie = new QuarkCookie($this->_cookieName, $value, $lifetime);
+
+		$cookie->domain = $this->_cookieDomain;
+		$cookie->SameSite = $this->_cookieSameSite;
+		$cookie->Secure = (bool)$this->_cookieSecure;
+		$cookie->HttpOnly = (bool)$this->_cookieHTTPOnly;
+
+		return $cookie;
 	}
 }
