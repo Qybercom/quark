@@ -17,9 +17,9 @@ class WebPush implements IQuarkPushNotificationProvider {
 	const INI_KEY_PRIVATE = 'web.KeyPrivate';
 
 	/**
-	 * @var string $_keuPublic = ''
+	 * @var string $_keyPublic = ''
 	 */
-	private $_keuPublic = '';
+	private $_keyPublic = '';
 
 	/**
 	 * @var string $_keyPrivate = ''
