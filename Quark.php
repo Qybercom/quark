@@ -6154,7 +6154,7 @@ trait QuarkViewBehavior {
 	 * @return string
 	 */
 	public function LanguageControlAttributes () {
-		return $this->__call('Languages', func_get_args());
+		return $this->__call('LanguageControlAttributes', func_get_args());
 	}
 
 	/**

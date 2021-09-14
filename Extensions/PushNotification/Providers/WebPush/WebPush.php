@@ -11,19 +11,61 @@ use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
  * @package Quark\Extensions\PushNotification\Providers\WebPush
  */
 class WebPush implements IQuarkPushNotificationProvider {
+	const TYPE = 'web';
+
+	const INI_KEY_PUBLIC = 'web.KeyPublic';
+	const INI_KEY_PRIVATE = 'web.KeyPrivate';
+
+	/**
+	 * @var string $_keuPublic = ''
+	 */
+	private $_keuPublic = '';
+
+	/**
+	 * @var string $_keyPrivate = ''
+	 */
+	private $_keyPrivate = '';
+
+	/**
+	 * @var Device[] $_devices = []
+	 */
+	private $_devices = array();
+
+	/**
+	 * @var IQuarkPushNotificationDetails|WebPushDetails $_details
+	 */
+	private $_details;
+
+	/**
+	 * @return string
+	 */
+	public function KeyPublic () {
+		return $this->_keyPublic;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function KeyPrivate () {
+		return $this->_keyPrivate;
+	}
 
 	/**
 	 * @return string
 	 */
 	public function PNPType () {
-		// TODO: Implement PNPType() method.
+		return self::TYPE;
 	}
 
 	/**
 	 * @param $config
 	 */
 	public function PNPConfig ($config) {
-		// TODO: Implement PNPConfig() method.
+		if (isset($ini[self::INI_KEY_PUBLIC]))
+			$this->_keyPublic = $ini[self::INI_KEY_PUBLIC];
+
+		if (isset($ini[self::INI_KEY_PRIVATE]))
+			$this->_keyPrivate = $ini[self::INI_KEY_PRIVATE];
 	}
 
 	/**
@@ -33,7 +75,17 @@ class WebPush implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PNPOption ($key, $value) {
-		// TODO: Implement PNPOption() method.
+		switch ($key) {
+			case self::INI_KEY_PUBLIC:
+				$this->_keyPublic = $value;
+				break;
+
+			case self::INI_KEY_PRIVATE:
+				$this->_keyPrivate = $value;
+				break;
+
+			default: break;
+		}
 	}
 
 	/**
