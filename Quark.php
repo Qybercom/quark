@@ -9632,10 +9632,11 @@ trait QuarkModelBehavior {
 
 	/**
 	 * @param string $language = QuarkLanguage::ANY
+	 * @param bool $fields = false
 	 *
 	 * @return string[]
 	 */
-	public function ValidationErrors ($language = QuarkLanguage::ANY) {
+	public function ValidationErrors ($language = QuarkLanguage::ANY, $fields = false) {
 		return $this->__call('ValidationErrors', func_get_args());
 	}
 	
@@ -10579,14 +10580,27 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param string $language = QuarkLanguage::ANY
+	 * @param bool $fields = false
 	 *
 	 * @return string[]
 	 */
-	public function ValidationErrors ($language = QuarkLanguage::ANY) {
+	public function ValidationErrors ($language = QuarkLanguage::ANY, $fields = false) {
 		$out = array();
+		$key = null;
+		$value = null;
 
-		foreach ($this->_errors as $error)
-			$out[] = $error->Value()->Of($language);
+		foreach ($this->_errors as $i => &$error) {
+			$key = $error->Key();
+			$value = $error->Value()->Of($language);
+
+			if ($fields) {
+				$out[$key] .= '; ' . $value;
+				$out[$key] = trim($out[$key], '; ');
+			}
+			else $out[] = $value;
+		}
+
+		unset($i, $error, $key, $value);
 
 		return $out;
 	}
@@ -12015,16 +12029,27 @@ class QuarkField {
 
 	/**
 	 * @param string $language = QuarkLanguage::ANY
+	 * @param bool $fields = false
 	 *
 	 * @return string[]
 	 */
-	public static function ValidationErrors ($language = QuarkLanguage::ANY) {
+	public static function ValidationErrors ($language = QuarkLanguage::ANY, $fields = false) {
 		$out = array();
+		$key = null;
+		$value = null;
 
-		foreach (self:: $_errors as $i => &$error)
-			$out[] = $error->Value()->Of($language);
+		foreach (self::$_errors as $i => &$error) {
+			$key = $error->Key();
+			$value = $error->Value()->Of($language);
 
-		unset($i, $error);
+			if ($fields) {
+				$out[$key] .= '; ' . $value;
+				$out[$key] = trim($out[$key], '; ');
+			}
+			else $out[] = $value;
+		}
+
+		unset($i, $error, $key, $value);
 
 		return $out;
 	}
@@ -18746,10 +18771,11 @@ class QuarkDTO {
 		else {
 			$this->_raw = $data->Raw();
 
+			// https://www.php.net/manual/ru/function.array-merge.php#92602
 			$this->_method = $data->Method();
 			$this->_boundary = $data->Boundary();
 			$this->_headers += $data->Headers();
-			$this->_cookies += $data->Cookies();
+			$this->_cookies = array_merge($this->_cookies, $data->Cookies());
 			$this->_languages += $data->Languages();
 			$this->_types += $data->Types();
 			$this->_uri = $data->URI() == null ? $this->_uri : $data->URI();
@@ -20611,7 +20637,7 @@ class QuarkCookie {
 				return 0;
 			}
 
-			$expires = QuarkDate::GMTNow()->Offset('+' . $seconds . ' seconds', true);
+			$expires = QuarkDate::GMTNow()->Offset(($seconds > 0 ? '+' : '') . $seconds . ' seconds', true);
 
 			$this->expires = $expires->Format(self::EXPIRES_FORMAT);
 		}

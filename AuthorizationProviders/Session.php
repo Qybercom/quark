@@ -23,6 +23,7 @@ use Quark\DataProviders\QuarkDNA;
  * @property string $name
  * @property string $sid
  * @property string $signature
+ * @property int $lifetime
  * @property QuarkModel|QuarkGenericModel|IQuarkAuthorizableModel $user
  * @property object $session
  *
@@ -124,7 +125,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		$output->Data($this->_processor->Decode($record->user));
 
 		if ($cookie != null)
-			$output->Cookie($cookie);
+			$output->Cookie($this->Cookie($record->sid, $record->lifetime));
 
 		return $output;
 	}
