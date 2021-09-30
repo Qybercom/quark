@@ -6013,6 +6013,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param IQuarkViewModel $view
+	 * @param array $vars
+	 *
+	 * @return QuarkView|IQuarkVIewModel
+	 */
+	public function Nested (IQuarkViewModel $view, $vars = []) {
+		return $this->__call('Nested', func_get_args());
+	}
+
+	/**
 	 * @return QuarkModel|QuarkSessionBehavior|IQuarkAuthorizableModel
 	 */
 	public function User () {
@@ -6328,12 +6338,7 @@ class QuarkView implements IQuarkContainer {
 		$this->_language = Quark::CurrentLanguage();
 		$this->_view = $view;
 		
-		$vars = $this->Vars($vars);
-
-		foreach ($vars as $key => $value)
-			$this->_view->$key = $value;
-		
-		$this->Vars($this->_view);
+		$this->Vars($vars);
 
 		$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
 		
@@ -6857,11 +6862,11 @@ class QuarkView implements IQuarkContainer {
 				$this->_layout->_resource(QuarkGenericViewResource::JS($this->_view->ViewLayoutController()));
 			}
 
+			$this->_layout->View($this->Compile());
+			$this->_layout->Child($this->_view);
 			$this->_layout->_resources($this->ResourceList());
 			$this->_layout->_resources($resources);
 
-			$this->_layout->View($this->Compile());
-			$this->_layout->Child($this->_view);
 			$this->_language = $this->_layout->Language();
 		}
 
@@ -6878,6 +6883,19 @@ class QuarkView implements IQuarkContainer {
 			$this->_html = $html;
 
 		return $this->_html;
+	}
+
+	/**
+	 * @param IQuarkViewModel $view
+	 * @param array $vars
+	 *
+	 * @return QuarkView|IQuarkVIewModel
+	 */
+	public function Nested (IQuarkViewModel $view, $vars = []) {
+		$out = new self($view, $vars);
+		$this->_resources($out->ResourceList());
+
+		return $out;
 	}
 
 	/**
@@ -6941,6 +6959,10 @@ class QuarkView implements IQuarkContainer {
 				: QuarkObject::Merge((object)$params);
 
 			$this->_vars = $vars == null ? (object)array() : $vars;
+
+			if (QuarkObject::IsTraversable($vars))
+				foreach ($vars as $key => $value)
+					$this->_view->$key = $value;
 		}
 
 		return $this->_vars;
@@ -8034,6 +8056,7 @@ trait QuarkCollectionBehavior {
 		
 		$out = true;
 		$outChanged = false;
+		$iterable = false;
 		
 		foreach ($query as $key => &$rule) {
 			$len = QuarkObject::isTraversable($key)
@@ -8041,19 +8064,20 @@ trait QuarkCollectionBehavior {
 				: strlen((string)$key);
 			
 			if ($len == 0) continue;
-			
+
 			if (preg_match('#\.#', $key)) {
 				$nodes = explode('.', $key);
 				$parent = $nodes[0];
-				
+
 				if (!isset($document->$parent)) return false;
 				
 				$newKey = implode('.', array_slice($nodes, 1));
-				
-				if (is_object($document->$parent))
+				$iterable = QuarkObject::Uses($document->$parent, 'Quark\\QuarkCollectionBehaviorWithArrayAccess');
+
+				if (is_object($document->$parent) && !$iterable)
 					return $this->Match($document->$parent, array($newKey => $rule));
-				
-				if (is_array($document->$parent))
+
+				if (is_array($document->$parent) || $iterable)
 					foreach ($document->$parent as $item)
 						if ($this->Match($item, array($newKey => $rule))) return true;
 				
@@ -8988,7 +9012,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 		ChangeAndReturn as private _changeAndReturn;
 		PurgeAndReturn as private _purgeAndReturn;
 		Aggregate as private _aggregate;
-		Map as private _map;
+		Map as MapRaw;
 		offsetSet as private _offsetSet;
 	}
 
@@ -9358,7 +9382,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	public function Map (IQuarkModel $type = null, callable $mapper = null) {
 		return $mapper == null ? null : new self(
 			$type == null ? $this->_type : $type,
-			$this->_map($mapper)
+			$this->MapRaw($mapper)
 		);
 	}
 	
@@ -9547,6 +9571,16 @@ trait QuarkModelBehavior {
 	 */
 	public function LazyLink (IQuarkLinkedModel $model, $value = null, $linked = false) {
 		return new QuarkLazyLink($model, func_num_args() > 1 ? $value : '', $linked);
+	}
+
+	/**
+	 * @param IQuarkLinkedModel $model
+	 * @param $value = null
+	 *
+	 * @return QuarkCollection|QuarkLazyLink[]|IQuarkLinkedModel[]
+	 */
+	public function LazyLinkCollection (IQuarkLinkedModel $model, $value = null) {
+		return QuarkCollection::Lazy($model, $value);
 	}
 
 	/**
@@ -10246,20 +10280,24 @@ class QuarkModel implements IQuarkContainer {
 			}
 		}
 
+		$key_type = null;
+
 		foreach ($source as $key => &$value) {
 			if ($key == '') continue;
 			if (!QuarkObject::PropertyExists($fields, $key) && $model instanceof IQuarkStrongModel) continue;
 
 			$property = QuarkObject::Property($fields, $key, $value);
+			$key_type = gettype($property instanceof QuarkLazyLink ? $property->value : null);
 
 			if ($property instanceof QuarkCollection) {
 				$class = $property->Type();
+				$key_type = gettype($class instanceof QuarkLazyLink ? $class->value : null);
 
-				$model->$key = $property->PopulateWith($value, function ($item) use ($key, $class) {
-					return self::_link(clone $class, $item, $key);
+				$model->$key = $property->PopulateWith($value, function ($item) use ($key, $class, $key_type) {
+					return self::_link(clone $class, $item, $key, $key_type);
 				});
 			}
-			else $model->$key = self::_link($property, $value, $key);
+			else $model->$key = self::_link($property, $value, $key, $key_type);
 		}
 
 		unset($key, $value);
@@ -10271,12 +10309,15 @@ class QuarkModel implements IQuarkContainer {
 	 * @param $property
 	 * @param $value
 	 * @param $key
+	 * @param string $key_type
 	 *
 	 * @return mixed|QuarkModel
 	 */
-	private static function _link ($property, $value, $key) {
+	private static function _link ($property, $value, $key, $key_type) {
+		$value_linked = $value;
+
 		return $property instanceof IQuarkLinkedModel
-			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : $value))
+			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : ($key_type != 'NULL' && settype($value_linked, $key_type) ? $value_linked : $value)))
 			: ($property instanceof IQuarkModel
 				? ($property instanceof IQuarkNullableModel && $value == null ? null : new QuarkModel($property, $value))
 				: (self::_callableField($property) ? $property($key, $value, true) : $value)
@@ -14127,7 +14168,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 	public function Unlink () {
 		if ($this->_linked)
 			$this->value = $this->_model->Unlink();
-
+			
 		return $this->value;
 	}
 
@@ -23560,7 +23601,8 @@ class QuarkCertificate extends QuarkFile {
 
 		unset($property, $value);
 
-		$csr = @openssl_csr_new($data, $this->_key->PrivateKey(false), $config);
+		$key_private = $this->_key->PrivateKey(false);
+		$csr = @openssl_csr_new($data, $key_private, $config);
 		if (!$csr)
 			return self::_error('SigningRequest: Cannot generate CSR');
 
@@ -24712,14 +24754,32 @@ interface IQuarkCompressor {
  * @package Quark
  */
 class QuarkSQL {
-	const OPTION_AS = 'option.as';
+	const OPTION_ALIAS = 'option.alias';
 	const OPTION_SCHEMA_GENERATE_PRINT = 'option.schema_print';
 	const OPTION_QUERY_TEST = 'option.query.test';
 	const OPTION_QUERY_DEBUG = 'option.query.debug';
 	const OPTION_QUERY_REVIEWER = 'option.query.reviewer';
 	const OPTION_FIELDS = '__sql_fields__';
+	const OPTION_JOIN = 'option.join';
+	const OPTION_GROUP_BY = 'option.group_by';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
+
+	const FLAG_JOIN_MODE = 'join_mode';
+	const FLAG_JOIN_MODEL = 'join_model';
+	const FLAG_JOIN_TABLE = 'join_table';
+	const FLAG_JOIN_CONDITION = 'join_condition';
+	const FLAG_JOIN_ALIAS = 'join_alias';
+	const FLAG_JOIN_QUERY = 'join_query';
+	const FLAG_JOIN_QUERY_OPTIONS = 'join_query_options';
+
+	const JOIN_INNER = 'INNER';
+	const JOIN_OUTER = 'OUTER';
+	const JOIN_LEFT = 'LEFT';
+	const JOIN_RIGHT = 'RIGHT';
+	const JOIN_CROSS = 'CROSS';
+	const JOIN_FULL = 'FULL';
+	const JOIN_DEFAULT = '';
 
 	const NULL = 'NULL';
 
@@ -24775,6 +24835,56 @@ class QuarkSQL {
 		$provider = self::_source($connection);
 
 		return $provider ? $provider->Schema($table) : false;
+	}
+
+	/**
+	 * @param IQuarkModel $model = null
+	 * @param string $mode = self::JOIN_DEFAULT
+	 * @param array $condition = []
+	 * @param string $alias = ''
+	 * @param array $query = []
+	 * @param array $query_options = []
+	 *
+	 * @return array
+	 */
+	public static function Join (IQuarkModel $model = null, $mode = self::JOIN_DEFAULT, $condition = [], $alias = '', $query = [], $query_options = []) {
+		$out = array(
+			self::FLAG_JOIN_MODEL => $model,
+			self::FLAG_JOIN_MODE => $mode,
+			self::FLAG_JOIN_CONDITION => $condition,
+			self::FLAG_JOIN_ALIAS => $alias
+		);
+
+		$args = func_num_args();
+		if ($args > 4) $out[self::FLAG_JOIN_QUERY] = $query;
+		if ($args > 5) $out[self::FLAG_JOIN_QUERY_OPTIONS] = $query_options;
+
+		return $out;
+	}
+
+	/**
+	 * @param string $table = ''
+	 * @param string $mode = self::JOIN_DEFAULT
+	 * @param array $condition = []
+	 * @param string $alias = ''
+	 * @param array $query = []
+	 * @param array $query_options = []
+	 *
+	 * @return array
+	 */
+	public static function JoinTable ($table = '', $mode = self::JOIN_DEFAULT, $condition = [], $alias = '', $query = [], $query_options = []) {
+		$out = array(
+			self::FLAG_JOIN_TABLE => $table,
+			self::FLAG_JOIN_MODE => $mode,
+			self::FLAG_JOIN_CONDITION => $condition,
+			self::FLAG_JOIN_ALIAS => $alias
+		);
+
+		$args = func_num_args();
+		if ($args > 4) $out[self::FLAG_JOIN_QUERY] = $query;
+		if ($args > 5) $out[self::FLAG_JOIN_QUERY_OPTIONS] = $query_options;
+
+		return $out;
 	}
 
 	/**
@@ -24848,8 +24958,11 @@ class QuarkSQL {
 	 * @return string
 	 */
 	public function Field ($field) {
+		$escape_dot = $this->_provider->EscapeField('.');
+		$escape_star= $this->_provider->EscapeField('*');
+
 		return is_string($field)
-			? $this->_provider->EscapeField($field)
+			? str_replace($escape_star, '*', str_replace('.', $escape_dot, $this->_provider->EscapeField($field)))
 			: '';
 	}
 
@@ -24880,6 +24993,7 @@ class QuarkSQL {
 		if ($value === null) return self::NULL;
 		// TODO: need refactor
 		//if ($value === null) $value = self::NULL;
+		// TODO: investigate, seems like QuarkCollection on this step is not used
 		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());
 		if (is_array($value)) $value = json_encode($value);
 		if (!is_scalar($value)) $value = null;
@@ -24902,6 +25016,8 @@ class QuarkSQL {
 		if (!is_array($condition) || sizeof($condition) == 0) return '';
 
 		$output = array();
+		// TODO: maybe need
+		//$target = str_replace('.', $this->Field('.'), $target);
 
 		foreach ($condition as $key => &$rule) {
 			$field = $this->Field($key);
@@ -24921,6 +25037,14 @@ class QuarkSQL {
 				case $this->Field('$regex'):
 					$regEx = new QuarkRegEx($rule);
 					$output[] = $target . ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
+					break;
+
+				case $this->Field('$like'):
+					$output[] = $target . ' LIKE ' . $value;
+					break;
+
+				case $this->Field('$ilike'):
+					$output[] = $target . ' ILIKE ' . $value; // TODO: ILIKE is not supported in MySQL
 					break;
 
 				case $this->Field('$and'):
@@ -24947,7 +25071,24 @@ class QuarkSQL {
 					foreach ($rule as $i => &$val)
 						$values[] = $this->Value($val);
 
-					$output[] = $target . ' IN (' . implode($values, ',') . ') ';
+					$output[] = $target . ' IN (' . implode(', ', $values) . ') ';
+					break;
+
+				case $this->Field('$quark_in'):
+					$field_match = isset($rule['$sql_field']);
+					$values = array('[,', ',,', ',]', '[]');
+
+					foreach ($values as $i => &$val)
+						$values[$i] = $target . ' LIKE ' . ($field_match
+							? 'CONCAT(' . $this->Value('%' . $val[0]) . ', ' . $this->Field($rule['$sql_field']) . ', ' . $this->Value($val[1] . '%') . ')'
+							: $this->Value('%' . $val[0] . $rule . $val[1] . '%')
+						);
+
+					$output[] = ' (' . implode(' OR ', $values) . ') ';
+					break;
+
+				case $this->Field('$sql_field'):
+					$output[] = $target . '=' . $this->Field($rule);
 					break;
 
 				default:
@@ -24969,6 +25110,17 @@ class QuarkSQL {
 	private function _cursor ($options) {
 		$output = '';
 
+		if (isset($options[self::OPTION_GROUP_BY]) && is_array($options[self::OPTION_GROUP_BY])) {
+			$output .= ' GROUP BY ';
+
+			foreach ($options[self::OPTION_GROUP_BY] as $i => &$key)
+				$output .= $this->Field($key) . ',';
+
+			unset($i, $key);
+
+			$output = trim($output, ',');
+		}
+
 		if (isset($options[QuarkModel::OPTION_SORT]) && is_array($options[QuarkModel::OPTION_SORT])) {
 			$output .= ' ORDER BY ';
 
@@ -24979,7 +25131,7 @@ class QuarkSQL {
 					default: $sort = ''; break;
 				}
 
-				$output .= $this->Field($key) . ' ' . $sort . ',';
+				$output .= (strpos($key, '(') !== false ? $key : $this->Field($key)) . ' ' . $sort . ',';
 			}
 
 			unset($key, $order);
@@ -24997,13 +25149,15 @@ class QuarkSQL {
 	}
 
 	/**
-	 * @param IQuarkModel $model
-	 * @param $criteria
+	 * @param string $table = ''
+	 * @param array $criteria = []
 	 * @param array $options = []
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function Select (IQuarkModel $model, $criteria, $options = []) {
+	public function SelectRaw ($table = '', $criteria = [], $options = []) {
+		$query_fields = '';
+
 		if (isset($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
 		else {
 			$query_fields = '*';
@@ -25011,22 +25165,61 @@ class QuarkSQL {
 			if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
 				$fields = array();
 
-				foreach ($options[QuarkModel::OPTION_FIELDS] as $i => &$field) {
-					switch ($field) {
-						case self::FIELD_COUNT_ALL: $fields[] = $field; break;
-						default: $fields[] = $this->Field($field); break;
+				foreach ($options[QuarkModel::OPTION_FIELDS] as $k => &$v) {
+					switch ($v) {
+						case self::FIELD_COUNT_ALL:
+							$fields[] = $v;
+							break;
+
+						default:
+							$fields[] = (is_int($k) ? '' : (strpos($k, '(') !== false ? $k : $this->Field($k)) . ' AS ') . $this->Field($v);
+							break;
 					}
 				}
+
+				unset($i, $field);
 
 				$query_fields = implode(', ', $fields);
 			}
 		}
 
-		return $this->Query(
-			$model,
-			$options,
-			'SELECT ' . $query_fields . (isset($options[self::OPTION_AS]) ? ' AS ' . $options[self::OPTION_AS] : '') . ' FROM ' . self::Collection($model) . $this->Condition($criteria) . $this->_cursor($options)
-		);
+		$joins = '';
+		if (isset($options[self::OPTION_JOIN]) && is_array($options[self::OPTION_JOIN])) {
+			$join_target = null;
+
+			foreach ($options[self::OPTION_JOIN] as $i => &$join) {
+				if (!is_array($join) || !isset($join[self::FLAG_JOIN_MODE]) || !isset($join[self::FLAG_JOIN_CONDITION])) continue;
+
+				$join_target = null;
+				if (isset($join[self::FLAG_JOIN_MODEL]) && $join[self::FLAG_JOIN_MODEL])
+					$join_target = $this->_provider->EscapeCollection(QuarkModel::CollectionName($join[self::FLAG_JOIN_MODEL]));
+
+				if (isset($join[self::FLAG_JOIN_TABLE]))
+					$join_target = $this->_provider->EscapeCollection($join[self::FLAG_JOIN_TABLE]);
+
+				if (isset($join[self::FLAG_JOIN_QUERY]) && $join_target != null)
+					$join_target = '(' . $this->SelectRaw($join_target, $join[self::FLAG_JOIN_QUERY], isset($join[self::FLAG_JOIN_QUERY_OPTIONS]) ? $join[self::FLAG_JOIN_QUERY_OPTIONS] : array()) . ')';
+
+				if ($join_target == null) continue;
+
+				$joins .= ' ' . $join[self::FLAG_JOIN_MODE] . ' JOIN ' . $join_target . (isset($join[self::FLAG_JOIN_ALIAS]) && $join[self::FLAG_JOIN_ALIAS] != '' ? ' AS ' . $join[self::FLAG_JOIN_ALIAS] : '') . ' ON ' . $this->Condition($join[self::FLAG_JOIN_CONDITION], ' ');
+			}
+
+			unset($i, $join, $join_target);
+		}
+
+		return 'SELECT ' . $query_fields . ' FROM ' . $table . (isset($options[self::OPTION_ALIAS]) ? ' AS ' . $options[self::OPTION_ALIAS] : '') . $joins . $this->Condition($criteria) . $this->_cursor($options);
+	}
+
+	/**
+	 * @param IQuarkModel $model
+	 * @param $criteria
+	 * @param array $options = []
+	 *
+	 * @return mixed
+	 */
+	public function Select (IQuarkModel $model, $criteria, $options = []) {
+		return $this->Query($model, $options, $this->SelectRaw(self::Collection($model), $criteria, $options));
 	}
 
 	/**

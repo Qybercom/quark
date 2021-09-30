@@ -38,21 +38,42 @@ class FFmpeg implements IQuarkExtension {
 	}
 
 	/**
+	 * @param string $bin = ''
 	 * @param string $command = ''
+	 * @param array $output = []
+	 * @param int $status = 0
 	 *
 	 * @return bool
+	 *
+	 * @throws QuarkArchException
 	 */
-	public function Command ($command = '') {
-		return $this->Shell($this->_config->LocationFFmpeg() . ' ' . $command);
+	private function _command ($bin = '', $command = '', &$output = [], &$status = 0) {
+		if (trim($bin) == '')
+			throw new QuarkArchException('FFmpeg binary path does not configured properly. Trying to execute "' . $bin . '" with arguments "' . $command . '"');
+
+		return $this->Shell($bin . ' ' . $command, $output, $status);
 	}
 
 	/**
 	 * @param string $command = ''
+	 * @param string[] &$output = []
+	 * @param int &$status = 0
 	 *
 	 * @return bool
 	 */
-	public function CommandProbe ($command = '') {
-		return $this->Shell($this->_config->LocationFFprobe() . ' ' . $command);
+	public function Command ($command = '', &$output = [], &$status = 0) {
+		return $this->_command($this->_config->LocationFFmpeg(), $command, $output, $status);
+	}
+
+	/**
+	 * @param string $command = ''
+	 * @param string[] &$output = []
+	 * @param int &$status = 0
+	 *
+	 * @return bool
+	 */
+	public function CommandProbe ($command = '', &$output = [], &$status = 0) {
+		return $this->_command($this->_config->LocationFFprobe(), $command, $output, $status);
 	}
 
 	/**
@@ -63,8 +84,9 @@ class FFmpeg implements IQuarkExtension {
 	public function Info ($file = '') {
 		$command = '-print_format json -show_streams -show_format -v quiet "' . $file . '"';
 
-		if (!$this->CommandProbe($command)) {
-			Quark::Log('[FFmpeg] Can not retrieve info from "' . $file . '". Command: ' . $command, Quark::LOG_WARN);
+		if (!$this->CommandProbe($command, $output, $status)) {
+			Quark::Log('[FFmpeg] Can not retrieve info from "' . $file . '". Command: ' . $command . '. Status: ' . $status, Quark::LOG_WARN);
+			Quark::Trace($output);
 			return null;
 		}
 

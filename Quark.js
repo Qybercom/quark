@@ -294,6 +294,33 @@ Quark.EscapeRegEx = function (str) {
 };
 
 /**
+ * https://stackoverflow.com/a/4835406/2097055
+ *
+ * @param {string} str
+ *
+ * @return {string}
+ */
+Quark.EscapeHTML = function (str) {
+	var key = '',
+		keys = [],
+		map = {
+			'&': '&amp;',
+			'<': '&lt;',
+			'>': '&gt;',
+			'"': '&quot;',
+			"'": '&#039;'
+		};
+
+	for (key in map)
+		keys.push(key);
+
+	return str.replace(
+		new RegExp('[' + keys.join('') + ']', 'g'),
+		function(m) { return map[m]; }
+	);
+};
+
+/**
  * http://stackoverflow.com/a/25840184/2097055
  */
 Quark.Base64 = {
