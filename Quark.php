@@ -12310,6 +12310,15 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	}
 
 	/**
+	 * @param string $language
+	 *
+	 * @return bool
+	 */
+	public function ExistsValue ($language) {
+		return isset($this->values->$language);
+	}
+
+	/**
 	 * @param string $value = ''
 	 *
 	 * @return string
