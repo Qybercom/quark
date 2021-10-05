@@ -17744,6 +17744,9 @@ class QuarkURI {
 
 	const HOST_LOCALHOST = '127.0.0.1';
 	const HOST_ALL_INTERFACES = '0.0.0.0';
+	const HOST_NETWORK_192 = '192.168.0.0/16';
+	const HOST_NETWORK_172 = '172.16.0.0/12';
+	const HOST_NETWORK_10 = '10.0.0.0/8';
 
 	const PORT_ANY = 0;
 
@@ -17822,6 +17825,17 @@ class QuarkURI {
 		'scp' => '22',
 		'http' => '80',
 		'https' => '443'
+	);
+
+	/**
+	 * http://infocisco.ru/cs_subnetting_table2.html
+	 *
+	 * @var string[] $_networksPrivate = []
+	 */
+	private static $_networksPrivate = array(
+		self::HOST_NETWORK_192,
+		self::HOST_NETWORK_172,
+		self::HOST_NETWORK_10
 	);
 
 	/**
@@ -18327,6 +18341,18 @@ class QuarkURI {
 
 			return $ip >= $min && $ip <= $max;
 		}
+
+		return false;
+	}
+
+	/**
+	 * @param string $ip = ''
+	 *
+	 * @return bool
+	 */
+	public static function IsHostFromPrivateNetworks ($ip = '') {
+		foreach (self::$_networksPrivate as $i => &$network)
+			if (self::IsHostFromNetwork($ip, $network)) return true;
 
 		return false;
 	}
