@@ -3,9 +3,7 @@ namespace Quark\Scenarios\Generate;
 
 use Quark\IQuarkTask;
 
-use Quark\Extensions\JOSE\JWK\JWK;
-use Quark\Extensions\JOSE\JWK\Providers\EC;
-use Quark\Extensions\JOSE\JWT;
+use Quark\Extensions\PushNotification\Providers\WebPush\VoluntaryApplicationServerIdentity;
 
 /**
  * Class VAPIDKeys
@@ -23,12 +21,8 @@ class VAPIDKeys implements IQuarkTask {
 	 * @return mixed
 	 */
 	public function Task ($argc, $argv) {
-		$jwk = new JWK();
-		$jwk->Type(JWK::TYPE_EC);
-		$jwk->Curve(EC::CURVE_P_256);
-
-		$jwt = new JWT();
-		$jwk = $jwt->JWKGenerate($jwk);
+		$vapid = VoluntaryApplicationServerIdentity::Generate();
+		$jwk = $vapid->JWK();
 
 		print_r($jwk);
 

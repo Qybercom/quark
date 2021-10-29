@@ -79,8 +79,8 @@ class DiceBearAvatar implements IQuarkExtension {
 	public function Generate ($seed = '') {
 		$out = $this->_config->URL();
 
-		if ($version != null)
-			$out .= '/' . $version;
+		if ($this->_version != null)
+			$out .= '/' . $this->_version;
 
 		return $out . '/' . $this->_sprites . '/' . $seed . '.svg';
 	}

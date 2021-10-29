@@ -198,13 +198,13 @@ class JWT {
 	}
 
 	/**
-	 * @param string $payload = ''
+	 * @param $payload = null
 	 * @param int $timeout = 0
 	 * @param int $timestamp = null
 	 *
 	 * @return bool
 	 */
-	public static function VerifyTime ($payload = '', $timeout = 0, $timestamp = null) {
+	public static function VerifyTime ($payload = null, $timeout = 0, $timestamp = null) {
 		if ($timestamp == null)
 			$timestamp = time();
 
@@ -215,6 +215,24 @@ class JWT {
 		if (isset($payload->exp) && ($timestamp - $timeout) >= $payload->exp) return false; // token is not expired
 
 		return true;
+	}
+
+	/**
+	 * @param $data
+	 *
+	 * @return string
+	 */
+	public static function JSONEncode ($data = null) {
+		return json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+	}
+
+	/**
+	 * @param string $data
+	 *
+	 * @return mixed
+	 */
+	public static function JSONDecode ($data = '') {
+		return json_decode($data, false, 512, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 	}
 
 	/**

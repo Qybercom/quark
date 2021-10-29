@@ -10635,6 +10635,8 @@ class QuarkModel implements IQuarkContainer {
 			$value = $error->Value()->Of($language);
 
 			if ($fields) {
+				if (!isset($out[$key])) $out[$key] = '';
+
 				$out[$key] .= '; ' . $value;
 				$out[$key] = trim($out[$key], '; ');
 			}
