@@ -105,30 +105,11 @@ class WebPushDevice implements IQuarkPushNotificationDevice {
 	}
 
 	/**
-	 * @return array
-	 */
-	public function SQL () {
-		return array(
-			'$like' => QuarkSQL::LikeEscape('%"keys":' . $this->_id->Key() . '%')
-		);
-	}
-
-	/**
 	 * @param string $id = ''
 	 *
 	 * @return bool
 	 */
 	public function NeedUpdate ($id = '') {
-		$target = json_decode($id);
-
-		if ($target == null) return true;
-		if (!self::ValidateID($id)) return true;
-
-		$keys = json_encode($data->keys);
-		if ($keys == $this->_id->Value())
-			return $data->endpoint != $this->_endpoint;
-
-		return false;
 	}
 
 	/**
@@ -191,5 +172,34 @@ class WebPushDevice implements IQuarkPushNotificationDevice {
 		$this->ID(new QuarkKeyValuePair(json_encode($data->keys), $data->endpoint));
 
 		return true;
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDeviceCriteriaSQL (PushNotificationDevice &$device) {
+		return array(
+			'$like' => QuarkSQL::LikeEscape('%"keys":' . $this->_id->Key() . '%')
+		);
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return bool
+	 */
+	public function PushNotificationDeviceUpdateNeed (PushNotificationDevice &$device) {
+		$target = json_decode($device->id);
+
+		if ($target == null) return true;
+		if (!self::ValidateID($device->id)) return true;
+
+		$keys = json_encode($data->keys);
+		if ($keys == $this->_id->Value())
+			return $data->endpoint != $this->_endpoint;
+
+		return false;
 	}
 }

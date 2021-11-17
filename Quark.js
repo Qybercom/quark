@@ -120,6 +120,10 @@ Quark.ServiceWorker.Register = function (url, opt) {
 		.then(function (registration) {
 			if (opt.success instanceof Function)
 				opt.success(registration);
+		})
+		.catch(function (error) {
+			if (opt.error instanceof Function)
+				opt.error(error);
 		});
 };
 
@@ -168,6 +172,42 @@ Quark.ServiceWorker.Ready = function (callback) {
 Quark.Notification = function () {};
 
 /**
+ * @param {Function=} subscriptionExists
+ * @param {Function=} subscriptionAbsent
+ * @param {Function=} error
+ */
+Quark.Notification.Ready = function (subscriptionExists, subscriptionAbsent, error) {
+	if (navigator.serviceWorker == undefined) return;
+
+	var worker = navigator.serviceWorker.getRegistration();
+	if (worker == undefined) return;
+
+	worker
+		.then(function (registration) {
+			if (registration == undefined) {
+				if (subscriptionAbsent instanceof Function)
+					subscriptionAbsent(registration);
+			}
+			else {
+				registration.pushManager
+					.getSubscription()
+					.then(function (subscription) {
+						if (subscription == undefined) {
+							if (subscriptionAbsent instanceof Function)
+								subscriptionAbsent(registration);
+						}
+						else {
+							if (subscriptionExists instanceof Function)
+								subscriptionExists(registration);
+						}
+					})
+					.catch(error);
+			}
+		})
+		.catch(error);
+};
+
+/**
  * @param {string} url
  * @param {object=} opt
  */
@@ -176,7 +216,12 @@ Quark.Notification.RequestPermission = function (url, opt) {
 		opt.scope = opt.scope || '/';
 
 	Notification.requestPermission(function (status) {
-		if (status == 'granted') Quark.ServiceWorker.Register(url, opt);
+		if (status == 'granted') {
+			if (opt.granted instanceof Function)
+				opt.granted(status);
+
+			Quark.ServiceWorker.Register(url, opt);
+		}
 		else {
 			if (opt.denied instanceof Function)
 				opt.denied(status);
@@ -214,6 +259,26 @@ Quark.Notification.SubscribeAndRegister = function (appVAPIDPublic, appURLDevice
 				}
 			}
 		);
+	});
+};
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription/unsubscribe
+ *
+ * @param {Function=} success
+ * @param {Function=} error
+ */
+Quark.Notification.Unsubscribe = function (success, error) {
+	navigator.serviceWorker.ready.then(function(registration) {
+		registration.pushManager
+			.getSubscription()
+			.then(function (subscription) {
+				subscription
+					.unsubscribe()
+					.then(success)
+					.catch(error);
+			})
+			.catch(error);
 	});
 };
 

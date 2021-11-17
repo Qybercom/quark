@@ -20,4 +20,18 @@ interface IQuarkPushNotificationDevice {
 	 * @return bool
 	 */
 	public function PushNotificationDeviceValidate(PushNotificationDevice &$device);
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDeviceCriteriaSQL(PushNotificationDevice &$device);
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return bool
+	 */
+	public function PushNotificationDeviceUpdateNeed(PushNotificationDevice &$device);
 }

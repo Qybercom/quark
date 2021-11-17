@@ -118,7 +118,8 @@ class WebPush implements IQuarkPushNotificationProvider {
 	 */
 	public function PushNotificationProviderProperties () {
 		return array(
-			'KeyLocation'
+			'KeyLocation',
+			'Debug'
 		);
 	}
 
@@ -183,6 +184,10 @@ class WebPush implements IQuarkPushNotificationProvider {
 			$response = QuarkHTTPClient::To($device->Endpoint(), $request, new QuarkDTO(new QuarkJSONIOProcessor()), null, 10, true, $this->_debug);
 
 			if ($response->StatusCode() == QuarkDTO::STATUS_201_CREATED) $out->CountSuccessAppend(1);
+			elseif ($response->StatusCode() == QuarkDTO::STATUS_410_GONE) {
+				$out->CountFailureAppend(1);
+				$this->_devices[$i]->deleted = true;
+			}
 			else {
 				Quark::Log('[PushNotification:WebPush] Can not send push notification request');
 

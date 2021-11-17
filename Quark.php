@@ -18569,6 +18569,7 @@ class QuarkDTO {
 	const STATUS_401_UNAUTHORIZED = '401 Unauthorized';
 	const STATUS_403_FORBIDDEN = '403 Forbidden';
 	const STATUS_404_NOT_FOUND = '404 Not Found';
+	const STATUS_410_GONE = '410 Gone';
 	const STATUS_500_SERVER_ERROR = '500 Server Error';
 
 	const CONNECTION_KEEP_ALIVE = 'keep-alive';
@@ -27358,6 +27359,7 @@ class QuarkSQL {
 		// yes, it's ridiculous, but that's the story...
 		$like = str_replace('\\', '\\\\\\\\\\', $like);
 		$like = str_replace('"',  '\\\\\\"', $like);
+		//$like = str_replace('_',  '\_"', $like);
 
 		return $like;
 	}
