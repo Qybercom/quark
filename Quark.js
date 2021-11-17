@@ -99,6 +99,237 @@ Quark.Event = function (events) {
 	};
 };
 
+Quark.ServiceWorker = function () {};
+Quark.ServiceWorker.Event = Quark.ServiceWorker.Event || {};
+Quark.ServiceWorker.Event.Installed = Quark.ServiceWorker.Event.Installed || function () {};
+Quark.ServiceWorker.Event.NotificationIncoming = Quark.ServiceWorker.Event.NotificationIncoming || function () {};
+Quark.ServiceWorker.Event.NotificationDenied = Quark.ServiceWorker.Event.NotificationDenied || function () {};
+Quark.ServiceWorker.Event.NotificationReady = Quark.ServiceWorker.Event.NotificationReady || function () {};
+Quark.ServiceWorker.Event.NotificationClick = Quark.ServiceWorker.Event.NotificationClick || function () {};
+
+/**
+ * @param {string} url
+ * @param {object=} opt
+ */
+Quark.ServiceWorker.Register = function (url, opt) {
+	opt = opt || {};
+		opt.scope = opt.scope || '/';
+
+	navigator.serviceWorker
+		.register(url, {scope: opt.scope})
+		.then(function (registration) {
+			if (opt.success instanceof Function)
+				opt.success(registration);
+		});
+};
+
+/**
+ * https://stackoverflow.com/questions/29774836/failed-to-construct-notification-illegal-constructor
+ * https://medium.com/@madridserginho/how-to-handle-webpush-api-pushsubscriptionchange-event-in-modern-browsers-6e47840d756f
+ * https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription/endpoint
+ *
+ * @param {Function} callback
+ */
+Quark.ServiceWorker.Ready = function (callback) {
+	self.addEventListener('install', function (eventInstalled) {
+		self.skipWaiting();
+
+		if (Quark.ServiceWorker.Event.Installed instanceof Function)
+			Quark.ServiceWorker.Event.Installed(eventInstalled);
+	});
+
+	self.addEventListener('activate', callback);
+
+	self.addEventListener('push', function (eventPush) {
+		if (Quark.ServiceWorker.Event.NotificationIncoming instanceof Function)
+			Quark.ServiceWorker.Event.NotificationIncoming(eventPush);
+
+		if (!self.Notification || self.Notification.permission !== 'granted') {
+			if (Quark.ServiceWorker.Event.NotificationDenied instanceof Function)
+				Quark.ServiceWorker.Event.NotificationDenied(self.Notification.permission);
+
+			return;
+		}
+
+		var data = eventPush.data.json();
+
+		if (Quark.ServiceWorker.Event.NotificationReady instanceof Function)
+			Quark.ServiceWorker.Event.NotificationReady(data);
+
+		self.registration.notificationclick = function (eventClick) {
+			if (Quark.ServiceWorker.Event.NotificationClick instanceof Function)
+				Quark.ServiceWorker.Event.NotificationClick(eventClick);
+		};
+
+		self.registration.showNotification(data.title, data);
+	});
+};
+
+Quark.Notification = function () {};
+
+/**
+ * @param {string} url
+ * @param {object=} opt
+ */
+Quark.Notification.RequestPermission = function (url, opt) {
+	opt = opt || {};
+		opt.scope = opt.scope || '/';
+
+	Notification.requestPermission(function (status) {
+		if (status == 'granted') Quark.ServiceWorker.Register(url, opt);
+		else {
+			if (opt.denied instanceof Function)
+				opt.denied(status);
+		}
+	});
+};
+
+/**
+ * @param {string} vapidPublic
+ * @param {Function=} success
+ * @param {Function=} error
+ */
+Quark.Notification.Subscribe = function (vapidPublic, success, error) {
+	self.registration.pushManager
+		.subscribe({
+			userVisibleOnly: true,
+			applicationServerKey: Quark.Base64.DecodeUInt8Array(vapidPublic)
+		})
+		.then(success)
+		.catch(error);
+};
+
+/**
+ * @param {string} appVAPIDPublic
+ * @param {string} appURLDeviceRegister
+ */
+Quark.Notification.SubscribeAndRegister = function (appVAPIDPublic, appURLDeviceRegister) {
+	Quark.Notification.Subscribe(appVAPIDPublic, function (subscription) {
+		Quark.Request.POSTFormURLEncoded(
+			appURLDeviceRegister,
+			{
+				device: {
+					type: 'web',
+					'id': JSON.stringify(subscription)
+				}
+			}
+		);
+	});
+};
+
+/**
+ * https://stackoverflow.com/a/37562814/2097055
+ *
+ * @param {object|array} data
+ * @param {object} serializer
+ * @param {string=} prefix
+ *
+ * @return {object|string}
+ */
+Quark.FormSerialize = function (data, serializer, prefix) {
+	var key = null;
+
+	for (key in data) {
+		if (data[key].constructor == Object) {
+			Quark.FormSerialize(data[key], serializer, key);
+			continue;
+		}
+
+		if (data[key].constructor == Array) {
+			Quark.FormSerialize(data[key], serializer, key + '[]');
+			continue;
+		}
+
+		serializer.append(prefix == undefined ? key : prefix + '[' + key + ']', data[key]);
+	}
+
+	return serializer;
+};
+
+/**
+ * @param {string} url
+ * @param {object=} opt
+ * @param {Function=} success
+ * @param {Function=} error
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request = function (url, opt, success, error) {
+	return fetch(url, opt || {}).then(success).catch(error);
+};
+
+/**
+ * @param {string} url
+ * @param {Function=} success
+ * @param {Function=} error
+ * @param {object=} opt
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request.GET = function (url, success, error, opt) {
+	opt = opt || {};
+		opt.method = opt.method || 'GET';
+
+	return Quark.Request(url, opt, success, error);
+};
+
+/**
+ * @param {string} url
+ * @param {any} data
+ * @param {Function=} success
+ * @param {Function=} error
+ * @param {object=} opt
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request.POST = function (url, data, success, error, opt) {
+	opt = opt || {};
+		opt.method = opt.method || 'POST';
+		opt.body = data;
+
+	return Quark.Request(url, opt, success, error);
+};
+
+/**
+ * @param {string} url
+ * @param {any} data
+ * @param {Function} serializer
+ * @param {Function=} success
+ * @param {Function=} error
+ * @param {object=} opt
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request.POSTForm = function (url, data, serializer, success, error, opt) {
+	return Quark.Request.POST(url, Quark.FormSerialize(data, serializer), success, error, opt);
+};
+
+/**
+ * @param {string} url
+ * @param {object|array=} data
+ * @param {Function=} success
+ * @param {Function=} error
+ * @param {object=} opt
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request.POSTFormURLEncoded = function (url, data, success, error, opt) {
+	return Quark.Request.POSTForm(url, data, new URLSearchParams(), success, error, opt);
+};
+
+/**
+ * @param {string} url
+ * @param {object|array=} data
+ * @param {Function=} success
+ * @param {Function=} error
+ * @param {object=} opt
+ *
+ * @return {Promise<Response>}
+ */
+Quark.Request.POSTMultipartFormData = function (url, data, success, error, opt) {
+	return Quark.Request.POSTForm(url, data, new FormData(), success, error, opt);
+};
+
 /**
  * @url http://javascript.ru/unsorted/top-10-functions
  */
@@ -448,6 +679,24 @@ Quark.Base64 = {
 		}
 
 		return t;
+	},
+
+	DecodeUInt8Array: function (raw) {
+		var padding = '='.repeat((4 - raw.length % 4) % 4),
+			source = atob((raw + padding)
+				.replace(/\-/g, '+')
+				.replace(/_/g, '/')
+			),
+			out = new Uint8Array(source.length),
+			i = 0;
+
+		while (i < source.length) {
+			out[i] = source.charCodeAt(i);
+
+			i++;
+		}
+
+		return out;
 	}
 };
 

@@ -8,7 +8,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\Extensions\JOSE\IJOSEJWTIdentity;
 use Quark\Extensions\JOSE\IJOSEJWTIdentityProvider;
 use Quark\Extensions\JOSE\JWK\IJOSEJWKProvider;
-use Quark\Extensions\JOSE\JWK\JWK;
+use Quark\Extensions\JOSE\JWK\JOSEPrimitiveJWK;
 
 /**
  * Class Apple
@@ -40,7 +40,7 @@ class Apple implements IJOSEJWTIdentityProvider, IJOSEJWKProvider {
 	/**
 	 * @param object $data
 	 *
-	 * @return JWK
+	 * @return JOSEPrimitiveJWK
 	 */
 	public function JOSEJWKProviderKeyExtract ($data) {
 		if (!isset($data->kid)) return null;
@@ -55,7 +55,7 @@ class Apple implements IJOSEJWTIdentityProvider, IJOSEJWKProvider {
 
 		foreach ($response->keys as $i => &$key)
 			if ($key->kid == $data->kid)
-				return JWK::FromData($key);
+				return JOSEPrimitiveJWK::FromData($key);
 
 		return null;
 	}

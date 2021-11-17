@@ -11,35 +11,32 @@ use Quark\IQuarkExtensionConfig;
  */
 class PushNotificationConfig implements IQuarkExtensionConfig {
 	/**
-	 * @var IQuarkPushNotificationProvider[] $_providers = []
-	 */
-	private $_providers = array();
-
-	/**
 	 * @var string $_name = ''
 	 */
 	private $_name = '';
 
 	/**
-	 * @param IQuarkPushNotificationProvider $provider
-	 * @param $config
-	 *
-	 * @return $this
+	 * @var IQuarkPushNotificationProvider $_provider = null
 	 */
-	public function Provider (IQuarkPushNotificationProvider $provider, $config = null) {
-		if (func_num_args() == 2)
-			$provider->PNPConfig($config);
+	private $_provider = null;
 
-		$this->_providers[] = $provider;
-
-		return $this;
+	/**
+	 * @param IQuarkPushNotificationProvider $provider
+	 */
+	public function __construct (IQuarkPushNotificationProvider $provider) {
+		$this->Provider($provider);
 	}
 
 	/**
-	 * @return IQuarkPushNotificationProvider[]
+	 * @param IQuarkPushNotificationProvider $provider = null
+	 *
+	 * @return IQuarkPushNotificationProvider
 	 */
-	public function Providers () {
-		return $this->_providers;
+	public function &Provider (IQuarkPushNotificationProvider $provider = null) {
+		if ($provider != null)
+			$this->_provider = $provider;
+
+		return $this->_provider;
 	}
 
 	/**
@@ -62,19 +59,21 @@ class PushNotificationConfig implements IQuarkExtensionConfig {
 	 * @return void
 	 */
 	public function ExtensionOptions ($ini) {
-		foreach ($ini as $key => $value) {
-			$type = explode('.', $key)[0];
+		$properties = $this->_provider->PushNotificationProviderProperties();
 
-			foreach ($this->_providers as $provider)
-				if ($provider->PNPType() == $type)
-					$provider->PNPOption($key, $value);
-		}
+		foreach ($properties as $i => &$property)
+			if (isset($ini->$property))
+				$this->_provider->$property($ini->$property);
+
+		unset($i, $property, $properties);
+
+		$this->_provider->PushNotificationProviderInit($this->_name);
 	}
 
 	/**
 	 * @return IQuarkExtension
 	 */
 	public function ExtensionInstance () {
-		return new PushNotification($this->_name);
+		// TODO: Implement ExtensionInstance() method.
 	}
 }

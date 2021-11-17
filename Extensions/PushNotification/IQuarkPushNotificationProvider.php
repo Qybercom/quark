@@ -8,48 +8,47 @@ interface IQuarkPushNotificationProvider {
 	/**
 	 * @return string
 	 */
-	public function PNPType();
+	public function PushNotificationProviderType();
 
 	/**
-	 * @param $config
+	 * @return string[]
 	 */
-	public function PNPConfig($config);
+	public function PushNotificationProviderProperties();
 
 	/**
-	 * @param string $key
-	 * @param $value
+	 * @param string $config
 	 *
 	 * @return mixed
 	 */
-	public function PNPOption($key, $value);
+	public function PushNotificationProviderInit($config);
 
 	/**
-	 * @param Device $device
+	 * @return IQuarkPushNotificationDetails
 	 */
-	public function PNPDevice(Device &$device);
+	public function PushNotificationProviderDetails();
 
 	/**
-	 * @return Device[]
+	 * @return IQuarkPushNotificationDevice
 	 */
-	public function &PNPDevices();
+	public function PushNotificationProviderDevice();
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationProviderDeviceAdd(PushNotificationDevice &$device);
 
 	/**
 	 * @param IQuarkPushNotificationDetails $details
-	 *
-	 * @return mixed
-	 */
-	public function PNPDetails(IQuarkPushNotificationDetails $details);
-
-	/**
 	 * @param object|array $payload
-	 * @param array $options
 	 *
-	 * @return mixed
+	 * @return PushNotificationResult
 	 */
-	public function PNPSend($payload, $options);
+	public function PushNotificationProviderSend(IQuarkPushNotificationDetails &$details, $payload);
 
 	/**
 	 * @return mixed
 	 */
-	public function PNPReset();
+	public function PushNotificationProviderReset();
 }

@@ -8,8 +8,10 @@ use Quark\QuarkJSONIOProcessor;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
 
-use Quark\Extensions\PushNotification\Device;
+use Quark\Extensions\PushNotification\PushNotificationDevice;
+use Quark\Extensions\PushNotification\PushNotificationResult;
 
 /**
  * Class GoogleFCM
@@ -18,155 +20,162 @@ use Quark\Extensions\PushNotification\Device;
  */
 class GoogleFCM implements IQuarkPushNotificationProvider {
 	const TYPE = 'fcm';
+	const URL_API = 'https://fcm.googleapis.com/fcm';
 	const BULK_MAX = 1000;
 	const ERROR_NOT_REGISTERED = 'NotRegistered';
 
 	/**
-	 * @var Device[] $_devices = []
+	 * @var PushNotificationDevice[] $_devices = []
 	 */
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails|GoogleFCMDetails $_details
+	 * @var IQuarkPushNotificationDetails $_details
 	 */
 	private $_details;
 
 	/**
-	 * @var string $_key = ''
+	 * @var string $_apiKey = ''
 	 */
-	private $_key = '';
+	private $_apiKey = '';
 
 	/**
-	 * GoogleFCM constructor.
+	 * @param string $apiKey = ''
+	 *
+	 * @return string
 	 */
-	public function __construct () {
-		$this->_details = new GoogleFCMDetails();
+	public function APIKey ($apiKey = '') {
+		if (func_num_args() != 0)
+			$this->_apiKey = $apiKey;
+
+		return $this->_apiKey;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function PNPType () {
+	public function PushNotificationProviderType () {
 		return self::TYPE;
 	}
 
 	/**
-	 * @param $config
+	 * @return string[]
 	 */
-	public function PNPConfig ($config) {
-		if (is_string($config)) {
-			$this->_key = $config;
-			return;
-		}
+	public function PushNotificationProviderProperties () {
+		return array(
+			'APIKey'
+		);
 	}
 
 	/**
-	 * @param string $key
-	 * @param $value
+	 * @param string $config
 	 *
-	 * @return void
+	 * @return mixed
 	 */
-	public function PNPOption ($key, $value) {
-		if (is_string($value)) {
-			$this->_key = $value;
-			return;
-		}
+	public function PushNotificationProviderInit ($config) {
+		// TODO: Implement PushNotificationProviderInit() method.
 	}
 
 	/**
-	 * @param Device &$device
+	 * @return IQuarkPushNotificationDetails
+	 */
+	public function PushNotificationProviderDetails () {
+		return new GoogleFCMDetails();
+	}
+
+	/**
+	 * @return IQuarkPushNotificationDevice
+	 */
+	public function PushNotificationProviderDevice () {
+		return new GoogleFCMDevice();
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
 	 *
-	 * @return bool
+	 * @return mixed
 	 */
-	public function PNPDevice (Device &$device) {
-		if ($device->type != self::TYPE) return false;
-
-		$this->_devices[] = $device;
-
-		return true;
-	}
-
-	/**
-	 * @return Device[]
-	 */
-	public function &PNPDevices () {
-		return $this->_devices;
+	public function PushNotificationProviderDeviceAdd (PushNotificationDevice &$device) {
+		$this->_devices[$device->id] = $device;
 	}
 
 	/**
 	 * @param IQuarkPushNotificationDetails $details
-	 *
-	 * @return void
-	 */
-	public function PNPDetails (IQuarkPushNotificationDetails $details) {
-		$this->_details = $details;
-	}
-
-	/**
 	 * @param object|array $payload
-	 * @param array $options
 	 *
-	 * @return mixed
+	 * @return PushNotificationResult
 	 */
-	public function PNPSend ($payload, $options) {
-		$devices = array();
-		foreach ($this->_devices as $key => &$device)
-			$devices[$key] = $device->id;
+	public function PushNotificationProviderSend (IQuarkPushNotificationDetails &$details, $payload) {
+		$out = new PushNotificationResult();
+		$size = sizeof($this->_devices);
 
-		$size = sizeof($devices);
-		if ($size == 0) return true;
+		$rounds = ceil($size / self::BULK_MAX);
+		$out->CountRounds($rounds);
 
-		$i = 0;
-		$queues = ceil($size / self::BULK_MAX);
-		$changed = sizeof($this->_details->Changes()) != 0;
+		if ($size != 0) {
+			$data = null;
+			$request = null;
+			$response = null;
+			$key = null;
+			$result = null;
+			$i = 0;
 
-		while ($i < $queues) {
-			$data = array(
-				'content_available' => true,
-				'registration_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
-				'data' => $payload
-			);
+			while ($i < $rounds) {
+				$data = $this->_details->PushNotificationDetailsData(array(
+					'content_available' => true,
+					'registration_ids' => array_slice($this->_devices, $i * self::BULK_MAX, self::BULK_MAX),
+					'data' => $payload
+				));
 
-			if ($changed)
-				$data['notification'] = $this->_details->PNDetails($payload, $options);
+				$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+				$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_apiKey);
+				$request->Data($data);
 
-			$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-			$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'key=' . $this->_key);
-			$request->Data($data);
+				$response = QuarkHTTPClient::To(self::URL_API . '/send', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
 
-			$response = new QuarkDTO(new QuarkJSONIOProcessor());
-
-			$out = QuarkHTTPClient::To('https://fcm.googleapis.com/fcm/send', $request, $response);
-
-			if (!$out || !isset($out->results) || !is_array($out->results)) {
-				Quark::Log('[GoogleFCM] Error during sending push notification. Google FCM (Firebase) response: ' . print_r($out, true), Quark::LOG_WARN);
-				return false;
-			}
-
-			Quark::Log('[GoogleFCM] Push notification sent. Results: [success:' . $out->success . ', failure:' . $out->failure . ', canonical:' . $out->canonical_ids . ']');
-
-			foreach ($out->results as $key => $result) {
-				if (isset($result->error) && $result->error == self::ERROR_NOT_REGISTERED) {
-					$this->_devices[$key]->deleted = true;
+				if (!$response || !isset($response->results) || !is_array($response->results)) {
+					Quark::Log('[PushNotification:GoogleFCM] Error during sending push notification. Response: ' . print_r($response, true), Quark::LOG_WARN);
+					$i++;
 					continue;
 				}
 
-				if (isset($result->registration_id)) {
-					$this->_devices[$key]->id = $result->registration_id;
-					continue;
+				if (isset($response->success))
+					$out->CountSuccessAppend($response->success);
+
+				if (isset($response->failure))
+					$out->CountFailureAppend($response->failure);
+
+				if (isset($response->canonical_ids))
+					$out->CountCanonicalAppend($response->canonical_ids);
+
+				foreach ($response->results as $key => &$result) {
+					if (isset($result->error) && $result->error == self::ERROR_NOT_REGISTERED) {
+						$this->_devices[$key]->deleted = true;
+						continue;
+					}
+
+					if (isset($result->registration_id)) {
+						$this->_devices[$key]->id = $result->registration_id;
+						continue;
+					}
 				}
+
+				$i++;
 			}
 
-			$i++;
+			unset($data, $request, $response, $key, $result, $i);
 		}
 
-		return true;
+		unset($rounds, $size);
+
+		return $out;
 	}
 
 	/**
-	 * @return void
+	 * @return mixed
 	 */
-	public function PNPReset () {
+	public function PushNotificationProviderReset () {
+		$this->_details = null;
 		$this->_devices = array();
 	}
 }

@@ -8,15 +8,17 @@ namespace Quark\Extensions\PushNotification;
  */
 interface IQuarkPushNotificationDetails {
 	/**
-	 * @return string
-	 */
-	public function PNProviderType();
-
-	/**
-	 * @param object|array$payload
-	 * @param array $options
+	 * @param object|array $payload
+	 * @param IQuarkPushNotificationDevice $device = null
 	 *
 	 * @return mixed
 	 */
-	public function PNDetails($payload, $options);
+	public function PushNotificationDetailsData($payload, IQuarkPushNotificationDevice $device = null);
+
+	/**
+	 * @param PushNotificationDetails $details
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDetailsFromDetails(PushNotificationDetails $details);
 }

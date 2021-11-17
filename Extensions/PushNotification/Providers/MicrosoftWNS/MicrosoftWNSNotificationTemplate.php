@@ -1,5 +1,6 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers\MicrosoftWNS;
+
 use Quark\QuarkXMLNode;
 
 /**
@@ -55,7 +56,7 @@ class MicrosoftWNSNotificationTemplate {
 	}
 
 	/**
-	 * @return string
+	 * @return QuarkXMLNode
 	 */
 	public function Binding () {
 		return new QuarkXMLNode('binding', $this->_elements, array(

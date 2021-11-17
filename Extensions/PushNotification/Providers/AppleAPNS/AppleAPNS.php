@@ -10,33 +10,29 @@ use Quark\QuarkTCPNetworkTransport;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
 
-use Quark\Extensions\PushNotification\Device;
+use Quark\Extensions\PushNotification\PushNotificationDevice;
+use Quark\Extensions\PushNotification\PushNotificationResult;
 
 /**
  * Class AppleAPNS
  *
  * @package Quark\Extensions\PushNotification\Providers\AppleAPNS
  */
-class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationProvider {
+class AppleAPNS implements IQuarkPushNotificationProvider {
 	const TYPE = 'ios';
 
-	const OPTION_CERTIFICATE = 'certificate';
-
-	const OPTION_PRODUCTION = 'ssl://gateway.push.apple.com:2195';
-	const OPTION_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
-
-	const INI_CERTIFICATE_LOCATION = 'ios.Certificate.Location';
-	const INI_CERTIFICATE_PASSPHRASE = 'ios.Certificate.Passphrase';
-	const INI_SANDBOX = 'ios.Sandbox';
+	const URL_API_PRODUCTION = 'ssl://gateway.push.apple.com:2195';
+	const URL_API_SANDBOX = 'ssl://gateway.sandbox.push.apple.com:2195';
 
 	/**
-	 * @var Device[] $_devices = []
+	 * @var PushNotificationDevice[] $_devices = []
 	 */
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails|AppleAPNSDetails $_details
+	 * @var IQuarkPushNotificationDetails $_details
 	 */
 	private $_details;
 
@@ -46,129 +42,137 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 	private $_certificate;
 
 	/**
-	 * @var string $_host = self::OPTION_PRODUCTION
+	 * @var bool $_sandbox = false
 	 */
-	private $_host = self::OPTION_PRODUCTION;
+	private $_sandbox = false;
 
 	/**
-	 * @var array $_payload = []
+	 * @var QuarkJSONIOProcessor $_processor
 	 */
-	private $_payload = array();
+	private $_processor;
+
+	/**
+	 * AppleAPNS constructor
+	 */
+	public function __construct () {
+		$this->_processor = new QuarkJSONIOProcessor();
+	}
+
+	/**
+	 * @param QuarkCertificate $certificate = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function &Certificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() != 0)
+			$this->_certificate = $certificate;
+
+		return $this->_certificate;
+	}
+
+	/**
+	 * @param string $location = ''
+	 *
+	 * @return string
+	 */
+	public function CertificateLocation ($location = '') {
+		if (func_num_args() != 0)
+			$this->Certificate(QuarkCertificate::FromLocation($location));
+
+		return $this->_certificate->Location();
+	}
+
+	/**
+	 * @param string $passphrase = null
+	 *
+	 * @return string
+	 */
+	public function CertificatePassphrase ($passphrase = null) {
+		if (func_num_args() != 0)
+			$this->_certificate->Passphrase($passphrase);
+
+		return $this->_certificate->Passphrase();
+	}
+
+	/**
+	 * @param bool $sandbox = false
+	 *
+	 * @return bool
+	 */
+	public function Sandbox ($sandbox = false) {
+		if (func_num_args() != 0)
+			$this->_sandbox = $sandbox;
+
+		return $this->_sandbox;
+	}
 
 	/**
 	 * @return string
 	 */
-	public function PNPType () {
+	public function PushNotificationProviderType () {
 		return self::TYPE;
 	}
 
 	/**
-	 * @param $config
+	 * @return string[]
 	 */
-	public function PNPConfig ($config) {
-		if (isset($config[self::OPTION_CERTIFICATE]) && $config[self::OPTION_CERTIFICATE] instanceof QuarkCertificate)
-			$this->_certificate = $config[self::OPTION_CERTIFICATE];
-
-		if (isset($config[self::OPTION_SANDBOX]) && $config[self::OPTION_SANDBOX] == true)
-			$this->_host = self::OPTION_SANDBOX;
+	public function PushNotificationProviderProperties () {
+		return array(
+			'CertificateLocation',
+			'CertificatePassphrase',
+			'Sandbox'
+		);
 	}
 
 	/**
-	 * @param string $key
-	 * @param $value
+	 * @param string $config
 	 *
-	 * @return void
+	 * @return mixed
 	 */
-	public function PNPOption ($key, $value) {
-		switch ($key) {
-			case self::INI_CERTIFICATE_LOCATION:
-				$this->_certificate = new QuarkCertificate($value);
-				break;
-
-			case self::INI_CERTIFICATE_PASSPHRASE:
-				$this->_certificate->Passphrase($value);
-				break;
-
-			case self::INI_SANDBOX:
-				if ($value == '1')
-					$this->_host = self::OPTION_SANDBOX;
-				break;
-
-			default: break;
-		}
+	public function PushNotificationProviderInit ($config) {
+		// TODO: Implement PushNotificationProviderInit() method.
 	}
 
 	/**
-	 * @param Device &$device
-	 *
-	 * @return bool
+	 * @return IQuarkPushNotificationDetails
 	 */
-	public function PNPDevice (Device &$device) {
-		if ($device->type != self::TYPE) return false;
+	public function PushNotificationProviderDetails () {
+		return new AppleAPNSDetails();
+	}
 
-		if (!preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id)) {
-			Quark::Log('[AppleAPNS] Invalid device id "' . $device->id . '"', Quark::LOG_WARN);
-			return false;
-		}
+	/**
+	 * @return IQuarkPushNotificationDevice
+	 */
+	public function PushNotificationProviderDevice () {
+		return new AppleAPNSDevice();
+	}
 
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationProviderDeviceAdd (PushNotificationDevice &$device) {
 		$this->_devices[] = $device;
-
-		return true;
-	}
-
-	/**
-	 * @return Device[]
-	 */
-	public function &PNPDevices () {
-		return $this->_devices;
 	}
 
 	/**
 	 * @param IQuarkPushNotificationDetails $details
-	 *
-	 * @return void
-	 */
-	public function PNPDetails (IQuarkPushNotificationDetails $details) {
-		$this->_details = $details;
-	}
-
-	/**
 	 * @param object|array $payload
-	 * @param array $options
 	 *
-	 * @return mixed
+	 * @return PushNotificationResult
 	 */
-	public function PNPSend ($payload, $options) {
+	public function PushNotificationProviderSend (IQuarkPushNotificationDetails &$details, $payload) {
+		$out = new PushNotificationResult();
+
 		if ($this->_certificate == null) {
-			Quark::Log('[AppleAPNS] Certificate was not specified or given path for ios.Certificate.Location in "ini" was not resolved', Quark::LOG_WARN);
-			return false;
+			Quark::Log('[PushNotification:AppleAPNS] Certificate was not specified or given path for ios.Certificate.Location in "ini" was not resolved', Quark::LOG_WARN);
+			return $out;
 		}
 
-		$data = $payload;
+		$payloadOut = $this->_processor->Encode($this->_details->PushNotificationDetailsData($payload));
 
-		if (is_scalar($payload)) {
-			$this->_details->Alert($payload);
-			$data = array();
-		}
-
-		$this->_payload = array(
-			'aps' => $this->_details->PNDetails($payload, $options),
-			'data' => $data
-		);
-
-		$devices = array();
-		$back = array();
-
-		foreach ($this->_devices as $device) {
-			if ($device->date == null) {
-				$back[] = $device;
-				continue;
-			}
-
-			$devices[] = $device;
-		}
-
-		usort($devices, function ($a, $b) {
+		usort($this->_devices, function ($a, $b) {
 			$date = $b->date instanceof QuarkModel ? $b->date->Model() : $b->date;
 
 			if (!isset($a->date)) return 1;
@@ -181,37 +185,45 @@ class AppleAPNS extends QuarkJSONIOProcessor implements IQuarkPushNotificationPr
 				);
 		});
 
-		$devices = array_merge($devices, $back);
+		$client = new QuarkClient(
+			$this->_sandbox ? self::URL_API_SANDBOX : self::URL_API_PRODUCTION,
+			new QuarkTCPNetworkTransport(),
+			$this->_certificate,
+			60,
+			false
+		);
 
-		$client = new QuarkClient($this->_host, new QuarkTCPNetworkTransport(), $this->_certificate, 60, false);
+		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use (&$payloadOut, &$out) {
+			foreach ($this->_devices as $i => &$device)
+				$out->CountSuccessAppend($client->Send(self::Message($device->id, $payloadOut)) ? 1 : 0);
 
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) use ($devices, $options) {
-			foreach ($devices as $device)
-				$client->Send($this->_msg($device));
+			unset($i, $device);
 		});
 
 		$client->On(QuarkClient::EVENT_ERROR_CONNECT, function ($error) {
 			Quark::Log($error, Quark::LOG_WARN);
 		});
 
-		return $client->Connect();
+		$client->Connect();
+
+		return $out;
 	}
 
 	/**
-	 * @return void
+	 * @return mixed
 	 */
-	public function PNPReset () {
+	public function PushNotificationProviderReset () {
+		$this->_details = null;
 		$this->_devices = array();
 	}
 
 	/**
-	 * @param Device $device
+	 * @param string $deviceID = ''
+	 * @param string $payload = ''
 	 *
 	 * @return string
 	 */
-	private function _msg (Device $device) {
-		$payload = $this->Encode($this->_payload);
-
-		return chr(0) . pack('n', 32) . pack('H*', str_replace('<', '', str_replace('>', '', str_replace(' ', '', $device->id)))) . pack('n', strlen($payload)) . $payload;
+	public static function Message ($deviceID = '', $payload = '') {
+		return chr(0) . pack('n', 32) . pack('H*', str_replace('<', '', str_replace('>', '', str_replace(' ', '', $deviceID)))) . pack('n', strlen($payload)) . $payload;
 	}
 }

@@ -1283,15 +1283,21 @@ class QuarkConfig {
 	}
 	
 	/**
+	 * https://bugs.php.net/bug.php?id=60157
+	 *
 	 * @param string $location = ''
 	 *
 	 * @return string
 	 */
 	public function OpenSSLConfig ($location = '') {
 		// TODO: maybe deprecated, see QuarkCertificate::OpenSSLConfig()
+		// UPD1: NOT DEPRECATED, need for OpenSSL auto-discovering
+		// UPD2: will be deprecated for R2, because of EnvironmentVariable() feature
 
-		if (func_num_args() != 0)
+		if (func_num_args() != 0) {
 			$this->_openSSLConfig = $location;
+			putenv('OPENSSL_CONF', $location);
+		}
 		
 		return $this->_openSSLConfig;
 	}
@@ -6418,10 +6424,11 @@ class QuarkView implements IQuarkContainer {
 
 	/**
 	 * @param bool $minimize = true
+	 * @param bool $bundle = false
 	 *
 	 * @return string
 	 */
-	public function Resources ($minimize = true) {
+	public function Resources ($minimize = true, $bundle = false) {
 		$out = '';
 		$type = null;
 		$source = new QuarkSource();
@@ -6436,7 +6443,9 @@ class QuarkView implements IQuarkContainer {
 				if ($min)
 					$source->Minimize();
 
-				$out .= $resource->HTML($min);
+				// TODO: refactor!!!
+				$buffer = $resource->HTML($min);
+				$out .= $bundle ? strip_tags($buffer) : $buffer;
 			}
 
 			if ($resource instanceof IQuarkSpecifiedViewResource) {
@@ -6457,7 +6466,9 @@ class QuarkView implements IQuarkContainer {
 						$source->Minimize();
 					}
 
-					$out .= $type->Container($source->Location(), $type->AfterMinimize($source->Content()));
+					$type->ViewResourceTypeContentOnly($bundle && $resource instanceof IQuarkViewResourceWithContent);
+
+					$out .= $bundle ? $type->AfterMinimize($source->Content()) : $type->Container($source->Location(), $type->AfterMinimize($source->Content()));
 				}
 			}
 		}
@@ -7386,6 +7397,13 @@ interface IQuarkInlineViewResource extends IQuarkViewResource, IQuarkMinimizable
 }
 
 /**
+ * Interface IQuarkViewResourceWithContent
+ *
+ * @package Quark
+ */
+interface IQuarkViewResourceWithContent extends IQuarkViewResource { }
+
+/**
  * Interface IQuarkMultipleViewResource
  *
  * @package Quark
@@ -7611,7 +7629,7 @@ class QuarkLocalCoreCSSViewResource implements IQuarkSpecifiedViewResource, IQua
  *
  * @package Quark
  */
-class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
+class QuarkLocalCoreJSViewResource implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource, IQuarkViewResourceWithContent {
 	use QuarkMinimizableViewResourceBehavior;
 
 	/**
@@ -7685,7 +7703,7 @@ class QuarkInlineCSSViewResource implements IQuarkViewResource, IQuarkLocalViewR
  *
  * @package Quark
  */
-class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
+class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithContent {
 	use QuarkInlineViewResourceBehavior;
 
 	/**
@@ -7703,7 +7721,7 @@ class QuarkInlineJSViewResource implements IQuarkViewResource, IQuarkLocalViewRe
  *
  * @package Quark
  */
-class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource {
+class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewResource, IQuarkInlineViewResource, IQuarkMultipleViewResource, IQuarkViewResourceWithContent {
 	const PROXY_SESSION_VAR = 'session_user';
 
 	use QuarkInlineViewResourceBehavior;
@@ -7832,6 +7850,13 @@ interface IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function AfterMinimize($content);
+
+	/**
+	 * @param bool $flag
+	 *
+	 * @return mixed
+	 */
+	public function ViewResourceTypeContentOnly($flag);
 }
 
 /**
@@ -7846,6 +7871,11 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	 * @var string[] $_media = []
 	 */
 	private $_media = array();
+
+	/**
+	 * @var bool $_contentOnly = false
+	 */
+	private $_contentOnly = false;
 
 	/**
 	 * @param string[] $media = null
@@ -7877,7 +7907,7 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 
 		return strlen($location) != 0
 			? '<link rel="stylesheet" type="text/css" href="' . $location . '"' . $media . ' />'
-			: '<style type="text/css"' . $media . '>' . $content . '</style>';
+			: ($this->_contentOnly ? $content : '<style type="text/css"' . $media . '>' . $content . '</style>');
 	}
 
 	/**
@@ -7898,6 +7928,15 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 
 		return $content;
 	}
+
+	/**
+	 * @param bool $flag
+	 *
+	 * @return mixed
+	 */
+	public function ViewResourceTypeContentOnly ($flag) {
+		$this->_contentOnly = $flag;
+	}
 }
 
 /**
@@ -7915,6 +7954,11 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	 * @var bool $_async = false
 	 */
 	private $_async = false;
+
+	/**
+	 * @var bool $_contentOnly = false
+	 */
+	private $_contentOnly = false;
 
 	/**
 	 * @param bool $defer = false
@@ -7956,11 +8000,12 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	 * @return string
 	 */
 	public function Container ($location, $content) {
-		return /** @lang text */'<script type="text/javascript"'
+		return $this->_contentOnly ? $content : (
+			/** @lang text */'<script type="text/javascript"'
 			. (strlen($location) != 0 ? ' src="' . $location . '"' : '')
 			. ($this->_defer ? ' defer="defer"' : '')
 			. ($this->_async ? ' async="async"' : '')
-			. '>' . $content . '</script>';
+			. '>' . $content . '</script>');
 	}
 
 	/**
@@ -7977,6 +8022,15 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	 */
 	public function AfterMinimize ($content) {
 		return $content;
+	}
+
+	/**
+	 * @param bool $flag
+	 *
+	 * @return mixed
+	 */
+	public function ViewResourceTypeContentOnly ($flag) {
+		$this->_contentOnly = $flag;
 	}
 }
 
@@ -10452,7 +10506,7 @@ class QuarkModel implements IQuarkContainer {
 
 		$valid = $check ? QuarkField::Rules($model->Rules()) : $model->Rules();
 		self::$_errorFlux = array_merge(self::$_errorFlux, QuarkField::FlushValidationErrors());
-		
+
 		foreach ($output as $key => $value) {
 			if ($key == '' || !($value instanceof QuarkModel)) continue;
 
@@ -18484,6 +18538,7 @@ class QuarkDTO {
 	const HEADER_CONTENT_DISPOSITION = 'Content-Disposition';
 	const HEADER_CONTENT_DESCRIPTION = 'Content-Description';
 	const HEADER_CONTENT_LANGUAGE = 'Content-Language';
+	const HEADER_CONTENT_ENCODING = 'Content-Encoding';
 	const HEADER_COOKIE = 'Cookie';
 	const HEADER_CONNECTION = 'Connection';
 	const HEADER_ETAG = 'ETag';
@@ -23998,6 +24053,922 @@ interface IQuarkEncryptionProtocol {
 }
 
 /**
+ * Interface IQuarkEncryptionAlgorithm
+ *
+ * @package Quark
+ */
+interface IQuarkEncryptionAlgorithm {
+	/**
+	 * @param QuarkEncryptionKey $key
+	 *
+	 * @return bool
+	 */
+	public function EncryptionAlgorithmKeyGenerate(QuarkEncryptionKey &$key);
+
+	/**
+	 * @param QuarkEncryptionKey $keyPrivate
+	 * @param QuarkEncryptionKey $keyPublic
+	 *
+	 * @return string
+	 */
+	public function EncryptionAlgorithmKeySharedSecret(QuarkEncryptionKey &$keyPrivate, QuarkEncryptionKey &$keyPublic);
+
+	/**
+	 * @param QuarkEncryptionKey $key
+	 *
+	 * @return QuarkPEMDTO[]
+	 */
+	public function EncryptionAlgorithmKeyPEMEncode(QuarkEncryptionKey &$key);
+
+	/**
+	 * @param QuarkEncryptionKey $key
+	 * @param QuarkPEMDTO $dto
+	 *
+	 * @return bool
+	 */
+	public function EncryptionAlgorithmKeyPEMDecode(QuarkEncryptionKey &$key, QuarkPEMDTO $dto);
+
+	/**
+	 * @param QuarkEncryptionKey $key
+	 * @param string $data
+	 *
+	 * @return string
+	 */
+	public function EncryptionAlgorithmSign(QuarkEncryptionKey &$key, $data);
+}
+
+/**
+ * Interface IQuarkEncryptionPrimitive
+ *
+ * @package Quark
+ */
+interface IQuarkEncryptionPrimitive {
+	/**
+	 * @param string $kind
+	 *
+	 * @return bool
+	 */
+	public function EncryptionPrimitiveRecognizeKind($kind);
+
+	/**
+	 * @param IQuarkEncryptionPrimitive[] $elements
+	 *
+	 * @return
+	 */
+	public function EncryptionPrimitiveRecognizeCompound(&$elements);
+
+	/**
+	 * @return QuarkPEMDTO[]
+	 */
+	public function EncryptionPrimitivePEMEncode();
+
+	/**
+	 * @param QuarkPEMDTO $dto
+	 *
+	 * @return bool
+	 */
+	public function EncryptionPrimitivePEMDecode(QuarkPEMDTO $dto);
+}
+
+/**
+ * Class QuarkEncryptionKey
+ *
+ * @package Quark
+ */
+class QuarkEncryptionKey implements IQuarkEncryptionPrimitive {
+	const HKDF_HASH_SHA256 = 'sha256';
+	const HKDF_HASH_SHA384 = 'sha384';
+	const HKDF_HASH_SHA512 = 'sha512';
+
+	/**
+	 * @var IQuarkEncryptionAlgorithm $_algorithm
+	 */
+	private $_algorithm;
+
+	/**
+	 * @var string $_valueSymmetric
+	 */
+	private $_valueSymmetric;
+
+	/**
+	 * @var string $_valueAsymmetricPublic
+	 */
+	private $_valueAsymmetricPublic;
+
+	/**
+	 * @var string $_valueAsymmetricPrivate
+	 */
+	private $_valueAsymmetricPrivate;
+
+	/**
+	 * @var QuarkEncryptionKeyDetails $_details
+	 */
+	private $_details;
+
+	/**
+	 * @var QuarkFile $_file
+	 */
+	private $_file;
+
+	/**
+	 * @var string $_passphrase
+	 */
+	private $_passphrase;
+
+	/**
+	 * @param QuarkFile $file = null
+	 *
+	 * @return QuarkFile
+	 */
+	public function &File (QuarkFile $file = null) {
+		if (func_num_args() != 0)
+			$this->_file = $file;
+
+		return $this->_file;
+	}
+
+	/**
+	 * @param IQuarkEncryptionAlgorithm $algorithm = null
+	 *
+	 * @return IQuarkEncryptionAlgorithm
+	 */
+	public function &Algorithm (IQuarkEncryptionAlgorithm $algorithm = null) {
+		if (func_num_args() != 0)
+			$this->_algorithm = $algorithm;
+
+		return $this->_algorithm;
+	}
+
+	/**
+	 * @param string $value = null
+	 *
+	 * @return string
+	 */
+	public function ValueSymmetric ($value = null) {
+		if (func_num_args() != 0)
+			$this->_valueSymmetric = $value;
+
+		return $this->_valueSymmetric;
+	}
+
+	/**
+	 * @param string $value = null
+	 *
+	 * @return string
+	 */
+	public function ValueAsymmetricPublic ($value = null) {
+		if (func_num_args() != 0)
+			$this->_valueAsymmetricPublic = $value;
+
+		return $this->_valueAsymmetricPublic;
+	}
+
+	/**
+	 * @param string $value = null
+	 *
+	 * @return string
+	 */
+	public function ValueAsymmetricPrivate ($value = null) {
+		if (func_num_args() != 0)
+			$this->_valueAsymmetricPrivate = $value;
+
+		return $this->_valueAsymmetricPrivate;
+	}
+
+	/**
+	 * @param QuarkEncryptionKeyDetails $details = null
+	 *
+	 * @return QuarkEncryptionKeyDetails
+	 */
+	public function &Details (QuarkEncryptionKeyDetails $details = null) {
+		if (func_num_args() != 0)
+			$this->_details = $details;
+
+		return $this->_details;
+	}
+
+	/**
+	 * @param string $passphrase = null
+	 *
+	 * @return string
+	 */
+	public function Passphrase ($passphrase = null) {
+		if (func_num_args() != 0)
+			$this->_passphrase = $passphrase;
+
+		return $this->_passphrase;
+	}
+
+	/**
+	 * @param QuarkEncryptionKey $with = null
+	 *
+	 * @return string
+	 */
+	public function SharedSecret (QuarkEncryptionKey $with = null) {
+		return $with == null || $this->_algorithm == null ? null : $this->_algorithm->EncryptionAlgorithmKeySharedSecret($this, $with);
+	}
+
+	/**
+	 * @param QuarkEncryptionKey $with = null
+	 *
+	 * @return string
+	 */
+	public function SharedSecretOpenSSL (QuarkEncryptionKey $with = null) {
+		if ($with == null || $this->_algorithm == null) return null;
+
+		$keyPrivate = null;
+		$keyPublic = null;
+
+		if (($this->IsAsymmetricPair() || $this->IsAsymmetricPrivate()) && $with->IsAsymmetricPublic()) {
+			$keyPrivate = clone $this;
+			$keyPublic = clone $with;
+		}
+
+		if (($with->IsAsymmetricPair() || $with->IsAsymmetricPrivate()) && $this->IsAsymmetricPublic()) {
+			$keyPrivate = clone $with;
+			$keyPublic = clone $this;
+		}
+
+		if ($keyPrivate == null || $keyPublic == null) return null;
+
+		$keyPrivateDTO = $keyPrivate->EncryptionPrimitivePEMEncode();
+		$keyPublicDTO = $keyPublic->EncryptionPrimitivePEMEncode();
+
+		$keyPrivateOut = null;
+		$keyPublicOut = null;
+
+		if (isset($keyPrivateDTO[0]) && $keyPrivateDTO[0]->KindIs(QuarkPEMIOProcessor::KIND_KEY_PRIVATE))
+			$keyPrivateOut = $keyPrivateDTO[0];
+
+		if (isset($keyPrivateDTO[1]) && $keyPrivateDTO[1]->KindIs(QuarkPEMIOProcessor::KIND_KEY_PRIVATE))
+			$keyPrivateOut = $keyPrivateDTO[1];
+
+		if (isset($keyPublicDTO[0]) && $keyPublicDTO[0]->KindIs(QuarkPEMIOProcessor::KIND_KEY_PUBLIC))
+			$keyPublicOut = $keyPublicDTO[0];
+
+		if ($keyPrivateOut == null || $keyPublicOut == null) return null;
+
+		return openssl_pkey_derive(
+			openssl_pkey_get_public($keyPublicOut->PEMEncode()),
+			openssl_pkey_get_private($keyPrivateOut->PEMEncode()),
+			$this->_details->Bits()
+		);
+	}
+
+	/**
+	 * @return string
+	 */
+	public function ExportOpenSSL () {
+		return openssl_pkey_export($this->_valueAsymmetricPrivate, $output, $this->_passphrase) ? $output : null;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Generate () {
+		return $this->_algorithm != null && $this->_algorithm->EncryptionAlgorithmKeyGenerate($this);
+	}
+
+	/**
+	 * @param string $data
+	 *
+	 * @return string
+	 */
+	public function Sign ($data = '') {
+		return $this->_algorithm == null ? null : $this->_algorithm->EncryptionAlgorithmSign($this, $data);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsSymmetric () {
+		return $this->_valueAsymmetricPublic == null && $this->_valueAsymmetricPrivate == null && $this->_valueSymmetric != null;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsAsymmetricPublic () {
+		return $this->_valueAsymmetricPublic != null && $this->_valueAsymmetricPrivate == null && $this->_valueSymmetric == null;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsAsymmetricPrivate () {
+		return $this->_valueAsymmetricPublic == null && $this->_valueAsymmetricPrivate != null && $this->_valueSymmetric == null;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function IsAsymmetricPair () {
+		return $this->_valueAsymmetricPublic != null && $this->_valueAsymmetricPrivate != null && $this->_valueSymmetric == null;
+	}
+
+	/**
+	 * @param QuarkEncryptionKey $key = null
+	 *
+	 * @return QuarkEncryptionKey
+	 */
+	public function Merge (QuarkEncryptionKey &$key = null) {
+		if ($key != null) {
+			if ($key->ValueSymmetric() != null)
+				$this->ValueSymmetric($key->ValueSymmetric());
+
+			if ($key->ValueAsymmetricPublic() != null)
+				$this->ValueAsymmetricPublic($key->ValueAsymmetricPublic());
+
+			if ($key->ValueAsymmetricPrivate() != null)
+				$this->ValueAsymmetricPrivate($key->ValueAsymmetricPrivate());
+
+			$this->_details->Populate($key->Details());
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param QuarkFile $file = null
+	 *
+	 * @return QuarkFile
+	 */
+	public static function FromFile (QuarkFile $file = null) {
+		if ($file == null) return null;
+
+		$out = new self();
+		$out->File();
+
+		return $file;
+	}
+
+	/**
+	 * @param string $location = ''
+	 * @param IQuarkEncryptionAlgorithm $algorithm = null
+	 *
+	 * @return QuarkEncryptionKey
+	 */
+	public static function FromFileLocation ($location = '', IQuarkEncryptionAlgorithm $algorithm = null) {
+		$processor = new QuarkPEMIOProcessor();
+		$processor->Primitives()[0]->Algorithm($algorithm); // TODO: refactor
+
+		$file = new QuarkFile($location);
+		$data = $file->Decode($processor, true);
+
+		if (sizeof($data) != 1 || !($data[0] instanceof QuarkEncryptionKey)) return null;
+
+		$data[0]->File($file);
+
+		return $data[0];
+	}
+
+	/**
+	 * @deprecated
+	 *
+	 * @param string $location = ''
+	 * @param IQuarkEncryptionAlgorithm $algorithm = null
+	 *
+	 * @return QuarkEncryptionKey
+	 */
+	public static function FromFileLocationPair ($location = '', IQuarkEncryptionAlgorithm $algorithm = null) {
+		$processor = new QuarkPEMIOProcessor();
+		$processor->Primitives()[0]->Algorithm($algorithm); // TODO: refactor
+
+		$file = new QuarkFile($location);
+		$data = $file->Decode($processor, true);
+
+		print_r($data);
+
+		if (sizeof($data) != 2) return null;
+		if (!($data[0] instanceof QuarkEncryptionKey)) return null;
+		if (!($data[1] instanceof QuarkEncryptionKey)) return null;
+
+		if ($data[0]->IsAsymmetricPrivate() && $data[1]->IsAsymmetricPublic())
+			return $data[0]->Merge($data[1]);
+
+		if ($data[1]->IsAsymmetricPrivate() && $data[0]->IsAsymmetricPublic())
+			return $data[1]->Merge($data[0]);
+
+		return null;
+	}
+
+	/**
+	 * @param string $kind
+	 *
+	 * @return bool
+	 */
+	public function EncryptionPrimitiveRecognizeKind ($kind) {
+		return preg_match('#KEY$#s', $kind);
+	}
+
+	/**
+	 * @param IQuarkEncryptionPrimitive[] $elements
+	 *
+	 * @return bool
+	 */
+	public function EncryptionPrimitiveRecognizeCompound (&$elements) {
+		$out = false;
+
+		if (sizeof($elements) == 2 && QuarkObject::IsArrayOf($elements, new QuarkEncryptionKey())) {
+			/**
+			 * @var QuarkEncryptionKey[] $elements
+			 */
+
+			if (!$out && $elements[0]->IsAsymmetricPrivate() && $elements[1]->IsAsymmetricPublic()) {
+				$elements[0]->Merge($elements[1]);
+				unset($elements[1]);
+				$out = true;
+			}
+
+			if (!$out && $elements[1]->IsAsymmetricPrivate() && $elements[0]->IsAsymmetricPublic()) {
+				$elements[1]->Merge($elements[0]);
+				unset($elements[0]);
+				$out = true;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return QuarkPEMDTO[]
+	 */
+	public function EncryptionPrimitivePEMEncode () {
+		return $this->_algorithm == null ? null : $this->_algorithm->EncryptionAlgorithmKeyPEMEncode($this);
+	}
+
+	/**
+	 * @param QuarkPEMDTO $dto
+	 *
+	 * @return bool
+	 */
+	public function EncryptionPrimitivePEMDecode (QuarkPEMDTO $dto) {
+		return $this->_algorithm == null ? false : $this->_algorithm->EncryptionAlgorithmKeyPEMDecode($this, $dto);
+	}
+
+	/**
+	 * @param string $ikm = ''
+	 * @param int $length = 0
+	 * @param string $info = ''
+	 * @param string $salt = ''
+	 * @param string $hash = self::HKDF_HASH_SHA256
+	 *
+	 * @return string
+	 */
+	public static function HKDF ($ikm = '', $length = 0, $info = '', $salt = '', $hash = self::HKDF_HASH_SHA256) {
+		$prk = self::HKDFHash($ikm, $salt, $hash);
+		$dkm = self::HKDFHash($info . chr(1), $prk);
+
+		return substr($dkm, 0, $length);
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param string $key = ''
+	 * @param string $hash = self::HKDF_HASH_SHA256
+	 *
+	 * @return string
+	 */
+	public static function HKDFHash ($data = '', $key = '', $hash = self::HKDF_HASH_SHA256) {
+		return hash_hmac($hash, $data, $key, true);
+	}
+}
+
+/**
+ * Class QuarkEncryptionKeyDetails
+ *
+ * @package Quark
+ */
+class QuarkEncryptionKeyDetails {
+	const OPENSSL_KEY_BITS = 'bits';
+	const OPENSSL_KEY_TYPE = 'type';
+	const OPENSSL_KEY_PUBLIC = 'key';
+
+	/**
+	 * @var string[] $_properties
+	 */
+	private static $_properties = array(
+		'Curve' => 'curve_name',
+		'CurveID' => 'curve_oid',
+		'CurveCoordinateX' => 'x',
+		'CurveCoordinateY' => 'y',
+
+		'ExponentPrivate' => 'd',
+
+		'ExponentPublic' => 'e',
+		'Modulus' => 'n',
+
+		'FactorFirstPrime' => 'p',
+		'FactorFirstExponent' => 'dmp1',
+		'FactorSecondPrime' => 'q',
+		'FactorSecondExponent' => 'dmq1',
+		'FactorCoefficient' => 'iqmp',
+
+		'Generator' => 'g',
+		'KeyPublic' => 'pub_key',
+		'KeyPrivate' => 'priv_key'
+	);
+
+	/**
+	 * @var int $_bits
+	 */
+	private $_bits;
+
+	/**
+	 * @var int $_openSSLType
+	 */
+	private $_openSSLType;
+
+	/**
+	 * @var string $_openSSLPublic
+	 */
+	private $_openSSLPublic;
+
+	/**
+	 * @var string $_curve
+	 */
+	private $_curve;
+
+	/**
+	 * @var string $_curveID
+	 */
+	private $_curveID;
+
+	/**
+	 * @var string $_curveCoordinateX
+	 */
+	private $_curveCoordinateX;
+
+	/**
+	 * @var string $_curveCoordinateY
+	 */
+	private $_curveCoordinateY;
+
+	/**
+	 * @var string $_exponentPrivate
+	 */
+	private $_exponentPrivate;
+
+	/**
+	 * @var string $_exponentPublic
+	 */
+	private $_exponentPublic;
+
+	/**
+	 * @var string $_modulus
+	 */
+	private $_modulus;
+
+	/**
+	 * @var string $_factorFirstPrime
+	 */
+	private $_factorFirstPrime;
+
+	/**
+	 * @var string $_factorFirstExponent
+	 */
+	private $_factorFirstExponent;
+
+	/**
+	 * @var string $_factorSecondPrime
+	 */
+	private $_factorSecondPrime;
+
+	/**
+	 * @var string $_factorSecondExponent
+	 */
+	private $_factorSecondExponent;
+
+	/**
+	 * @var string $_factorCoefficient
+	 */
+	private $_factorCoefficient;
+
+	/**
+	 * @var string $_generator
+	 */
+	private $_generator;
+
+	/**
+	 * @var string $_keyPrivate
+	 */
+	private $_keyPrivate;
+
+	/**
+	 * @var string $_keyPublic
+	 */
+	private $_keyPublic;
+
+	/**
+	 * @param int $bits = null
+	 *
+	 * @return int
+	 */
+	public function Bits ($bits = null) {
+		if (func_num_args() != 0)
+			$this->_bits = $bits;
+
+		return $this->_bits;
+	}
+
+	/**
+	 * @param int $type = null
+	 *
+	 * @return int
+	 */
+	public function OpenSSLType ($type = null) {
+		if (func_num_args() != 0)
+			$this->_openSSLType = $type;
+
+		return $this->_openSSLType;
+	}
+
+	/**
+	 * @param string $key = null
+	 *
+	 * @return string
+	 */
+	public function OpenSSLPublic ($key = null) {
+		if (func_num_args() != 0)
+			$this->_openSSLPublic = $key;
+
+		return $this->_openSSLPublic;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function OpenSSLPublicBinary () {
+		return QuarkPEMIOProcessor::DecodeContentDirect($this->_openSSLPublic, QuarkPEMIOProcessor::KIND_KEY_PUBLIC);
+	}
+
+	/**
+	 * @param string $curve = null
+	 *
+	 * @return string
+	 */
+	public function Curve ($curve = null) {
+		if (func_num_args() != 0)
+			$this->_curve = $curve;
+
+		return $this->_curve;
+	}
+
+	/**
+	 * @param string $id = null
+	 *
+	 * @return string
+	 */
+	public function CurveID ($id = null) {
+		if (func_num_args() != 0)
+			$this->_curveID = $id;
+
+		return $this->_curveID;
+	}
+
+	/**
+	 * @param string $coordinate = null
+	 *
+	 * @return string
+	 */
+	public function CurveCoordinateX ($coordinate = null) {
+		if (func_num_args() != 0)
+			$this->_curveCoordinateX = $coordinate;
+
+		return $this->_curveCoordinateX;
+	}
+
+	/**
+	 * @param string $coordinate = null
+	 *
+	 * @return string
+	 */
+	public function CurveCoordinateY ($coordinate = null) {
+		if (func_num_args() != 0)
+			$this->_curveCoordinateY = $coordinate;
+
+		return $this->_curveCoordinateY;
+	}
+
+	/**
+	 * @param string $exponent = null
+	 *
+	 * @return string
+	 */
+	public function ExponentPrivate ($exponent = null) {
+		if (func_num_args() != 0)
+			$this->_exponentPrivate = $exponent;
+
+		return $this->_exponentPrivate;
+	}
+
+	/**
+	 * @param string $exponent = null
+	 *
+	 * @return string
+	 */
+	public function ExponentPublic ($exponent = null) {
+		if (func_num_args() != 0)
+			$this->_exponentPublic = $exponent;
+
+		return $this->_exponentPublic;
+	}
+
+	/**
+	 * @param string $modulus = null
+	 *
+	 * @return string
+	 */
+	public function Modulus ($modulus = null) {
+		if (func_num_args() != 0)
+			$this->_modulus = $modulus;
+
+		return $this->_modulus;
+	}
+
+	/**
+	 * @param string $prime = null
+	 *
+	 * @return string
+	 */
+	public function FactorFirstPrime ($prime = null) {
+		if (func_num_args() != 0)
+			$this->_factorFirstPrime = $prime;
+
+		return $this->_factorFirstPrime;
+	}
+
+	/**
+	 * @param string $exponent = null
+	 *
+	 * @return string
+	 */
+	public function FactorFirstExponent ($exponent = null) {
+		if (func_num_args() != 0)
+			$this->_factorFirstExponent = $exponent;
+
+		return $this->_factorFirstExponent;
+	}
+
+	/**
+	 * @param string $prime = null
+	 *
+	 * @return string
+	 */
+	public function FactorSecondPrime ($prime = null) {
+		if (func_num_args() != 0)
+			$this->_factorSecondPrime = $prime;
+
+		return $this->_factorSecondPrime;
+	}
+
+	/**
+	 * @param string $exponent = null
+	 *
+	 * @return string
+	 */
+	public function FactorSecondExponent ($exponent = null) {
+		if (func_num_args() != 0)
+			$this->_factorSecondExponent = $exponent;
+
+		return $this->_factorSecondExponent;
+	}
+
+	/**
+	 * @param string $coefficient = null
+	 *
+	 * @return string
+	 */
+	public function FactorCoefficient ($coefficient = null) {
+		if (func_num_args() != 0)
+			$this->_factorCoefficient = $coefficient;
+
+		return $this->_factorCoefficient;
+	}
+
+	/**
+	 * @param string $generator = null
+	 *
+	 * @return string
+	 */
+	public function Generator ($generator = null) {
+		if (func_num_args() != 0)
+			$this->_generator = $generator;
+
+		return $this->_generator;
+	}
+
+	/**
+	 * @param string $key = null
+	 *
+	 * @return string
+	 */
+	public function KeyPrivate ($key = null) {
+		if (func_num_args() != 0)
+			$this->_keyPrivate = $key;
+
+		return $this->_keyPrivate;
+	}
+
+	/**
+	 * @param string $key = null
+	 *
+	 * @return string
+	 */
+	public function KeyPublic ($key = null) {
+		if (func_num_args() != 0)
+			$this->_keyPublic = $key;
+
+		return $this->_keyPublic;
+	}
+
+	/**
+	 * @param QuarkEncryptionKeyDetails $details = null
+	 *
+	 * @return QuarkEncryptionKeyDetails
+	 */
+	public function Populate (QuarkEncryptionKeyDetails $details = null) {
+		if ($details != null) {
+			$buffer = null;
+
+			foreach (self::$_properties as $property => &$field) {
+				$buffer = $details->$property();
+
+				if ($buffer !== null)
+					$this->$property($buffer);
+			}
+
+			unset($property, $field, $buffer);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param string $openSSLType = ''
+	 * @param array|object $data = []
+	 *
+	 * @return QuarkEncryptionKeyDetails
+	 */
+	public function PopulateOpenSSL ($openSSLType = '', $data = []) {
+		if (is_object($data)) $data = (array)$data;
+
+		if (is_array($data)) {
+			if (isset($data[self::OPENSSL_KEY_TYPE]))
+				$this->OpenSSLType($data[self::OPENSSL_KEY_TYPE]);
+
+			if (isset($data[self::OPENSSL_KEY_PUBLIC]))
+				$this->OpenSSLPublic($data[self::OPENSSL_KEY_PUBLIC]);
+
+			if (isset($data[self::OPENSSL_KEY_BITS]))
+				$this->Bits($data[self::OPENSSL_KEY_BITS]);
+
+			if (isset($data[$openSSLType])) {
+				if (is_object($data[$openSSLType]))
+					$data[$openSSLType] = (array)$data[$openSSLType];
+
+				if (is_array($data[$openSSLType]))
+					foreach (self::$_properties as $property => &$key)
+						if (isset($data[$openSSLType][$key]))
+							$this->$property($data[$openSSLType][$key]);
+			}
+
+			unset($property, $key);
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @param string $curve = ''
+	 *
+	 * @return QuarkEncryptionKeyDetails
+	 */
+	public static function FromCurve ($curve = '') {
+		$out = new self();
+		$out->Curve($curve);
+
+		return $out;
+	}
+
+	/**
+	 * @param string $x = ''
+	 * @param string $y = ''
+	 *
+	 * @return QuarkEncryptionKeyDetails
+	 */
+	public static function FromCurveCoordinates ($x = '', $y = '') {
+		$out = new self();
+		$out->CurveCoordinateX($x);
+		$out->CurveCoordinateY($y);
+
+		return $out;
+	}
+}
+
+/**
+ * @deprecated
+ *
  * Class QuarkOpenSSLCipher
  *
  * @package Quark
@@ -24131,6 +25102,8 @@ class QuarkOpenSSLCipher implements IQuarkEncryptionProtocol {
 }
 
 /**
+ * @deprecated
+ *
  * Class QuarkCipherKeyPair
  *
  * @package Quark
@@ -24139,6 +25112,10 @@ class QuarkCipherKeyPair extends QuarkFile {
 	const KEY_PRIVATE_ENCRYPTED = '#-----BEGIN ENCRYPTED PRIVATE KEY-----(.*)-----END ENCRYPTED PRIVATE KEY-----#Uis';
 	const KEY_PRIVATE = '#-----BEGIN PRIVATE KEY-----(.*)-----END PRIVATE KEY-----#Uis';
 	const KEY_PUBLIC = '#-----BEGIN PUBLIC KEY-----(.*)-----END PUBLIC KEY-----#Uis';
+
+	const PEM_TARGET_PUBLIC = 'PUBLIC';
+	const PEM_TARGET_PRIVATE = 'PRIVATE';
+	const PEM_CHUNK = 64;
 
 	/**
 	 * @var array $_config
@@ -24569,6 +25546,1032 @@ class QuarkCipherKeyPair extends QuarkFile {
 				? $this->PrivateKey()
 				: $this->_content
 			);
+	}
+
+	/**
+	 * @param string $target = ''
+	 * @param string $data = ''
+	 * @param string $type = ''
+	 * @param int $chunk = self::PEM_CHUNK
+	 *
+	 * @return string
+	 */
+	public static function SerializePEM ($target = '', $data = '', $type = '', $chunk = self::PEM_CHUNK) {
+		$type = trim(strtoupper($type) . ' ' . $target);
+
+		return ''
+			. '-----BEGIN ' . $type . ' KEY-----' . "\r\n"
+			. chunk_split(base64_encode($data), $chunk, "\r\n")
+			. '-----END ' . $type . ' KEY-----' . "\r\n";
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param string $type = ''
+	 * @param int $chunk = self::PEM_CHUNK
+	 *
+	 * @return string
+	 */
+	public static function SerializePEMPublic ($data = '', $type = '', $chunk = self::PEM_CHUNK) {
+		return self::SerializePEM(self::PEM_TARGET_PUBLIC, $data, $type, $chunk);
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param string $type = ''
+	 * @param int $chunk = self::PEM_CHUNK
+	 *
+	 * @return string
+	 */
+	public static function SerializePEMPrivate ($data = '', $type = '', $chunk = self::PEM_CHUNK) {
+		return self::SerializePEM(self::PEM_TARGET_PRIVATE, $data, $type, $chunk);
+	}
+}
+
+/**
+ * Class QuarkPEMIOProcessor
+ *
+ * https://pki-tutorial.readthedocs.io/en/latest/mime.html
+ *
+ * @package Quark
+ */
+class QuarkPEMIOProcessor implements IQuarkIOProcessor {
+	const REGEX = '#(.*)----[- ]BEGIN ([A-Z0-9\\- ]+)[- ]----\\r?\\n(.*\\r?\\n\\r?\\n)?([a-zA-Z0-9+\\/\\r\\n]*={0,2})\\r?\\n----[- ]END([A-Z0-9 ]+)[- ]----.*#Us';
+
+	const CHUNK = 64;
+
+	const TOKEN_DELIMITER = '-----';
+	const TOKEN_BEGIN = 'BEGIN';
+	const TOKEN_END = 'END';
+
+	const KIND_CERTIFICATE = 'CERTIFICATE';
+	const KIND_CERTIFICATE_REQUEST = 'CERTIFICATE REQUEST';
+	const KIND_CERTIFICATE_ATTRIBUTE = 'ATTRIBUTE CERTIFICATE';
+	const KIND_KEY_PUBLIC = 'PUBLIC KEY';
+	const KIND_KEY_PRIVATE = 'PRIVATE KEY';
+	const KIND_KEY_PRIVATE_ENCRYPTED = 'ENCRYPTED PRIVATE KEY';
+	const KIND_X509_CRL = 'X509 CRL';
+	const KIND_PKCS7 = 'PKCS7';
+	const KIND_CMS = 'CMS';
+
+	const MIME_X_PEM_FILE = 'application/x-pem-file';
+
+	/**
+	 * @var IQuarkEncryptionPrimitive[] $_primitives
+	 */
+	private $_primitives = array();
+
+	/**
+	 * QuarkPEMIOProcessor constructor
+	 */
+	public function __construct () {
+		$this->_primitives = array(
+			new QuarkEncryptionKey()
+		);
+	}
+
+	/**
+	 * @return IQuarkEncryptionPrimitive[]
+	 */
+	public function &Primitives () {
+		return $this->_primitives;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function MimeType () {
+		return self::MIME_X_PEM_FILE; // TODO: add support for other PKI MIME types, maybe within private field
+	}
+
+	/**
+	 * @param $data
+	 *
+	 * @return string
+	 */
+	public function Encode ($data) {
+		if ($data instanceof IQuarkEncryptionPrimitive)
+			$data = array($data);
+
+		if (!QuarkObject::isTraversable($data)) return null;
+
+		$out = '';
+		$buffer = array();
+
+		foreach ($data as $i => &$item) {
+			$buffer = array($item);
+
+			if ($item instanceof IQuarkEncryptionPrimitive)
+				$buffer = $item->EncryptionPrimitivePEMEncode();
+
+			if (is_array($buffer))
+				foreach ($buffer as $j => &$dto)
+					if ($dto instanceof QuarkPEMDTO)
+						$out .= $dto->PEMEncode();
+		}
+
+		unset($i, $j, $item, $buffer);
+
+		return $out;
+	}
+
+	/**
+	 * @param $raw
+	 *
+	 * @return IQuarkEncryptionPrimitive[]
+	 */
+	public function Decode ($raw) {
+		$out = array();
+
+		if (preg_match_all(self::REGEX, $raw, $found, PREG_SET_ORDER) !== false) {
+			$item = null;
+			$ok = false;
+			foreach ($found as $i => &$element) {
+				if ($element[2] == '') continue;
+
+				$item = null;
+
+				foreach ($this->_primitives as $j => &$primitive)
+					if ($primitive->EncryptionPrimitiveRecognizeKind($element[2]))
+						$item = clone $primitive;
+
+				if ($item == null) continue;
+
+				$ok = $item->EncryptionPrimitivePEMDecode(QuarkPEMDTO::FromPemRegularExpression(
+					$element[0],
+					$element[2],
+					self::DecodeHeaders($element[3]),
+					self::DecodeHeaders($element[1]),
+					self::DecodeContent($element[4])
+				));
+
+				if ($ok)
+					$out[] = $item;
+			}
+
+			foreach ($this->_primitives as $j => &$primitive)
+				if ($primitive->EncryptionPrimitiveRecognizeCompound($out))
+					$out = array_values($out);
+
+			unset($i, $j, $element, $primitive);
+		}
+
+		unset($found);
+
+		return $out;
+	}
+
+	/**
+	 * @param string $raw
+	 * @param bool $fallback
+	 *
+	 * @return mixed
+	 */
+	public function Batch ($raw, $fallback) {
+		// TODO: Implement Batch() method.
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ForceInput () {
+		// TODO: Implement ForceInput() method.
+	}
+
+	/**
+	 * @param string[] $headers = []
+	 *
+	 * @return string
+	 */
+	public static function EncodeHeaders ($headers = []) {
+		$out = '';
+
+		if (QuarkObject::isTraversable($headers)) {
+			foreach ($headers as $key => &$value)
+				$out .= $key . ': ' . $value . "\r\n";
+
+			unset($key, $value);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param string $content = ''
+	 * @param int $chunk = self::CHUNK
+	 *
+	 * @return string
+	 */
+	public static function EncodeContent ($content = '', $chunk = self::CHUNK) {
+		return chunk_split(base64_encode($content), $chunk, "\r\n");
+	}
+
+	/**
+	 * @param string $source = ''
+	 *
+	 * @return string[]
+	 */
+	public static function DecodeHeaders ($source = '') {
+		$out = array();
+		$headers = explode("\n", str_replace("\r", '', $source));
+		$buffer = null;
+
+		foreach ($headers as $i => &$header) {
+			$buffer = strpos($header, ':');
+
+			if ($buffer !== false)
+				$out[substr($header, 0, $buffer)] = trim(substr($header, $buffer + 1));
+		}
+
+		unset($i, $buffer, $header, $headers);
+
+		return $out;
+	}
+
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return string
+	 */
+	public static function DecodeContent ($content = '') {
+		return base64_decode(str_replace("\n", '', str_replace("\r", '', $content)));
+	}
+
+	/**
+	 * @param string $raw = ''
+	 * @param string $kind = ''
+	 *
+	 * @return string
+	 */
+	public static function DecodeContentDirect ($raw = '', $kind = '') {
+		$raw = str_replace("\n", "\r\n", str_replace("\r\n", "\n", $raw));
+		$raw = str_replace(self::TokenBegin($kind), '', $raw, $tb);
+		$raw = str_replace(self::TokenEnd($kind), '', $raw, $te);
+		$raw = str_replace("\r", '', $raw);
+
+		$content = explode("\n\n", $raw);
+
+		return self::DecodeContent($content[sizeof($content) == 2 ? 1 : 0]);
+	}
+
+	/**
+	 * @param string $kind = ''
+	 *
+	 * @return string
+	 */
+	public static function TokenBegin ($kind = '') {
+		return self::TOKEN_DELIMITER . self::TOKEN_BEGIN . ' ' . $kind . self::TOKEN_DELIMITER . "\r\n";
+	}
+
+	/**
+	 * @param string $kind = ''
+	 *
+	 * @return string
+	 */
+	public static function TokenEnd ($kind = '') {
+		return self::TOKEN_DELIMITER . self::TOKEN_END . ' ' . $kind . self::TOKEN_DELIMITER . "\r\n";
+	}
+}
+
+/**
+ * Class QuarkPEMDTO
+ *
+ * @package Quark
+ */
+class QuarkPEMDTO {
+	/**
+	 * @var string $_raw
+	 */
+	private $_raw;
+
+	/**
+	 * @var string $_kind
+	 */
+	private $_kind;
+
+	/**
+	 * @var string $_delimiter = QuarkPEMIOProcessor::TOKEN_DELIMITER
+	 */
+	private $_delimiter = QuarkPEMIOProcessor::TOKEN_DELIMITER;
+
+	/**
+	 * @var string[] $_headersInside = []
+	 */
+	private $_headersInside = array();
+
+	/**
+	 * @var string[] $_headersOutside = []
+	 */
+	private $_headersOutside = array();
+
+	/**
+	 * @var string $_content
+	 */
+	private $_content;
+
+	/**
+	 * @param string $raw = null
+	 *
+	 * @return string
+	 */
+	public function Raw ($raw = null) {
+		if (func_num_args() != 0)
+			$this->_raw = $raw;
+
+		return $this->_raw;
+	}
+
+	/**
+	 * @param string $kind = null
+	 *
+	 * @return string
+	 */
+	public function Kind ($kind = null) {
+		if (func_num_args() != 0)
+			$this->_kind = $kind;
+
+		return $this->_kind;
+	}
+
+	/**
+	 * @param string $kind = ''
+	 *
+	 * @return bool
+	 */
+	public function KindIs ($kind = '') {
+		return $kind != '' && preg_match('#' . $kind . '$#is', $this->_kind); // maybe need regex escape
+	}
+
+	/**
+	 * @param string $kind = QuarkPEMIOProcessor::TOKEN_DELIMITER
+	 *
+	 * @return string
+	 */
+	public function Delimiter ($delimiter = QuarkPEMIOProcessor::TOKEN_DELIMITER) {
+		if (func_num_args() != 0)
+			$this->_delimiter = $delimiter;
+
+		return $this->_delimiter;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $value = null
+	 *
+	 * @return string
+	 */
+	public function HeaderInside ($key = '', $value = null) {
+		if (func_num_args() > 1)
+			$this->_headersInside[$key] = $value;
+
+		return isset($this->_headeraInside[$key]) ? $this->_headeraInside[$key] : null;
+	}
+
+	/**
+	 * @param string[] $headers = []
+	 *
+	 * @return string[]
+	 */
+	public function &HeadersInside ($headers = []) {
+		if (func_num_args() != 0)
+			$this->_headersInside = $headers;
+
+		return $this->_headersInside;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param string $value = null
+	 *
+	 * @return string
+	 */
+	public function HeaderOutside ($key = '', $value = null) {
+		if (func_num_args() > 1)
+			$this->_headersOutside[$key] = $value;
+
+		return isset($this->_headeraOutside[$key]) ? $this->_headeraOutside[$key] : null;
+	}
+
+	/**
+	 * @param string[] $headers = []
+	 *
+	 * @return string[]
+	 */
+	public function &HeadersOutside ($headers = []) {
+		if (func_num_args() != 0)
+			$this->_headersOutside = $headers;
+
+		return $this->_headersOutside;
+	}
+
+	/**
+	 * @param string $content = null
+	 *
+	 * @return string
+	 */
+	public function Content ($content = null) {
+		if (func_num_args() != 0)
+			$this->_content = $content;
+
+		return $this->_content;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function PEMEncode () {
+		return ltrim(''
+			. QuarkPEMIOProcessor::EncodeHeaders($this->_headersOutside)
+			. QuarkPEMIOProcessor::TokenBegin($this->_kind)
+			. trim(QuarkPEMIOProcessor::EncodeHeaders($this->_headersInside) . "\r\n" . QuarkPEMIOProcessor::EncodeContent($this->_content)) . "\r\n"
+			. QuarkPEMIOProcessor::TokenEnd($this->_kind)
+		);
+	}
+
+	/**
+	 * @param string $raw = ''
+	 * @param string $kind = ''
+	 * @param string[] $headersInside = []
+	 * @param string[] $headersOutside = []
+	 * @param string $content = ''
+	 *
+	 * @return QuarkPEMDTO
+	 */
+	public static function FromPEMRegularExpression ($raw = '', $kind = '', $headersInside = [], $headersOutside = [], $content = '') {
+		$out = new self();
+
+		$out->Raw($raw);
+		$out->Kind($kind);
+		$out->HeadersInside($headersInside);
+		$out->HeadersOutside($headersOutside);
+		$out->Content($content);
+
+		return $out;
+	}
+}
+
+/**
+ * Class QuarkMathNumber
+ *
+ * https://github.com/web-token/jwt-util-ecc/blob/master/Math.php
+ *
+ * @package Quark
+ */
+class QuarkMathNumber {
+	const ENCODING_8BIT = '8bit';
+
+	/**
+	 * @var \GMP|resource $_data
+	 */
+	private $_data;
+
+	/**
+	 * @var int $_base = 0
+	 */
+	private $_base = 0;
+
+	/**
+	 * @param \GMP|resource $data
+	 * @param int $base = 0
+	 */
+	private function __construct ($data, $base = 0) {
+		$this->_data = $data;
+		$this->_base = $base;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function __toString () {
+		return $this->Stringify();
+	}
+
+	/**
+	 * @return string
+	 */
+	public function Stringify () {
+		return $this->Serialize($this->_base);
+	}
+
+	/**
+	 * @param int $base = 10
+	 *
+	 * @return string
+	 */
+	public function Serialize ($base = 10) {
+		return gmp_strval($this->_data, $base);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function ToBool () {
+		return (bool)$this->Serialize();
+	}
+
+	/**
+	 * @return int
+	 */
+	public function ToInt () {
+		return (int)$this->Serialize();
+	}
+
+	/**
+	 * @return float
+	 */
+	public function ToFloat () {
+		return (float)$this->Serialize();
+	}
+
+	/**
+	 * @return \GMP|resource
+	 */
+	public function &Data () {
+		return $this->_data;
+	}
+
+	/**
+	 * @return int
+	 */
+	public function Base () {
+		return $this->_base;
+	}
+
+	/**
+	 * @param int $to
+	 * @param int $from = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BaseConvert ($to, $from = null) {
+		return self::Init($this->Serialize($to), $from === null ? $this->_base : $from);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return int
+	 */
+	private function _compare (QuarkMathNumber &$with = null) {
+		return $with == null ? null : \gmp_cmp($this->_data, $with->_data);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return bool
+	 */
+	public function LessThan (QuarkMathNumber &$with = null) {
+		return $this->_compare($with) < 0;
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return bool
+	 */
+	public function LessThanPrimitive ($number = 0) {
+		$with = self::InitDecimal($number);
+
+		return $this->LessThan($with);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return bool
+	 */
+	public function LessThanOrEqual (QuarkMathNumber &$with = null) {
+		return $this->LessThan($with) || $this->Equal($with);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return bool
+	 */
+	public function LessThanOrEqualPrimitive ($number = 0) {
+		$with = self::InitDecimal($number);
+
+		return $this->LessThanOrEqual($with);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return bool
+	 */
+	public function Equal (QuarkMathNumber &$with = null) {
+		return $this->_compare($with) === 0;
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return bool
+	 */
+	public function EqualPrimitive ($number = 0) {
+		$with = self::InitDecimal($number);
+
+		return $this->Equal($with);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return bool
+	 */
+	public function GreatThanOrEqual (QuarkMathNumber &$with = null) {
+		return $this->GreatThan($with) || $this->Equal($with);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return bool
+	 */
+	public function GreatThanOrEqualPrimitive ($number = 0) {
+		$with = self::InitDecimal($number);
+
+		return $this->GreatThanOrEqual($with);
+	}
+
+	/**
+	 * @param QuarkMathNumber $with = null
+	 *
+	 * @return bool
+	 */
+	public function GreatThan (QuarkMathNumber &$with = null) {
+		return $this->_compare($with) > 0;
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return bool
+	 */
+	public function GreatThanPrimitive ($number = 0) {
+		$with = self::InitDecimal($number);
+
+		return $this->GreatThan($with);
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Odd () {
+		return !$this->Even();
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function Even () {
+		return $this->ModuloPrimitive(2)->EqualPrimitive(0);
+	}
+
+	/**
+	 * @return int
+	 */
+	public function LengthBytes () {
+		return (int)ceil($this->LengthBits() / 8);
+	}
+
+	/**
+	 * @return int
+	 */
+	public function LengthBits () {
+		$zero = self::Zero();
+		$out = 0;
+		$check = true;
+		$copy = clone $this;
+
+		while ($check) {
+			$copy = $copy->BitwiseShiftRight(1);
+			if ($copy->Equal($zero)) break;
+
+			$out++;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @param int $base = null
+	 *
+	 * @return int
+	 */
+	public function LengthBase ($base = null) {
+		return mb_strlen($this->Serialize($base === null ? $this->_base : $base), self::ENCODING_8BIT);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Add (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_add($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function AddPrimitive ($number = 0) {
+		return new self(gmp_add($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Subtract (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_sub($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function SubtractPrimitive ($number = 0) {
+		return new self(gmp_sub($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 * @param QuarkMathNumber $modulus = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function SubtractModular (QuarkMathNumber $number = null, QuarkMathNumber $modulus = null) {
+		return $number == null || $modulus == null ? null : $this->Subtract($number)->Modulo($modulus);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Multiply (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_mul($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function MultiplyPrimitive ($number = 0) {
+		return new self(gmp_mul($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 * @param QuarkMathNumber $modulus = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function MultiplyModular (QuarkMathNumber $number = null, QuarkMathNumber $modulus = null) {
+		return $number == null || $modulus == null ? null : $this->Multiply($number)->Modulo($modulus);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Divide (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_div($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function DividePrimitive ($number = 0) {
+		return new self(gmp_div($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 * @param QuarkMathNumber $modulus = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function DivideModular (QuarkMathNumber $number = null, QuarkMathNumber $modulus = null) {
+		return $number == null || $modulus == null ? null : $this->Divide($number)->Modulo($modulus);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Modulo (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_mod($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function ModuloInverse (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_invert($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function ModuloPrimitive ($number = 0) {
+		return new self(gmp_mod($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param int $exponent = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function Power ($exponent = 0) {
+		return new self(gmp_pow($this->_data, $exponent), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseAnd (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_and($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseAndPrimitive ($number = 0) {
+		return new self(gmp_and($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseOr (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_or($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseOrPrimitive ($number = 0) {
+		return new self(gmp_or($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @param QuarkMathNumber $number = null
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseXOr (QuarkMathNumber $number = null) {
+		return $number == null ? null : new self(gmp_xor($this->_data, $number->_data), $this->_base);
+	}
+
+	/**
+	 * @param int|float $number = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseXOrPrimitive ($number = 0) {
+		return new self(gmp_xor($this->_data, $number), $this->_base);
+	}
+
+	/**
+	 * @note EXPERIMENTAL
+	 *
+	 * @param QuarkMathNumber $number = null
+	 * @param int $condition = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseSwap (QuarkMathNumber &$number = null, $condition = 0) {
+		//echo '--- BITSWAP.INIT (size, mask) ---', "\r\n";
+		$size = max($this->LengthBase(2), $number->LengthBase(2));
+		$mask = self::InitBinary(str_pad('', $size, (string)(1 - $condition), STR_PAD_LEFT));
+		//var_dump((string)(1 - $condition));
+		/*$taA = Math::bitwiseAnd($sa, $mask);
+		$taB = Math::bitwiseAnd($sb, $mask);
+		$sa = Math::bitwiseXor(Math::bitwiseXor($sa, $sb), $taB);
+		$sb = Math::bitwiseXor(Math::bitwiseXor($sa, $sb), $taA);
+		$sa = Math::bitwiseXor(Math::bitwiseXor($sa, $sb), $taB);*/
+
+		$sa = clone $this;
+		$sb = clone $number;
+
+		$taA = $sa->BitwiseAnd($mask);
+		$taB = $sb->BitwiseAnd($mask);
+
+		$sa = $sa->BitwiseXOr($sb)->BitwiseXOr($taB);
+		$sb = $sa->BitwiseXOr($sb)->BitwiseXOr($taA);
+		$sa = $sa->BitwiseXOr($sb)->BitwiseXOr($taB);
+
+		$this->_data = $sa->Data();
+		$number->_data = $sb->Data();
+
+		print_r($this);
+		print_r($number);
+
+		/*$maskedThis = $this->BitwiseAnd($mask);
+		$maskedNumber = $number->BitwiseAnd($mask);
+
+		$buffer = $this->BitwiseXOr($number)->BitwiseXOr($maskedNumber);
+
+		$number->_data = $buffer->BitwiseXOr($number)->BitwiseXOr($maskedThis)->Data();
+		$this->_data = $buffer->BitwiseXOr($number)->BitwiseXOr($maskedNumber)->Data();*/
+
+		return $this;
+	}
+
+	/**
+	 * @param int $positions = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public function BitwiseShiftRight ($positions = 0) {
+		return $this->Divide(self::InitDecimal(2)->Power($positions));
+	}
+
+	/**
+	 * @param string $data = ''
+	 * @param int $base = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function Init ($data = '', $base = 0) {
+		return new self(\gmp_init($data, $base), $base);
+	}
+
+	/**
+	 * @param int $data = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function InitBinary ($data = 0) {
+		return self::Init($data, 2);
+	}
+
+	/**
+	 * @param int $data = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function InitOctal ($data = 0) {
+		return self::Init($data, 8);
+	}
+
+	/**
+	 * @param int $data = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function InitDecimal ($data = 0) {
+		return self::Init($data, 10);
+	}
+
+	/**
+	 * @param int $data = 0
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function InitHexadecimal ($data = 0) {
+		return self::Init($data, 16);
+	}
+
+	/**
+	 * @return QuarkMathNumber
+	 */
+	public static function Zero () {
+		return self::Init(0, 10);
+	}
+
+	/**
+	 * @param int $bytes = 64
+	 *
+	 * @return QuarkMathNumber
+	 */
+	public static function Max ($bytes = 64) {
+		return self::Init(str_repeat('f', $bytes), 16);
 	}
 }
 
@@ -25030,8 +27033,11 @@ class QuarkSQL {
 		if ($value === null) return self::NULL;
 		// TODO: need refactor
 		//if ($value === null) $value = self::NULL;
-		// TODO: investigate, seems like QuarkCollection on this step is not used
+		// TODO: investigate, seems like QuarkCollection on this step is not used. UPD: used, but it's weird
 		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());
+		// TODO: investigate, maybe need additional handling of nested models
+		/*if ($value instanceof IQuarkModel) $value = new QuarkModel($value);
+		if ($value instanceof QuarkModel) $value = json_encode($value->Extract());*/
 		if (is_array($value)) $value = json_encode($value);
 		if (!is_scalar($value)) $value = null;
 		if (is_bool($value))
@@ -25341,6 +27347,19 @@ class QuarkSQL {
 		return $this->Select($model, $criteria, array_merge($options, array(
 			'fields' => array(self::FIELD_COUNT_ALL)
 		)));
+	}
+
+	/**
+	 * @param string $like = ''
+	 *
+	 * @return string
+	 */
+	public static function LikeEscape ($like = '') {
+		// yes, it's ridiculous, but that's the story...
+		$like = str_replace('\\', '\\\\\\\\\\', $like);
+		$like = str_replace('"',  '\\\\\\"', $like);
+
+		return $like;
 	}
 }
 

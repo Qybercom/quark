@@ -1,8 +1,13 @@
 <?php
 namespace Quark\Extensions\PushNotification\Providers\MicrosoftWNS;
 
-use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
+use Quark\QuarkDTO;
+use Quark\QuarkXMLIOProcessor;
 use Quark\QuarkXMLNode;
+
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\PushNotificationDetails;
 
 /**
  * Class MicrosoftWNSDetails
@@ -61,11 +66,18 @@ class MicrosoftWNSDetails implements IQuarkPushNotificationDetails {
 	}
 
 	/**
+	 * @return MicrosoftWNSNotificationTemplate[]
+	 */
+	public function &Visual () {
+		return $this->_visual;
+	}
+
+	/**
 	 * @param MicrosoftWNSNotificationTemplate $template = null
 	 *
 	 * @return MicrosoftWNSDetails
 	 */
-	public function Visual (MicrosoftWNSNotificationTemplate $template = null) {
+	public function VisualItem (MicrosoftWNSNotificationTemplate $template = null) {
 		if ($template != null)
 			$this->_visual[] = $template;
 
@@ -73,26 +85,42 @@ class MicrosoftWNSDetails implements IQuarkPushNotificationDetails {
 	}
 
 	/**
-	 * @return string
-	 */
-	public function PNProviderType () {
-		return MicrosoftWNS::TYPE;
-	}
-
-	/**
 	 * @param object|array $payload
-	 * @param array $options
+	 * @param IQuarkPushNotificationDevice $device = null
 	 *
 	 * @return mixed
 	 */
-	public function PNDetails ($payload, $options) {
-		if (sizeof($this->_visual) == 0) return null;
+	public function PushNotificationDetailsData ($payload, IQuarkPushNotificationDevice $device = null) {
+		$type = str_replace('wns/', '', $this->_type);
 
-		$visual = array();
+		$root = new QuarkXMLNode($type);
+		$data = array('data' => json_encode($payload));
 
-		foreach ($this->_visual as $item)
-			$visual[] = $item->Binding();
+		if ($this->_value !== null)
+			$root->Attribute('value', $this->_value);
 
-		return new QuarkXMLNode('visual', $visual);
+		if (sizeof($this->_visual) != 0) {
+			$visual = array();
+
+			foreach ($this->_visual as $i => &$item)
+				$visual[] = $item->Binding();
+
+			$data['visual'] = new QuarkXMLNode('visual', $visual);
+		}
+
+		$out = QuarkDTO::ForPOST(new QuarkXMLIOProcessor($root, QuarkXMLIOProcessor::ITEM, false));
+		$out->Header(MicrosoftWNS::HEADER_TYPE, $type);
+		$out->Data($data);
+
+		return $out;
+	}
+
+	/**
+	 * @param PushNotificationDetails $details
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDetailsFromDetails (PushNotificationDetails $details) {
+		// TODO: Implement PushNotificationDetailsFromDetails() method.
 	}
 }

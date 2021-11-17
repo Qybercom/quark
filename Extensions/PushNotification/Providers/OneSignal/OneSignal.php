@@ -5,11 +5,13 @@ use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
-use Quark\QuarkLocalizedString;
 
-use Quark\Extensions\PushNotification\Device;
-use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
 use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
+
+use Quark\Extensions\PushNotification\PushNotificationDevice;
+use Quark\Extensions\PushNotification\PushNotificationResult;
 
 /**
  * Class OneSignal
@@ -18,20 +20,16 @@ use Quark\Extensions\PushNotification\IQuarkPushNotificationProvider;
  */
 class OneSignal implements IQuarkPushNotificationProvider {
 	const TYPE = 'os';
-
+	const URL_API = 'https://onesignal.com/api/v1/notifications';
 	const BULK_MAX = 2000;
-	const URL = 'https://onesignal.com/api/v1/notifications';
-
-	const OPTION_APP_ID = 'os.id';
-	const OPTION_APP_SECRET = 'os.secret';
 
 	/**
-	 * @var Device[] $_devices = []
+	 * @var PushNotificationDevice[] $_devices = []
 	 */
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails|OneSignalDetails $_details
+	 * @var IQuarkPushNotificationDetails $_details
 	 */
 	private $_details;
 
@@ -46,158 +44,132 @@ class OneSignal implements IQuarkPushNotificationProvider {
 	private $_appSecret = '';
 
 	/**
+	 * @param string $appID = ''
+	 *
 	 * @return string
 	 */
-	public function PNPType () {
+	public function AppID ($appID = '') {
+		if (func_num_args() != 0)
+			$this->_appID = $appID;
+
+		return $this->_appID;
+	}
+
+	/**
+	 * @param string $appSecret = ''
+	 *
+	 * @return string
+	 */
+	public function AppSecret ($appSecret = '') {
+		if (func_num_args() != 0)
+			$this->_appSecret = $appSecret;
+
+		return $this->_appSecret;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function PushNotificationProviderType () {
 		return self::TYPE;
 	}
 
 	/**
-	 * @param $config
+	 * @return string[]
 	 */
-	public function PNPConfig ($config) {
-		if (isset($config[self::OPTION_APP_ID]))
-			$this->_appID = $config[self::OPTION_APP_ID];
-
-		if (isset($config[self::OPTION_APP_SECRET]))
-			$this->_appSecret = $config[self::OPTION_APP_SECRET];
+	public function PushNotificationProviderProperties () {
+		return array(
+			'AppID',
+			'AppSecret'
+		);
 	}
 
 	/**
-	 * @param string $key
-	 * @param $value
+	 * @param string $config
 	 *
 	 * @return mixed
 	 */
-	public function PNPOption ($key, $value) {
-		switch ($key) {
-			case self::OPTION_APP_ID:
-				$this->_appID = $value;
-				break;
-
-			case self::OPTION_APP_SECRET:
-				$this->_appSecret = $value;
-				break;
-
-			default: break;
-		}
+	public function PushNotificationProviderInit ($config) {
+		// TODO: Implement PushNotificationProviderInit() method.
 	}
 
 	/**
-	 * @param Device $device
+	 * @return IQuarkPushNotificationDetails
+	 */
+	public function PushNotificationProviderDetails () {
+		return new OneSignalDetails();
+	}
+
+	/**
+	 * @return IQuarkPushNotificationDevice
+	 */
+	public function PushNotificationProviderDevice () {
+		return new OneSignalDevice();
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
 	 *
-	 * @return bool
+	 * @return mixed
 	 */
-	public function PNPDevice (Device &$device) {
-		if ($device->type != self::TYPE) return false;
-
-		$this->_devices[] = $device;
-
-		return true;
-	}
-
-	/**
-	 * @return Device[]
-	 */
-	public function &PNPDevices () {
-		return $this->_devices;
+	public function PushNotificationProviderDeviceAdd (PushNotificationDevice &$device) {
+		$this->_devices[$device->id] = $device;
 	}
 
 	/**
 	 * @param IQuarkPushNotificationDetails $details
-	 *
-	 * @return mixed
-	 */
-	public function PNPDetails (IQuarkPushNotificationDetails $details) {
-		$this->_details = $details;
-	}
-
-	/**
 	 * @param object|array $payload
-	 * @param array $options
 	 *
-	 * @return mixed
+	 * @return PushNotificationResult
 	 */
-	public function PNPSend ($payload, $options) {
-		$devices = array();
-		foreach ($this->_devices as $key => &$device)
-			$devices[$key] = $device->id;
+	public function PushNotificationProviderSend (IQuarkPushNotificationDetails &$details, $payload) {
+		$out = new PushNotificationResult();
+		$size = sizeof($this->_devices);
 
-		$size = sizeof($devices);
-		if ($size == 0) return true;
+		$rounds = ceil($size / self::BULK_MAX);
+		$out->CountRounds($rounds);
 
-		$i = 0;
-		$queues = ceil($size / self::BULK_MAX);
+		if ($size != 0) {
+			$request = null;
+			$response = null;
+			$devices = array_keys($this->_devices);
+			$i = 0;
 
-		$data = null;
-		$data_headings = null;
-		$data_contents = null;
-		$request = null;
-		$response = null;
-		$out = null;
+			while ($i < $rounds) {
+				$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
+				$request->Data($this->_details->PushNotificationDetailsData(array(
+					'app_id' => $this->_appID,
+					'include_player_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
+				)));
 
-		while ($i < $queues) {
-			$data_headings = $this->_details->Headings();
-			$data_contents = $this->_details->Contents();
+				if ($this->_appSecret != '')
+					$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'Basic ' . $this->_appSecret);
 
-			$data = array(
-				'app_id' => $this->_appID,
-				'include_player_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
-			);
+				$response = QuarkHTTPClient::To(self::URL_API, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
 
-			if ($data_headings != null)
-				$data['headings'] = $this->_localizedString($data_headings);
+				if (!isset($response->errors)) $out->CountSuccessAppend(1);
+				else {
+					Quark::Log('[PushNotification:OneSignal] Error during sending push notification. OneSignal response: ' . print_r($response, true), Quark::LOG_WARN);
 
-			if ($data_contents != null)
-				$data['contents'] = $this->_localizedString($data_contents);
+					$out->CountFailureAppend(1);
+				}
 
-			$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-
-			if ($this->_appSecret != '')
-				$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'Basic ' . $this->_appSecret);
-
-			$request->Data($data);
-
-			$response = new QuarkDTO(new QuarkJSONIOProcessor());
-
-			$out = QuarkHTTPClient::To(self::URL, $request, $response);
-
-			if (!$out || isset($out->errors)) {
-				Quark::Log('[OneSignal] Error during sending push notification. OneSignal response: ' . print_r($out, true), Quark::LOG_WARN);
-
-				return false;
+				$i++;
 			}
 
-			$i++;
+			unset($data, $request, $response, $i, $devices);
 		}
 
-		unset($data, $request, $response, $out);
+		unset($rounds, $size);
 
-		return true;
+		return $out;
 	}
 
 	/**
 	 * @return mixed
 	 */
-	public function PNPReset () {
+	public function PushNotificationProviderReset () {
+		$this->_details = null;
 		$this->_devices = array();
-	}
-
-	/**
-	 * @param QuarkLocalizedString $source = null
-	 *
-	 * @return object
-	 */
-	private function _localizedString (QuarkLocalizedString &$source = null) {
-		$out = clone $source->values;
-
-		if (isset($out->{'*'})) {
-			if (!isset($out->en))
-				$out->en = $out->{'*'};
-
-			unset($out->{'*'});
-		}
-
-		return $out;
 	}
 }

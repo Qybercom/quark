@@ -2,8 +2,9 @@
 namespace Quark\Extensions\PushNotification\Providers\GoogleFCM;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
 
-use Quark\Extensions\PushNotification\Providers\AppleAPNS\AppleAPNSDetails;
+use Quark\Extensions\PushNotification\PushNotificationDetails;
 
 /**
  * Class GoogleFCMDetails
@@ -11,15 +12,74 @@ use Quark\Extensions\PushNotification\Providers\AppleAPNS\AppleAPNSDetails;
  * @package Quark\Extensions\PushNotification\Providers\GoogleFCM
  */
 class GoogleFCMDetails implements IQuarkPushNotificationDetails {
+	const SOUND_DEFAULT = 'default';
+
+	/**
+	 * @var string[] $_properties
+	 */
+	private static $_properties = array(
+		'Title' => 'title',
+		'TitleLocalizationKey' => 'title_loc_key',
+		'TitleLocalizationArgs' => 'title_loc_args',
+		'Subtitle' => 'subtitle',
+		'Body' => 'body',
+		'BodyLocalizationKey' => 'body_loc_key',
+		'BodyLocalizationArgs' => 'body_loc_args',
+		'Icon' => 'icon',
+		'Badge' => 'badge',
+		'Sound' => 'sound',
+		'Tag' => 'tag',
+		'Color' => 'color',
+		'ClickAction' => 'click_action',
+		'AndroidChannelID' => 'android_channel_id'
+	);
+
+	/**
+	 * @var string[] $_propertiesMatch
+	 */
+	private static $_propertiesMatch = array(
+		'Title' => 'Title',
+		'Subtitle' => 'Subtitle',
+		'Body' => 'Body',
+		'Icon' => 'Icon',
+		'Badge' => 'Badge',
+		'Sound' => 'Sound'
+	);
+
 	/**
 	 * @var string $_title = null
 	 */
-	private $_title;
+	private $_title = null;
+
+	/**
+	 * @var string $_titleLocalizationKey = null
+	 */
+	private $_titleLocalizationKey = null;
+
+	/**
+	 * @var string $_titleLocalizationArgs = null
+	 */
+	private $_titleLocalizationArgs = null;
+
+	/**
+	 * @var string $_subtitle = null
+	 */
+	private $_subtitle = null;
 
 	/**
 	 * @var string $_body = null
 	 */
 	private $_body = null;
+
+	/**
+	 * @var string $_bodyLocalizationKey = null
+	 */
+	private $_bodyLocalizationKey = null;
+
+	/**
+	 * @var string $_bodyLocalizationArgs = null
+	 */
+	private $_bodyLocalizationArgs = null;
 
 	/**
 	 * @var string $_icon = null
@@ -32,9 +92,9 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	private $_badge = 1;
 
 	/**
-	 * @var string $_sound = AppleAPNSDetails::SOUND_DEFAULT
+	 * @var string $_sound = self::SOUND_DEFAULT
 	 */
-	private $_sound = AppleAPNSDetails::SOUND_DEFAULT;
+	private $_sound = self::SOUND_DEFAULT;
 
 	/**
 	 * @var string $_tag = null
@@ -52,29 +112,9 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	private $_clickAction = null;
 
 	/**
-	 * @var string $_bodyLocKey = null
+	 * @var string $_androidChannelID = null
 	 */
-	private $_bodyLocKey = null;
-
-	/**
-	 * @var string $_bodyLocArgs = null
-	 */
-	private $_bodyLocArgs = null;
-
-	/**
-	 * @var string $_titleLocKey = null
-	 */
-	private $_titleLocKey = null;
-
-	/**
-	 * @var string $_titleLocArgs = null
-	 */
-	private $_titleLocArgs = null;
-
-	/**
-	 * @var string[] $_changes = []
-	 */
-	private $_changes = array();
+	private $_androidChannelID = null;
 
 	/**
 	 * @param string $title = null
@@ -82,29 +122,9 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 * @param string $icon = null
 	 */
 	public function __construct ($title = null, $body = null, $icon = null) {
-		$args = func_num_args();
-
-		if ($args > 0) $this->Title($title);
-		if ($args > 1) $this->Body($body);
-		if ($args > 2) $this->Icon($icon);
-	}
-
-	/**
-	 * @return string[]
-	 */
-	public function Changes () {
-		return $this->_changes;
-	}
-
-	/**
-	 * @param string $key
-	 * @param $value
-	 */
-	private function _change ($key, $value) {
-		$this->$key = $value;
-
-		if (!in_array($key, $this->_changes))
-			$this->_changes[] = $key;
+		$this->Title($title);
+		$this->Body($body);
+		$this->Icon($icon);
 	}
 
 	/**
@@ -114,9 +134,45 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Title ($title = null) {
 		if (func_num_args() != 0)
-			$this->_change('_title', $title);
+			$this->_title = $title;
 
 		return $this->_title;
+	}
+
+	/**
+	 * @param string $titleLocalizationKey = null
+	 *
+	 * @return string
+	 */
+	public function TitleLocalizationKey ($titleLocalizationKey = null) {
+		if (func_num_args() != 0)
+			$this->_titleLocalizationKey = $titleLocalizationKey;
+
+		return $this->_titleLocalizationKey;
+	}
+
+	/**
+	 * @param string $titleLocalizationArgs = null
+	 *
+	 * @return string
+	 */
+	public function TitleLocalizationArgs ($titleLocalizationArgs = null) {
+		if (func_num_args() != 0)
+			$this->_titleLocalizationArgs = $titleLocalizationArgs;
+
+		return $this->_titleLocalizationArgs;
+	}
+
+	/**
+	 * @param string $subtitle = null
+	 *
+	 * @return string
+	 */
+	public function Subitle ($subtitle = null) {
+		if (func_num_args() != 0)
+			$this->_subtitle = $subtitle;
+
+		return $this->_subtitle;
 	}
 
 	/**
@@ -126,9 +182,33 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Body ($body = null) {
 		if (func_num_args() != 0)
-			$this->_change('_body', $body);
+			$this->_body = $body;
 
 		return $this->_body;
+	}
+
+	/**
+	 * @param string $bodyLocalizationKey = null
+	 *
+	 * @return string
+	 */
+	public function BodyLocalizationKey ($bodyLocalizationKey = null) {
+		if (func_num_args() != 0)
+			$this->_bodyLocalizationKey = $bodyLocalizationKey;
+
+		return $this->_bodyLocalizationKey;
+	}
+
+	/**
+	 * @param string $bodyLocalizationArgs = null
+	 *
+	 * @return string
+	 */
+	public function BodyLocalizationArgs ($bodyLocalizationArgs = null) {
+		if (func_num_args() != 0)
+			$this->_bodyLocalizationArgs = $bodyLocalizationArgs;
+
+		return $this->_bodyLocalizationArgs;
 	}
 
 	/**
@@ -138,7 +218,7 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Icon ($icon = null) {
 		if (func_num_args() != 0)
-			$this->_change('_icon', $icon);
+			$this->_icon = $icon;
 
 		return $this->_icon;
 	}
@@ -150,19 +230,19 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Badge ($badge = 1) {
 		if (func_num_args() != 0)
-			$this->_change('_badge', $badge);
+			$this->_badge = $badge;
 
 		return $this->_badge;
 	}
 
 	/**
-	 * @param string $sound = AppleAPNSDetails::SOUND_DEFAULT
+	 * @param string $sound = self::SOUND_DEFAULT
 	 *
 	 * @return string
 	 */
-	public function Sound ($sound = AppleAPNSDetails::SOUND_DEFAULT) {
+	public function Sound ($sound = self::SOUND_DEFAULT) {
 		if (func_num_args() != 0)
-			$this->_change('_sound', $sound);
+			$this->_sound = $sound;
 
 		return $this->_sound;
 	}
@@ -174,7 +254,7 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Tag ($tag = null) {
 		if (func_num_args() != 0)
-			$this->_change('_tag', $tag);
+			$this->_tag = $tag;
 
 		return $this->_tag;
 	}
@@ -186,92 +266,68 @@ class GoogleFCMDetails implements IQuarkPushNotificationDetails {
 	 */
 	public function Color ($color = null) {
 		if (func_num_args() != 0)
-			$this->_change('_color', $color);
+			$this->_color = $color;
 
 		return $this->_color;
 	}
 
 	/**
-	 * @param string $action = null
+	 * @param string $clickAction = null
 	 *
 	 * @return string
 	 */
-	public function ClickAction ($action = null) {
+	public function ClickAction ($clickAction = null) {
 		if (func_num_args() != 0)
-			$this->_change('_clickAction', $action);
+			$this->_clickAction = $clickAction;
 
 		return $this->_clickAction;
 	}
 
 	/**
-	 * @param string $key = null
+	 * @param string $androidChannelID = null
 	 *
 	 * @return string
 	 */
-	public function BodyLocKey ($key = null) {
+	public function AndroidChannelID ($androidChannelID = null) {
 		if (func_num_args() != 0)
-			$this->_change('_bodyLocKey', $key);
+			$this->_androidChannelID = $androidChannelID;
 
-		return $this->_bodyLocKey;
-	}
-
-	/**
-	 * @param string $args = null
-	 *
-	 * @return string
-	 */
-	public function BodyLocArgs ($args = null) {
-		if (func_num_args() != 0)
-			$this->_change('_bodyLocArgs', $args);
-
-		return $this->_bodyLocArgs;
-	}
-
-	/**
-	 * @param string $key = null
-	 *
-	 * @return string
-	 */
-	public function TitleLocKey ($key = null) {
-		if (func_num_args() != 0)
-			$this->_change('_titleLocKey', $key);
-
-		return $this->_titleLocKey;
-	}
-
-	/**
-	 * @param string $args = null
-	 *
-	 * @return string
-	 */
-	public function TitleLocArgs ($args = null) {
-		if (func_num_args() != 0)
-			$this->_change('_titleLocArgs', $args);
-
-		return $this->_titleLocArgs;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function PNProviderType () {
-		return GoogleFCM::TYPE;
+		return $this->_androidChannelID;
 	}
 
 	/**
 	 * @param object|array $payload
-	 * @param array $options
+	 * @param IQuarkPushNotificationDevice $device = null
 	 *
 	 * @return mixed
 	 */
-	public function PNDetails ($payload, $options) {
-		$out = array('alert' => 'test');
+	public function PushNotificationDetailsData ($payload, IQuarkPushNotificationDevice $device = null) {
+		$value = null;
 
-		foreach ($this->_changes as $i => &$key) {
-			$k = strlen($key) != 0 && $key[0] == '_' ? substr($key, 1) : $key;
-			$out[$k] = $this->$key;
+		foreach (self::$_properties as $property => &$field) {
+			$value = $this->$property();
+			if ($value === null) continue;
+
+			if (!isset($payload['notification']))
+				$payload['notification'] = array();
+
+			$payload['notification'][$field] = $value;
 		}
 
-		return sizeof($out) == 0 ? null : $out;
+		unset($property, $field, $value);
+
+		return $payload;
+	}
+
+	/**
+	 * @param PushNotificationDetails $details
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDetailsFromDetails (PushNotificationDetails $details) {
+		foreach (self::$_propertiesMatch as $propertyPublic => &$propertyOwn)
+			$this->$propertyOwn($details->$propertyPublic());
+
+		unset($propertyPublic, $propertyOwn);
 	}
 }

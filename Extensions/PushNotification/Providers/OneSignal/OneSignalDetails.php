@@ -4,6 +4,8 @@ namespace Quark\Extensions\PushNotification\Providers\OneSignal;
 use Quark\QuarkLocalizedString;
 
 use Quark\Extensions\PushNotification\IQuarkPushNotificationDetails;
+use Quark\Extensions\PushNotification\IQuarkPushNotificationDevice;
+use Quark\Extensions\PushNotification\PushNotificationDetails;
 
 /**
  * Class OneSignalDetails
@@ -29,16 +31,6 @@ class OneSignalDetails implements IQuarkPushNotificationDetails {
 	}
 
 	/**
-	 * @param object|array $payload
-	 * @param array $options
-	 *
-	 * @return mixed
-	 */
-	public function PNDetails ($payload, $options) {
-		// TODO: Implement PNDetails() method.
-	}
-
-	/**
 	 * @param QuarkLocalizedString $headings =null
 	 *
 	 * @return QuarkLocalizedString
@@ -60,5 +52,47 @@ class OneSignalDetails implements IQuarkPushNotificationDetails {
 			$this->_contents = $contents;
 
 		return $this->_contents;
+	}
+
+	/**
+	 * @param object|array $payload
+	 * @param IQuarkPushNotificationDevice $device = null
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDetailsData ($payload, IQuarkPushNotificationDevice $device = null) {
+		$headings = $this->LocalizedString($this->Headings());
+		if ($headings != null) $payload['headings'] = $headings;
+
+		$contents = $this->LocalizedString($this->Contents());
+		if ($contents != null) $payload['contents'] = $contents;
+	}
+
+	/**
+	 * @param PushNotificationDetails $details
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDetailsFromDetails (PushNotificationDetails $details) {
+		$this->Headings(new QuarkLocalizedString($details->Title()));
+		$this->Contents(new QuarkLocalizedString($details->Body()));
+	}
+
+	/**
+	 * @param QuarkLocalizedString $source = null
+	 *
+	 * @return object
+	 */
+	public function LocalizedString (QuarkLocalizedString $source = null) {
+		$out = clone $source->values;
+
+		if (isset($out->{'*'})) {
+			if (!isset($out->en))
+				$out->en = $out->{'*'};
+
+			unset($out->{'*'});
+		}
+
+		return $out;
 	}
 }

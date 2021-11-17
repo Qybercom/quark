@@ -13,9 +13,9 @@ use Quark\QuarkDate;
  */
 class PushNotification implements IQuarkExtension {
 	/**
-	 * @var PushNotificationConfig $_config
+	 * @var IQuarkPushNotificationDetails[] $_queue = []
 	 */
-	private $_config;
+	private $_queue = array();
 
 	/**
 	 * @var object|array $_payload
@@ -23,47 +23,52 @@ class PushNotification implements IQuarkExtension {
 	private $_payload = array();
 
 	/**
-	 * @var Device[] $_devices
+	 * @var PushNotificationDetails $_details = null
+	 */
+	private $_details = null;
+
+	/**
+	 * @var PushNotificationDevice[] $_devices
 	 */
 	private $_devices = array();
 
 	/**
-	 * @var array $_details
+	 * @param object|array $payload = []
 	 */
-	private $_details = array();
-
-	/**
-	 * @var array $_options
-	 */
-	private $_options = array();
-
-	/**
-	 * @param string $config
-	 * @param object|array $payload
-	 */
-	public function __construct ($config, $payload = []) {
-		$this->_config = Quark::Config()->Extension($config);
-		$this->_payload = $payload;
+	public function __construct ($payload = []) {
+		$this->Payload($payload);
 	}
 
 	/**
-	 * @param object|array $payload
+	 * @param object|array $payload = []
 	 *
 	 * @return object|array
 	 */
 	public function Payload ($payload = []) {
-		if (func_num_args() == 1)
+		if (func_num_args() != 0)
 			$this->_payload = $payload;
 
 		return $this->_payload;
 	}
 
 	/**
-	 * @param Device $device = null
+	 * @param PushNotificationDetails $details = null
+	 *
+	 * @return PushNotificationDetails
+	 */
+	public function Details (PushNotificationDetails $details = null) {
+		if (func_num_args() != 0)
+			$this->_details = $details;
+
+		return $this->_details;
+	}
+
+	/**
+	 * @param PushNotificationDevice $device = null
 	 *
 	 * @return PushNotification
 	 */
-	public function Device (Device &$device = null) {
+	public function Device (PushNotificationDevice $device = null) {
 		if ($device != null)
 			$this->_devices[] = $device;
 
@@ -71,68 +76,112 @@ class PushNotification implements IQuarkExtension {
 	}
 
 	/**
-	 * @return Device[]
+	 * @param string $type = ''
+	 * @param string $id = ''
+	 * @param QuarkDate|string $date = ''
+	 *
+	 * @return PushNotification
+	 */
+	public function DeviceByValues ($type = '', $id = '', $date = '') {
+		return $this->Device(new PushNotificationDevice($type, $id, $date));
+	}
+
+	/**
+	 * @param object|array $device = null
+	 * @param QuarkDate|string $date = ''
+	 *
+	 * @return PushNotification
+	 */
+	public function DeviceFromObject ($device = null, $date = '') {
+		return $this->Device(PushNotificationDevice::FromObject($device, $date));
+	}
+
+	/**
+	 * @return PushNotificationDevice[]
 	 */
 	public function &Devices () {
 		return $this->_devices;
 	}
 
 	/**
+	 * @param string $config = ''
 	 * @param IQuarkPushNotificationDetails $details = null
 	 *
 	 * @return PushNotification
 	 */
-	public function Details (IQuarkPushNotificationDetails $details = null) {
-		if ($details != null)
-			$this->_details[$details->PNProviderType()] = $details;
+	public function Queue ($config = '', IQuarkPushNotificationDetails $details = null) {
+		if (func_num_args() != 0)
+			$this->_queue[$config] = $details;
 
 		return $this;
 	}
 
 	/**
-	 * @param IQuarkPushNotificationProvider $provider
-	 * @param array                          $options
+	 * @param QuarkDate $ageEdge = null
+	 *
+	 * @return PushNotificationResult[]
 	 */
-	public function Options (IQuarkPushNotificationProvider $provider, $options = []) {
-		$this->_options[$provider->PNPType()] = $options;
+	public function Send (QuarkDate $ageEdge = null) {
+		$out = array();
+
+		$config = null;
+		$provider = null;
+		$i = 0;
+		$device = null;
+		$detailsBuffer = null;
+
+		foreach ($this->_queue as $configKey => &$details) {
+			$config = Quark::Config()->Extension($configKey);
+
+			if (!($config instanceof PushNotificationConfig)) {
+				Quark::Log('[PushNotification] Config key "' . $configKey . '" is not an IQuarkPushNotificationConfig', Quark::LOG_WARN);
+				continue;
+			}
+
+			$provider = $config->Provider();
+
+			foreach ($this->_devices as $i => &$device)
+				if ($device->Valid($provider, $ageEdge))
+					$provider->PushNotificationProviderDeviceAdd($device);
+
+			$detailsBuffer = $details == null ? $provider->PushNotificationProviderDetails() : clone $details;
+			$detailsBuffer->PushNotificationDetailsFromDetails($this->_details);
+
+			$out[$configKey] = $provider->PushNotificationProviderSend($detailsBuffer, $this->_payload);
+		}
+
+		unset($i, $device, $details, $detailsBuffer, $provider, $config);
+
+		return $out;
 	}
 
 	/**
-	 * @param QuarkDate|string $ageEdge = ''
+	 * @param string $config = ''
+	 * @param IQuarkPushNotificationDetails $details = null
+	 * @param object|array $payload = []
 	 *
-	 * @return bool
+	 * @return PushNotification
 	 */
-	public function Send ($ageEdge = '') {
-		if (!$this->_config) {
-			Quark::Log('PushNotification does not have a valid config', Quark::LOG_WARN);
-			return false;
-		}
+	public static function Enqueue ($config = '', IQuarkPushNotificationDetails $details = null, $payload = []) {
+		$out = new self($payload);
+		$out->Queue($config, $details);
 
-		$ok = true;
-		$providers = $this->_config->Providers();
+		return $out;
+	}
 
-		foreach ($providers as $provider) {
-			$devices = 0;
+	/**
+	 * @param string $config = ''
+	 * @param PushNotificationDevice $device = null
+	 * @param PushNotificationDetails $details = null
+	 * @param IQuarkPushNotificationDetails $detailsProvider = null
+	 * @param object|array $payload
+	 *
+	 * @return PushNotificationResult[]
+	 */
+	public static function SendToOneDevice ($config = '', PushNotificationDevice $device = null, PushNotificationDetails $details = null, IQuarkPushNotificationDetails $detailsProvider = null, $payload = []) {
+		$out = self::Enqueue($config, $detailsProvider, $payload)->Device($device);
+		$out->Details($details);
 
-			foreach ($this->_devices as $device) {
-				if (func_num_args() != 0 && ($device->date == null || $device->date->Earlier(QuarkDate::From($ageEdge)))) continue;
-
-				if ($device && $device->id != '' && $provider->PNPDevice($device))
-					$devices++;
-			}
-
-			if ($devices == 0) continue;
-
-			if (isset($this->_details[$provider->PNPType()]))
-				$provider->PNPDetails($this->_details[$provider->PNPType()]);
-
-			$ok &= (bool)$provider->PNPSend($this->_payload, isset($this->_options[$provider->PNPType()])
-				? $this->_options[$provider->PNPType()]
-				: array());
-
-			$provider->PNPReset();
-		}
-
-		return $ok;
+		return $out->Send();
 	}
 }

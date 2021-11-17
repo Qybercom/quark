@@ -54,6 +54,6 @@ class Analytics implements IQuarkExtension, IQuarkViewResource, IQuarkInlineView
 		foreach ($providers as $i => &$provider)
 			$out .= $provider->AnalyticsProviderViewFragment();
 
-		return $this->MinimizeString($out);
+		return $minimize ? $this->MinimizeString($out) : $out;
 	}
 }
