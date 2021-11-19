@@ -5,16 +5,11 @@ use Quark\IQuarkViewResource;
 use Quark\IQuarkViewResourceType;
 use Quark\IQuarkViewResourceWithDependencies;
 
-use Quark\Quark;
 use Quark\QuarkDate;
-use Quark\QuarkEncryptionKey;
 use Quark\QuarkInlineJSViewResource;
 use Quark\QuarkJSViewResourceType;
 use Quark\QuarkLocalCoreJSViewResource;
 use Quark\QuarkMinimizableViewResourceBehavior;
-use Quark\QuarkURI;
-
-use Quark\Extensions\PushNotification\PushNotificationConfig;
 
 /**
  * Class WebPushServiceWorker
@@ -35,10 +30,16 @@ class WebPushServiceWorker implements IQuarkViewResource, IQuarkViewResourceWith
 	private $_urlDeviceRegister = '';
 
 	/**
+	 * @var bool $_preventDisplay = false
+	 */
+	private $_preventDisplay = false;
+
+	/**
 	 * @param string $keyVAPID = ''
 	 * @param string $urlDeviceRegister = ''
+	 * @param bool $preventDisplay = false
 	 */
-	public function __construct ($keyVAPID = '', $urlDeviceRegister = '') {
+	public function __construct ($keyVAPID = '', $urlDeviceRegister = '', $preventDisplay = false) {
 		$this->KeyVAPID($keyVAPID);
 		$this->URLDeviceRegister($urlDeviceRegister);
 	}
@@ -68,6 +69,18 @@ class WebPushServiceWorker implements IQuarkViewResource, IQuarkViewResourceWith
 	}
 
 	/**
+	 * @param bool $preventDisplay = false
+	 *
+	 * @return bool
+	 */
+	public function PreventDisplay ($preventDisplay = false) {
+		if (func_num_args() != 0)
+			$this->_preventDisplay = $preventDisplay;
+
+		return $this->_preventDisplay;
+	}
+
+	/**
 	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
@@ -82,10 +95,18 @@ class WebPushServiceWorker implements IQuarkViewResource, IQuarkViewResourceWith
 			new QuarkLocalCoreJSViewResource(),
 			new QuarkInlineJSViewResource('/*' . QuarkDate::GMTNow()->Format(QuarkDate::FORMAT_ISO) . '*/' . $this->MinimizeString('
 				Quark.ServiceWorker.Ready(function (e) {
-					if (Quark.ServiceWorker.Event.Ready instanceof Function)
-						Quark.ServiceWorker.Event.Ready(e);
-					
-					Quark.Notification.SubscribeAndRegister(\'' . $this->_keyVAPID . '\', \'' . $this->_urlDeviceRegister . '\');
+					Quark.Notification.PreventDisplay = ' . ($this->_preventDisplay ? 'true' : 'false') . ';
+					Quark.Notification.Subscribe(\'' . $this->_keyVAPID . '\', function (subscription) {
+						Quark.Request.POSTFormURLEncoded(
+							\'' . $this->_urlDeviceRegister . '\',
+							{
+								device: {
+									type: \'' . WebPush::TYPE . '\',
+									id: JSON.stringify(subscription)
+								}
+							}
+						);
+					});
 				});
 			'))
 		);;

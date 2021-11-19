@@ -3991,6 +3991,31 @@ trait QuarkServiceBehavior {
 	}
 
 	/**
+	 * @param IQuarkSpecifiedViewResource $resource = null
+	 * @param $vars = []
+	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkDTO
+	 */
+	public function RenderResource (IQuarkSpecifiedViewResource $resource = null, $vars = [], $dependencies = [], $minimize = true) {
+		return QuarkDTO::ForResource($resource, $vars, $dependencies, $minimize);
+	}
+
+	/**
+	 * @param string $location = ''
+	 * @param string $scope = ''
+	 * @param $vars = []
+	 * @param IQuarkSpecifiedViewResource[] $dependenies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkDTO
+	 */
+	public function RenderServiceWorker ($location = '', $scope = '', $vars = [], $dependencies = [], $minimize = true) {
+		return QuarkDTO::ForServiceWorker($location, $scope, $vars, $dependencies, $minimize);
+	}
+
+	/**
 	 * @param IQuarkService $service = null
 	 * @param bool $query = true
 	 * @param bool $fragment = true
@@ -6202,6 +6227,16 @@ trait QuarkViewBehavior {
 	}
 
 	/**
+	 * @param bool $minimize = true
+	 * @param bool $bundle = false
+	 *
+	 * @return string
+	 */
+	public function ViewModelResourceBundle ($minimize = true, $bundle = false) {
+		return $this->__call('Resources', func_get_args());
+	}
+
+	/**
 	 * @param string $location
 	 * @param IQuarkViewResourceType $type
 	 * @param bool $minimize = true
@@ -6346,21 +6381,23 @@ class QuarkView implements IQuarkContainer {
 		
 		$this->Vars($vars);
 
-		$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
-		
-		if (Quark::Config()->LocalizationByFamily() && !is_file($this->_file))
-			$_file = $this->_file = $this->_localized_theme(Quark::CurrentLanguageFamily());
-		
-		if (!is_file($this->_file))
-			$_file = $this->_file = $this->_localized_theme(self::GENERIC_LOCALIZATION);
-		
-		if (!is_file($this->_file)) {
-			$this->_file = $this->_view->View();
-			$this->_theme = '';
+		if (!($this->_view instanceof IQuarkViewModelInline)) {
+			$_file = $this->_file = $this->_localized_theme($this->_language == QuarkLanguage::ANY ? self::GENERIC_LOCALIZATION : $this->_language);
+
+			if (Quark::Config()->LocalizationByFamily() && !is_file($this->_file))
+				$_file = $this->_file = $this->_localized_theme(Quark::CurrentLanguageFamily());
+
+			if (!is_file($this->_file))
+				$_file = $this->_file = $this->_localized_theme(self::GENERIC_LOCALIZATION);
+
+			if (!is_file($this->_file)) {
+				$this->_file = $this->_view->View();
+				$this->_theme = '';
+			}
+
+			if (!is_file($this->_file))
+				throw new QuarkArchException('Unknown view file ' . $this->_file . ' (' . $_file . '). If you specified your view as IQuarkViewModelInTheme or its inheritor, check that theme structure is correct.');
 		}
-		
-		if (!is_file($this->_file))
-			throw new QuarkArchException('Unknown view file ' . $this->_file . ' (' . $_file . '). If you specified your view as IQuarkViewModelInTheme or its inheritor, check that theme structure is correct.');
 
 		$this->_resources = $resources;
 
@@ -6923,6 +6960,29 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
+	 * @param callable $rendeer = null
+	 * @param $vars = []
+	 * @param IQuarkViewResource[] $resources = []
+	 *
+	 * @return QuarkModel|QuarkGenericViewModelInline
+	 */
+	public static function Inline (callable $rendeer = null, $vars = [], $resources = []) {
+		return new self(new QuarkGenericViewModelInline($renderer, $resources), $vars);
+	}
+
+	/**
+	 * @param IQuarkSpecifiedViewResource $resource = null
+	 * @param $vars = []
+	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkModel|QuarkGenericViewModelInline
+	 */
+	public static function InlineResource (IQuarkSpecifiedViewResource $resource = null, $vars = [], $dependencies = [], $minimize = true) {
+		return new self(QuarkGenericViewModelInline::ForResource($resource, $dependencies, $minimize), $vars);
+	}
+
+	/**
 	 * @param string $source = ''
 	 * @param array|object $data = []
 	 * @param string $prefix = ''
@@ -7104,6 +7164,9 @@ class QuarkView implements IQuarkContainer {
 		if ($this->_view instanceof IQuarkViewModelWithVariableProcessing)
 			$this->_view->ViewVariableProcessing($this->_vars);
 
+		if ($this->_view instanceof IQuarkViewModelInline)
+			return self::TemplateString($this->_view->ViewModelInline(), $this->_vars);
+
 		foreach ($this->_vars as $___name___ => &$___value___)
 			$$___name___ = $___value___;
 
@@ -7160,6 +7223,18 @@ interface IQuarkViewModel extends IQuarkPrimitive {
 	 * @return string
 	 */
 	public function View();
+}
+
+/**
+ * Interface IQuarkViewModelInline
+ *
+ * @package Quark
+ */
+interface IQuarkViewModelInline extends IQuarkViewModel {
+	/**
+	 * @return string
+	 */
+	public function ViewModelInline();
 }
 
 /**
@@ -7852,6 +7927,11 @@ interface IQuarkViewResourceType {
 	public function AfterMinimize($content);
 
 	/**
+	 * @return string
+	 */
+	public function ViewResourceTypeMIME();
+
+	/**
 	 * @param bool $flag
 	 *
 	 * @return mixed
@@ -7866,6 +7946,8 @@ interface IQuarkViewResourceType {
  */
 class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	const MEDIA = 'all|braille|handheld|print|screen|speech|projection|tty|tv';
+
+	const MIME = 'text/css';
 
 	/**
 	 * @var string[] $_media = []
@@ -7930,6 +8012,13 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function ViewResourceTypeMIME () {
+		return self::MIME;
+	}
+
+	/**
 	 * @param bool $flag
 	 *
 	 * @return mixed
@@ -7945,6 +8034,8 @@ class QuarkCSSViewResourceType implements IQuarkViewResourceType {
  * @package Quark
  */
 class QuarkJSViewResourceType implements IQuarkViewResourceType {
+	const MIME = 'application/javascript';
+
 	/**
 	 * @var bool $_defer = false
 	 */
@@ -8025,6 +8116,13 @@ class QuarkJSViewResourceType implements IQuarkViewResourceType {
 	}
 
 	/**
+	 * @return string
+	 */
+	public function ViewResourceTypeMIME () {
+		return self::MIME;
+	}
+
+	/**
 	 * @param bool $flag
 	 *
 	 * @return mixed
@@ -8044,6 +8142,95 @@ interface IQuarkViewFragment {
 	 * @return string
 	 */
 	public function CompileFragment();
+}
+
+/**
+ * Class QuarkGenericViewModelInline
+ *
+ * @package Quark
+ */
+class QuarkGenericViewModelInline implements IQuarkViewModelInline, IQuarkViewModelWithResources {
+	use QuarkViewBehavior;
+	
+	/**
+	 * @var callable $_renderer = null
+	 */
+	private $_renderer = null;
+
+	/**
+	 * @var IQuarkViewResource[] $_resources = []
+	 */
+	private $_resources = array();
+
+	/**
+	 * @param callable $renderer = null
+	 * @param IQuarkViewResource[] $resources = []
+	 */
+	public function __construct (callable $renderer = null, $resources = []) {
+		$this->Renderer($renderer);
+		$this->Resources($resources);
+	}
+
+	/**
+	 * @param callable $renderer = null
+	 *
+	 * @return callable
+	 */
+	public function &Renderer (callable $renderer = null) {
+		if (func_num_args() != 0)
+			$this->_renderer = $renderer;
+		
+		return $this->_renderer;
+	}
+
+	/**
+	 * @param IQuarkViewResource[] $resources = []
+	 *
+	 * @return IQuarkViewResource[]
+	 */
+	public function &Resources ($resources = []) {
+		if (func_num_args() != 0)
+			$this->_resources = $resources;
+
+		return $this->_resources;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function View () { }
+
+	/**
+	 * @return string
+	 */
+	public function ViewModelInline () {
+		$renderer = $this->_renderer;
+
+		return is_callable($renderer) ? $renderer($this) : ($this->_resource ? $this->ViewModelResourceBundle(true, true) : null);
+	}
+
+	/**
+	 * @return IQuarkViewResource[]
+	 */
+	public function ViewResources () {
+		return $this->_resources;
+	}
+
+	/**
+	 * @param IQuarkSpecifiedViewResource $resource = null
+	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkGenericViewModelInline
+	 */
+	public static function ForResource (IQuarkSpecifiedViewResource $resource = null, $dependencies = [], $minimize = true) {
+		return $resource == null ? null : new self(
+			function (QuarkGenericViewModelInline $view) use (&$minimize) {
+				return $view->ViewModelResourceBundle($minimize, true);
+			},
+			array_merge($dependencies, array($resource))
+		);
+	}
 }
 
 /**
@@ -18559,6 +18746,7 @@ class QuarkDTO {
 	const HEADER_SERVER = 'Server';
 	const HEADER_DATE = 'Date';
 	const HEADER_WWW_AUTHENTICATE = 'WWW-Authenticate';
+	const HEADER_SERVICE_WORKER_ALLOWED = 'Service-Worker-Allowed';
 
 	const STATUS_101_SWITCHING_PROTOCOLS = '101 Switching Protocols';
 	const STATUS_200_OK = '200 OK';
@@ -18863,6 +19051,39 @@ class QuarkDTO {
 	public static function ForStatus ($status) {
 		$response = new self();
 		$response->Status($status);
+
+		return $response;
+	}
+
+	/**
+	 * @param IQuarkSpecifiedViewResource $resource = null
+	 * @param $vars = []
+	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForResource (IQuarkSpecifiedViewResource $resource = null, $vars = [], $dependencies = [], $minimize = true) {
+		$response = self::ForResponse();
+		$response->Header(self::HEADER_CONTENT_TYPE, $resource->Type()->ViewResourceTypeMIME());
+		$response->Data(QuarkView::InlineResource($resource, $vars, $dependencies, $minimize));
+
+		return $response;
+	}
+
+	/**
+	 * @param string $location = ''
+	 * @param string $scope = ''
+	 * @param $vars = []
+	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
+	 * @param bool $minimize = true
+	 *
+	 * @return QuarkDTO
+	 */
+	public static function ForServiceWorker ($location = '', $scope = '', $vars = [], $dependencies = [], $minimize = true) {
+		$response = self::ForResource(QuarkGenericViewResource::JS($location), $vars, $dependencies, $minimize);
+
+		$response->Header(self::HEADER_SERVICE_WORKER_ALLOWED, $scope);
 
 		return $response;
 	}

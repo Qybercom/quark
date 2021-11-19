@@ -109,30 +109,6 @@ class WebPushDevice implements IQuarkPushNotificationDevice {
 	 *
 	 * @return bool
 	 */
-	public function NeedUpdate ($id = '') {
-	}
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return bool
-	 */
-	public function IsSame ($id = '') {
-		$target = json_decode($id);
-
-		if ($target == null) return false;
-		if (!self::ValidateID($id)) return false;
-
-		$keys = json_encode($data->keys);
-
-		return $keys == $this->_id->Value();
-	}
-
-	/**
-	 * @param string $id = ''
-	 *
-	 * @return bool
-	 */
 	public static function ValidateID ($id = '') {
 		$data = json_decode($id);
 
@@ -196,9 +172,9 @@ class WebPushDevice implements IQuarkPushNotificationDevice {
 		if ($target == null) return true;
 		if (!self::ValidateID($device->id)) return true;
 
-		$keys = json_encode($data->keys);
+		$keys = json_encode($target->keys);
 		if ($keys == $this->_id->Value())
-			return $data->endpoint != $this->_endpoint;
+			return $target->endpoint != $this->_endpoint;
 
 		return false;
 	}

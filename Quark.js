@@ -102,10 +102,10 @@ Quark.Event = function (events) {
 Quark.ServiceWorker = function () {};
 Quark.ServiceWorker.Event = Quark.ServiceWorker.Event || {};
 Quark.ServiceWorker.Event.Installed = Quark.ServiceWorker.Event.Installed || function () {};
-Quark.ServiceWorker.Event.NotificationIncoming = Quark.ServiceWorker.Event.NotificationIncoming || function () {};
-Quark.ServiceWorker.Event.NotificationDenied = Quark.ServiceWorker.Event.NotificationDenied || function () {};
-Quark.ServiceWorker.Event.NotificationReady = Quark.ServiceWorker.Event.NotificationReady || function () {};
-Quark.ServiceWorker.Event.NotificationClick = Quark.ServiceWorker.Event.NotificationClick || function () {};
+Quark.ServiceWorker.Event.Ready = Quark.ServiceWorker.Event.Ready || function () {};
+Quark.ServiceWorker.Event.Signal = Quark.ServiceWorker.Event.Signal || {};
+Quark.ServiceWorker.Event.Notification = Quark.ServiceWorker.Event.Notification || function () {};
+Quark.ServiceWorker._init = false;
 
 /**
  * @param {string} url
@@ -142,70 +142,85 @@ Quark.ServiceWorker.Ready = function (callback) {
 			Quark.ServiceWorker.Event.Installed(eventInstalled);
 	});
 
-	self.addEventListener('activate', callback);
+	self.addEventListener('activate', function (eventActivated) {
+		if (callback instanceof Function)
+			callback(eventActivated);
 
-	self.addEventListener('push', function (eventPush) {
-		if (Quark.ServiceWorker.Event.NotificationIncoming instanceof Function)
-			Quark.ServiceWorker.Event.NotificationIncoming(eventPush);
-
-		if (!self.Notification || self.Notification.permission !== 'granted') {
-			if (Quark.ServiceWorker.Event.NotificationDenied instanceof Function)
-				Quark.ServiceWorker.Event.NotificationDenied(self.Notification.permission);
-
-			return;
-		}
-
-		var data = eventPush.data.json();
-
-		if (Quark.ServiceWorker.Event.NotificationReady instanceof Function)
-			Quark.ServiceWorker.Event.NotificationReady(data);
-
-		self.registration.notificationclick = function (eventClick) {
-			if (Quark.ServiceWorker.Event.NotificationClick instanceof Function)
-				Quark.ServiceWorker.Event.NotificationClick(eventClick);
-		};
-
-		self.registration.showNotification(data.title, data);
+		if (Quark.ServiceWorker.Event.Ready instanceof Function)
+			Quark.ServiceWorker.Event.Ready(eventActivated);
 	});
+
+	self.addEventListener('message', function (eventMessage) {
+		var data = eventMessage.data;
+
+		if (Quark.ServiceWorker.Event.Signal[data.signal] instanceof Function)
+			Quark.ServiceWorker.Event.Signal[data.signal](data.data, eventMessage);
+	});
+
+	self.addEventListener('push', Quark.Notification._received);
+};
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerGlobalScope/message_event
+ * https://aleemisiaka.com/blog/send-message-from-service-worker-broadcastchannel/
+ * https://stackoverflow.com/a/58765611/2097055
+ *
+ * @param {string} signal
+ * @param {any} data
+ *
+ * @returns {Promise<ReadonlyArray<ClientQueryOptions["type"] extends "window" ? WindowClient : Client>>|Promise<ServiceWorkerRegistration>}
+ */
+Quark.ServiceWorker.SignalSend = function (signal, data) {
+	var message = {
+		signal: signal,
+		data: data
+	};
+
+	/*if (self.serviceWorker != undefined && self.serviceWorker.postMessage instanceof Function) {
+		console.log('test');
+		return self.serviceWorker.postMessage(message);
+	}*/
+
+	return self.clients != undefined
+		? self.clients.matchAll({includeUncontrolled: true, type: 'window'}).then(function (clients) {
+			clients.forEach(function (client) {
+				client.postMessage(message);
+			});
+		})
+		: navigator.serviceWorker.ready.then(registration => {
+			registration.active.postMessage(message);
+		});
+};
+
+/**
+ * https://felixgerschau.com/how-to-communicate-with-service-workers/
+ *
+ * @param {string} signal
+ * @param {Function=} callback
+ */
+Quark.ServiceWorker.SignalReceived = function (signal, callback) {
+	Quark.ServiceWorker.Event.Signal[signal] = callback;
+
+	if (!Quark.ServiceWorker._init) {
+		Quark.ServiceWorker._init = true;
+
+		if (navigator.serviceWorker != undefined)
+			navigator.serviceWorker.onmessage = function (e) {
+				var data = e.data;
+
+				if (Quark.ServiceWorker.Event.Signal[data.signal] instanceof Function)
+					Quark.ServiceWorker.Event.Signal[data.signal](data.data, e);
+			};
+	}
 };
 
 Quark.Notification = function () {};
-
-/**
- * @param {Function=} subscriptionExists
- * @param {Function=} subscriptionAbsent
- * @param {Function=} error
- */
-Quark.Notification.Ready = function (subscriptionExists, subscriptionAbsent, error) {
-	if (navigator.serviceWorker == undefined) return;
-
-	var worker = navigator.serviceWorker.getRegistration();
-	if (worker == undefined) return;
-
-	worker
-		.then(function (registration) {
-			if (registration == undefined) {
-				if (subscriptionAbsent instanceof Function)
-					subscriptionAbsent(registration);
-			}
-			else {
-				registration.pushManager
-					.getSubscription()
-					.then(function (subscription) {
-						if (subscription == undefined) {
-							if (subscriptionAbsent instanceof Function)
-								subscriptionAbsent(registration);
-						}
-						else {
-							if (subscriptionExists instanceof Function)
-								subscriptionExists(registration);
-						}
-					})
-					.catch(error);
-			}
-		})
-		.catch(error);
-};
+Quark.Notification.PreventDisplay = Quark.Notification.PreventDisplay == undefined ? false : Quark.Notification.PreventDisplay;
+Quark.Notification.Event = Quark.Notification.Event || {};
+Quark.Notification.Event.ReceivedRaw = Quark.Notification.Event.ReceivedRaw || function () {};
+Quark.Notification.Event.Denied = Quark.Notification.Event.Denied || function () {};
+Quark.Notification.Event.Received = Quark.Notification.Event.Received || function () {};
+Quark.Notification.Event.Click = Quark.Notification.Event.Click || function () {};
 
 /**
  * @param {string} url
@@ -213,7 +228,7 @@ Quark.Notification.Ready = function (subscriptionExists, subscriptionAbsent, err
  */
 Quark.Notification.RequestPermission = function (url, opt) {
 	opt = opt || {};
-		opt.scope = opt.scope || '/';
+	opt.scope = opt.scope || '/';
 
 	Notification.requestPermission(function (status) {
 		if (status == 'granted') {
@@ -227,6 +242,42 @@ Quark.Notification.RequestPermission = function (url, opt) {
 				opt.denied(status);
 		}
 	});
+};
+
+/**
+ * @param {Function=} subscriptionExists
+ * @param {Function=} subscriptionAbsent
+ * @param {Function=} error
+ */
+Quark.Notification.Subscription = function (exists, absent, error) {
+	if (navigator.serviceWorker == undefined) return;
+
+	var worker = navigator.serviceWorker.getRegistration();
+	if (worker == undefined) return;
+
+	worker
+		.then(function (registration) {
+			if (registration == undefined) {
+				if (absent instanceof Function)
+					absent(registration);
+			}
+			else {
+				registration.pushManager
+					.getSubscription()
+					.then(function (subscription) {
+						if (subscription == undefined) {
+							if (absent instanceof Function)
+								absent(registration);
+						}
+						else {
+							if (exists instanceof Function)
+								exists(registration);
+						}
+					})
+					.catch(error);
+			}
+		})
+		.catch(error);
 };
 
 /**
@@ -245,41 +296,62 @@ Quark.Notification.Subscribe = function (vapidPublic, success, error) {
 };
 
 /**
- * @param {string} appVAPIDPublic
- * @param {string} appURLDeviceRegister
- */
-Quark.Notification.SubscribeAndRegister = function (appVAPIDPublic, appURLDeviceRegister) {
-	Quark.Notification.Subscribe(appVAPIDPublic, function (subscription) {
-		Quark.Request.POSTFormURLEncoded(
-			appURLDeviceRegister,
-			{
-				device: {
-					type: 'web',
-					'id': JSON.stringify(subscription)
-				}
-			}
-		);
-	});
-};
-
-/**
  * https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription/unsubscribe
  *
  * @param {Function=} success
  * @param {Function=} error
  */
 Quark.Notification.Unsubscribe = function (success, error) {
-	navigator.serviceWorker.ready.then(function(registration) {
-		registration.pushManager
-			.getSubscription()
-			.then(function (subscription) {
-				subscription
-					.unsubscribe()
-					.then(success)
-					.catch(error);
-			})
-			.catch(error);
-	});
+	navigator.serviceWorker.ready
+		.then(function (registration) {
+			registration.pushManager
+				.getSubscription()
+				.then(function (subscription) {
+					subscription
+						.unsubscribe()
+						.then(success)
+						.catch(error);
+				})
+				.catch(error);
+		})
+		.catch(error);
+};
+
+/**
+ * @param {Event} eventPush
+ */
+Quark.Notification._received = function (eventPush) {
+	if (Quark.Notification.Event.ReceivedRaw instanceof Function)
+		Quark.Notification.Event.ReceivedRaw(eventPush);
+
+	if (!self.Notification || self.Notification.permission !== 'granted') {
+		if (Quark.Notification.Event.Denied instanceof Function)
+			Quark.Notification.Event.Denied(self.Notification.permission);
+
+		return;
+	}
+
+	var data = eventPush.data.json();
+
+	if (Quark.Notification.Event.Received instanceof Function)
+		Quark.Notification.Event.Received(data);
+
+	Quark.ServiceWorker.SignalSend('__push__', data);
+
+	self.registration.notificationclick = function (eventClick) {
+		if (Quark.Notification.Event.Click instanceof Function)
+			Quark.Notification.Event.Click(eventClick);
+	};
+
+	if (!Quark.Notification.PreventDisplay && !data.preventDisplay)
+		self.registration.showNotification(data.title, data);
+};
+
+/**
+ * @param {Function} callback
+ */
+Quark.Notification.Received = function (callback) {
+	Quark.ServiceWorker.SignalReceived('__push__', callback);
 };
 
 /**

@@ -221,21 +221,14 @@ class WebPush implements IQuarkPushNotificationProvider {
 
 	/**
 	 * @param string $urlDeviceRegistration = ''
-	 * @param IQuarkSpecifiedViewResource $custom = null
+	 * @param string $custom = null
 	 * @param string $scope = '/'
 	 *
 	 * @return QuarkDTO
 	 */
-	public function ServiceWorker ($urlDeviceRegistration = '', IQuarkSpecifiedViewResource $custom = null, $scope = '/') {
-		$response = QuarkDTO::ForResponse();
-
-		$response->Header('Service-Worker-Allowed', $scope);
-		$response->Header(QuarkDTO::HEADER_CONTENT_TYPE, 'application/javascript; charset=UTF-8');
-		$response->Data(new QuarkView(new WebPushServiceWorkerView($custom), array(
-			'keyVAPID' => $this->VAPID(),
-			'urlDeviceRegistration' => $urlDeviceRegistration
-		)));
-
-		return $response;
+	public function ServiceWorker ($urlDeviceRegistration = '', $custom = null, $scope = '/') {
+		return QuarkDTO::ForServiceWorker($custom, $scope, array(), array(
+			new WebPushServiceWorker($this->VAPID(), $urlDeviceRegistration)
+		));
 	}
 }

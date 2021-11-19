@@ -58,7 +58,9 @@ class WebPushDetails implements IQuarkPushNotificationDetails {
 
 		'Actions' => 'actions',
 
-		'Timestamp' => 'timestamp'
+		'Timestamp' => 'timestamp',
+
+		'PreventDisplay' => 'preventDisplay'
 	);
 
 	/**
@@ -71,29 +73,6 @@ class WebPushDetails implements IQuarkPushNotificationDetails {
 		'Badge' => 'Badge',
 		'Sound' => 'Sound'
 	);
-	/*
-  "//": "Visual Options",
-  "body": "<String>",
-  "icon": "<URL String>",
-  "image": "<URL String>",
-  "badge": "<URL String>",
-  "vibrate": "<Array of Integers>",
-  "sound": "<URL String>",
-  "dir": "<String of 'auto' | 'ltr' | 'rtl'>",
-
-  "//": "Behavioral Options",
-  "tag": "<String>",
-  "data": "<Anything>",
-  "requireInteraction": "<boolean>",
-  "renotify": "<Boolean>",
-  "silent": "<Boolean>",
-
-  "//": "Both visual & behavioral options",
-  "actions": "<Array of Strings>",
-
-  "//": "Information Option. No visual affect.",
-  "timestamp": "<Long>"
-	 */
 
 	/**
 	 * @var string $_payload
@@ -219,6 +198,11 @@ class WebPushDetails implements IQuarkPushNotificationDetails {
 	 * @var int $_timestamp
 	 */
 	private $_timestamp;
+
+	/**
+	 * @var bool $_preventDisplay
+	 */
+	private $_preventDisplay;
 
 	/**
 	 * @param IWebPushContentEncoding $encoding = null
@@ -538,12 +522,27 @@ class WebPushDetails implements IQuarkPushNotificationDetails {
 	}
 
 	/**
+	 * @param bool $preventDisplay = false
+	 *
+	 * @return bool
+	 */
+	public function PreventDisplay ($preventDisplay = false) {
+		if (func_num_args() != 0)
+			$this->_preventDisplay = $preventDisplay;
+
+		return $this->_preventDisplay;
+	}
+
+	/**
 	 * @param object|array $payload
 	 * @param IQuarkPushNotificationDevice|WebPushDevice $device = null
 	 *
 	 * @return mixed
 	 */
 	public function PushNotificationDetailsData ($payload, IQuarkPushNotificationDevice $device = null) {
+		if ($this->_data === null && $payload !== null)
+			$this->Data($payload);
+
 		$payload = null;
 		$value = null;
 		$buffer = null;
@@ -553,7 +552,7 @@ class WebPushDetails implements IQuarkPushNotificationDetails {
 
 			$value = $this->$property();
 
-			if (is_array($value)) {
+			if (is_array($value) && $property != 'Data') {
 				$buffer = null;
 
 				foreach ($value as $i => &$item) {
