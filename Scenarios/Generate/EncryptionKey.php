@@ -31,7 +31,7 @@ class EncryptionKey implements IQuarkTask {
 			$algorithm = new EncryptionAlgorithmEC();
 
 		if ($algorithm == null) {
-			echo $this->ShellLineWarning('Unknown encryption algorithm ' . $argv[3] . '. Can be one of [ec, rsa, dsa, dh]');
+			echo $this->ShellLineWarning('Unknown encryption algorithm "' . $argv[3] . '". Can be one of [ec, rsa, dsa, dh]', true);
 
 			return;
 		}
@@ -40,7 +40,7 @@ class EncryptionKey implements IQuarkTask {
 			$curves = EncryptionAlgorithmEC::CurveList();
 
 			if (!in_array($argv[4], $curves)) {
-				echo $this->ShellLineWarning('Unknown Elliptic Curve name ' . $argv[4] . '. Can be one of [' . implode(', ', $curves) . ']');
+				echo $this->ShellLineWarning('Unknown Elliptic Curve name "' . $argv[4] . '". Can be one of [' . implode(', ', $curves) . ']', true);
 
 				return;
 			}
@@ -48,7 +48,7 @@ class EncryptionKey implements IQuarkTask {
 			$key = EncryptionAlgorithmEC::KeyGenerate($argv[4]);
 
 			if ($key == null) {
-				echo $this->ShellLineWarning('Can not generate key for curve ' . $argv[4]);
+				echo $this->ShellLineWarning('Can not generate key for curve "' . $argv[4] . '"', true);
 
 				return;
 			}
@@ -70,8 +70,8 @@ class EncryptionKey implements IQuarkTask {
 					$file->Content($pemOut);
 
 					echo $file->SaveContent()
-						? $this->ShellLineSuccess('Successfully generated and saved key ' . $algorithmType . ':' . $argv[4] . ' to ' . $argv[5])
-						: $this->ShellLineError('An error occurred during saving key ' . $algorithmType . ':' . $argv[4] . ' to ' . $argv[5]);
+						? $this->ShellLineSuccess('Successfully generated and saved key ' . $algorithmType . ':' . $argv[4] . ' to ' . $argv[5], true)
+						: $this->ShellLineError('An error occurred during saving key ' . $algorithmType . ':' . $argv[4] . ' to ' . $argv[5], true);
 				}
 				else {
 					echo 'Skip saving';
