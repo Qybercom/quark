@@ -12992,7 +12992,14 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 				$this->_date->setTimestamp((int)$value);
 				$this->_fromTimestamp = true;
 			}
-			elseif (is_string($value)) $this->_date = new \DateTime($value);
+			elseif (is_string($value)) {
+				try {
+					$this->_date = new \DateTime($value);
+				}
+				catch (\Exception $e) {
+					Quark::Log('Can not parse date from given string "' . $value . '". DateTime error: ' . $e->getMessage(), Quark::LOG_WARN);
+				}
+			}
 			else $this->_isNull = true;
 		}
 
