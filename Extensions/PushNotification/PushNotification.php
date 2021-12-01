@@ -118,10 +118,11 @@ class PushNotification implements IQuarkExtension {
 
 	/**
 	 * @param QuarkDate $ageEdge = null
+	 * @param bool $autoReset = true
 	 *
 	 * @return PushNotificationResult[]
 	 */
-	public function Send (QuarkDate $ageEdge = null) {
+	public function Send (QuarkDate $ageEdge = null, $autoReset = true) {
 		$out = array();
 
 		$config = null;
@@ -148,11 +149,35 @@ class PushNotification implements IQuarkExtension {
 			$detailsBuffer->PushNotificationDetailsFromDetails($this->_details);
 
 			$out[$configKey] = $provider->PushNotificationProviderSend($detailsBuffer, $this->_payload);
+
+			if ($autoReset)
+				$provider->PushNotificationProviderReset();
 		}
 
 		unset($i, $device, $details, $detailsBuffer, $provider, $config);
 
 		return $out;
+	}
+
+	/**
+	 * @return PushNotification
+	 */
+	public function Reset () {
+		foreach ($this->_queue as $configKey => &$details) {
+			$config = Quark::Config()->Extension($configKey);
+
+			if (!($config instanceof PushNotificationConfig)) {
+				Quark::Log('[PushNotification] Config key "' . $configKey . '" is not an IQuarkPushNotificationConfig', Quark::LOG_WARN);
+				continue;
+			}
+
+			$provider = $config->Provider();
+			$provider->PushNotificationProviderReset();
+		}
+
+		unset($configKey, $details, $config, $provider);
+
+		return $this;
 	}
 
 	/**
