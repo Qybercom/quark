@@ -245,8 +245,8 @@ Quark.Notification.RequestPermission = function (url, opt) {
 };
 
 /**
- * @param {Function=} subscriptionExists
- * @param {Function=} subscriptionAbsent
+ * @param {Function=} exists
+ * @param {Function=} absent
  * @param {Function=} error
  */
 Quark.Notification.Subscription = function (exists, absent, error) {
@@ -965,4 +965,20 @@ Quark.Print = function (url, windowName, windowFeatures, windowCloseTimeout) {
 			windowTarget.close();
 		}, windowCloseTimeout);
 	}, true);
+};
+
+Quark.Clipboard = {};
+
+/**
+ * @param {any} value
+ */
+Quark.Clipboard.Copy = function (value) {
+	var buffer = document.createElement('textarea');
+	buffer.value = value;
+	document.body.appendChild(buffer);
+
+	buffer.select();
+
+	document.execCommand('copy');
+	//document.body.removeChild(buffer);
 };

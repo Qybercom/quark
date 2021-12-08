@@ -209,7 +209,7 @@ class Session implements IQuarkAuthorizationProvider, IQuarkModel, IQuarkModelWi
 		if ($session == null) return null;
 
 		if ($commit) {
-			$session->session = json_encode($data);
+			$session->session = json_encode($data, JSON_UNESCAPED_UNICODE);
 
 			if (!$session->Save()) return null;
 		}

@@ -186,18 +186,19 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return array
 	 */
 	public function Find (IQuarkModel $model, $criteria, $options = []) {
-		$records = $this->_sql->Select($model, $criteria, $options);
-		if (!$records) return array();
-
 		$output = array();
-		$fields = (object)$model->Fields();
+		$records = $this->_sql->Select($model, $criteria, $options);
 
-		foreach ($records as $record) {
-			foreach ($record as $key => &$value)
-				if (isset($fields->$key) && ($fields->$key instanceof QuarkCollection || ($fields->$key instanceof IQuarkModel && !($fields->$key instanceof QuarkLocalizedString)) || is_array($fields->$key)) && QuarkJSONIOProcessor::IsValid($value))
-					$value = json_decode($value);
+		if ($records) {
+			$fields = (object)$model->Fields();
 
-			$output[] = $record;
+			foreach ($records as $record) {
+				foreach ($record as $key => &$value)
+					if (isset($fields->$key) && ($fields->$key instanceof QuarkCollection || ($fields->$key instanceof IQuarkModel && !($fields->$key instanceof QuarkLocalizedString)) || is_array($fields->$key)) && QuarkJSONIOProcessor::IsValid($value))
+						$value = json_decode($value);
+
+				$output[] = $record;
+			}
 		}
 
 		return $output;

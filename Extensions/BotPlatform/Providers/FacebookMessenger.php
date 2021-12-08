@@ -43,6 +43,7 @@ class FacebookMessenger implements IQuarkBotPlatformProvider {
 	 * @return bool
 	 */
 	public function BotValidation (QuarkDTO $request) {
+		// TODO: maybe need JSON_UNESCAPED_UNICODE
 		return $request->Header(self::SIGNATURE_HEADER) == 'sha1=' . hash_hmac('sha1', json_encode($request->Data()), $this->_appSecret);
 	}
 

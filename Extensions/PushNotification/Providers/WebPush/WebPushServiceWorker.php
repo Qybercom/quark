@@ -42,6 +42,7 @@ class WebPushServiceWorker implements IQuarkViewResource, IQuarkViewResourceWith
 	public function __construct ($keyVAPID = '', $urlDeviceRegister = '', $preventDisplay = false) {
 		$this->KeyVAPID($keyVAPID);
 		$this->URLDeviceRegister($urlDeviceRegister);
+		$this->PreventDisplay($preventDisplay);
 	}
 
 	/**

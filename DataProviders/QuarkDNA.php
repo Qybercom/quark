@@ -75,7 +75,7 @@ class QuarkDNA implements IQuarkDataProvider, IQuarkGuIDSynchronizer {
 			 */
 			$db->$name = $collection->Extract();
 			
-		$this->_storage->Content(json_encode($db));
+		$this->_storage->Content(json_encode($db, JSON_UNESCAPED_UNICODE));
 
 		if ($this->_uri->fragment != self::CONNECTION_EXTERNAL)
 			return $this->_storage->SaveContent();

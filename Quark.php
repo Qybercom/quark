@@ -292,6 +292,20 @@ class Quark {
 	}
 
 	/**
+	 * @param string $path
+	 * @param bool $full = true
+	 *
+	 * @return string
+	 */
+	public static function WebLocationSigned ($path, $full = true) {
+		$uri = self::WebLocation($path, $full);
+
+		return $uri . QuarkURI::BuildQuery($uri, array(
+			QuarkDTO::KEY_SIGNATURE => QuarkSession::Current() ? QuarkSession::Current()->Signature() : ''
+		));
+	}
+
+	/**
 	 * @param string $url
 	 *
 	 * @return string
@@ -6742,8 +6756,8 @@ class QuarkView implements IQuarkContainer {
 	 */
 	private function _link ($uri, $signed = false) {
 		return $uri . ($signed ? QuarkURI::BuildQuery($uri, array(
-				QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
-			)) : '');
+			QuarkDTO::KEY_SIGNATURE => $this->Signature(false)
+		)) : '');
 	}
 
 	/**
@@ -7806,7 +7820,7 @@ class QuarkProxyJSViewResource implements IQuarkViewResource, IQuarkLocalViewRes
 	 * @param $value
 	 */
 	public function __construct ($var, $value) {
-		$this->_code = 'var ' . $var . '=' . \json_encode($value) . ';';
+		$this->_code = 'var ' . $var . '=' . \json_encode($value, JSON_UNESCAPED_UNICODE) . ';';
 	}
 
 	/**
@@ -9681,6 +9695,22 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
+	 * @param IQuarkLinkedModel $model
+	 * @param int $page = 1
+	 * @param int $pages = 1
+	 *
+	 * @return QuarkCollection|IQuarkModel
+	 */
+	public static function Empty (IQuarkLinkedModel $model, $page = 1, $pages = 1) {
+		$out = new self($model);
+
+		$out->Page($page);
+		$out->Pages($pages);
+
+		return $out;
+	}
+
+	/**
 	 * Reset QuarkCollection
 	 */
 	public function __destruct () {
@@ -11246,15 +11276,13 @@ class QuarkModel implements IQuarkContainer {
 		if (!isset($options[self::OPTION_FORCE_DEFINITION]))
 			$options[self::OPTION_FORCE_DEFINITION] = true;
 		
-		$model = self::_export($model, $options);
-
-		if (!$model) return false;
-		
 		$ok = $model instanceof IQuarkModelWithBeforeSave
 			? $model->BeforeSave($options)
 			: true;
 
-		return ($ok || $ok === null) ? self::_provider($model)->Update($model, $criteria, $options) : false;
+		$model = self::_export($model, $options);
+
+		return $model && ($ok || $ok === null) ? self::_provider($model)->Update($model, $criteria, $options) : false;
 	}
 
 	/**
@@ -12582,6 +12610,15 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	}
 
 	/**
+	 * @param $data = []
+	 *
+	 * @return string
+	 */
+	public function CurrentTemplated ($data = []) {
+		return QuarkView::TemplateString($this->Current(), $data);
+	}
+
+	/**
 	 * @param string $value = ''
 	 *
 	 * @return string
@@ -12594,7 +12631,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 * @return string
 	 */
 	public function ControlValue () {
-		return base64_encode(json_encode($this->values));
+		return base64_encode(json_encode($this->values, JSON_UNESCAPED_UNICODE));
 	}
 
 	/**
@@ -12700,7 +12737,7 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 * @return mixed
 	 */
 	public function Unlink () {
-		return json_encode($this->values);
+		return json_encode($this->values, JSON_UNESCAPED_UNICODE);
 	}
 
 	/**
@@ -22853,7 +22890,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	 *
 	 * @return string
 	 */
-	public function Encode ($data) { return \json_encode($data); }
+	public function Encode ($data) { return \json_encode($data, JSON_UNESCAPED_UNICODE); } // TODO: add escaping control
 
 	/**
 	 * @param $raw
@@ -27028,6 +27065,7 @@ class QuarkSQL {
 	const OPTION_QUERY_TEST = 'option.query.test';
 	const OPTION_QUERY_DEBUG = 'option.query.debug';
 	const OPTION_QUERY_REVIEWER = 'option.query.reviewer';
+	const OPTION_RESULT_REVIEWER = 'option.result.reviewer';
 	const OPTION_FIELDS = '__sql_fields__';
 	const OPTION_JOIN = 'option.join';
 	const OPTION_GROUP_BY = 'option.group_by';
@@ -27195,6 +27233,11 @@ class QuarkSQL {
 		if (isset($options[self::OPTION_QUERY_DEBUG]) && $options[self::OPTION_QUERY_DEBUG])
 			Quark::Log('[QuarkSQL] Query: "' . $query . '"');
 
+		if (isset($options[self::OPTION_RESULT_REVIEWER])) {
+			$reviewer = $options[self::OPTION_RESULT_REVIEWER];
+			$out = is_callable($reviewer) ? $reviewer($out) : $out;
+		}
+
 		return $out;
 	}
 
@@ -27263,11 +27306,11 @@ class QuarkSQL {
 		// TODO: need refactor
 		//if ($value === null) $value = self::NULL;
 		// TODO: investigate, seems like QuarkCollection on this step is not used. UPD: used, but it's weird
-		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract());
+		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract(), JSON_UNESCAPED_UNICODE);
 		// TODO: investigate, maybe need additional handling of nested models
 		/*if ($value instanceof IQuarkModel) $value = new QuarkModel($value);
 		if ($value instanceof QuarkModel) $value = json_encode($value->Extract());*/
-		if (is_array($value)) $value = json_encode($value);
+		if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE);
 		if (!is_scalar($value)) $value = null;
 		if (is_bool($value))
 			$value = $value ? 1 : 0;
@@ -27590,6 +27633,23 @@ class QuarkSQL {
 		//$like = str_replace('_',  '\_"', $like);
 
 		return $like;
+	}
+
+	/**
+	 * @info incorrect behavior someimes
+	 *
+	 * @param string $like = ''
+	 *
+	 * @return array
+	 */
+	public static function RegexUnicode ($like = '') {
+		$like = trim(json_encode($like), '"');
+		$like = ltrim(str_replace('\\u', "\0" . '\\u', $like)) . "\0";
+		$like = str_replace('\\', '\\', $like);
+
+		return array(
+			'$regex' => '/.*' . $like . '.*/'
+		);
 	}
 }
 
