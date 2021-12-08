@@ -980,5 +980,5 @@ Quark.Clipboard.Copy = function (value) {
 	buffer.select();
 
 	document.execCommand('copy');
-	//document.body.removeChild(buffer);
+	document.body.removeChild(buffer);
 };
