@@ -7,6 +7,7 @@ use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
+use Quark\QuarkKeyValuePair;
 
 /**
  * Class SendGrid
@@ -49,8 +50,10 @@ class SendGrid implements IQuarkExtension {
 	 */
 	public function API ($url = '', $data = [], $method = QuarkDTO::METHOD_POST) {
 		$request = QuarkDTO::ForRequest($method, new QuarkJSONIOProcessor());
+		$request->Authorization(new QuarkKeyValuePair('Bearer', $this->_config->APIKey()));
+		$request->Data($data);
 
-		return QuarkHTTPClient::To(self::URL_API . $url, $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+		return QuarkHTTPClient::To(self::URL_API . $url, $request, new QuarkDTO(new QuarkJSONIOProcessor()), null, 10, true, true);
 	}
 
 	/**
@@ -67,15 +70,23 @@ class SendGrid implements IQuarkExtension {
 	 * @return bool
 	 */
 	public function MailSend ($template = '', $emails = []) {
-		$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-		$request->Data(array(
+		$data = array(
 			'template_id' => $template,
-			'emails' => $emails
-		));
+			'from' => array(
+				'email' => $this->_config->FromAddress()
+			),
+			'personalizations' => array()
+		);
 
-		$response = $this->API('/marketing/test/send_email', $request, new QuarkDTO(new QuarkJSONIOProcessor()));
+		foreach ($emails as $i => &$email)
+			$data['personalizations'][] = array('to' => array(array('email' => $email)));
 
-		if ($response->StatusCode() == 400) {
+		if ($this->_config->FromName() != '')
+			$data['from']['name'] = $this->_config->FromName();
+
+		$response = $this->API('/mail/send', $data);
+
+		if ($response->StatusCode() != 200 ) {
 			$this->_errors = $response->errors;
 
 			return false;
