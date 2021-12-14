@@ -731,8 +731,7 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 		};
 
 	opt = opt || {};
-		opt.localize = opt.localize !== undefined ? opt.localize : false;
-		opt.labels = opt.labels !== undefined ? opt.labels : {'*': 'Any'};
+	opt.labels = opt.labels !== undefined ? opt.labels : {'*': 'Any'};
 
 	/**
 	 * @param {string} name
@@ -760,19 +759,31 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 	 * @private
 	 */
 	that._nameQuery = function (name, postfix) {
-		return '[name="' + that._name(name, postfix) + '"]';
+		return '[data-attr-name="' + that._name(name, postfix) + '"]';
 	};
 
 	/**
-	 * @param elem
-	 * @param {string} name
+	 * @param {*} elem
 	 * @param {string=} postfix
 	 *
 	 * @return {string}
 	 *
 	 * @private
 	 */
-	that._field = function (elem, name, postfix) {
+	that._elemName = function (elem, postfix) {
+		return elem.attr('data-attr-name').replace(new RegExp(postfix + '(]?)$'), '$1');
+	};
+
+	/**
+	 * @param {*} elem
+	 * @param {string} name
+	 * @param {string=} postfix
+	 *
+	 * @return {*}
+	 *
+	 * @private
+	 */
+	that._sibling = function (elem, name, postfix) {
 		return elem.parent().find(that._nameQuery(name, postfix));
 	};
 
@@ -780,102 +791,103 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 
 	that.Elem.each(function () {
 		var elem = $(this),
-			val = elem.val(),
-			language = '',
-			languages = elem.attr('quark-languages'),
-			selected = elem.attr('quark-language'),
-			selected_family = selected == undefined ? null : selected.split('-')[0],
-			select = '<select class="quark-input quark-language-select" name="' + that._name(elem.attr('name'), '_language') + '">',
-			json = _decode(val),
+			elem_name = elem.attr('name'),
+			elem_val = elem.val(),
+			elem_val_json = _decode(elem_val),
+			elem_localized = elem.clone(),
+			elem_localized_name = that._name(elem_name, '_localized'),
+			elem_language_name = that._name(elem_name, '_language'),
+			elem_language = '<select class="quark-input quark-language-select" name="' + elem_language_name + '" data-attr-name="' + elem_language_name + '">',
+			language_list = elem.attr('quark-languages'),
+			language_selected = elem.attr('quark-language'),
+			language_selected_family = language_selected == undefined ? null : language_selected.split('-')[0],
+			language_selected_flag = false,
 			i = 0;
 
-		languages = languages === undefined ? [] : languages.split(',');
+		elem.attr('data-attr-name', elem_name);
 
-		if (languages.indexOf('*') === -1)
-			languages.unshift('*');
+		language_list = language_list === undefined ? [] : language_list.split(',');
 
-		while (i < languages.length) {
-			select += '<option value="' + languages[i] + '"' + ((json[selected] !== undefined && languages[i] === selected) || (json[selected_family] !== undefined && languages[i] === selected_family) || languages[i] === Quark.Language || languages[i] === Quark.LanguageFamily ? ' selected="selected"' : '') + '>'
-					+ (opt.labels[languages[i]] !== undefined ? opt.labels[languages[i]] : languages[i])
-					+ '</option>';
+		if (language_list.indexOf('*') === -1)
+			language_list.unshift('*');
+
+		while (i < language_list.length) {
+			language_selected_flag = false
+				|| (elem_val_json[language_selected] !== undefined && language_list[i] === language_selected)
+				|| (elem_val_json[language_selected_family] !== undefined && language_list[i] === language_selected_family)
+				|| language_list[i] === Quark.Language
+				|| language_list[i] === Quark.LanguageFamily;
+
+			elem_language += ''
+				+ '<option value="' + language_list[i] + '"' + (language_selected_flag ? ' selected="selected"' : '') + '>'
+				+ (opt.labels[language_list[i]] !== undefined ? opt.labels[language_list[i]] : language_list[i])
+				+ '</option>';
 
 			i++;
 		}
 
-		select += '</select>';
+		elem_language += '</select>';
 
-		var copy = elem.clone();
-		copy
-			.attr('name', that._name(copy.attr('name'), '_localized'))
-			.val(json !== null && (json[selected] !== undefined ? json[selected] : (json[selected_family] !== undefined ? json[selected_family] : (json['*'] !== undefined ? json['*'] : ''))));
+		elem_localized
+			.attr('name', elem_localized_name)
+			.attr('data-attr-name', elem_localized_name)
+			.addClass('quark-localized-display')
+			.val(elem_val_json !== null
+				&& (elem_val_json[language_selected] !== undefined
+						? elem_val_json[language_selected]
+						: (elem_val_json[language_selected_family] !== undefined
+								? elem_val_json[language_selected_family]
+								: (elem_val_json['*'] !== undefined
+										? elem_val_json['*']
+										: ''
+								)
+						)
+				)
+			);
 
 		elem
 			.css('display', 'none')
-			.after(select)
-			.after(copy);
+			.after(elem_language)
+			.after(elem_localized);
+	});
 
-		elem.parent()
-			.find(that._nameQuery(elem.attr('name'), '_localized'))
-			.on('change', function () {
-				var localized = $(this),
-					name = localized.attr('name').replace(/_localized(]?)$/, '$1'),
-					orig = localized.parent().find('[name="' + name + '"]'),
-					lang = that._field(orig, name, '_language'),
-					json = _decode(orig.val()),
-					selected = lang.val();
+	$(document).on('change', '.quark-localized-display', function () {
+		var elem_localized = $(this),
+			elem_localized_val = elem_localized.val(),
+			elem_name = that._elemName(elem_localized, '_localized'),
+			elem = that._sibling(elem_localized, elem_name),
+			elem_val = elem.val(),
+			elem_val_json = _decode(elem_val),
+			elem_language = that._sibling(elem_localized, elem_name, '_language'),
+			elem_language_val = elem_language.val();
 
-				if (json == null)
-					json = {};
+		if (elem_val_json == null)
+			elem_val_json = {};
 
-				json[selected] = localized.val();
-				var val = _encode(json);
+		elem_val_json[elem_language_val] = elem_localized_val;
+		elem_val = _encode(elem_val_json);
 
-				if (opt.change instanceof Function)
-					opt.change(json[selected], json ,val);
+		if (opt.change instanceof Function)
+			opt.change(elem_val_json[elem_language_val], elem_val_json, elem_val);
 
-				orig.val(val);
-			});
+		elem.val(elem_val);
 	});
 
 	$(document).on('change', 'select.quark-language-select', function () {
-		var lang = $(this),
-			name = lang.attr('name').replace(/_language(]?)$/, '$1'),
-			orig = lang.parent().find('[name="' + name + '"]'),
-			display = that._field(lang, orig.attr('name'), '_localized'),
-			json = _decode(orig.val()),
-			selected = lang.val(),
-			val = json !== null && json[selected] !== undefined ? json[selected] : '';
+		var elem_language = $(this),
+			elem_language_val = elem_language.val(),
+			elem_name = that._elemName(elem_language, '_language'),
+			elem = that._sibling(elem_language, elem_name),
+			elem_val = elem.val(),
+			elem_val_json = _decode(elem_val),
+			elem_localized = that._sibling(elem_language, elem_name, '_localized'),
+			elem_localized_val = elem_val_json !== null && elem_val_json[elem_language_val] !== undefined ? elem_val_json[elem_language_val] : '';
 
 		if (opt.localize instanceof Function)
-			opt.localize(selected, val);
+			opt.localize(elem_language_val, elem_localized_val);
 
-		display.val(val);
+		elem_localized.val(elem_localized_val);
 	});
-
-	that.Localize = function (language, value, selector) {
-		$(selector || that.Elem).each(function () {
-			var elem = $(this),
-				name = elem.attr('name'),
-				lang = that._field(elem, name, '_language'),
-				display = that._field(elem, name, '_localized'),
-				json = _decode(elem.val());
-
-			language = language || lang.val();
-
-			if (value !== undefined) {
-				json[language] = value;
-				elem.val(_encode(json));
-			}
-
-			var val = json !== null && json[language] !== undefined ? json[language] : '';
-
-			if (opt.localize instanceof Function && opt.localizeSelf)
-				opt.localize(language, val);
-
-			lang.val(language);
-			display.val(val);
-		});
-	};
 };
 
 /**
