@@ -86,7 +86,7 @@ class SendGrid implements IQuarkExtension {
 
 		$response = $this->API('/mail/send', $data);
 
-		if ($response->StatusCode() != 200 ) {
+		if ($response->StatusCode() != 202) {
 			$this->_errors = $response->errors;
 
 			return false;

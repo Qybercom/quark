@@ -27474,9 +27474,8 @@ class QuarkSQL {
 		$query_fields = '';
 
 		if (isset($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
-		elseif (isset($options[self::OPTION_ALIAS])) $query_fields = $options[self::OPTION_ALIAS] . '.*'; // TODO: need refactor
 		else {
-			$query_fields = '*';
+			$query_fields = (isset($options[self::OPTION_ALIAS]) ? $options[self::OPTION_ALIAS] . '.' : '') . '*';
 
 			if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS])) {
 				$fields = array();
