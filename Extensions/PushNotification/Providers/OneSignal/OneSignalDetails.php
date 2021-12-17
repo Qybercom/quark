@@ -66,6 +66,8 @@ class OneSignalDetails implements IQuarkPushNotificationDetails {
 
 		$contents = $this->LocalizedString($this->Contents());
 		if ($contents != null) $payload['contents'] = $contents;
+
+		return $payload;
 	}
 
 	/**
