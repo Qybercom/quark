@@ -29,4 +29,22 @@ class MicrosoftWNSDevice implements IQuarkPushNotificationDevice {
 	public function PushNotificationDeviceValidate (PushNotificationDevice &$device) {
 		return QuarkField::URI($device->id);
 	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDeviceCriteriaSQL (PushNotificationDevice &$device) {
+		// TODO: Implement PushNotificationDeviceCriteriaSQL() method.
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return bool
+	 */
+	public function PushNotificationDeviceUpdateNeed (PushNotificationDevice &$device) {
+		// TODO: Implement PushNotificationDeviceUpdateNeed() method.
+	}
 }

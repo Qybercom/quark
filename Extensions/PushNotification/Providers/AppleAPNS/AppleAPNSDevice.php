@@ -27,4 +27,22 @@ class AppleAPNSDevice implements IQuarkPushNotificationDevice {
 	public function PushNotificationDeviceValidate (PushNotificationDevice &$device) {
 		return preg_match('#^[a-f0-9\<\> ]+$#Uis', $device->id) !== false;
 	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return mixed
+	 */
+	public function PushNotificationDeviceCriteriaSQL (PushNotificationDevice &$device) {
+		// TODO: Implement PushNotificationDeviceCriteriaSQL() method.
+	}
+
+	/**
+	 * @param PushNotificationDevice $device
+	 *
+	 * @return bool
+	 */
+	public function PushNotificationDeviceUpdateNeed (PushNotificationDevice &$device) {
+		// TODO: Implement PushNotificationDeviceUpdateNeed() method.
+	}
 }
