@@ -146,7 +146,8 @@ class PushNotification implements IQuarkExtension {
 					$provider->PushNotificationProviderDeviceAdd($device);
 
 			$detailsBuffer = $details == null ? $provider->PushNotificationProviderDetails() : clone $details;
-			$detailsBuffer->PushNotificationDetailsFromDetails($this->_details);
+			if ($this->_details != null)
+				$detailsBuffer->PushNotificationDetailsFromDetails($this->_details);
 
 			$out[$configKey] = $provider->PushNotificationProviderSend($detailsBuffer, $this->_payload);
 
