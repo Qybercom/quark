@@ -29,11 +29,6 @@ class OneSignal implements IQuarkPushNotificationProvider {
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails $_details
-	 */
-	private $_details;
-
-	/**
 	 * @var string $_appID = ''
 	 */
 	private $_appID = '';
@@ -137,7 +132,7 @@ class OneSignal implements IQuarkPushNotificationProvider {
 
 			while ($i < $rounds) {
 				$request = QuarkDTO::ForPOST(new QuarkJSONIOProcessor());
-				$request->Data($this->_details->PushNotificationDetailsData(array(
+				$request->Data($details->PushNotificationDetailsData(array(
 					'app_id' => $this->_appID,
 					'include_player_ids' => array_slice($devices, $i * self::BULK_MAX, self::BULK_MAX),
 				)));
@@ -169,7 +164,6 @@ class OneSignal implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PushNotificationProviderReset () {
-		$this->_details = null;
 		$this->_devices = array();
 	}
 }

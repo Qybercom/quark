@@ -30,11 +30,6 @@ class GoogleFCM implements IQuarkPushNotificationProvider {
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails $_details
-	 */
-	private $_details;
-
-	/**
 	 * @var string $_apiKey = ''
 	 */
 	private $_apiKey = '';
@@ -121,7 +116,7 @@ class GoogleFCM implements IQuarkPushNotificationProvider {
 			$i = 0;
 
 			while ($i < $rounds) {
-				$data = $this->_details->PushNotificationDetailsData(array(
+				$data = $details->PushNotificationDetailsData(array(
 					'content_available' => true,
 					'registration_ids' => array_slice($this->_devices, $i * self::BULK_MAX, self::BULK_MAX),
 					'data' => $payload
@@ -175,7 +170,6 @@ class GoogleFCM implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PushNotificationProviderReset () {
-		$this->_details = null;
 		$this->_devices = array();
 	}
 }

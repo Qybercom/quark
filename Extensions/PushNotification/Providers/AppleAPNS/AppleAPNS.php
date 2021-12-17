@@ -32,11 +32,6 @@ class AppleAPNS implements IQuarkPushNotificationProvider {
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails $_details
-	 */
-	private $_details;
-
-	/**
 	 * @var QuarkCertificate $_certificate
 	 */
 	private $_certificate;
@@ -170,7 +165,7 @@ class AppleAPNS implements IQuarkPushNotificationProvider {
 			return $out;
 		}
 
-		$payloadOut = $this->_processor->Encode($this->_details->PushNotificationDetailsData($payload));
+		$payloadOut = $this->_processor->Encode($details->PushNotificationDetailsData($payload));
 
 		usort($this->_devices, function ($a, $b) {
 			$date = $b->date instanceof QuarkModel ? $b->date->Model() : $b->date;
@@ -213,7 +208,6 @@ class AppleAPNS implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PushNotificationProviderReset () {
-		$this->_details = null;
 		$this->_devices = array();
 	}
 

@@ -39,11 +39,6 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	private $_devices = array();
 
 	/**
-	 * @var IQuarkPushNotificationDetails $_details
-	 */
-	private $_details;
-
-	/**
 	 * @var string $_appID = ''
 	 */
 	private $_appID = '';
@@ -142,7 +137,7 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 			$response = null;
 
 			foreach ($this->_devices as $i => &$device) {
-				$request = $this->_details->PushNotificationDetailsData($payload, $device->ToDevice(new MicrosoftWNSDevice()));
+				$request = $details->PushNotificationDetailsData($payload, $device->ToDevice(new MicrosoftWNSDevice()));
 				$request->Header(QuarkDTO::HEADER_AUTHORIZATION, 'Bearer ' . $token);
 
 				$response = QuarkHTTPClient::To($device->id, $request, new QuarkDTO(new QuarkPlainIOProcessor()));
@@ -161,7 +156,6 @@ class MicrosoftWNS implements IQuarkPushNotificationProvider {
 	 * @return mixed
 	 */
 	public function PushNotificationProviderReset () {
-		$this->_details = null;
 		$this->_devices = array();
 	}
 
