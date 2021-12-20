@@ -21877,6 +21877,19 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @param string $location = ''
+	 *
+	 * @return bool
+	 */
+	public function Rename ($location = '') {
+		if (!rename($this->Location(), $location)) return false;
+
+		$this->Location($location);
+
+		return true;
+	}
+
+	/**
 	 * @return bool
 	 */
 	public function DeleteFromDisk () {

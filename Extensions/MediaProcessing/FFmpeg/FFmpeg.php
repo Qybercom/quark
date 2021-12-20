@@ -111,6 +111,35 @@ class FFmpeg implements IQuarkExtension {
 	}
 
 	/**
+	 * https://superuser.com/a/704118/568233
+	 *
+	 * @param QuarkFile $file = null
+	 * @param string $start = '0'
+	 * @param string $duration = '00:00:01'
+	 * @param string $format = 'mp4'
+	 *
+	 * @return QuarkFile
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function Fragment (QuarkFile $file = null, $start = '0', $duration = '00:00:01', $format = 'mp4') {
+		if ($file == null) return null;
+
+		$tmp = Quark::TempFile('ffmpeg_fragment');
+		$tmp->Rename($tmp->name . '.' . $format, true);
+
+		$command = '-y -ss ' . $start . ' -t ' . $duration . ' -i "' . $file->Location() . '" -c copy -v quiet ' . $tmp->Location();
+
+		$output = '';
+		if (!$this->Command($command, $output, $status)) {
+			Quark::Log('[FFmpeg] Can not get fragment from "' . $file->Location() . '". Command: ' . $command, Quark::LOG_WARN);
+			return null;
+		}
+
+		return $tmp;
+	}
+
+	/**
 	 * https://ffmpeg.org/ffmpeg.html#Filtering
 	 * https://networking.ringofsaturn.com/Unix/extractthumbnail.php
 	 * https://trac.ffmpeg.org/wiki/Scaling
@@ -126,6 +155,8 @@ class FFmpeg implements IQuarkExtension {
 	 * @throws QuarkArchException
 	 */
 	public function Frame (QuarkFile $file = null, $moment = '0', $format = 'apng', $width = -1, $height = -1) {
+		if ($file == null) return null;
+
 		$tmp = Quark::TempFile('ffmpeg_frame');
 
 		$command = '-y -ss ' . $moment . ' -t 00:00:01 -i "' . $file->Location() . '" -vf "scale=' . $width . ':' . $height . '" -vsync 0 -f ' . $format . ' -vframes 1 -an -v quiet ' . $tmp->Location();
@@ -149,6 +180,8 @@ class FFmpeg implements IQuarkExtension {
 	 * @return QuarkFile
 	 */
 	public function FrameRandom (QuarkFile $file = null, $format = 'apng', $width = -1, $height = -1) {
+		if ($file == null) return null;
+
 		$info = $this->Info($file->Location());
 
 		$duration = $info->Duration()->Seconds();
@@ -173,6 +206,8 @@ class FFmpeg implements IQuarkExtension {
 	 * @throws QuarkArchException
 	 */
 	public function Thumbnail (QuarkFile $file = null, $format = 'apng', $width = -1, $height = -1, $changes = 0.4, $fps = '1/600') {
+		if ($file == null) return null;
+
 		$tmp = Quark::TempFile('ffmpeg_frame');
 
 		$command = '-y -i "' . $file->Location() . '" -vf "select=gt(scene\,' . $changes . '),fps=fps=' . $fps . ',scale=' . $width . ':' . $height . '" -vframes 1 -vsync vfr -f ' . $format . ' -vframes 1 -an -v quiet ' . $tmp->Location();
