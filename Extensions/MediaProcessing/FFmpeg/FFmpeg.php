@@ -126,7 +126,7 @@ class FFmpeg implements IQuarkExtension {
 		if ($file == null) return null;
 
 		$tmp = Quark::TempFile('ffmpeg_fragment');
-		$tmp->Rename($tmp->name . '.' . $format, true);
+		if (!$tmp->Rename($tmp->Location() . '.' . $format, true)) return null;
 
 		$command = '-y -ss ' . $start . ' -t ' . $duration . ' -i "' . $file->Location() . '" -c copy -v quiet ' . $tmp->Location();
 
