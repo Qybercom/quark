@@ -15530,6 +15530,10 @@ trait QuarkNetwork {
 /**
  * Class QuarkClient
  *
+ * @TODO
+ * https://www.php.net/manual/ru/function.stream-context-set-params.php
+ * https://www.php.net/manual/ru/function.stream-notification-callback.php
+ *
  * @package Quark
  */
 class QuarkClient implements IQuarkEventable {
@@ -15603,6 +15607,16 @@ class QuarkClient implements IQuarkEventable {
 	private $_channels = array();
 
 	/**
+	 * @var bool $_bindIPv4 = false
+	 */
+	private $_bindIPv4 = false;
+
+	/**
+	 * @var bool $_bindIPv6 = false
+	 */
+	private $_bindIPv6 = false;
+
+	/**
 	 * @return int
 	 */
 	public static function Crypto () {
@@ -15658,6 +15672,12 @@ class QuarkClient implements IQuarkEventable {
 			stream_context_set_option($stream, 'ssl', 'local_cert', $this->_certificate->Location());
 			stream_context_set_option($stream, 'ssl', 'passphrase', $this->_certificate->Passphrase());
 		}
+
+		if ($this->_bindIPv4)
+			stream_context_set_option($stream, 'socket', 'bindto', QuarkURI::HOST_ALL_INTERFACES_IPV4 . ':' . QuarkURI::PORT_ANY);
+
+		if ($this->_bindIPv6)
+			stream_context_set_option($stream, 'socket', 'bindto', QuarkURI::HOST_ALL_INTERFACES_IPV6 . ':' . QuarkURI::PORT_ANY);
 		
 		$socket = $this->_uri->SocketURI();
 		$secure = $socket->Secure();
@@ -16005,6 +16025,30 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function &Channels () {
 		return $this->_channels;
+	}
+
+	/**
+	 * @param bool $bind = false
+	 *
+	 * @return bool
+	 */
+	public function BindIPv4 ($bind = false) {
+		if (func_num_args() != 0)
+			$this->_bindIPv4 = $bind;
+		
+		return $this->_bindIPv4;
+	}
+
+	/**
+	 * @param bool $bind = false
+	 *
+	 * @return bool
+	 */
+	public function BindIPv6 ($bind = false) {
+		if (func_num_args() != 0)
+			$this->_bindIPv6 = $bind;
+
+		return $this->_bindIPv6;
 	}
 
 	/**
@@ -18030,11 +18074,12 @@ class QuarkURI {
 	const SCHEME_HTTPS = 'https';
 
 	const HOST_LOCALHOST = '127.0.0.1';
-	const HOST_ALL_INTERFACES = '0.0.0.0';
 	const HOST_NETWORK_192 = '192.168.0.0/16';
 	const HOST_NETWORK_172 = '172.16.0.0/12';
 	const HOST_NETWORK_10 = '10.0.0.0/8';
-
+	const HOST_ALL_INTERFACES_IPV4 = '0.0.0.0';
+	const HOST_ALL_INTERFACES_IPV6 = '[::]';
+	
 	const PORT_ANY = 0;
 
 	const PATTERN_URL = '#([a-zA-Z0-9\-\+\.]+)\:\/\/(([^\s]*?)(\:([^\s]*?))?\@)?([^\s\/\?\:]+)(\:([\d]+))?([^\s\?]+)?(\?([^\s\#]*))?(\#([^\s]*))?#is';
@@ -18586,6 +18631,18 @@ class QuarkURI {
 	}
 
 	/**
+	 * @param bool $ipv4 = true
+	 * @param bool $ipv6 = true
+	 *
+	 * @return bool
+	 */
+	public function IsHostAny ($ipv4 = true, $ipv6 = true) {
+		return false
+			|| ($ipv4 && $this->host == self::HOST_ALL_INTERFACES_IPV4)
+			|| ($ipv6 && $this->host == self::HOST_ALL_INTERFACES_IPV6);
+	}
+
+	/**
 	 * Formats of `$network`:
 	 *  - CIDR  192.168.0.0/24
 	 *  - CIDR  192.168.0.0/255.255.255.0
@@ -18638,10 +18695,30 @@ class QuarkURI {
 	 * @return bool
 	 */
 	public static function IsHostFromPrivateNetworks ($ip = '') {
-		foreach (self::$_networksPrivate as $i => &$network)
-			if (self::IsHostFromNetwork($ip, $network)) return true;
+		$out = false;
 
-		return false;
+		foreach (self::$_networksPrivate as $i => &$network)
+			$out |= self::IsHostFromNetwork($ip, $network);
+
+		unset($i, $network);
+
+		return $out;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public static function HostIPAddresses ($host = '') {
+		$ips = gethostbynamel($host);
+		$out = array();
+		
+		foreach ($ips as $i => &$ip)
+			if (!self::IsHostFromPrivateNetworks($ip))
+				$out[] = $ip;
+
+		unset($i, $ip, $ips);
+		
+		return $out;
 	}
 
 	/**
@@ -18672,7 +18749,7 @@ class QuarkURI {
 		$uri = clone $this;
 			$uri->host = func_num_args() != 0
 				? $host
-				: ($uri->host == self::HOST_ALL_INTERFACES
+				: ($uri->IsHostAny()
 					? Quark::HostIP()
 					: $uri->host
 				);
@@ -20426,10 +20503,12 @@ class QuarkHTTPClient implements IQuarkEventable {
 	 * @param int $timeout = 10
 	 * @param bool $sync = true
 	 * @param bool $trace = false
+	 * @param bool $bindIPv4 = false
+	 * @param bool $bindIPv6 = false
 	 *
 	 * @return QuarkDTO|bool
 	 */
-	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true, $trace = false) {
+	public static function To ($uri, QuarkDTO $request, QuarkDTO $response = null, QuarkCertificate $certificate = null, $timeout = 10, $sync = true, $trace = false, $bindIPv4 = false, $bindIPv6 = false) {
 		$http = new self($request, $response);
 		$client = new QuarkClient($uri, new QuarkTCPNetworkTransport(), $certificate, $timeout, $sync);
 
@@ -20469,6 +20548,9 @@ class QuarkHTTPClient implements IQuarkEventable {
 		$client->On(QuarkServer::EVENT_ERROR_CRYPTOGRAM, function ($error) {
 			Quark::Log($error . '. Error: ' . QuarkException::LastError(), Quark::LOG_WARN);
 		});
+
+		$client->BindIPv4($bindIPv4);
+		$client->BindIPv6($bindIPv6);
 
 		if (!$client->Connect()) return false;
 

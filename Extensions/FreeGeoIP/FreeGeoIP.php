@@ -4,6 +4,7 @@ namespace Quark\Extensions\FreeGeoIP;
 use Quark\IOProcessors\QuarkCSVIOProcessor;
 use Quark\IQuarkExtension;
 
+use Quark\Quark;
 use Quark\QuarkDTO;
 use Quark\QuarkHTTPClient;
 use Quark\QuarkJSONIOProcessor;
@@ -82,10 +83,15 @@ class FreeGeoIP implements IQuarkExtension {
 	private $_longitude = '';
 
 	/**
-	 * @param string $address = ''
+	 * @var FreeGeoIPConfig $_config = null
 	 */
-	public function __construct ($address = '') {
-		$this->Address($address);
+	private $_config = null;
+
+	/**
+	 * @param string $config = ''
+	 */
+	public function __construct ($config = '') {
+		$this->_config = $config == '' ? null : Quark::Config()->Extension($config);
 	}
 
 	/**
@@ -234,13 +240,14 @@ class FreeGeoIP implements IQuarkExtension {
 
 	/**
 	 * @param QuarkDTO $dto = null
+	 * @param string $config = ''
 	 *
 	 * @return FreeGeoIP
 	 */
-	public static function FromDTO (QuarkDTO $dto = null) {
+	public static function FromDTO (QuarkDTO $dto = null, $config = '') {
 		if ($dto == null) return null;
 
-		$out = new self();
+		$out = new self($config);
 
 		if (isset($dto->ip))
 			$out->IP($dto->ip);
@@ -282,27 +289,34 @@ class FreeGeoIP implements IQuarkExtension {
 	 *
 	 * @return QuarkDTO|bool
 	 */
-	public static function API ($address = '', $language = null, $format = self::FORMAT_JSON) {
+	public function API ($address = '', $language = null, $format = self::FORMAT_JSON) {
 		$processor = null;
 		if ($format == self::FORMAT_JSON) $processor = new QuarkJSONIOProcessor();
 		if ($format == self::FORMAT_XML) $processor = new QuarkXMLIOProcessor();
 		if ($format == self::FORMAT_CSV) $processor = new QuarkCSVIOProcessor();
 
 		$request = QuarkDTO::ForGET();
+
 		if ($language != null)
 			$request->Header(QuarkDTO::HEADER_ACCEPT_LANGUAGE, $language);
 
-		return QuarkHTTPClient::To(self::URL_API . $format . '/' . $address, $request, new QuarkDTO($processor));
+		if ($this->_config != null && $this->_config->APIKey() != '')
+			$request->URIParams(array('apiKey' => $this->_config->APIKey()));
+
+		return QuarkHTTPClient::To(self::URL_API . $format . '/' . $address, $request, new QuarkDTO($processor), null, 3, true, false, true);
 	}
 
 	/**
 	 * @param string $address = ''
 	 * @param string $language = null
+	 * @param string $config = ''
 	 *
 	 * @return FreeGeoIP
 	 */
-	public static function Info ($address = '', $language = null) {
-		$data = self::API($address, $language);
+	public static function Info ($address = '', $language = null, $config = '') {
+		$provider = new self($config);
+
+		$data = $provider->API($address, $language);
 		if (!$data) return null;
 
 		$out = self::FromDTO($data);
