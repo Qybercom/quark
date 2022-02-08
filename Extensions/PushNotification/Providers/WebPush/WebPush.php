@@ -183,7 +183,7 @@ class WebPush implements IQuarkPushNotificationProvider {
 
 			$response = QuarkHTTPClient::To($device->Endpoint(), $request, new QuarkDTO(new QuarkJSONIOProcessor()), null, 10, true, $this->_debug);
 
-			if ($response->StatusCode() == QuarkDTO::STATUS_201_CREATED) $out->CountSuccessAppend(1);
+			if (!$response || $response->StatusCode() == QuarkDTO::STATUS_201_CREATED) $out->CountSuccessAppend(1);
 			elseif ($response->StatusCode() == QuarkDTO::STATUS_410_GONE) {
 				$out->CountFailureAppend(1);
 				$this->_devices[$i]->deleted = true;

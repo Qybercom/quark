@@ -126,7 +126,7 @@ class Mail implements IQuarkExtension {
 	 * @param string $name
 	 * @param string $email
 	 *
-	 * @return Mail|string
+	 * @return string
 	 */
 	public function From ($name = '', $email = '') {
 		$num = func_num_args();
@@ -140,7 +140,7 @@ class Mail implements IQuarkExtension {
 	/**
 	 * @param string $subject
 	 *
-	 * @return Mail|string
+	 * @return string
 	 */
 	public function Subject ($subject = '') {
 		if (func_num_args() != 0)
@@ -176,54 +176,68 @@ class Mail implements IQuarkExtension {
 		$this->_dto->Header(self::HEADER_SUBJECT, $this->_subject);
 
 		if (sizeof($this->_files) != 0)
-			$this->_dto->Data(
-				array(
-					QuarkHTMLIOProcessor::TYPE_KEY => $this->_dto->Data(),
-					'files' => $this->_files
-				));
+			$this->_dto->Data(array(
+				QuarkHTMLIOProcessor::TYPE_KEY => $this->_dto->Data(),
+				'files' => $this->_files
+			));
 
-		$client = new QuarkClient($this->_config->MailSMTPEndpoint(), new QuarkTCPNetworkTransport(), $this->_config->MailCertificate(), $this->_config->TimeoutConnect(), false);
+		$out = false;
 
-		$client->AutoSecure(false);
+		if ($this->_config->LocalSend()) {
+			$out = true;
+			$prefix = $this->_config->LocalStoragePrefix();
 
-		$client->On(QuarkClient::EVENT_ERROR_CRYPTOGRAM, function ($error) {
-			$this->_log('[Mail] Cryptogram enabling error. ' . $error);
-		});
-		
-		$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
-			$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
-			$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
+			$dto = new QuarkFile($prefix . '.txt');
+			$dto->Content($this->_outgoingDTO());
+			$out &= $dto->SaveContent();
 
-			$smtp = $this->_config->MailSMTPEndpoint();
-			$response = $this->_dto->SerializeResponse();
+			$html = new QuarkFile($prefix . '.html');
+			$html->Content($this->_dto->Data());
+			$out &= $html->SaveContent();
+		}
+		else {
+			$client = new QuarkClient($this->_config->EndpointSMTP(), new QuarkTCPNetworkTransport(), $this->_config->Certificate(), $this->_config->TimeoutConnect(), false);
 
-			$this->_cmd($client);
-			$this->_cmd($client, 'HELO Quark');
+			$client->AutoSecure(false);
 
-			if ($this->_config->MailProvider()->MailStartTLS()) {
-				$this->_cmd($client, 'STARTTLS');
-				$client->Secure(true);
+			$client->On(QuarkClient::EVENT_ERROR_CRYPTOGRAM, function ($error) {
+				$this->_log('[Mail] Cryptogram enabling error. ' . $error);
+			});
+
+			$client->On(QuarkClient::EVENT_CONNECT, function (QuarkClient $client) {
+				$dto = $this->_outgoingDTO();
+				$smtp = $this->_config->EndpointSMTP();
+
+				$this->_cmd($client);
 				$this->_cmd($client, 'HELO Quark');
+
+				if ($this->_config->Provider()->MailStartTLS()) {
+					$this->_cmd($client, 'STARTTLS');
+					$client->Secure(true);
+					$this->_cmd($client, 'HELO Quark');
+				}
+
+				$this->_cmd($client, 'AUTH LOGIN');
+				$this->_cmd($client, base64_encode($smtp->user));
+				$this->_cmd($client, base64_encode($smtp->pass));
+				$this->_cmd($client, 'MAIL FROM: <' . $this->_from . '>');
+
+				foreach ($this->_receivers as $i => &$receiver)
+					$this->_cmd($client, 'RCPT TO: <' . $receiver . '>');
+
+				unset($i, $receiver);
+
+				$this->_cmd($client, 'DATA');
+				$this->_cmd($client, trim(substr($dto, strpos($dto, "\r\n"))) . "\r\n.");
+				$this->_cmd($client, 'QUIT');
+			});
+
+			$out = $client->Connect();
+
+			if ($this->_config->Log()) {
+				Quark::Log('[Mail] Tracing Mail');
+				Quark::Trace($this->Log());
 			}
-
-			$this->_cmd($client, 'AUTH LOGIN');
-			$this->_cmd($client, base64_encode($smtp->user));
-			$this->_cmd($client, base64_encode($smtp->pass));
-			$this->_cmd($client, 'MAIL FROM: <' . $this->_from . '>');
-
-			foreach ($this->_receivers as $receiver)
-				$this->_cmd($client, 'RCPT TO: <' . $receiver . '>');
-
-			$this->_cmd($client, 'DATA');
-			$this->_cmd($client, trim(substr($response, strpos($response, "\r\n"))) . "\r\n.");
-			$this->_cmd($client, 'QUIT');
-		});
-
-		$out = $client->Connect();
-
-		if ($this->_config->Log()) {
-			Quark::Log('[Mail] Tracing Mail');
-			Quark::Trace($this->Log());
 		}
 
 		return $out;
@@ -234,6 +248,16 @@ class Mail implements IQuarkExtension {
 	 */
 	public function Log () {
 		return $this->_log;
+	}
+
+	/**
+	 * @return string
+	 */
+	private function _outgoingDTO () {
+		$this->_dto->Header(QuarkDTO::HEADER_CONTENT_TRANSFER_ENCODING, QuarkDTO::TRANSFER_ENCODING_BASE64);
+		$this->_dto->Encoding(QuarkDTO::TRANSFER_ENCODING_BASE64);
+
+		return $this->_dto->SerializeResponse();
 	}
 
 	/**

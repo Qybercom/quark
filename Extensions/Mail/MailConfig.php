@@ -3,7 +3,10 @@ namespace Quark\Extensions\Mail;
 
 use Quark\IQuarkExtension;
 use Quark\IQuarkExtensionConfig;
+
 use Quark\QuarkCertificate;
+use Quark\QuarkURI;
+use Quark\QuarkDate;
 
 /**
  * Class MailConfig
@@ -13,6 +16,8 @@ use Quark\QuarkCertificate;
 class MailConfig implements IQuarkExtensionConfig {
 	const TIMEOUT_CONNECT = 5;
 	const TIMEOUT_COMMAND = 100000;
+
+	const LOCAL_STORAGE = './runtime/mails/';
 
 	/**
 	 * @var IQuarkMailProvider $_provider
@@ -70,6 +75,16 @@ class MailConfig implements IQuarkExtensionConfig {
 	private $_log = false;
 
 	/**
+	 * @var bool $_localSend = false
+	 */
+	private $_localSend = false;
+
+	/**
+	 * @var string $_localStorage = self::LOCAL_STORAGE
+	 */
+	private $_localStorage = self::LOCAL_STORAGE;
+
+	/**
 	 * @param IQuarkMailProvider $provider
 	 * @param $username = ''
 	 * @param $password = ''
@@ -83,17 +98,27 @@ class MailConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
+	 * @param string $sender = ''
+	 *
 	 * @return string
 	 */
-	public function Sender () {
+	public function Sender ($sender = '') {
+		if (func_num_args() != 0)
+			$this->_sender = $sender;
+
 		return $this->_sender ? $this->_sender : Mail::Sender($this->_fullName, $this->_username);
 	}
 
 	/**
+	 * @param string $from = ''
+	 *
 	 * @return string
 	 */
-	public function From () {
-		return $this->_from ? $this->_from : $this->MailSMTPEndpoint()->user;
+	public function From ($from = '') {
+		if (func_num_args() != 0)
+			$this->_from = $from;
+
+		return $this->_from ? $this->_from : $this->EndpointSMTP()->user;
 	}
 
 	/**
@@ -157,31 +182,72 @@ class MailConfig implements IQuarkExtensionConfig {
 	}
 
 	/**
+	 * @param QuarkCertificate $certificate = null
+	 *
+	 * @return QuarkCertificate
+	 */
+	public function &Certificate (QuarkCertificate $certificate = null) {
+		if (func_num_args() != 0)
+			$this->_certificate = $certificate;
+
+		return $this->_certificate;
+	}
+
+	/**
+	 * @param bool $log = false
+	 *
 	 * @return bool
 	 */
-	public function Log () {
+	public function Log ($log = false) {
+		if (func_num_args() != 0)
+			$this->_log = $log;
+
 		return $this->_log;
+	}
+
+	/**
+	 * @param bool $send = false
+	 *
+	 * @return bool
+	 */
+	public function LocalSend ($send = false) {
+		if (func_num_args() != 0)
+			$this->_localSend = $send;
+
+		return $this->_localSend;
+	}
+
+	/**
+	 * @param string $storage = self::LOCAL_STORAGE
+	 *
+	 * @return string
+	 */
+	public function LocalStorage ($storage = self::LOCAL_STORAGE) {
+		if (func_num_args() != 0)
+			$this->_localStorage = $storage;
+
+		return $this->_localStorage;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function LocalStoragePrefix () {
+		return $this->_localStorage . '/' . QuarkDate::GMTNow()->Format('Ymd-His-u');
 	}
 
 	/**
 	 * @return IQuarkMailProvider
 	 */
-	public function &MailProvider () {
+	public function &Provider () {
 		return $this->_provider;
 	}
 
 	/**
-	 * @return \Quark\QuarkURI
+	 * @return QuarkURI
 	 */
-	public function MailSMTPEndpoint () {
+	public function EndpointSMTP () {
 		return $this->_provider->MailSMTP($this->_username, $this->_password);
-	}
-	
-	/**
-	 * @return QuarkCertificate
-	 */
-	public function &MailCertificate () {
-		return $this->_certificate;
 	}
 
 	/**
@@ -205,33 +271,40 @@ class MailConfig implements IQuarkExtensionConfig {
 	 */
 	public function ExtensionOptions ($ini) {
 		if (isset($ini->Username))
-			$this->_username = $ini->Username;
+			$this->Username($ini->Username);
 
 		if (isset($ini->Password))
-			$this->_password = $ini->Password;
+			$this->Password($ini->Password);
 
 		if (isset($ini->FullName))
-			$this->_fullName = $ini->FullName;
+			$this->FullName($ini->FullName);
 
 		if (isset($ini->Sender))
-			$this->_sender = $ini->Sender;
+			$this->Sender($ini->Sender);
 
 		if (isset($ini->From))
-			$this->_from = $ini->From;
+			$this->From($ini->From);
 		
 		if (isset($ini->CertificateLocation))
-			$this->_certificate = new QuarkCertificate($ini->CertificateLocation);
+			$this->Certificate(new QuarkCertificate($ini->CertificateLocation));
 		
 		if (isset($ini->CertificatePassphrase))
 			$this->_certificate->Passphrase($ini->CertificatePassphrase);
 
 		if (isset($ini->TimeoutConnect))
-			$this->_timeoutConnect = $ini->TimeoutConnect;
+			$this->TimeoutConnect($ini->TimeoutConnect);
 
 		if (isset($ini->TimeoutCommand))
-			$this->_timeoutCommand = $ini->TimeoutCommand;
+			$this->TimeoutCommand($ini->TimeoutCommand);
 
-		$this->_log = isset($ini->Log) && $ini->Log;
+		if (isset($ini->Log))
+			$this->Log($ini->Log);
+
+		if (isset($ini->LocalSend))
+			$this->LocalSend($ini->LocalSend);
+
+		if (isset($ini->LocalStorage))
+			$this->LocalStorage($ini->LocalStorage);
 
 		$this->_provider->MailINI($ini);
 	}
