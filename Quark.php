@@ -7011,13 +7011,23 @@ class QuarkView implements IQuarkContainer {
 
 		foreach ($data as $key => $value) {
 			$append = $prefix . $key;
-			$source = QuarkObject::isTraversable($value) && !is_callable($value)
-				? self::_tpl($source, $value, $append . '.')
-				: (!is_callable($value)
-					? preg_replace('#\{' . $append . '\}#Uisu', $value, $source)
-					: preg_replace_callback('#\{' . $append . '\}#Uisu', function ($matches) use (&$value, &$key, &$append) { return $value($matches, $key, $append); }, $source)
-				);
+			
+			if (is_callable($value)) {
+				$source = preg_replace_callback('#\{' . $append . '\}#Uisu', function ($matches) use (&$value, &$key, &$append) {
+					return $value($matches, $key, $append);
+				}, $source);
+				continue;
+			}
+			
+			if (QuarkObject::isTraversable($value)) {
+				$source = self::_tpl($source, $value, $append . '.');
+				continue;
+			}
+			
+			$source = preg_replace('#\{' . $append . '\}#Uisu', $value, $source);
 		}
+
+		unset($key, $value, $data);
 
 		return $source;
 	}
@@ -14401,7 +14411,7 @@ class QuarkLazyLink implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBe
 		$this->_model = $model;
 		$this->_linked = $linked;
 		
-		$this->value = func_num_args() > 1 ? $value : '';
+		$this->value = $value;
 	}
 
 	/**
