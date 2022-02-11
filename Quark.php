@@ -27738,7 +27738,7 @@ class QuarkSQL {
 				unset($i, $field, $fields, $options[QuarkModel::OPTION_FIELDS]);
 			}
 			else {
-				$options[QuarkModel::OPTION_FIELDS] = self::FIELD_COUNT_ALL;
+				$options[QuarkModel::OPTION_FIELDS] = array(self::FIELD_COUNT_ALL);
 			}
 		}
 
