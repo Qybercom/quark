@@ -17,6 +17,7 @@ use Quark\QuarkModel;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
 use Quark\QuarkConnectionException;
+use Quark\QuarkObject;
 
 /**
  * Class PostgreSQL
@@ -246,8 +247,8 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return int
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
-		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
-			QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
+		$result = $this->_sql->Count($model, $criteria, QuarkObject::Merge($options, array(
+			//QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
 			QuarkModel::OPTION_SKIP => $skip,
 			QuarkModel::OPTION_LIMIT => $limit == 0 ? 'ALL' : $limit
 		)));

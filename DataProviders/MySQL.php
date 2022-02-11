@@ -263,10 +263,10 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 */
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options = []) {
 		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
-				QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
-				QuarkModel::OPTION_SKIP => $skip,
-				QuarkModel::OPTION_LIMIT => $limit == 0 ? 1 : $limit
-			)));
+			//QuarkModel::OPTION_FIELDS => array(QuarkSQL::FIELD_COUNT_ALL),
+			QuarkModel::OPTION_SKIP => $skip,
+			QuarkModel::OPTION_LIMIT => $limit == 0 ? 1 : $limit
+		)));
 
 		return !$result ? 0 : (int)$result->fetch_row()[0];
 	}

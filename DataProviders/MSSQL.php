@@ -262,13 +262,13 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	public function Count (IQuarkModel $model, $criteria, $limit, $skip, $options) {
 		$options = $this->_options($model, $options);
 		$result = $this->_sql->Count($model, $criteria, array_merge($options, array(
-				QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER()',
-				//QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER(ORDER BY Id)',
-				//QuarkSQL::OPTION_FIELDS => 'ROW_NUMBER() OVER(ORDER BY [Id] ASC) AS RowNum',
-				//QuarkSQL::OPTION_FIELDS => '*, COUNT(*) OVER()',
-				QuarkModel::OPTION_SKIP => $skip,
-				QuarkModel::OPTION_LIMIT => $limit// == 0 ? 1 : $limit
-			)));
+			QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER()',
+			//QuarkSQL::OPTION_FIELDS => 'COUNT(1) OVER(ORDER BY Id)',
+			//QuarkSQL::OPTION_FIELDS => 'ROW_NUMBER() OVER(ORDER BY [Id] ASC) AS RowNum',
+			//QuarkSQL::OPTION_FIELDS => '*, COUNT(*) OVER()',
+			QuarkModel::OPTION_SKIP => $skip,
+			QuarkModel::OPTION_LIMIT => $limit// == 0 ? 1 : $limit
+		)));
 
 		return !$result ? 0 : (int)\sqlsrv_fetch_array($result)[0];
 	}

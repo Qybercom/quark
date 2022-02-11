@@ -11213,15 +11213,18 @@ class QuarkModel implements IQuarkContainer {
 	 * @param int $page = 1
 	 * @param array $criteria = []
 	 * @param array $options = []
+	 * @param array $optionsCount = []
 	 *
 	 * @return QuarkCollection|array
 	 */
-	public static function FindByPage (IQuarkModel $model, $page = 1, $criteria = [], $options = []) {
-		$optionsCount = $options;
+	public static function FindByPage (IQuarkModel $model, $page = 1, $criteria = [], $options = [], $optionsCount = []) {
+		$optionsCount = (array)QuarkObject::Merge($options, $optionsCount);
+		if (isset($optionsCount[self::OPTION_LIMIT]))
+			unset($optionsCount[self::OPTION_LIMIT]);
 
 		if (!isset($options[self::OPTION_LIMIT]))
 			$options[self::OPTION_LIMIT] = self::LIMIT_PAGED;
-		
+
 		$pages = 1;
 		$page = (int)$page;
 		if ($page < 1) $page = 1;
@@ -27721,9 +27724,25 @@ class QuarkSQL {
 	 * @return mixed
 	 */
 	public function Count (IQuarkModel $model, $criteria, $options = []) {
-		return $this->Select($model, $criteria, array_merge($options, array(
-			'fields' => array(self::FIELD_COUNT_ALL)
-		)));
+		$options = (array)$options;
+
+		if (!isset($options[self::OPTION_FIELDS])) {
+			if (isset($options[QuarkModel::OPTION_FIELDS]) && is_array($options[QuarkModel::OPTION_FIELDS]) && sizeof($options[QuarkModel::OPTION_FIELDS]) != 0) {
+				$fields = array();
+
+				foreach ($options[QuarkModel::OPTION_FIELDS] as $i => &$field)
+					$fields[] = $this->Field($field);
+
+				$options[self::OPTION_FIELDS] = 'COUNT(' . implode(', ', $fields) . ')';
+
+				unset($i, $field, $fields, $options[QuarkModel::OPTION_FIELDS]);
+			}
+			else {
+				$options[QuarkModel::OPTION_FIELDS] = self::FIELD_COUNT_ALL;
+			}
+		}
+
+		return $this->Select($model, $criteria, $options);
 	}
 
 	/**
