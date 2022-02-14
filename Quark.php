@@ -12931,15 +12931,9 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const FORMAT_MS_DOS = '___quark_ms_dos___';
 	const FORMAT_HTTP_DATE = 'D, d M Y H:i:s'; // https://stackoverflow.com/a/21121453/2097055
 
-	const PRECISE_YEARS = 'Y-01-01 00:00:00';
-	const PRECISE_MONTHS = 'Y-m-01 00:00:00';
-	const PRECISE_DAYS = 'Y-m-d 00:00:00';
-	const PRECISE_HOURS = 'Y-m-d H:00:00';
-	const PRECISE_MINUTES = 'Y-m-d H:i:00';
-	const PRECISE_SECONDS = 'Y-m-d H:i:s';
-
 	const UNIT_YEAR = 'Y';
 	const UNIT_MONTH = 'm';
+	const UNIT_WEEK = 'w';
 	const UNIT_DAY = 'd';
 	const UNIT_HOUR = 'H';
 	const UNIT_MINUTE = 'i';
@@ -13230,18 +13224,6 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
-	 * @param string $level = self::PRECISE_SECONDS
-	 *
-	 * @return QuarkDate
-	 */
-	public function Precise ($level = self::PRECISE_SECONDS) {
-		$out = clone $this;
-		$out->Value($out->Format($level));
-
-		return $out;
-	}
-
-	/**
 	 * @param string $timezone = self::CURRENT
 	 * @param bool $copy = false
 	 *
@@ -13529,6 +13511,64 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	}
 
 	/**
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function StartOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::Now(QuarkDateInterval::EdgeStart($interval));
+	}
+
+	/**
+	 * @deprecated
+	 * 
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function GMTStartOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::GMTOf(QuarkDateInterval::EdgeStart($interval));
+	}
+
+	/**
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function UTCStartOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::UTCOf(QuarkDateInterval::EdgeStart($interval));
+	}
+
+	/**
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function EndOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::Of(QuarkDateInterval::EdgeEnd($interval));
+	}
+
+	/**
+	 * @deprecated
+	 *
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function GMTEndOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::GMTOf(QuarkDateInterval::EdgeEnd($interval));
+	}
+
+	/**
+	 * @param string $interval = QuarkDateInterval::UNIT_SECOND
+	 *
+	 * @return QuarkDate
+	 */
+	public static function UTCEndOf ($interval = QuarkDateInterval::UNIT_SECOND) {
+		return self::UTCOf(QuarkDateInterval::EdgeEnd($interval));
+	}
+
+	/**
 	 * @param QuarkDate $start = null
 	 * @param QuarkDate $end = null
 	 *
@@ -13641,10 +13681,27 @@ class QuarkDateInterval {
 	
 	const UNIT_YEAR = 'year';
 	const UNIT_MONTH = 'month';
+	const UNIT_WEEK = 'week';
 	const UNIT_DAY = 'day';
 	const UNIT_HOUR = 'hour';
 	const UNIT_MINUTE = 'minute';
 	const UNIT_SECOND = 'second';
+	const UNIT_MICROSECOND = 'microsecond';
+
+	const EDGE_START_YEAR = 'Y-01-01 00:00:00';
+	const EDGE_START_MONTH = 'Y-m-01 00:00:00';
+	const EDGE_START_WEEK = 'Monday this week';
+	const EDGE_START_DAY = 'Y-m-d 00:00:00';
+	const EDGE_START_HOUR = 'Y-m-d H:00:00';
+	const EDGE_START_MINUTE = 'Y-m-d H:i:00';
+	const EDGE_START_SECOND = 'Y-m-d H:i:s';
+	const EDGE_END_YEAR = 'Y-01-01 23:59:59';
+	const EDGE_END_MONTH = 'Y-m-01 23:59:59';
+	const EDGE_END_WEEK = 'Sunday this week +23 hours 59 minutes 59 seconds';
+	const EDGE_END_DAY = 'Y-m-d 23:59:59';
+	const EDGE_END_HOUR = 'Y-m-d H:59:59';
+	const EDGE_END_MINUTE = 'Y-m-d H:i:59';
+	const EDGE_END_SECOND = 'Y-m-d H:i:s';
 	
 	const SECONDS_IN_YEAR = 31536000;
 	const SECONDS_IN_MONTH = 2678400;
@@ -13688,6 +13745,7 @@ class QuarkDateInterval {
 		self::UNIT_SECOND => array(
 			self::UNIT_YEAR => self::SECONDS_IN_YEAR,
 			self::UNIT_MONTH => self::SECONDS_IN_MONTH,
+			self::UNIT_WEEK => self::SECONDS_IN_WEEK,
 			self::UNIT_DAY => self::SECONDS_IN_DAY,
 			self::UNIT_HOUR => self::SECONDS_IN_HOUR,
 			self::UNIT_MINUTE => self::SECONDS_IN_MINUTE,
@@ -13696,6 +13754,7 @@ class QuarkDateInterval {
 		self::UNIT_MINUTE => array(
 			self::UNIT_YEAR => self::MINUTES_IN_YEAR,
 			self::UNIT_MONTH => self::MINUTES_IN_MONTH,
+			self::UNIT_WEEK => self::MINUTES_IN_WEEK,
 			self::UNIT_DAY => self::MINUTES_IN_DAY,
 			self::UNIT_HOUR => self::MINUTES_IN_HOUR,
 			self::UNIT_MINUTE => self::MINUTES_IN_MINUTE
@@ -13703,13 +13762,20 @@ class QuarkDateInterval {
 		self::UNIT_HOUR => array(
 			self::UNIT_YEAR => self::HOURS_IN_YEAR,
 			self::UNIT_MONTH => self::HOURS_IN_MONTH,
+			self::UNIT_WEEK => self::HOURS_IN_WEEK,
 			self::UNIT_DAY => self::HOURS_IN_DAY,
 			self::UNIT_HOUR => self::HOURS_IN_HOUR
 		),
 		self::UNIT_DAY => array(
 			self::UNIT_YEAR => self::DAYS_IN_YEAR,
 			self::UNIT_MONTH => self::DAYS_IN_MONTH,
+			self::UNIT_WEEK => self::DAYS_IN_WEEK,
 			self::UNIT_DAY => self::DAYS_IN_DAY
+		),
+		self::UNIT_WEEK => array(
+			self::UNIT_YEAR => self::WEEKS_IN_YEAR,
+			self::UNIT_MONTH => self::WEEKS_IN_MONTH,
+			self::UNIT_WEEK => self::WEEKS_IN_WEEK
 		),
 		self::UNIT_MONTH => array(
 			self::UNIT_YEAR => self::MONTHS_IN_YEAR,
@@ -13738,10 +13804,37 @@ class QuarkDateInterval {
 	private static $_units = array(
 		self::UNIT_YEAR,
 		self::UNIT_MONTH,
+		self::UNIT_WEEK,
 		self::UNIT_DAY,
 		self::UNIT_HOUR,
 		self::UNIT_MINUTE,
 		self::UNIT_SECOND,
+	);
+
+	/**
+	 * @var string[] $_edgeStart
+	 */
+	private static $_edgeStart = array(
+		self::UNIT_YEAR => self::EDGE_START_YEAR,
+		self::UNIT_MONTH => self::EDGE_START_MONTH,
+		self::UNIT_WEEK => self::EDGE_START_WEEK,
+		self::UNIT_DAY => self::EDGE_START_DAY,
+		self::UNIT_HOUR => self::EDGE_START_HOUR,
+		self::UNIT_MINUTE => self::EDGE_START_MINUTE,
+		self::UNIT_SECOND => self::EDGE_START_SECOND
+	);
+
+	/**
+	 * @var string[] $_edgeEnd
+	 */
+	private static $_edgeEnd = array(
+		self::UNIT_YEAR => self::EDGE_END_YEAR,
+		self::UNIT_MONTH => self::EDGE_END_MONTH,
+		self::UNIT_WEEK => self::EDGE_END_WEEK,
+		self::UNIT_DAY => self::EDGE_END_DAY,
+		self::UNIT_HOUR => self::EDGE_END_HOUR,
+		self::UNIT_MINUTE => self::EDGE_END_MINUTE,
+		self::UNIT_SECOND => self::EDGE_END_SECOND
 	);
 	
 	/**
@@ -14132,6 +14225,30 @@ class QuarkDateInterval {
 				($args > 7 && isset(self::$_dividers[$target][self::UNIT_HOUR]) ? $hours * self::$_dividers[$target][self::UNIT_HOUR] : 0) +
 				($args > 8 && isset(self::$_dividers[$target][self::UNIT_MINUTE]) ? $minutes * self::$_dividers[$target][self::UNIT_MINUTE] : 0) +
 			0);
+	}
+
+	/**
+	 * @param string $unit = self::UNIT_SECOND
+	 * @param bool $raw = false
+	 *
+	 * @return string
+	 */
+	public static function EdgeStart ($unit = self::UNIT_SECOND, $raw = false) {
+		return isset(self::$_edgeStart[$unit])
+			? ($unit == self::UNIT_WEEK || $raw ? self::$_edgeStart[$unit] : QuarkDate::GMTNow()->Format(self::$_edgeStart[$unit]))
+			: null;
+	}
+
+	/**
+	 * @param string $unit = self::UNIT_SECOND
+	 * @param bool $raw = false
+	 *
+	 * @return string
+	 */
+	public static function EdgeEnd ($unit = self::UNIT_SECOND, $raw = false) {
+		return isset(self::$_edgeEnd[$unit])
+			? ($unit == self::UNIT_WEEK || $raw ? self::$_edgeEnd[$unit] : QuarkDate::GMTNow()->Format(self::$_edgeEnd[$unit]))
+			: null;
 	}
 }
 
@@ -27177,16 +27294,17 @@ class QuarkSQL {
 	const OPTION_FIELDS = '__sql_fields__';
 	const OPTION_JOIN = 'option.join';
 	const OPTION_GROUP_BY = 'option.group_by';
+	const OPTION_SECURE = 'option.secure';
 
 	const FIELD_COUNT_ALL = 'COUNT(*)';
 
-	const FLAG_JOIN_MODE = 'join_mode';
-	const FLAG_JOIN_MODEL = 'join_model';
-	const FLAG_JOIN_TABLE = 'join_table';
-	const FLAG_JOIN_CONDITION = 'join_condition';
-	const FLAG_JOIN_ALIAS = 'join_alias';
-	const FLAG_JOIN_QUERY = 'join_query';
-	const FLAG_JOIN_QUERY_OPTIONS = 'join_query_options';
+	const FLAG_JOIN_MODE = '$sql_join_mode';
+	const FLAG_JOIN_CONDITION = '$sql_join_condition';
+	const FLAG_JOIN_ALIAS = '$sql_join_alias';
+	const FLAG_QUERY_MODEL = '$sql_query_model';
+	const FLAG_QUERY_TABLE = '$sql_query_table';
+	const FLAG_QUERY_CONTENT = '$sql_query_content';
+	const FLAG_QUERY_OPTIONS = '$sql_query_options';
 
 	const JOIN_INNER = 'INNER';
 	const JOIN_OUTER = 'OUTER';
@@ -27195,6 +27313,41 @@ class QuarkSQL {
 	const JOIN_CROSS = 'CROSS';
 	const JOIN_FULL = 'FULL';
 	const JOIN_DEFAULT = '';
+
+	const FUNCTION_COALESCE = 'COALESCE';
+	const FUNCTION_COUNT = 'COUNT';
+	const FUNCTION_MAX = 'MAX';
+	const FUNCTION_MIN = 'MIN';
+	const FUNCTION_ABS = 'ABS';
+	const FUNCTION_MOD = 'MOD';
+	const FUNCTION_AVG = 'AVG';
+	const FUNCTION_ROUND = 'ROUND';
+	const FUNCTION_CONCAT = 'CONCAT';
+	const FUNCTION_INITCAP = 'INITCAP';
+	const FUNCTION_LOWER = 'LOWER';
+	const FUNCTION_UPPER = 'UPPER';
+	const FUNCTION_LPAD = 'LPAD';
+	const FUNCTION_RPAD = 'RPAD';
+	const FUNCTION_LTRIM = 'LTRIM';
+	const FUNCTION_RTRIM = 'RTRIM';
+	const FUNCTION_REPLACE = 'REPLACE';
+	const FUNCTION_TRANSLATE = 'TRANSLATE';
+	const FUNCTION_SUBSTR = 'SUBSTR';
+	const FUNCTION_LENGTH = 'LENGTH';
+	const FUNCTION_CHAR_LENGTH = 'CHAR_LENGTH';
+	const FUNCTION_DATE = 'DATE';
+	const FUNCTION_MONTH = 'MONTH';
+	const FUNCTION_YEAR = 'YEAR';
+	const FUNCTION_CURRENT_DATE = 'CURRENT_DATE';
+	const FUNCTION_CURRENT_TIME = 'CURRENT_TIME';
+	const FUNCTION_CURRENT_TIMESTAMP = 'CURRENT_TIMESTAMP';
+	const FUNCTION_TIMESTAMPDIFF = 'TIMESTAMPDIFF'; // MySQL only
+	const FUNCTION_DATEDIFF = 'DATEPDIFF'; // PostgreSQL and MSSQL only
+	const FUNCTION_DATE_PART = 'DATE_PART'; // PostgreSQL and MSSQL only
+
+	const ALLOW_ACCESSOR_FIELD = 'allow_accessor_field';
+	const ALLOW_ACCESSOR_VALUE = 'allow_accessor_value';
+	const ALLOW_ACCESSOR_QUERY = 'allow_accessor_query';
 
 	const NULL = 'NULL';
 
@@ -27264,15 +27417,15 @@ class QuarkSQL {
 	 */
 	public static function Join (IQuarkModel $model = null, $mode = self::JOIN_DEFAULT, $condition = [], $alias = '', $query = [], $query_options = []) {
 		$out = array(
-			self::FLAG_JOIN_MODEL => $model,
 			self::FLAG_JOIN_MODE => $mode,
 			self::FLAG_JOIN_CONDITION => $condition,
-			self::FLAG_JOIN_ALIAS => $alias
+			self::FLAG_JOIN_ALIAS => $alias,
+			self::FLAG_QUERY_MODEL => $model
 		);
 
 		$args = func_num_args();
-		if ($args > 4) $out[self::FLAG_JOIN_QUERY] = $query;
-		if ($args > 5) $out[self::FLAG_JOIN_QUERY_OPTIONS] = $query_options;
+		if ($args > 4) $out[self::FLAG_QUERY_CONTENT] = $query;
+		if ($args > 5) $out[self::FLAG_QUERY_OPTIONS] = $query_options;
 
 		return $out;
 	}
@@ -27289,17 +27442,87 @@ class QuarkSQL {
 	 */
 	public static function JoinTable ($table = '', $mode = self::JOIN_DEFAULT, $condition = [], $alias = '', $query = [], $query_options = []) {
 		$out = array(
-			self::FLAG_JOIN_TABLE => $table,
 			self::FLAG_JOIN_MODE => $mode,
 			self::FLAG_JOIN_CONDITION => $condition,
-			self::FLAG_JOIN_ALIAS => $alias
+			self::FLAG_JOIN_ALIAS => $alias,
+			self::FLAG_QUERY_TABLE => $table
 		);
 
 		$args = func_num_args();
-		if ($args > 4) $out[self::FLAG_JOIN_QUERY] = $query;
-		if ($args > 5) $out[self::FLAG_JOIN_QUERY_OPTIONS] = $query_options;
+		if ($args > 4) $out[self::FLAG_QUERY_CONTENT] = $query;
+		if ($args > 5) $out[self::FLAG_QUERY_OPTIONS] = $query_options;
 
 		return $out;
+	}
+
+	/**
+	 * @param IQuarkModel $model = null
+	 * @param array $query = []
+	 * @param array $query_options = []
+	 *
+	 * @return array
+	 */
+	public static function Subquery (IQuarkModel $model = null, $query = [], $query_options = []) {
+		$out = array(
+			self::FLAG_QUERY_MODEL => $model
+		);
+
+		$args = func_num_args();
+		if ($args > 1) $out[self::FLAG_QUERY_CONTENT] = $query;
+		if ($args > 2) $out[self::FLAG_QUERY_OPTIONS] = $query_options;
+
+		return $out;
+	}
+
+	/**
+	 * @param string $table = ''
+	 * @param array $query = []
+	 * @param array $query_options = []
+	 *
+	 * @return array
+	 */
+	public static function SubqueryTable ($table = '', $query = [], $query_options = []) {
+		$out = array(
+			self::FLAG_QUERY_TABLE => $table
+		);
+
+		$args = func_num_args();
+		if ($args > 1) $out[self::FLAG_QUERY_CONTENT] = $query;
+		if ($args > 2) $out[self::FLAG_QUERY_OPTIONS] = $query_options;
+
+		return $out;
+	}
+
+	/**
+	 * @param array $source = []
+	 *
+	 * @return string
+	 */
+	private function _subquery ($source = []) {
+		$out = null;
+
+		if (isset($source[self::FLAG_QUERY_MODEL]) && $source[self::FLAG_QUERY_MODEL])
+			$out = $this->_provider->EscapeCollection(QuarkModel::CollectionName($source[self::FLAG_QUERY_MODEL]));
+
+		if (isset($source[self::FLAG_QUERY_TABLE]))
+			$out = $this->_provider->EscapeCollection($source[self::FLAG_QUERY_TABLE]);
+
+		if (isset($source[self::FLAG_QUERY_CONTENT]) && $out != null)
+			$out = '(' . $this->SelectRaw($out, $source[self::FLAG_QUERY_CONTENT], isset($source[self::FLAG_QUERY_OPTIONS]) ? $source[self::FLAG_QUERY_OPTIONS] : array()) . ')';
+
+		return $out;
+	}
+
+	/**
+	 * @param string $function = ''
+	 * @param array $args = []
+	 *
+	 * @return array
+	 */
+	public static function Call ($function = '', $args = []) {
+		return array(
+			'$sql_function' => new QuarkKeyValuePair($function, $args)
+		);
 	}
 
 	/**
@@ -27442,87 +27665,118 @@ class QuarkSQL {
 		// TODO: maybe need
 		//$target = str_replace('.', $this->Field('.'), $target);
 
-		foreach ($condition as $key => &$rule) {
-			$field = $this->Field($key);
-			$value = $this->Value($rule);
-
-			if (is_array($rule))
-				$value = $this->Condition($rule, ' AND ', $field);
-
-			switch ($field) {
-				case $this->Field('$eq'): $output[] = $target . ($value === null ? ' IS ' . self::NULL : '=' . $value); break;
-				case $this->Field('$lte'): $output[] = $target . '<=' . $value; break;
-				case $this->Field('$lt'): $output[] = $target . '<' . $value; break;
-				case $this->Field('$gt'): $output[] = $target . '>' . $value; break;
-				case $this->Field('$gte'): $output[] = $target . '>=' . $value; break;
-				case $this->Field('$ne'): $output[] = $target . ($value === null ? ' IS NOT ' . self::NULL : '<>' . $value); break;
-
-				case $this->Field('$regex'):
-					$regEx = new QuarkRegEx($rule);
-					$output[] = $target . ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
-					break;
-
-				case $this->Field('$like'):
-					$output[] = $target . ' LIKE ' . $value;
-					break;
-
-				case $this->Field('$ilike'):
-					$output[] = $target . ' ILIKE ' . $value; // TODO: ILIKE is not supported in MySQL
-					break;
-
-				case $this->Field('$and'):
-					$value = $this->Condition($rule, ' AND ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				case $this->Field('$or'):
-					$value = $this->Condition($rule, ' OR ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				case $this->Field('$nor'):
-					$value = $this->Condition($rule, ' NOT OR ');
-					$output[] = ' (' . $value . ') ';
-					break;
-
-				case $this->Field('$in'):
-					// TODO: support native for DBs 'IN' (for the moment - huge differences for different DB providers)
-					// TODO: for example https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
-
-					$values = [];
-
-					foreach ($rule as $i => &$val)
-						$values[] = $this->Value($val);
-
-					$output[] = $target . ' IN (' . implode(', ', $values) . ') ';
-					break;
-
-				case $this->Field('$quark_in'):
-					$field_match = isset($rule['$sql_field']);
-					$values = array('[,', ',,', ',]', '[]');
-
-					foreach ($values as $i => &$val)
-						$values[$i] = $target . ' LIKE ' . ($field_match
-							? 'CONCAT(' . $this->Value('%' . $val[0]) . ', ' . $this->Field($rule['$sql_field']) . ', ' . $this->Value($val[1] . '%') . ')'
-							: $this->Value('%' . $val[0] . $rule . $val[1] . '%')
-						);
-
-					$output[] = ' (' . implode(' OR ', $values) . ') ';
-					break;
-
-				case $this->Field('$sql_field'):
-					$output[] = $target . '=' . $this->Field($rule);
-					break;
-
-				default:
-					$output[] = (is_string($key) && !is_array($rule)  ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
-					break;
-			}
-		}
+		foreach ($condition as $key => &$rule)
+			$output[] = $this->_conditionRule($key, $rule, $target);
 
 		unset($key, $rule);
 
 		return ($glue == '' ? ' WHERE ' : '') . implode($glue == '' ? ' AND ' : $glue, $output);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param $rule = null
+	 * @param string $target = ''
+	 */
+	private function _conditionRule ($key = '', $rule = null, $target = '') {
+		$field = $this->Field($key);
+		$value = $this->Value($rule);
+
+		if (is_array($rule))
+			$value = $this->Condition($rule, ' AND ', $field);
+
+		switch ($field) {
+			case $this->Field('$eq'): return $target . ($value === null ? ' IS ' . self::NULL : '=' . $value); break;
+			case $this->Field('$lte'): return $target . '<=' . $value; break;
+			case $this->Field('$lt'): return $target . '<' . $value; break;
+			case $this->Field('$gt'): return $target . '>' . $value; break;
+			case $this->Field('$gte'): return $target . '>=' . $value; break;
+			case $this->Field('$ne'): return $target . ($value === null ? ' IS NOT ' . self::NULL : '<>' . $value); break;
+
+			case $this->Field('$regex'):
+				$regEx = new QuarkRegEx($rule);
+				return $target . ' REGEXP ' . ($regEx->HasFlag(QuarkRegEx::PCRE_CASELESS) ? '' : 'BINARY ') . $this->Value($regEx->Expression());
+				break;
+
+			case $this->Field('$like'):
+				return $target . ' LIKE ' . $value;
+				break;
+
+			case $this->Field('$ilike'):
+				return $target . ' ILIKE ' . $value; // TODO: ILIKE is not supported in MySQL
+				break;
+
+			case $this->Field('$and'):
+				$value = $this->Condition($rule, ' AND ');
+				return ' (' . $value . ') ';
+				break;
+
+			case $this->Field('$or'):
+				$value = $this->Condition($rule, ' OR ');
+				return ' (' . $value . ') ';
+				break;
+
+			case $this->Field('$nor'):
+				$value = $this->Condition($rule, ' NOT OR ');
+				return ' (' . $value . ') ';
+				break;
+
+			case $this->Field('$in'):
+				// TODO: support native for DBs 'IN' (for the moment - huge differences for different DB providers)
+				// TODO: for example https://phpclub.ru/talk/threads/mysql-in-%D0%B8-%D1%81%D0%BE%D1%80%D1%82%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0.12493/
+
+				$values = [];
+
+				foreach ($rule as $i => &$val)
+					$values[] = $this->Value($val);
+
+				return $target . ' IN (' . implode(', ', $values) . ') ';
+				break;
+
+			case $this->Field('$quark_in'):
+				$field_match = isset($rule['$sql_field']);
+				$values = array('[,', ',,', ',]', '[]');
+
+				foreach ($values as $i => &$val)
+					$values[$i] = $target . ' LIKE ' . ($field_match
+							? 'CONCAT(' . $this->Value('%' . $val[0]) . ', ' . $this->Field($rule['$sql_field']) . ', ' . $this->Value($val[1] . '%') . ')'
+							: $this->Value('%' . $val[0] . $rule . $val[1] . '%')
+						);
+
+				return ' (' . implode(' OR ', $values) . ') ';
+				break;
+
+			case $this->Field('$sql_field'):
+				return $target . '=' . $this->Field($rule);
+				break;
+
+			case $this->Field('$sql_value'):
+				return $target . '=' . $rule;
+				break;
+
+			case $this->Field('$sql_function'):
+				if (!($rule instanceof QuarkKeyValuePair)) return null;
+
+				$args_out = array();
+				$args_in = $rule->Value();
+
+				if (!is_array($args_in))
+					$args_in = array($args_in);
+
+				foreach ($args_in as $i => &$arg)
+					$args_out[] = trim($this->_conditionRule(null, $arg), '=');
+
+				return $target . '=' . $rule->Key() . '(' . implode(', ', $args_out) . ')';
+				break;
+
+			case $this->Field('$sql_query'):
+				return $target . '=' . $this->_subquery($rule);
+				break;
+
+			default:
+				return (is_string($key) && !is_array($rule) ? $field : '') . (is_scalar($rule) ? '=' : ($value == self::NULL ? ' IS ' : '')) . $value;
+				break;
+		}
 	}
 
 	/**
@@ -27581,7 +27835,21 @@ class QuarkSQL {
 	public function SelectRaw ($table = '', $criteria = [], $options = []) {
 		$query_fields = '';
 
-		if (isset($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
+		if (isset($options[self::OPTION_FIELDS])) {
+			if (!is_array($options[self::OPTION_FIELDS])) $query_fields = $options[self::OPTION_FIELDS];
+			else {
+				$_fields = array();
+
+				foreach ($options[self::OPTION_FIELDS] as $key => &$value)
+					$_fields[] = is_int($key)
+						? $this->Field($value)
+						: trim($this->_conditionRule(null, $value), '=') . ' AS ' . $this->Field($key);
+
+				$query_fields = implode(', ', $_fields);
+
+				unset($key, $value, $_fields);
+			}
+		}
 		else {
 			$query_fields = (isset($options[self::OPTION_ALIAS]) ? $options[self::OPTION_ALIAS] . '.' : '') . '*';
 
@@ -27613,16 +27881,7 @@ class QuarkSQL {
 			foreach ($options[self::OPTION_JOIN] as $i => &$join) {
 				if (!is_array($join) || !isset($join[self::FLAG_JOIN_MODE]) || !isset($join[self::FLAG_JOIN_CONDITION])) continue;
 
-				$join_target = null;
-				if (isset($join[self::FLAG_JOIN_MODEL]) && $join[self::FLAG_JOIN_MODEL])
-					$join_target = $this->_provider->EscapeCollection(QuarkModel::CollectionName($join[self::FLAG_JOIN_MODEL]));
-
-				if (isset($join[self::FLAG_JOIN_TABLE]))
-					$join_target = $this->_provider->EscapeCollection($join[self::FLAG_JOIN_TABLE]);
-
-				if (isset($join[self::FLAG_JOIN_QUERY]) && $join_target != null)
-					$join_target = '(' . $this->SelectRaw($join_target, $join[self::FLAG_JOIN_QUERY], isset($join[self::FLAG_JOIN_QUERY_OPTIONS]) ? $join[self::FLAG_JOIN_QUERY_OPTIONS] : array()) . ')';
-
+				$join_target = $this->_subquery($join);
 				if ($join_target == null) continue;
 
 				$joins .= ' ' . $join[self::FLAG_JOIN_MODE] . ' JOIN ' . $join_target . (isset($join[self::FLAG_JOIN_ALIAS]) && $join[self::FLAG_JOIN_ALIAS] != '' ? ' AS ' . $join[self::FLAG_JOIN_ALIAS] : '') . ' ON ' . $this->Condition($join[self::FLAG_JOIN_CONDITION], ' ');
@@ -27631,7 +27890,7 @@ class QuarkSQL {
 			unset($i, $join, $join_target);
 		}
 
-		return 'SELECT ' . $query_fields . ' FROM ' . $table . (isset($options[self::OPTION_ALIAS]) ? ' AS ' . $options[self::OPTION_ALIAS] : '') . $joins . $this->Condition($criteria) . $this->_cursor($options);
+		return 'SELECT ' . $query_fields . ' FROM ' . $table . (isset($options[self::OPTION_ALIAS]) ? ' AS ' . $this->Field($options[self::OPTION_ALIAS]) : '') . $joins . $this->Condition($criteria) . $this->_cursor($options);
 	}
 
 	/**
