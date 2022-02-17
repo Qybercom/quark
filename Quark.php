@@ -27314,6 +27314,7 @@ class QuarkSQL {
 	const JOIN_FULL = 'FULL';
 	const JOIN_DEFAULT = '';
 
+	const FUNCTION_IF = 'IF';
 	const FUNCTION_COALESCE = 'COALESCE';
 	const FUNCTION_COUNT = 'COUNT';
 	const FUNCTION_MAX = 'MAX';
@@ -27735,7 +27736,7 @@ class QuarkSQL {
 
 			case $this->Field('$quark_in'):
 				$field_match = isset($rule['$sql_field']);
-				$values = array('[,', ',,', ',]', '[]');
+				$values = array('[,', ',,', ',]', '[]', ':,', ':]', ':}');
 
 				foreach ($values as $i => &$val)
 					$values[$i] = $target . ' LIKE ' . ($field_match
@@ -27884,7 +27885,7 @@ class QuarkSQL {
 				$join_target = $this->_subquery($join);
 				if ($join_target == null) continue;
 
-				$joins .= ' ' . $join[self::FLAG_JOIN_MODE] . ' JOIN ' . $join_target . (isset($join[self::FLAG_JOIN_ALIAS]) && $join[self::FLAG_JOIN_ALIAS] != '' ? ' AS ' . $join[self::FLAG_JOIN_ALIAS] : '') . ' ON ' . $this->Condition($join[self::FLAG_JOIN_CONDITION], ' ');
+				$joins .= ' ' . $join[self::FLAG_JOIN_MODE] . ' JOIN ' . $join_target . (isset($join[self::FLAG_JOIN_ALIAS]) && $join[self::FLAG_JOIN_ALIAS] != '' ? ' AS ' . $this->Field($join[self::FLAG_JOIN_ALIAS]) : '') . ' ON ' . $this->Condition($join[self::FLAG_JOIN_CONDITION], ' AND ');
 			}
 
 			unset($i, $join, $join_target);
