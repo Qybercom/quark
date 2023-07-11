@@ -21,13 +21,13 @@ use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\OAuth\OAuthToken;
-use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Tumblr
@@ -47,7 +47,7 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 	const STORAGE = 'quark.social.tumblr';
 	const COLLECTION = 'SocialTumblr';
 
-	use OAuthProviderBehavior;
+	use SocialNetworkProviderBehavior;
 	use QuarkModelBehavior;
 
 	/**
@@ -154,6 +154,15 @@ class Tumblr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuark
 		}
 
 		return $this->OAuth1_0a_TokenFromRequest($request, '/access_token', self::URL_OAUTH, $token->oauth_token_secret);
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

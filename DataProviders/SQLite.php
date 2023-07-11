@@ -235,7 +235,7 @@ class SQLite implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeField ($field) {
-		return '"' . $field . '"';
+		return '"' . \SQLite3::escapeString($field) . '"';
 	}
 
 	/**

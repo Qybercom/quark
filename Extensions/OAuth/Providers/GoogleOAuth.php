@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\OAuth\Providers;
 
+use Quark\Extensions\OAuth\OAuthUser;
 use Quark\Quark;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
@@ -135,6 +136,30 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 	}
 
 	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		$req = QuarkDTO::ForPOST(new QuarkFormIOProcessor());
+		$req->Data(array(
+			'client_id' => $config->AppID(),
+			'client_secret' => $config->AppSecret(),
+			'grant_type' => 'refresh_token',
+			'refresh_token' => $token->token_refresh
+		));
+
+		$res = $consumer->OAuthAPI('/token', $req, new QuarkDTO(new QuarkJSONIOProcessor()), 'https://oauth2.googleapis.com');
+
+		if (!isset($res->access_token)) return null;
+
+		$token->access_token = $res->access_token;
+		$token->expires_in = $res->expires_in;
+
+		return $token;
+	}
+
+	/**
 	 * @param string $url = ''
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null
@@ -160,5 +185,19 @@ class GoogleOAuth implements IQuarkOAuthProvider {
 			throw new OAuthAPIException($request, $response);
 
 		return $api;
+	}
+
+	/**
+	 * @return OAuthUser
+	 */
+	public function OAuthUser () {
+		$userInfo = $this->OAuthAPI('/oauth2/v3/userinfo');
+		if ($userInfo == null) return null;
+
+		$user = new OAuthUser($userInfo->id, $userInfo->name);
+		$user->Email($userInfo->email);
+		$user->AvatarFromLink($userInfo->picture);
+
+		return $user;
 	}
 }

@@ -167,7 +167,9 @@ class QuarkViewNavigatorFragment implements IQuarkViewFragment {
 		$href = is_callable($this->_href) ? $this->_href : function () { return ''; };
 
 		while ($i <= $pages) {
-			$items .= '<a class="quark-navigator-item ' . ($i == $page ? ' selected' : '') . '" href="' . $href($i) . '">' . $i . '</a>';
+			if ($i == 1 || $i == $pages || ($i >= $page - 5 && $i <= $page + 5))
+				$items .= '<a class="quark-navigator-item ' . ($i == $page ? ' selected' : '') . '" href="' . $href($i) . '">' . $i . '</a>';
+
 			$i++;
 		}
 

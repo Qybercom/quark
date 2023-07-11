@@ -14,6 +14,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class GooglePlus
@@ -33,6 +34,8 @@ class GooglePlus extends GoogleOAuth implements IQuarkOAuthProvider, IQuarkSocia
 
 	const AGGREGATE_COUNT = 100;
 	const AGGREGATE_CURSOR = '';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string[] $_defaultScope

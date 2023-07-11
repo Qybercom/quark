@@ -12,13 +12,13 @@ use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthAPIException;
 use Quark\Extensions\OAuth\OAuthToken;
-use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Flickr
@@ -29,7 +29,7 @@ class Flickr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const URL_OAUTH = 'https://www.flickr.com/services/oauth';
 	const URL_API = 'https://api.flickr.com/services/rest';
 
-	use OAuthProviderBehavior;
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @param OAuthToken $token
@@ -84,6 +84,15 @@ class Flickr implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
 		// TODO: Implement OAuthTokenFromRequest() method.
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

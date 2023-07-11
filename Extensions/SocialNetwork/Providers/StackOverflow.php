@@ -14,6 +14,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class StackOverflow
@@ -21,6 +22,8 @@ use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
  * @package Quark\Extensions\SocialNetwork\Providers
  */
 class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
+	use SocialNetworkProviderBehavior;
+
 	/**
 	 * @var string $_appId = ''
 	 */
@@ -85,6 +88,15 @@ class StackOverflow implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
 		// TODO: Implement OAuthTokenFromRequest() method.
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

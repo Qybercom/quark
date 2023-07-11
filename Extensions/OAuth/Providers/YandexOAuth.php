@@ -110,6 +110,15 @@ class YandexOAuth implements IQuarkOAuthProvider {
 	}
 
 	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
+	}
+
+	/**
 	 * @param string $url = ''
 	 * @param QuarkDTO $request = null
 	 * @param QuarkDTO $response = null

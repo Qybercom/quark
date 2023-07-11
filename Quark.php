@@ -3927,6 +3927,13 @@ trait QuarkServiceBehavior {
 	}
 
 	/**
+	 * @return QuarkDTO
+	 */
+	public function Output () {
+		return $this->__call('Output', func_get_args());
+	}
+
+	/**
 	 * @return QuarkSession
 	 */
 	public function Session () {
@@ -5868,17 +5875,18 @@ class QuarkObject {
 
 	/**
 	 * @param $value
+	 * @param bool $quote = false
 	 *
 	 * @return string
 	 */
-	public static function Stringify ($value) {
+	public static function Stringify ($value, $quote = false) {
 		if (is_bool($value))
 			return $value ? 'true' : 'false';
 
 		if (is_null($value)) return 'null';
 		if (is_array($value)) return 'array';
 
-		return (string)$value;
+		return $quote ? ('\'' . (string)$value . '\'') : (string)$value;
 	}
 
 	/**
@@ -6495,6 +6503,7 @@ class QuarkView implements IQuarkContainer {
 					$source->Minimize();
 
 				// TODO: refactor!!!
+				// @note Quark inline primitives don't use minimization parameter - refactor
 				$buffer = $resource->HTML($min);
 				$out .= $bundle ? strip_tags($buffer) : $buffer;
 			}
@@ -6974,13 +6983,13 @@ class QuarkView implements IQuarkContainer {
 	}
 
 	/**
-	 * @param callable $rendeer = null
+	 * @param callable $renderer = null
 	 * @param $vars = []
 	 * @param IQuarkViewResource[] $resources = []
 	 *
-	 * @return QuarkModel|QuarkGenericViewModelInline
+	 * @return QuarkView|QuarkGenericViewModelInline
 	 */
-	public static function Inline (callable $rendeer = null, $vars = [], $resources = []) {
+	public static function Inline (callable $renderer = null, $vars = [], $resources = []) {
 		return new self(new QuarkGenericViewModelInline($renderer, $resources), $vars);
 	}
 
@@ -6990,7 +6999,7 @@ class QuarkView implements IQuarkContainer {
 	 * @param IQuarkSpecifiedViewResource[] $dependencies = []
 	 * @param bool $minimize = true
 	 *
-	 * @return QuarkModel|QuarkGenericViewModelInline
+	 * @return QuarkView|QuarkGenericViewModelInline
 	 */
 	public static function InlineResource (IQuarkSpecifiedViewResource $resource = null, $vars = [], $dependencies = [], $minimize = true) {
 		return new self(QuarkGenericViewModelInline::ForResource($resource, $dependencies, $minimize), $vars);
@@ -8294,13 +8303,17 @@ trait QuarkCollectionBehavior {
 
 	/**
 	 * @param callable $iterator = null
+	 * @param array $query = []
 	 *
 	 * @return $this
 	 */
-	public function Each (callable $iterator = null) {
+	public function Each (callable $iterator = null, $query = []) {
 		if ($iterator != null) {
-			foreach ($this->_collection as $i => &$item)
+			foreach ($this->_collection as $i => &$item) {
+				if (func_num_args() > 1 && !$this->Match($item, $query)) continue;
+
 				$this->_collection[$i] = $iterator($item);
+			}
 
 			unset($i, $item, $iterator);
 		}
@@ -8342,9 +8355,13 @@ trait QuarkCollectionBehavior {
 				if (is_object($document->$parent) && !$iterable)
 					return $this->Match($document->$parent, array($newKey => $rule));
 
-				if (is_array($document->$parent) || $iterable)
+				if (is_array($document->$parent) || $iterable) {
+					// TODO: BUG multiple links doesn't work, because of forced array($newKey => $rule), need multiple array re-assign
 					foreach ($document->$parent as $item)
 						if ($this->Match($item, array($newKey => $rule))) return true;
+
+					unset($item);
+				}
 				
 				continue;
 			}
@@ -8368,6 +8385,8 @@ trait QuarkCollectionBehavior {
 			if (isset($document->$key) || $document->$key === null)
 				$this->_matchOut($out, $outChanged, $this->_matchTarget($document->$key, $rule));
 		}
+
+		unset($key, $rule);
 		
 		return $outChanged ? $out : false;
 	}
@@ -8752,6 +8771,17 @@ trait QuarkCollectionBehavior {
 	private function _compare_regex ($property, $expected) {
 		return preg_match($expected, $property);
 	}
+
+	/** @noinspection PhpUnusedPrivateMethodInspection
+	 *
+	 * @param $property
+	 * @param $expected
+	 *
+	 * @return bool
+	 */
+	private function _compare_regex_inverse ($property, $expected) {
+		return preg_match($property, $expected);
+	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
 	 *
@@ -8777,9 +8807,12 @@ trait QuarkCollectionBehavior {
 		$out = array();
 		
 		if (sizeof($query) == 0) $out = $this->_collection;
-		else foreach ($this->_collection as $i => &$item) {
-			if ($this->Match($item, $query))
-				$out[] = $item;
+		else {
+			foreach ($this->_collection as $i => &$item)
+				if ($this->Match($item, $query))
+					$out[] = clone $item;
+
+			unset($i, $item);
 		}
 		
 		return $this->_slice($out, $options);
@@ -8931,6 +8964,7 @@ trait QuarkCollectionBehavior {
 	 * @param $update
 	 */
 	private function _change ($i, $update) {
+		// TODO: add support of compound keys "foo.bar.etc"
 		if (!QuarkObject::isTraversable($update)) return;
 
 		$modified = false;
@@ -9096,6 +9130,36 @@ trait QuarkCollectionBehavior {
 		foreach ($this->_collection as $i => &$item)
 			$out[] = $mapper($item, $this);
 
+		unset($i, $item);
+
+		return $out;
+	}
+
+	/**
+	 * @param callable $mapper = null
+	 *
+	 * @return array
+	 */
+	public function MapKeyPair (callable $mapper = null) {
+		if ($mapper == null) return null;
+
+		/**
+		 * @var QuarkKeyValuePair[] $pairs
+		 */
+		$pairs = array();
+
+		foreach ($this->_collection as $i => &$item)
+			$pairs[] = $mapper($item, $this);
+
+		unset($i, $item);
+
+		$out = array();
+
+		foreach ($pairs as $i => &$pair)
+			$out[$pair->Key()] = $pair->Value();
+
+		unset($i, $pair);
+
 		return $out;
 	}
 
@@ -9114,6 +9178,47 @@ trait QuarkCollectionBehavior {
 		if ($next === null) return;
 
 		$this->Navigate($next, $navigator);
+	}
+
+	/**
+	 * @return QuarkCollectionBehavior
+	 */
+	public function Reverse () {
+		$this->_collection = array_reverse($this->_collection);
+
+		return $this;
+	}
+
+	/**
+	 * @return QuarkCollectionBehavior
+	 */
+	public function Shuffle () {
+		shuffle($this->_collection);
+
+		return $this;
+	}
+
+	/**
+	 * @param $needle
+	 * @param callable $compare
+	 *
+	 * @return bool
+	 */
+	public function In ($needle, callable $compare) {
+		foreach ($this->_collection as $key => &$item)
+			if ($compare($item, $needle, $key)) return true;
+
+		return false;
+	}
+
+	/**
+	 * @return QuarkCollectionBehavior
+	 */
+	public function Flush () {
+		$this->_collection = array();
+		$this->_index = 0;
+
+		return $this;
 	}
 }
 
@@ -9340,26 +9445,39 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 
 	/**
 	 * @param $item
+	 * @param bool $prepend = false
+	 *
+	 * @return QuarkCollection
+	 */
+	private function &_add ($item, $prepend = false) {
+		if ($prepend) array_unshift($this->_collection, $item);
+		else $this->_collection[] = $item;
+
+		return $this;
+	}
+
+	/**
+	 * @param $item
+	 * @param bool $prepend = false
 	 *
 	 * @return bool
 	 */
-	public function Add ($item) {
+	public function Add ($item, $prepend = false) {
 		if (!$this->TypeIs($item)) return false;
 
-		$this->_collection[] = !$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item);
+		$this->_add(!$this->_model || $item instanceof QuarkModel ? $item : new QuarkModel($item), $prepend);
 
 		return true;
 	}
 
 	/**
 	 * @param array|object $source = []
+	 * @param bool $prepend = false
 	 *
 	 * @return QuarkCollection
 	 */
-	public function AddBySource ($source = []) {
-		$this->_collection[] = new QuarkModel($this->_type, $source);
-
-		return $this;
+	public function AddBySource ($source = [], $prepend = false) {
+		return $this->_add(new QuarkModel($this->_type, $source), $prepend);
 	}
 
 	/**
@@ -9391,51 +9509,25 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	}
 
 	/**
-	 * @return QuarkCollection
-	 */
-	public function Reverse () {
-		$this->_collection = array_reverse($this->_collection);
-
-		return $this;
-	}
-	
-	/**
-	 * @return QuarkCollection
-	 */
-	public function Shuffle () {
-		shuffle($this->_collection);
-		
-		return $this;
-	}
-
-	/**
-	 * @param $needle
-	 * @param callable $compare
-	 *
-	 * @return bool
-	 */
-	public function In ($needle, callable $compare) {
-		foreach ($this->_collection as $key => &$item)
-			if ($compare($item, $needle, $key)) return true;
-
-		return false;
-	}
-
-	/**
-	 * @param array $source
+	 * @param QuarkCollection|array $source
 	 * @param callable $iterator = null
+	 * @param bool $empty = true
+	 * @param bool $prepend = false
 	 *
 	 * @return QuarkCollection
 	 */
-	public function PopulateWith ($source, callable $iterator = null) {
+	public function PopulateWith ($source, callable $iterator = null, $empty = true, $prepend = false) {
 		if ($source instanceof QuarkCollection)
 			$source = $source->_collection;
 
 		if (is_array($source)) {
-			$this->_collection = array();
+			if ($empty)
+				$this->_collection = array();
 
 			foreach ($source as $key => &$item)
-				$this->Add($iterator == null ? $item : $iterator($item, $key));
+				$this->Add($iterator == null ? $item : $iterator($item, $key), $prepend);
+
+			unset($key, $item);
 		}
 
 		return $this;
@@ -9443,13 +9535,24 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 
 	/**
 	 * @param array $source = []
+	 * @param bool $prepend = false
 	 *
 	 * @return QuarkCollection
 	 */
-	public function PopulateModelsWith ($source = []) {
+	public function PopulateModelsWith ($source = [], $prepend = false) {
 		return $this->PopulateWith($source, function ($item) {
 			return new QuarkModel($this->_type, $item);
-		});
+		}, true, $prepend);
+	}
+
+	/**
+	 * @param QuarkCollection $collection = null
+	 * @param bool $prepend = false
+	 *
+	 * @return QuarkCollection
+	 */
+	public function Merge (QuarkCollection $collection = null, $prepend = false) {
+		return $this->PopulateWith($collection, null, false, $prepend);
 	}
 
 	/**
@@ -9478,6 +9581,8 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 			if ($iterator == null || $iterator($item, $key))
 				$output[] = $item;
 
+		unset($key, $item);
+
 		return $output;
 	}
 
@@ -9498,17 +9603,9 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 			 */
 			$out[] = $item->Extract($fields, $weak);
 
+		unset($key, $item);
+
 		return $out;
-	}
-
-	/**
-	 * @return QuarkCollection
-	 */
-	public function Flush () {
-		$this->_collection = array();
-		$this->_index = 0;
-
-		return $this;
 	}
 	
 	/**
@@ -9819,6 +9916,12 @@ trait QuarkModelBehavior {
 	 * @return callable
 	 */
 	public function Nullable ($default) {
+		if ($default instanceof QuarkLocalizedString) {
+			$default->Nullable(true);
+
+			return $default;
+		}
+
 		$store = $default;
 		$stored = false;
 		
@@ -10475,9 +10578,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return QuarkModel|null
 	 */
 	public static function Build ($model, $field) {
-		return $field == null && $model instanceof IQuarkNullableModel
-			? null
-			: new QuarkModel($model);
+		return $field == null && self::_nullable($model) ? null : new QuarkModel($model);
 	}
 
 	/**
@@ -10600,9 +10701,31 @@ class QuarkModel implements IQuarkContainer {
 		return $property instanceof IQuarkLinkedModel
 			? ($value instanceof QuarkModel ? $value : $property->Link(QuarkObject::isAssociative($value) ? (object)$value : ($key_type != 'NULL' && settype($value_linked, $key_type) ? $value_linked : $value)))
 			: ($property instanceof IQuarkModel
-				? ($property instanceof IQuarkNullableModel && $value == null ? null : new QuarkModel($property, $value))
+				? (self::_nullable($property) && $value == null ? null : new QuarkModel($property, $value))
 				: (self::_callableField($property) ? $property($key, $value, true) : $value)
 			);
+	}
+
+	/**
+	 * @param IQuarkModel $model = null
+	 *
+	 * @return bool
+	 */
+	private static function _nullable (IQuarkModel &$model = null) {
+		$out = false;
+
+		if ($model instanceof IQuarkNullableModel) {
+			$out = true;
+
+			if ($model instanceof IQuarkNullableManageableModel) {
+				$value = $model->ModelNullable();
+				$out &= $value === null || $value;
+			}
+		}
+
+		unset($model);
+
+		return $out;
 	}
 
 	/**
@@ -10702,7 +10825,7 @@ class QuarkModel implements IQuarkContainer {
 	private static function _validate (IQuarkModel $model, $check = true) {
 		QuarkField::FlushValidationErrors();
 
-		if ($model instanceof IQuarkNullableModel && sizeof((array)$model) == 0) return true;
+		if (self::_nullable($model) && sizeof((array)$model) == 0) return true;
 
 		if ($model instanceof IQuarkModelWithValidationControl) {
 			$control = $model->ValidationControl();
@@ -11218,7 +11341,7 @@ class QuarkModel implements IQuarkContainer {
 	 * @return QuarkCollection|array
 	 */
 	public static function FindByPage (IQuarkModel $model, $page = 1, $criteria = [], $options = [], $optionsCount = []) {
-		$optionsCount = (array)QuarkObject::Merge($options, $optionsCount);
+		$optionsCount = array_replace_recursive($options, $optionsCount);
 		if (isset($optionsCount[self::OPTION_LIMIT]))
 			unset($optionsCount[self::OPTION_LIMIT]);
 
@@ -11408,6 +11531,18 @@ interface IQuarkStrongModelWithRuntimeFields extends IQuarkStrongModel {
  * @package Quark
  */
 interface IQuarkNullableModel { }
+
+/**
+ * Interface IQuarkNullableManageableModel
+ *
+ * @package Quark
+ */
+interface IQuarkNullableManageableModel extends IQuarkNullableModel {
+	/**
+	 * @return bool
+	 */
+	public function ModelNullable();
+}
 
 /**
  * Interface IQuarkPolymorphicModel
@@ -12533,7 +12668,7 @@ class QuarkField {
  *
  * @package Quark
  */
-class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithBeforeExtract {
+class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkNullableManageableModel, IQuarkModelWithBeforeExtract {
 	const EXTRACT_CURRENT = 'localized.extract.current';
 	const EXTRACT_ANY = 'localized.extract.any';
 	const EXTRACT_VALUES = 'localized.extract.values';
@@ -12548,6 +12683,11 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 * @var string $default = QuarkLanguage::ANY
 	 */
 	public $default = QuarkLanguage::ANY;
+
+	/**
+	 * @var bool $_nullable = false
+	 */
+	private $_nullable = false;
 
 	/**
 	 * @param string $value
@@ -12567,6 +12707,18 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	 */
 	public function __toString () {
 		return $this->Of($this->default);
+	}
+
+	/**
+	 * @param bool $nullable = false
+	 *
+	 * @return bool
+	 */
+	public function Nullable ($nullable = false) {
+		if (func_num_args() != 0)
+			$this->_nullable = $nullable;
+
+		return $this->_nulllable;
 	}
 
 	/**
@@ -12754,6 +12906,13 @@ class QuarkLocalizedString implements IQuarkModel, IQuarkLinkedModel, IQuarkMode
 	}
 
 	/**
+	 * @return bool
+	 */
+	public function ModelNullable () {
+		return $this->_nullable;
+	}
+
+	/**
 	 * @param array $fields
 	 * @param bool $weak
 	 *
@@ -12930,6 +13089,7 @@ class QuarkDate implements IQuarkModel, IQuarkLinkedModel, IQuarkModelWithAfterP
 	const FORMAT_ISO_FULL = 'Y-m-d H:i:s.u';
 	const FORMAT_MS_DOS = '___quark_ms_dos___';
 	const FORMAT_HTTP_DATE = 'D, d M Y H:i:s'; // https://stackoverflow.com/a/21121453/2097055
+	const FORMAT_HTML_DATETIME_LOCAL = 'Y-m-d\\TH:i'; // https://developer.mozilla.org/ru/docs/Web/HTML/Element/Input/datetime-local
 
 	const UNIT_YEAR = 'Y';
 	const UNIT_MONTH = 'm';
@@ -23182,7 +23342,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
  */
 class QuarkXMLIOProcessor implements IQuarkIOProcessor {
 	const PATTERN_ATTRIBUTE = '#([a-zA-Z0-9\:\_\.\-]+)\=\"(.*)\"#UisS';
-	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\.\-]+)\s*((([a-zA-Z0-9\:\_\.\-]+)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#UisS';
+	const PATTERN_ELEMENT = '#\<([a-zA-Z0-9\:\_\.\-]+)\s*((([a-zA-Z0-9\:\_\.\-]+)\=\"(.*)\")*)\s*(\>(.*)\<\/\1|\/)\>#isS';
 	const PATTERN_META = '#^\s*\<\?xml\s*((([a-zA-Z0-9\:\_\-\.]+?)\=\"(.*)\")*)\s*\?\>#UisS';
 	const PATTERN_COMMENT = '#\<\!\-\-(.*)\-\-\>#is';
 
@@ -27122,7 +27282,7 @@ class QuarkArchive extends QuarkFile implements IQuarkCollectionWithArrayAccess 
 		if (func_num_args() != 0)
 			$this->_collection = $items;
 		
-		$this->Content($this->_archive->Pack($this->_collection));
+		$this->Content($this->_archive->Pack($this->_collection), true);
 		$this->_unpacked = true;
 		
 		return $this;

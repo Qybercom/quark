@@ -21,6 +21,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class VKontakte
@@ -65,6 +66,8 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	const PERMISSION_OFFLINE = 'offline';
 	const PERMISSION_NOHTTPS = 'nohttps';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_appId = ''
@@ -159,6 +162,15 @@ class VKontakte implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = $this->OAuthAPI('/access_token', $req, $res, self::URL_OAUTH);
 
 		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

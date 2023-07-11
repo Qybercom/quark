@@ -11,7 +11,8 @@ use Quark\IQuarkViewResourceWithDependencies;
  */
 class OwlCarousel implements IQuarkViewResource, IQuarkViewResourceWithDependencies{
 	//const CURRENT_VERSION = '1.32';
-	const CURRENT_VERSION = '2.2.1';
+	//const CURRENT_VERSION = '2.2.1';
+	const CURRENT_VERSION = '2.3.4';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION

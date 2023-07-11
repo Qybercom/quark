@@ -20,6 +20,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class MyMailRU
@@ -32,6 +33,8 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 
 	const GENDER_MALE = '0';
 	const GENDER_FEMALE = '1';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_appId
@@ -123,6 +126,15 @@ class MyMailRU implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$this->_vid = isset($api->x_mailru_vid) ? $api->x_mailru_vid : '';
 
 		return new QuarkModel(new OAuthToken(), $api->Data());
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

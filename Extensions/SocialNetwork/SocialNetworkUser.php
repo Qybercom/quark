@@ -1,6 +1,7 @@
 <?php
 namespace Quark\Extensions\SocialNetwork;
 
+use Quark\Extensions\OAuth\OAuthUser;
 use Quark\QuarkCultureISO;
 use Quark\QuarkDate;
 use Quark\QuarkFile;
@@ -335,5 +336,19 @@ class SocialNetworkUser {
 			$this->_company = $company;
 
 		return $this->_company;
+	}
+
+	/**
+	 * @return OAuthUser
+	 */
+	public function OAuthUser () {
+		$out = new OAuthUser();
+
+		$out->ID($this->_id);
+		$out->Name($this->_name);
+		$out->Email($this->_email);
+		$out->Avatar($this->_photo);
+
+		return $out;
 	}
 }

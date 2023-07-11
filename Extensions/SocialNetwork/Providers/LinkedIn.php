@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Quark;
 use Quark\QuarkURI;
 use Quark\QuarkDTO;
@@ -22,7 +21,9 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class LinkedIn
@@ -73,6 +74,8 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const VISIBILITY_CONNECTIONS_ONLY = 'connections-only';
 
 	const MAX_COMPANIES = 100;
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_appId = ''
@@ -189,6 +192,15 @@ class LinkedIn implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = $this->OAuthAPI('/accessToken', $req, new QuarkDTO(new QuarkJSONIOProcessor()), self::URL_OAUTH);
 
 		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

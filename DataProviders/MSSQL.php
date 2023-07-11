@@ -341,7 +341,7 @@ class MSSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeField ($field) {
-		return '[' . $field . ']';
+		return '[' . str_replace('"', '""', $field) . ']';
 	}
 
 	/**

@@ -45,6 +45,11 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	private $_force = array();
 
 	/**
+	 * @var bool $_quot = true
+	 */
+	private $_quot = true;
+
+	/**
 	 * @var string $_separatorBit = self::SEPARATOR_BIT_DOT
 	 */
 	private $_separatorBit = self::SEPARATOR_BIT_DOT;
@@ -59,14 +64,16 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	 * @param string $separatorValue = self::SEPARATOR_VALUE_COMMA
 	 * @param bool $header = false
 	 * @param string[] $force = []
+	 * @param bool $quot = true
 	 * @param string $separatorBit = self::SEPARATOR_BIT_DOT
 	 * @param bool $keysLikePHP = true
 	 */
-	public function __construct ($sample = null, $separatorValue = self::SEPARATOR_VALUE_COMMA, $header = false, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT, $keysLikePHP = true) {
+	public function __construct ($sample = null, $separatorValue = self::SEPARATOR_VALUE_COMMA, $header = false, $force = [], $quot = true, $separatorBit = self::SEPARATOR_BIT_DOT, $keysLikePHP = true) {
 		$this->Sample($sample ? $sample : new \stdClass());
 		$this->SeparatorValue($separatorValue);
 		$this->Header($header);
 		$this->Force($force);
+		$this->Quot($quot);
 		$this->SeparatorBit($separatorBit);
 		$this->KeysLikePHP($keysLikePHP);
 	}
@@ -120,6 +127,18 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	}
 
 	/**
+	 * @param bool $quot = []
+	 *
+	 * @return bool
+	 */
+	public function Quot ($quot = true) {
+		if (func_num_args() != 0)
+			$this->_quot = $quot;
+
+		return $this->_quot;
+	}
+
+	/**
 	 * @param string $separator = self::SEPARATOR_BIT_DOT
 	 *
 	 * @return string
@@ -163,6 +182,8 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 
 		$out = '';
 		$header = array();
+		$quot = $this->_quot ? '"' : '';
+		$quot_escape = $this->_quot ? '""' : '';
 
 		foreach ($data as $i => &$item) {
 			if (!QuarkObject::isTraversable($item)) continue;
@@ -174,7 +195,7 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 					$header[] = $key;
 
 				$line[] = (in_array($key, $this->_force) ? '=' : '')
-						. ('"' . str_replace('"', '""', (is_float($value) ? str_replace('.', $this->_separatorBit, (string)$value) : $value)) . '"');
+						. ($quot . str_replace($quot, $quot_escape, (is_float($value) ? str_replace('.', $this->_separatorBit, (string)$value) : $value)) . $quot);
 			}
 
 			$out .= implode($this->_separatorValue, $line) . "\r\n";
@@ -286,5 +307,19 @@ class QuarkCSVIOProcessor implements IQuarkIOProcessor {
 	 */
 	public static function WithHeader ($sample = null, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT, $keysLikePHP = true) {
 		return new self($sample, self::SEPARATOR_VALUE_COMMA, true, $force, $separatorBit, $keysLikePHP);
+	}
+
+	/**
+	 * @param string $separatorValue = self::SEPARATOR_VALUE_COMMA
+	 * @param object $sample = null
+	 * @param bool $header = false
+	 * @param string[] $force = []
+	 * @param string $separatorBit = self::SEPARATOR_BIT_DOT
+	 * @param bool $keysLikePHP = true
+	 *
+	 * @return QuarkCSVIOProcessor
+	 */
+	public static function WithoutQuot ($separatorValue = self::SEPARATOR_VALUE_COMMA, $sample = null, $header = false, $force = [], $separatorBit = self::SEPARATOR_BIT_DOT, $keysLikePHP = true) {
+		return new self($sample, $separatorValue, $header, $force, false, $separatorBit, $keysLikePHP);
 	}
 }

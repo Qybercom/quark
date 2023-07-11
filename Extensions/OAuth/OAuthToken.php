@@ -159,6 +159,17 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	}
 
 	/**
+	 * @return OAuthToken
+	 *
+	 * @throws QuarkArchException
+	 */
+	public function RefreshAuto () {
+		$out = $this->Provider()->OAuthTokenRefresh($this);
+
+		return $out instanceof OAuthToken ? $this->Refresh($out->access_token, $out->refresh_token, $out->expires_in) : null;
+	}
+
+	/**
 	 * @return object
 	 */
 	public function ExtractOAuth () {
@@ -246,6 +257,16 @@ class OAuthToken implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 */
 	public static function FromMeta ($meta = '', $config = '') {
 		return new QuarkModel(func_num_args() == 2 ? new OAuthToken($config) : new OAuthToken(), self::MetaDecode($meta));
+	}
+
+	/**
+	 * @param string $config = ''
+	 * @param array|object $params = []
+	 *
+	 * @return QuarkModel|OAuthToken
+	 */
+	public static function Init ($config = '', $params = []) {
+		return self::FromMeta(self::MetaEncode($params), $config);
 	}
 
 	/**

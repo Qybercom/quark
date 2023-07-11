@@ -14,6 +14,7 @@ use Quark\QuarkJSONIOProcessor;
 use Quark\QuarkKeyValuePair;
 use Quark\QuarkLocalizedString;
 use Quark\QuarkModel;
+use Quark\QuarkObject;
 use Quark\QuarkURI;
 use Quark\QuarkSQL;
 use Quark\QuarkArchException;
@@ -104,10 +105,12 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			unset($options[self::OPTION_SCHEMA_CHARSET]);
 		}
 
-		foreach ($options as $key => $value) {
-			if (!$this->_connection->options($key, $value))
-				throw new QuarkArchException('MySQLi option set error');
+		foreach ($options as $key => &$value) {
+			if (!$this->_connection->options(QuarkObject::ConstValue($key), $value))
+				throw new QuarkArchException('MySQLi option set error: ' . QuarkException::LastError());
 		}
+
+		unset($key, $value);
 
 		if (!@$this->_connection->real_connect(
 			$uri->host,
@@ -308,7 +311,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeField ($field) {
-		return '`' . $field . '`';
+		return '`' . $this->_connection->real_escape_string($field) . '`';
 	}
 
 	/**

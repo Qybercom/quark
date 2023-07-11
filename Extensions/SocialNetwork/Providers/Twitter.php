@@ -13,15 +13,15 @@ use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
-use Quark\Extensions\OAuth\OAuthProviderBehavior;
 use Quark\Extensions\OAuth\OAuthError;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
-use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Twitter
@@ -59,7 +59,7 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const CRITERIA_ID = 'user_id';
 	const CRITERIA_USERNAME = 'screen_name';
 
-	use OAuthProviderBehavior;
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_cursor = self::AGGREGATE_CURSOR
@@ -141,6 +141,15 @@ class Twitter implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	 */
 	public function OAuthTokenFromRequest (QuarkDTO $request, $redirect) {
 		return $this->OAuth1_0a_TokenFromRequest($request, '/oauth/access_token', self::URL_API);
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

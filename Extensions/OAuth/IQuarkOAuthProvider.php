@@ -49,6 +49,13 @@ interface IQuarkOAuthProvider {
 	public function OAuthTokenFromRequest(QuarkDTO $request, $redirect);
 
 	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh(OAuthToken $token);
+
+	/**
 	 * @param string $url
 	 * @param QuarkDTO $request
 	 * @param QuarkDTO $response
@@ -59,4 +66,9 @@ interface IQuarkOAuthProvider {
 	 * @throws OAuthAPIException
 	 */
 	public function OAuthAPI($url, QuarkDTO $request, QuarkDTO $response, $base = null);
+
+	/**
+	 * @return OAuthUser
+	 */
+	public function OAuthUser();
 }

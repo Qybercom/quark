@@ -21,6 +21,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Odnoklassniki
@@ -130,6 +131,8 @@ class Odnoklassniki implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 	const FIELD_URL_PROFILE_MOBILE = 'URL_PROFILE_MOBILE';
 	const FIELD_VIP = 'VIP';
 
+	use SocialNetworkProviderBehavior;
+
 	/**
 	 * @var string $_appId = ''
 	 */
@@ -225,6 +228,15 @@ class Odnoklassniki implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider 
 		$api = $this->OAuthAPI('/oauth/token.do', $req, $res);
 
 		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

@@ -1,7 +1,6 @@
 <?php
 namespace Quark\Extensions\SocialNetwork\Providers;
 
-use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Quark;
 use Quark\QuarkFormIOProcessor;
 use Quark\QuarkURI;
@@ -20,7 +19,9 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
+use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Facebook
@@ -69,6 +70,8 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const PAGE_ROLE_MODERATE_CONTENT = 'MODERATE_CONTENT';
 	const PAGE_ROLE_CREATE_ADS = 'CREATE_ADS';
 	const PAGE_ROLE_BASIC_ADMIN = 'BASIC_ADMIN';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_appId = ''
@@ -176,6 +179,15 @@ class Facebook implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = $this->OAuthAPI('/oauth/access_token', $req);
 
 		return isset($api->access_token) ? new QuarkModel(new OAuthToken(), $api->Data()) : null;
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

@@ -293,7 +293,7 @@ class PostgreSQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeField ($field) {
-		return '"' . $field . '"';
+		return '"' . \pg_escape_string($field) . '"';
 	}
 
 	/**

@@ -21,8 +21,9 @@ use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
-use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
 use Quark\Extensions\SocialNetwork\SocialNetworkPostAttachment;
+use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Wordpress
@@ -37,6 +38,8 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 	const SCOPE_GLOBAL = 'global';
 
 	const CURRENT_USER = 'me';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @var string $_appId = ''
@@ -141,6 +144,15 @@ class Wordpress implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider {
 		$api = $this->OAuthAPI('/token', $req, new QuarkDTO(new QuarkJSONIOProcessor()), self::URL_OAUTH);
 
 		return $api == null ? null : new QuarkModel(new OAuthToken(), $api->Data());
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

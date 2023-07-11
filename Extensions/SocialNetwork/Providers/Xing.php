@@ -21,13 +21,13 @@ use Quark\Extensions\OAuth\IQuarkOAuthConsumer;
 use Quark\Extensions\OAuth\IQuarkOAuthProvider;
 use Quark\Extensions\OAuth\OAuthToken;
 use Quark\Extensions\OAuth\OAuthAPIException;
-use Quark\Extensions\OAuth\OAuthProviderBehavior;
 
 use Quark\Extensions\SocialNetwork\IQuarkSocialNetworkProvider;
 use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class Xing
@@ -75,7 +75,7 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuarkMo
 	const STORAGE = 'quark.social.xing';
 	const COLLECTION = 'SocialXing';
 
-	use OAuthProviderBehavior;
+	use SocialNetworkProviderBehavior;
 	use QuarkModelBehavior;
 
 	/**
@@ -193,6 +193,15 @@ class Xing implements IQuarkOAuthProvider, IQuarkSocialNetworkProvider, IQuarkMo
 		$this->_callback = null;
 
 		return $out;
+	}
+
+	/**
+	 * @param OAuthToken $token
+	 *
+	 * @return OAuthToken
+	 */
+	public function OAuthTokenRefresh (OAuthToken $token) {
+		return $token;
 	}
 
 	/**

@@ -14,6 +14,7 @@ use Quark\Extensions\SocialNetwork\SocialNetwork;
 use Quark\Extensions\SocialNetwork\SocialNetworkUser;
 use Quark\Extensions\SocialNetwork\SocialNetworkPost;
 use Quark\Extensions\SocialNetwork\SocialNetworkPublishingChannel;
+use Quark\Extensions\SocialNetwork\SocialNetworkProviderBehavior;
 
 /**
  * Class YandexMoyKrug
@@ -41,6 +42,8 @@ class YandexMoyKrug extends YandexOAuth implements IQuarkOAuthProvider, IQuarkSo
 	const PHOTO_RETINA_MIDDLE = 'islands-retina-middle';
 	const PHOTO_RETINA_50 = 'islands-retina-50';
 	const PHOTO_200 = 'islands-200';
+
+	use SocialNetworkProviderBehavior;
 
 	/**
 	 * @param OAuthToken $token

@@ -742,6 +742,8 @@ Quark.Controls.LocalizedInput = function (selector, opt) {
 	 * @private
 	 */
 	that._name = function (name, postfix) {
+		if (name == undefined) return '';
+
 		postfix = postfix || '';
 		var i = name.lastIndexOf(']');
 
