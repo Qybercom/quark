@@ -1118,7 +1118,10 @@ class QuarkConfig {
 
 		if (isset($_SERVER['DOCUMENT_ROOT']))
 			$this->_webHost->path = Quark::NormalizePath(str_replace(Quark::NormalizePath($_SERVER['DOCUMENT_ROOT']), '', Quark::Host()));
-		
+
+		if (isset($_SERVER['HTTP_HOST']) && $this->_webHost->host == QuarkServer::ALL_INTERFACES)
+			$this->_webHost->host = preg_replace('#^([a-zA-Z0-9-._]+):' . $this->_webHost->port . '$#is', '$1', $_SERVER['HTTP_HOST']);
+
 		$this->Ini($ini);
 	}
 
