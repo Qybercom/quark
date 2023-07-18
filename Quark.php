@@ -2612,10 +2612,10 @@ class QuarkCLIEnvironment implements IQuarkEnvironment {
 
 		if ($this->_queued && !$this->_started) {
 			$tasks = $dedicated
-				? Quark::Config()->Dedicated($argc >= 2 ? $argv[2] : '')
+				? Quark::Config()->Dedicated(isset($argv[2]) ? $argv[2] : '')
 				: Quark::Config()->DedicatedAll();
 
-			$this->_tasks = QuarkService::Suite(Quark::Host(), function ($service) use (&$dedicated, $tasks) {
+			$this->_tasks = QuarkService::Suite(Quark::Config()->Location(QuarkConfig::SERVICES), function ($service) use (&$dedicated, $tasks) {
 				if ($dedicated && !QuarkService::URLMatch($service, $tasks)) return false;
 				if (!$dedicated && QuarkService::URLMatch($service, $tasks)) return false;
 
@@ -3441,6 +3441,15 @@ class QuarkTask {
 		});
 
 		return $server;
+	}
+
+	/**
+	 * @param string[] $argv = []
+	 *
+	 * @return string|null
+	 */
+	public static function DedicatedKey ($argv = []) {
+		return isset($argv[1]) && isset($argv[2]) && ($argv[1] == self::DEDICATED || $argv[1] == self::DEDICATED_ALIAS) ? $argv[2] : null;
 	}
 
 	/**
@@ -17393,6 +17402,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private $_unknown;
 
 	/**
+	 * @var string $_dedicated
+	 */
+	private $_dedicated;
+
+	/**
 	 * @var bool $_controllerFromConfig = false
 	 */
 	private $_controllerFromConfig = false;
@@ -17791,6 +17805,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param string $dedicated = ''
+	 *
+	 * @return string
+	 */
+	public function &Dedicated ($dedicated = '') {
+		if (func_num_args() != 0)
+			$this->_dedicated = $dedicated;
+
+		return $this->_dedicated;
+	}
+
+	/**
 	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
@@ -17919,13 +17945,16 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		
 		if (isset($ini->StreamUnknown))
 			$this->StreamUnknown($ini->StreamUnknown);
+
+		if (isset($ini->Dedicated))
+			$this->Dedicated($ini->Dedicated);
 	}
 
 	/**
 	 * @return bool
 	 */
 	public function UsageCriteria () {
-		return Quark::CLI() && $_SERVER['argc'] == 1;
+		return Quark::CLI() && QuarkTask::DedicatedKey($_SERVER['argv']) == $this->_dedicated;
 	}
 
 	/**
@@ -18256,6 +18285,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$node->signature = $signature;
 
 			$this->_monitor();
+
+			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $state->uri, null, true));
 		});
 	}
 
