@@ -137,7 +137,9 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 
 			$file->Content($origin->Content());
 			if (!$file->SaveContent()) return false;
+		}
 
+		if (!in_array($host, $item->hosts)) {
 			$item->hosts[] = $host;
 			if (!$item->Save()) return false;
 		}
