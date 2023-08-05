@@ -15516,9 +15516,9 @@ class QuarkKeyValuePair {
 		if (!is_array($field) && !is_object($field)) return null;
 
 		$field = (array)$field;
-		$pair = each($field);
+		foreach ($field as $key => $value);
 
-		return new self($pair['key'], $pair['value']);
+		return new self($key, $value);
 	}
 
 	/**
