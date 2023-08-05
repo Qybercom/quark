@@ -16237,7 +16237,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Closed () {
-		return !$this->_socket || (@feof($this->_socket) === true && $this->_connected);
+		return !$this->_socket || !is_resource($this->_socket) || (@feof($this->_socket) === true && $this->_connected);
 	}
 
 	/**
