@@ -211,6 +211,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 			var dialog = $(this);
 
 			dialog.data('quark-dialog-id', that._id);
+			dialog.attr('data-quark-dialog-id', that._id);
 
 			dialog.hide(0);
 

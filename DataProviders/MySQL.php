@@ -311,6 +311,9 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	 * @return string
 	 */
 	public function EscapeField ($field) {
+		if (!$this->_connection)
+			throw new QuarkArchException('[MySQL::EscapeField] No active connection');
+
 		return '`' . $this->_connection->real_escape_string($field) . '`';
 	}
 
