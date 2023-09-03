@@ -16050,7 +16050,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Send ($data) {
-		$out = $this->_socket && $this->_transport instanceof IQuarkNetworkTransport
+		$out = $this->_socket && is_resource($this->_socket) && $this->_transport instanceof IQuarkNetworkTransport
 			? @fwrite($this->_socket, $this->_transport->Send($data))
 			: false;
 
