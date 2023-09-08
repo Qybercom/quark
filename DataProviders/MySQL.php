@@ -32,6 +32,7 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 	const OPTION_SCHEMA_AUTOINCREMENT = 'AUTO_INCREMENT';
 	const OPTION_SCHEMA_NOT_NULL = 'NOT NULL';
 	const OPTION_SCHEMA_CHECK_EXISTS = '_sql_exists';
+	const OPTION_QUERY_MULTIPLE = '_sql_query_multiple';
 
 	const SCHEMA_TYPE_BDB = 'BDB';
 	const SCHEMA_TYPE_HEAP = 'HEAP';
@@ -285,10 +286,12 @@ class MySQL implements IQuarkDataProvider, IQuarkSQLDataProvider {
 			? $options['mode']
 			: MYSQLI_STORE_RESULT;
 
-		if (!@$this->_connection->ping())
+		if ($this->_connection == null || !@$this->_connection->ping())
 			$this->Connect($this->_uri);
 
-		$out = @$this->_connection->query($query, $mode);
+		$out = null;
+		if (isset($options[self::OPTION_QUERY_MULTIPLE]) && $options[self::OPTION_QUERY_MULTIPLE]) $out = @$this->_connection->multi_query($query);
+		else $out = @$this->_connection->query($query, $mode);
 
 		if (!$out)
 			Quark::Log('[MySQL] Query error "' . $query . '". Error: ' . $this->_connection->error);
