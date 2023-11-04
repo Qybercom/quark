@@ -15702,7 +15702,7 @@ trait QuarkNetwork {
 	 * @return QuarkURI|null
 	 */
 	public function ConnectionURI ($remote = false, $face = false) {
-		if (!$this->_socket) return null;
+		if (!is_resource($this->_socket)) return null;
 
 		$uri = QuarkURI::FromURI(stream_socket_get_name($this->_socket, $remote));
 		if ($uri == null) return null;
@@ -15736,7 +15736,7 @@ trait QuarkNetwork {
 		if (func_num_args() == 1 && is_int($timeout)) {
 			$this->_timeout = $timeout;
 
-			if ($this->_socket)
+			if (is_resource($this->_socket))
 				stream_set_timeout($this->_socket, $this->_timeout, QuarkThreadSet::TICK);
 		}
 
@@ -15764,7 +15764,7 @@ trait QuarkNetwork {
 		if (func_num_args() != 0) {
 			$this->_blocking = (bool)$block;
 
-			if ($this->_socket)
+			if (is_resource($this->_socket))
 				stream_set_blocking($this->_socket, (int)$block);
 		}
 
@@ -15783,7 +15783,7 @@ trait QuarkNetwork {
 	 */
 	public function Secure ($method = -1, $flag = false, $timeout = 30) {
 		if (func_num_args() != 0) {
-			if (!$this->_socket) return false;
+			if (!is_resource($this->_socket)) return false;
 		
 			if (!$this->_blocking) stream_set_blocking($this->_socket, 1);
 			stream_set_timeout($this->_socket, $timeout, QuarkThreadSet::TICK);

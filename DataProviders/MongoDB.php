@@ -1215,7 +1215,7 @@ class _MongoDB_php_mongodb implements IQuarkMongoDBDriver {
 		$this->_uri = $uri;
 
 		try {
-			$this->_connection = new Manager($uri->URI());
+			$this->_connection = new Manager($uri->URI(true));
 			$this->Ping();
 		}
 		catch (\Exception $e) {
