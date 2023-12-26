@@ -72,7 +72,8 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 			$input = self::FrameIn($this->_buffer);
 			$this->_buffer = '';
 			
-			$client->TriggerData($input);
+			if ($input !== null)
+				$client->TriggerData($input);
 		}
 		else {
 			if (!preg_match(QuarkDTO::HTTP_PROTOCOL_REQUEST, $this->_buffer)) return;
@@ -126,6 +127,8 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	 * @return string
 	 */
 	public static function FrameIn ($data) {
+		if (!isset($data[1])) return null;
+		
 		$length = ord($data[1]) & 127;
 
 		if ($length == 126) {
@@ -154,21 +157,21 @@ class WebSocketNetworkTransportServer implements IQuarkNetworkTransport {
 	}
 	
 	/**
-     * @param string $data
-     * @param int $op = self::OP_TEXT
+	 * @param string $data
+	 * @param int $op = self::OP_TEXT
 	 *
 	 * @return string
-     */
+	 */
 	public static function FrameOut ($data, $op = self::OP_TEXT) {
 		$length = strlen($data);
-        $out = pack('C', $op | 0x80);
-        
-        if ($length > 125 && $length <= 0xffff)
+		$out = pack('C', $op | 0x80);
+		
+		if ($length > 125 && $length <= 0xffff)
 			return $out . pack('Cn', 126, $length) . $data;
-			
-        if ($length > 0xffff)
+		
+		if ($length > 0xffff)
 			return $out . pack('CNN', 127, 0, $length) . $data;
-        
+		
 		return $out . pack('C', $length) . $data;
-    }
+	}
 }

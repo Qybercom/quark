@@ -2367,6 +2367,7 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		Quark::CurrentEnvironment($this);
 
 		$offset = Quark::Config()->WebHost()->path;
+		if ($offset === null) $offset = '';
 
 		$service = new QuarkService(
 			substr($_SERVER['REQUEST_URI'], ($offset != '' ? (int)strpos($_SERVER['REQUEST_URI'], $offset) : 0) + strlen($offset)),
@@ -2388,8 +2389,11 @@ class QuarkFPMEnvironment implements IQuarkEnvironment {
 		$service->Input()->Remote($remote);
 		$service->Output()->Remote($remote);
 
-		if ($service->Service() instanceof IQuarkServiceWithAccessControl)
-			$service->Output()->Header(QuarkDTO::HEADER_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
+		if ($service->Service() instanceof IQuarkServiceWithAccessControl) {
+			$service->Output()->Header(QuarkDTO::HEADER_ACCESS_CONTROL_ALLOW_ORIGIN, $service->Service()->AllowOrigin());
+			$service->Output()->Header(QuarkDTO::HEADER_ACCESS_CONTROL_ALLOW_HEADERS, 'Content-Type, Content-Length, Accept, Cookie');
+			$service->Output()->Header(QuarkDTO::HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS, 'true');
+		}
 
 		$headers = array();
 
@@ -9095,6 +9099,7 @@ trait QuarkCollectionBehavior {
 	 * The return value is cast to an integer.
 	 * @since 5.1.0
 	 */
+	#[\ReturnTypeWillChange]
 	public function Count ($query = [], $options = []) {
 		return sizeof(func_num_args() == 0
 			? $this->_collection
@@ -9261,6 +9266,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @link http://php.net/manual/en/iterator.current.php
 	 * @return mixed Can return any type.
 	 */
+	#[\ReturnTypeWillChange]
 	public function current () {
 		return $this->_collection[$this->_index];
 	}
@@ -9272,6 +9278,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @link http://php.net/manual/en/iterator.next.php
 	 * @return void Any returned value is ignored.
 	 */
+	#[\ReturnTypeWillChange]
 	public function next () {
 		$this->_index++;
 	}
@@ -9283,6 +9290,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @link http://php.net/manual/en/iterator.key.php
 	 * @return mixed scalar on success, or null on failure.
 	 */
+	#[\ReturnTypeWillChange]
 	public function key () {
 		return $this->_index;
 	}
@@ -9295,6 +9303,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @return boolean The return value will be casted to boolean and then evaluated.
 	 *       Returns true on success or false on failure.
 	 */
+	#[\ReturnTypeWillChange]
 	public function valid () {
 		return isset($this->_collection[$this->_index]);
 	}
@@ -9306,6 +9315,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * @link http://php.net/manual/en/iterator.rewind.php
 	 * @return void Any returned value is ignored.
 	 */
+	#[\ReturnTypeWillChange]
 	public function rewind () {
 		$this->_index = 0;
 	}
@@ -9325,6 +9335,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 * <p>
 	 * The return value will be casted to boolean if non-boolean was returned.
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetExists ($offset) {
 		return isset($this->_collection[$offset]);
 	}
@@ -9341,6 +9352,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 *
 	 * @return mixed Can return all value types.
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetGet ($offset) {
 		return isset($this->_collection[$offset]) ? $this->_collection[$offset] : null;
 	}
@@ -9360,6 +9372,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 *
 	 * @return void
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetSet ($offset, $value) {
 		if ($offset === null) $this->_collection[] = $value;
 		else $this->_collection[(int)$offset] = $value;
@@ -9377,6 +9390,7 @@ trait QuarkCollectionBehaviorWithArrayAccess {
 	 *
 	 * @return void
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetUnset ($offset) {
 		unset($this->_collection[(int)$offset]);
 	}
@@ -9764,6 +9778,7 @@ class QuarkCollection implements IQuarkCollectionWithArrayAccess {
 	 * @param mixed $offset
 	 * @param mixed $value
 	 */
+	#[\ReturnTypeWillChange]
 	public function offsetSet ($offset, $value) {
 		if (!$this->TypeIs($value)) return;
 		
@@ -16237,7 +16252,7 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Closed () {
-		return !$this->_socket || !is_resource($this->_socket) || (@feof($this->_socket) === true && $this->_connected);
+		return !$this->_socket || !is_resource($this->_socket) || (feof($this->_socket) === true && $this->_connected);
 	}
 
 	/**
@@ -16320,6 +16335,23 @@ class QuarkClient implements IQuarkEventable {
 	 */
 	public function Subscribed ($channel = '', $strict = false) {
 		return in_array($channel, $this->_channels, $strict);
+	}
+
+	/**
+	 * @param string[] $channels = []
+	 * @param bool $strict = false
+	 *
+	 * @return bool
+	 */
+	public function SubscribedList ($channels = [], $strict = false) {
+		$ok = true;
+
+		foreach ($channels as $i => &$channel)
+			$ok &= $this->Subscribed($channel, $strict);
+
+		unset($i, $channel, $channels);
+
+		return $ok;
 	}
 
 	/**
@@ -18003,6 +18035,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		foreach ($clients as $i => &$client) {
 			if ($filtered) {
 				if (is_string($filter) && !$client->Subscribed($filter)) continue;
+				if (is_array($filter) && !$client->SubscribedList($filter)) continue;
 				if (is_callable($filter) && !call_user_func_array($filter, array(&$client))) continue;
 			}
 
@@ -19175,7 +19208,14 @@ class QuarkDTO {
 	const HEADER_CONNECTION = 'Connection';
 	const HEADER_ETAG = 'ETag';
 	const HEADER_SET_COOKIE = 'Set-Cookie';
-	const HEADER_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
+	const HEADER_ACCESS_CONTROL_ALLOW_CREDENTIALS = 'Access-Control-Allow-Credentials';
+	const HEADER_ACCESS_CONTROL_ALLOW_HEADERS = 'Access-Control-Allow-Headers';
+	const HEADER_ACCESS_CONTROL_ALLOW_METHODS = 'Access-Control-Allow-Methods';
+	const HEADER_ACCESS_CONTROL_ALLOW_ORIGIN = 'Access-Control-Allow-Origin';
+	const HEADER_ACCESS_CONTROL_EXPOSE_HEADERS = 'Access-Control-Expose-Headers';
+	const HEADER_ACCESS_CONTROL_MAX_AGE = 'Access-Control-Max-Age';
+	const HEADER_ACCESS_CONTROL_REQUEST_HEADERS = 'Access-Control-Request-Headers';
+	const HEADER_ACCESS_CONTROL_REQUEST_METHOD = 'Access-Control-Request-Method';
 	const HEADER_AUTHORIZATION = 'Authorization';
 	const HEADER_EXPIRES = 'Expires';
 	const HEADER_PRAGMA = 'Pragma';
