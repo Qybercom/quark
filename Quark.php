@@ -4429,7 +4429,7 @@ trait QuarkStreamBehavior {
 	}
 
 	/**
-	 * @param string $channel = ''
+	 * @param string|string[] $channel = ''
 	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
 	 *
@@ -18023,7 +18023,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param string $url
 	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
-	 * @param string|callable(QuarkClient $client) $filter = null
+	 * @param string|string[]|callable(QuarkClient $client) $filter = null
 	 *
 	 * @return bool
 	 */
