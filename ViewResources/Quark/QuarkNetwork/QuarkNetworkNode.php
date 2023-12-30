@@ -61,7 +61,7 @@ class QuarkNetworkNode implements IQuarkViewResource, IQuarkInlineViewResource, 
 	 */
 	public function Dependencies () {
 		return array(
-			new QuarkNetwork()
+			new QuarkNetwork(true)
 		);
 	}
 

@@ -4368,12 +4368,12 @@ trait QuarkStreamBehavior {
 	use QuarkCLIBehavior;
 
 	/**
-	 * @param QuarkDTO|object|array $data
+	 * @param QuarkDTO|object|array $data = null
 	 * @param string $url = ''
 	 *
 	 * @return bool
 	 */
-	public function Broadcast ($data, $url = '') {
+	public function Broadcast ($data = null, $url = '') {
 		$env = Quark::CurrentEnvironment();
 		$url = func_num_args() == 2 ? $url : $this->CalledURL();
 
@@ -4432,15 +4432,19 @@ trait QuarkStreamBehavior {
 	 * @param string|string[] $channel = ''
 	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
+	 * @param string $url = $url = null
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true) {
+	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true, $url = null) {
 		$env = Quark::CurrentEnvironment();
+		
+		if (func_num_args() < 4)
+			$url = $this->URL();
 
-		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($this->URL(), $sender, $auth, $channel);
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($url, $sender, $auth, $channel);
 		else throw new QuarkArchException('QuarkStreamBehavior: the `ChannelEvent` method cannot be called in a non-stream environment');
 	}
 
@@ -16344,10 +16348,10 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function SubscribedList ($channels = [], $strict = false) {
-		$ok = true;
+		$ok = false;
 
 		foreach ($channels as $i => &$channel)
-			$ok &= $this->Subscribed($channel, $strict);
+			$ok |= $this->Subscribed($channel, $strict);
 
 		unset($i, $channel, $channels);
 
@@ -22400,7 +22404,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	 * @return bool
 	 */
 	public function Upload ($mime = true, $mode = self::MODE_DEFAULT) {
-		if ($mime) {
+		if ($mime && !$this->extension) {
 			$ext = self::ExtensionByMime(self::Mime($this->tmp_name));
 			$this->location .= $ext ? '.' . $ext : '';
 			$this->extension = $ext;

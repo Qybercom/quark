@@ -113,6 +113,8 @@ class QuarkSelfCDN implements IQuarkCDNProvider, IQuarkModel, IQuarkModelWithDat
 	public function CDNResourceURL ($id) {
 		$hostWeb = $this->_host($id);
 		$hostFs = $this->_host($id, false);
+		
+		Quark::Trace($hostFs);
 
 		$file = new QuarkFile($hostFs);
 

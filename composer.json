@@ -1,11 +1,11 @@
 {
-  "name": "qybercom/quark",
-  "description": "Quark is a PHP multipurpose framework, designed for using in complex projects",
-  "license": "LGPL-3.0-only",
-  "autoload": {
-	"files": ["Quark.php"]
-  },
-  "require": {
-	"php": ">=5.4"
-  }
+	"name": "qybercom/quark",
+	"description": "Quark is a PHP multipurpose framework, designed for using in complex projects",
+	"license": "LGPL-3.0-only",
+	"autoload": {
+		"files": ["Quark.php"]
+	},
+	"require": {
+		"php": ">=5.4"
+	}
 }

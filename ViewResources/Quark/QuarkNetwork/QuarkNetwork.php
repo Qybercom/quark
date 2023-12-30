@@ -14,6 +14,18 @@ use Quark\QuarkJSViewResourceType;
  */
 class QuarkNetwork implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource {
 	/**
+	 * @var bool $_legacy = false
+	 */
+	private $_legacy = false;
+
+	/**
+	 * @param bool $legacy = false
+	 */
+	public function __construct ($legacy = false) {
+		$this->_legacy = $legacy;
+	}
+
+	/**
 	 * @return IQuarkViewResourceType
 	 */
 	public function Type () {
@@ -24,7 +36,7 @@ class QuarkNetwork implements IQuarkSpecifiedViewResource, IQuarkLocalViewResour
 	 * @return string
 	 */
 	public function Location () {
-		return __DIR__ . '/QuarkNetwork.js';
+		return __DIR__ . '/QuarkNetwork' . ($this->_legacy ? 'Legacy' : '') . '.js';
 	}
 
 	/**

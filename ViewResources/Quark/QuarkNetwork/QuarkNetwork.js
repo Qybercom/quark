@@ -3,7 +3,7 @@
  *
  * @type {Quark}
  */
-var Quark = Quark || {};
+Quark = Quark || {};
 
 /**
  * Quark.Network namespace
@@ -11,293 +11,237 @@ var Quark = Quark || {};
 Quark.Network = {};
 
 /**
- * @type {{
- *  host: string,
- *  port: number,
- *  socket: WebSocket,
- *  secure: false,
- *  on: {
- *      message: Function,
- *      error: Function
- *  },
- *  constructor: Function,
- *  Connect: Function,
- *  Close: Function,
- *  Send: Function
- * }}
- */
-Quark.Network.Socket = {
-    host: '',
-    port: 0,
-    socket: null,
-    connected: false,
-    secure: false,
-    on: {
-        open: function () {},
-        close: function () {},
-        message: function () {},
-        error: function (e) { console.warn(e); }
-    },
-
-    /**
-     * @param {string=} host
-     * @param {number=} port
-     * @param {object=} [on={open,close,error}]
-     *
-     * @constructor
-     */
-    constructor: function (host, port, on) {
-        this.host = host;
-        this.port = port;
-        this.on = on;
-    },
-
-    /**
-     * API methods
-     */
-    Connect: function () {
-    	var that = this;
-
-        this.socket = new WebSocket('ws' + (this.secure ? 's' : '') + '://' + this.host + ':' + this.port);
-
-        this.socket.onmessage = this.on.message;
-        this.socket.onerror = this.on.error;
-
-        this.socket.onopen = function (e) {
-            that.connected = true;
-            that.on.open(e);
-        };
-
-        this.socket.onclose = function (e) {
-            that.connected = false;
-            that.on.close(e);
-        };
-    },
-
-    /**
-     * @return {boolean}
-     */
-    Close: function () {
-        if (this.socket == null) return false;
-
-        this.socket.close();
-        this.socket = null;
-
-        return true;
-    },
-
-    /**
-     * @param {object} data
-     *
-     * @return {boolean}
-     */
-    Send: function (data) {
-        if (!(this.socket instanceof WebSocket)) return false;
-
-        this.socket.send(data);
-        return true;
-    }
-};
-
-/**
- * @param {string=} [host=document.location.hostname]
- * @param {number=} [port=25000]
- * @param {object=} [on={open,close,error}]
+ * @param {*} opt
  *
  * @constructor
  */
-Quark.Network.Client = function (host, port, on) {
-    on = on || this.on;
+Quark.Network.Socket = function (opt) {
+	opt = opt || {};
 
-    var that = this;
+	var that = this,
+		connected = false,
+		reconnect = null,
+		_reconnectDisabled = false,
+		_reconnect = function () {
+			if (!that.reconnect || _reconnectDisabled) return;
 
-    var _event = {};
-    var _response = {};
+			if (that.onReconnect instanceof Function)
+				that.onReconnect();
 
-    on.message = function (e) {
-        try {
-            var input = JSON.parse(e.data), key = '';
+			if (!reconnect)
+				reconnect = setInterval(function () {
+					that.Connect();
+				}, that.reconnect);
+		};
 
-			if (input.response != undefined)
-				for (key in _response)
-					if (input.response.match(new RegExp('^' + key, 'i')) && _response[key] instanceof Function)
-                		return _response[key](input.response, input.data, input.session);
+	that.Socket = null;
 
-			if (input.event != undefined)
-				for (key in _event)
-					if (input.event.match(new RegExp('^' + key, 'i')) && _event[key] instanceof Function)
-                		return _event[key](input.event, input.data, input.session);
-        }
-        catch (e) {
-            on.error(e);
-        }
-    };
+	that.url = opt.url || null;
+	that.host = opt.host || null;
+	that.port = opt.port || null;
+	that.secure = opt.secure || false;
+	that.path = opt.path || null;
+	that.reconnect = opt.reconnect || false;
+	that.onConnect = opt.onConnect || null;
+	that.onMessage = opt.onMessage || null;
+	that.onClose = opt.onClose || null;
+	that.onError = opt.onError || null;
+	that.onReconnect = opt.onReconnect || null;
 
-    /**
-     * @param {string} url
-     * @param {Function=} [event]
-     *
-     * @return {Function|undefined}
-     */
-    that.Event = function (url, event) {
-        if (event instanceof Function)
-            _event[url] = event;
+	/**
+	 * @returns {string}
+	 */
+	that.URL = function () {
+		var url = opt.url;
 
-        return _event[url] == undefined ? undefined : _event[url];
-    };
+		if (opt.host) {
+			url = 'ws' + (opt.secure ? 's' : '') + '://' + opt.host;
 
-    /**
-     * @param {string} url
-     * @param {Function=} [response]
-     *
-     * @return {Function|undefined}
-     */
-    that.Response = function (url, response) {
-        if (response instanceof Function)
-            _response[url] = response;
+			if (opt.port)
+				url += ':' + opt.port;
+		}
 
-        return _response[url] == undefined ? undefined : _response[url];
-    };
+		if (opt.path)
+			url += opt.path;
 
-    /**
-     * @param {string} url
-     * @param {object=} [data]
-     * @param {object=} [session]
-     */
-    that.Service = function (url, data, session) {
-        try {
-            var out = {
-                url: url,
-                data: data
-            };
+		return url;
+	};
 
-            if (session != undefined)
-                out.session = session;
+	/**
+	 * @returns {boolean}
+	 */
+	that.Connect = function () {
+		try {
+			_reconnectDisabled = false;
 
-            that.Send(JSON.stringify(out));
-        }
-        catch (e) {
-            on.error(e);
-        }
-    };
+			that.Socket = new WebSocket(that.URL());
 
-    that.constructor(host || document.location.hostname, port || 25000, on);
+			that.Socket.onopen = function (e) {
+				connected = true;
+
+				clearInterval(reconnect);
+
+				if (that.onConnect instanceof Function)
+					that.onConnect(e);
+			};
+
+			that.Socket.onmessage = function (e) {
+				if (that.onMessage instanceof Function)
+					that.onMessage(e);
+			};
+			
+			that.Socket.onerror = function (e) {
+				if (that.onError instanceof Function)
+					opt.onError(e);
+			};
+
+			that.Socket.onclose = function (e) {
+				connected = false;
+
+				if (that.onClose instanceof Function)
+					that.onClose(e);
+
+				_reconnect();
+			};
+
+			return true;
+		}
+		catch (e) {
+			if (opt.onError instanceof Function)
+				opt.onError(e);
+
+			_reconnect();
+
+			return false;
+		}
+	};
+
+	/**
+	 * @return {boolean}
+	 */
+	that.Close = function () {
+		if (that.Socket == null) return false;
+
+		that.Socket.close();
+		that.Socket = null;
+
+		_reconnectDisabled = true;
+
+		return true;
+	};
+
+	/**
+	 * @param {object} data
+	 *
+	 * @return {boolean}
+	 */
+	that.Send = function (data) {
+		if (!(that.Socket instanceof WebSocket)) return false;
+		if (that.Socket.readyState !== that.Socket.OPEN) return false;
+
+		that.Socket.send(data);
+		return true;
+	};
 };
 
-Quark.Network.Client.prototype = Quark.Network.Socket;
-
 /**
- * Get a connection from cluster controller, specified by host and port, to the most suitable cluster node
- *
- * @param {string=} [host=document.location.hostname]
- * @param {number=} [port=25900]
- * @param {Function} available
- * @param {Function} error
- */
-Quark.Network.Client.From = function (host, port, available, error) {
-    var terminal = new Quark.Network.Terminal(host || document.location.hostname, port || 25900);
-
-    terminal.Command('endpoint', function (cmd, endpoint) {
-        if (!endpoint) error();
-        else available(endpoint);
-    });
-};
-
-/**
- * @param {string=} [host=document.location.hostname]
- * @param {number=} [port=25900]
- * @param {object=} [on={close,error}]
+ * @param {*} opt
  *
  * @constructor
  */
-Quark.Network.Terminal = function (host, port, on) {
-    on = on || this.on;
+Quark.Network.Client = function (opt) {
+	opt = opt || {};
+		opt.onMessage = opt.onMessage || null;
+		opt.onError = opt.onError || null;
 
-    var that = this;
+	var that = this,
+		_event = {},
+		_response = {};
 
-    var commands = {};
+	that.Socket = new Quark.Network.Socket(opt);
 
-    var _signature = '';
-    var _infrastructure = function () {};
+	that.Socket.onMessage = function (e) {
+		if (opt.onMessage instanceof Function)
+			opt.onMessage(e);
 
-    on.open = function () {
-        that.Send(JSON.stringify({
-            cmd: 'authorize',
-            data: {},
-            signature: _signature
-        }));
-    };
+		var input = JSON.parse(e.data),
+			key = '';
 
-    on.message = function (e) {
-        try {
-            var input = JSON.parse(e.data);
+		if (input.response !== undefined)
+			for (key in _response)
+				if (input.response.match(new RegExp('^' + key, 'i')) && _response[key] instanceof Function)
+					return _response[key](input.response, input.data, input.session);
 
-            if (input.cmd == undefined) return;
+		if (input.event !== undefined)
+			for (key in _event)
+				if (input.event.match(new RegExp('^' + key, 'i')) && _event[key] instanceof Function)
+					return _event[key](input.event, input.data, input.session);
+	};
 
-            input.cmd = input.cmd.toLowerCase();
+	/**
+	 * @param {string} url
+	 * @param {Function=} [event]
+	 *
+	 * @return {Function}
+	 */
+	that.Event = function (url, event) {
+		if (event instanceof Function)
+			_event[url] = event;
 
-            if (input.cmd == 'infrastructure' && _infrastructure instanceof Function)
-                _infrastructure(input.data);
+		return _event[url] instanceof Function ? _event[url] : null;
+	};
 
-            if (commands[input.cmd] instanceof Array) {
-                var i = 0;
+	/**
+	 * @param {string} url
+	 * @param {Function=} [response]
+	 *
+	 * @return {Function}
+	 */
+	that.Response = function (url, response) {
+		if (response instanceof Function)
+			_response[url] = response;
 
-                while (i < commands[input.cmd].length) {
-                    commands[input.cmd][i](input.cmd, input.data);
+		return _response[url] instanceof Function ? _response[url] : null;
+	};
 
-                    i++;
-                }
-            }
-        }
-        catch (e) {
-            on.error(e);
-        }
-    };
+	/**
+	 * @param {string} url
+	 * @param {object=} [data]
+	 * @param {object=} [session]
+	 *
+	 * @returns {boolean}
+	 */
+	that.Service = function (url, data, session) {
+		try {
+			var out = {
+				url: url,
+				data: data
+			};
 
-    /**
-     * @param {string=} [signature]
-     *
-     * @return {string}
-     */
-    that.Signature = function (signature) {
-        if (signature != undefined)
-            _signature = signature;
+			if (session !== undefined)
+				out.session = session;
+			
+			return that.Socket.Send(JSON.stringify(out));
+		}
+		catch (e) {
+			if (opt.onError instanceof Function)
+				opt.onError(e);
+			
+			return false;
+		}
+	};
 
-        return _signature;
-    };
+	/**
+	 * @returns {boolean}
+	 */
+	that.Connect = function () {
+		return that.Socket.Connect();
+	};
 
-    /**
-     * @param {Function=} [infrastructure]
-     *
-     * @return {Function}
-     */
-    that.Infrastructure = function (infrastructure) {
-        if (infrastructure instanceof Function)
-            _infrastructure = infrastructure;
-
-        return _infrastructure;
-    };
-
-    /**
-     * @param {string} cmd
-     * @param {Function} listener
-     *
-     * @return {boolean}
-     */
-    that.Command = function (cmd, listener) {
-        if (!(listener instanceof Function)) return false;
-
-        cmd = cmd.toLowerCase();
-
-        if (commands[cmd] == undefined)
-            commands[cmd] = [];
-
-        commands[cmd].push(listener);
-
-        return true;
-    };
-
-    that.constructor(host || document.location.hostname, port || 25900, on);
+	/**
+	 * @returns {boolean}
+	 */
+	that.Close = function () {
+		return that.Socket.Close();
+	};
 };
-
-Quark.Network.Terminal.prototype = Quark.Network.Socket;

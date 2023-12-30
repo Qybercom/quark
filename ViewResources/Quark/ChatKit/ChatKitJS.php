@@ -49,7 +49,7 @@ class ChatKitJS implements IQuarkSpecifiedViewResource, IQuarkLocalViewResource,
 		return array(
 			new jQueryCore(),
 			new MomentJS(),
-			new QuarkNetwork(),
+			new QuarkNetwork(true),
 			new QuarkUX(),
 			new QuarkMVC()
 		);
