@@ -4404,12 +4404,12 @@ trait QuarkStreamBehavior {
 	}
 
 	/**
-	 * @param QuarkDTO|object|array $data
+	 * @param QuarkDTO|object|array $data = null
 	 * @param IQuarkStreamNetwork $service = null
 	 *
 	 * @return bool
 	 */
-	public function BroadcastService ($data, IQuarkStreamNetwork $service = null) {
+	public function BroadcastService ($data = null, IQuarkStreamNetwork $service = null) {
 		return $this->Broadcast($data, $this->URL($service));
 	}
 
@@ -15535,7 +15535,8 @@ class QuarkKeyValuePair {
 		if (!is_array($field) && !is_object($field)) return null;
 
 		$field = (array)$field;
-		foreach ($field as $key => $value);
+		$key = key($field);
+		$value = $key === null ? null : current($field);
 
 		return new self($key, $value);
 	}
@@ -18262,7 +18263,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		});
 
 		$this->_cmd($data, self::COMMAND_BROADCAST, function ($payload) {
-			if (!isset($payload->url) || !isset($payload->data)) return;
+			if (!isset($payload->url)) return;
 
 			$this->_cluster->Broadcast(self::Package(self::PACKAGE_REQUEST, $payload->url, $payload->data, null, true));
 		});
@@ -18305,7 +18306,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function ControllerServerData (QuarkClient $node, $data) {
 		$this->_cmd($data, self::COMMAND_BROADCAST, function ($payload) {
-			if (!isset($payload->url) || !isset($payload->data)) return;
+			if (!isset($payload->url)) return;
 
 			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_BROADCAST, $payload, null, true));
 		});
