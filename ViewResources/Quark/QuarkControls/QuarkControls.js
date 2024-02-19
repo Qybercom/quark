@@ -224,7 +224,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		e.preventDefault();
 
 		var action = $(this),
-			dialog = action.parent('.quark-dialog');
+			dialog = action.parents('.quark-dialog');
 
 		if (dialog.data('quark-dialog-id') !== that._id) return;
 
@@ -236,7 +236,7 @@ Quark.Controls.Dialog = function (selector, opt) {
 		e.preventDefault();
 
 		var action = $(this),
-			dialog = action.parent('.quark-dialog');
+			dialog = action.parents('.quark-dialog');
 
 		if (dialog.data('quark-dialog-id') !== that._id) return;
 
