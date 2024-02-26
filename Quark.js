@@ -982,3 +982,36 @@ Quark.Clipboard.Copy = function (value) {
 	document.execCommand('copy');
 	document.body.removeChild(buffer);
 };
+
+/**
+ * @url https://www.w3schools.com/howto/howto_js_fullscreen.asp
+ */
+Quark.FullScreen = {};
+
+/**
+ * @param {HTMLElement} element
+ */
+Quark.FullScreen.Open = function (element) {
+	element = element || document.documentElement;
+	
+	if (element.requestFullscreen) {
+		element.requestFullscreen();
+		return;
+	}
+	
+	if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
+	if (element.msRequestFullscreen) element.msRequestFullscreen();
+};
+
+/**
+ * Exit full screen mode
+ */
+Quark.FullScreen.Close = function () {
+	if (document.exitFullscreen) {
+		document.exitFullscreen();
+		return;
+	}
+	
+	if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+	if (document.msExitFullscreen) document.msExitFullscreen();
+};

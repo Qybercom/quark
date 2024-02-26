@@ -1116,12 +1116,12 @@ class QuarkConfig {
 		if (isset($_SERVER['SERVER_PORT']))
 			$this->_webHost->port = $_SERVER['SERVER_PORT'];
 
-		if (isset($_SERVER['DOCUMENT_ROOT']))
+		if (isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] != '')
 			$this->_webHost->path = Quark::NormalizePath(str_replace(Quark::NormalizePath($_SERVER['DOCUMENT_ROOT']), '', Quark::Host()));
 
 		if (isset($_SERVER['HTTP_HOST']) && $this->_webHost->host == QuarkServer::ALL_INTERFACES)
 			$this->_webHost->host = preg_replace('#^([a-zA-Z0-9-._]+):' . $this->_webHost->port . '$#is', '$1', $_SERVER['HTTP_HOST']);
-
+		
 		$this->Ini($ini);
 	}
 
@@ -18561,7 +18561,7 @@ class QuarkURI {
 		}
 
 		$uri = str_replace($pass, ':0@', $uri);
-
+		
 		$url = parse_url($uri);
 
 		if ($url === false) return null;
@@ -18642,6 +18642,8 @@ class QuarkURI {
 	 * @return string
 	 */
 	public function Hostname ($user = true) {
+		if ($this->host == '') return '';
+		
 		if (strpos(strtolower($this->scheme), strtolower('HTTP/')) !== false)
 			$this->scheme = 'http';
 
