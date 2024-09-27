@@ -355,6 +355,73 @@ Quark.Notification.Received = function (callback) {
 };
 
 /**
+ * @param {{onScan: Function, onRead: Function, onRecord: Function, onWrite: Function, onError: Function}} opt
+ */
+Quark.WebNFC = function (opt) {
+	opt = opt || {};
+	
+	var that = this;
+	var reader = null;
+	
+	that.Write = function (data) {
+		if (reader == null) return false;
+		
+		reader.write(data)
+			.then(opt.onWrite)
+			.catch(opt.onError);
+		
+		return true;
+	};
+	
+	try {
+		reader = new NDEFReader();
+		
+		reader.scan()
+			.then(function () {
+				if (opt.onScan instanceof Function)
+					opt.onScan(reader);
+		
+				reader.addEventListener('readingerror', function () {
+					if (opt.onError instanceof Function)
+						opt.onError();
+				});
+		
+				reader.addEventListener('reading', function (data) {
+					if (opt.onRead instanceof Function)
+						opt.onRead({serialNumber: data.serialNumber, recordsLength: data.message.records.length});
+					
+					var decoder = null,
+						record = null,
+						i = 0;
+					
+					while (i < data.message.records.length) {
+						record = data.message.records[i];
+						
+						decoder = new TextDecoder();
+						
+						if (opt.onRecord instanceof Function)
+							opt.onRecord(
+								{
+									id: record.id,
+									recordType: record.recordType,
+									mediaType: record.mediaType
+								},
+								decoder.decode(record.data)
+							);
+						
+						i++;
+					}
+				});
+			})
+			.catch(opt.onError);
+	}
+	catch (e) {
+		if (opt.onError instanceof Function)
+			opt.onError(e);
+	}
+};
+
+/**
  * https://stackoverflow.com/a/37562814/2097055
  *
  * @param {object|array} data
