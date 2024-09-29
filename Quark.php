@@ -17439,6 +17439,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private $_unknown;
 
 	/**
+	 * @var string $_host
+	 */
+	private $_host;
+
+	/**
 	 * @var string $_dedicated
 	 */
 	private $_dedicated;
@@ -17530,12 +17535,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public static function ConnectionURI ($name = '') {
 		$environment = Quark::Environment();
 		$host = Quark::Config()->StreamHost();
+		$buffer = '';
 		
-		foreach ($environment as $i => &$env)
-			if ($env instanceof QuarkStreamEnvironment && $env->EnvironmentName() == $name)
-				return $host == ''
-					? $env->ServerURI()->ConnectionURI()
-					: $env->ServerURI()->ConnectionURI($host);
+		foreach ($environment as $i => &$env) {
+			if (!($env instanceof QuarkStreamEnvironment) || $env->EnvironmentName() != $name) continue;
+			
+			$buffer = $env->StreamHost();
+			if ($buffer != null) $host = $buffer;
+			
+			return $host == ''
+				? $env->ServerURI()->ConnectionURI()
+				: $env->ServerURI()->ConnectionURI($host);
+		}
 
 		unset($i, $env);
 
@@ -17842,6 +17853,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param string $host
+	 *
+	 * @return string
+	 */
+	public function StreamHost ($host = '') {
+		if (func_num_args() != 0)
+			$this->_host = $host;
+
+		return $this->_host;
+	}
+
+	/**
 	 * @param string $dedicated = ''
 	 *
 	 * @return string
@@ -17982,6 +18005,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		
 		if (isset($ini->StreamUnknown))
 			$this->StreamUnknown($ini->StreamUnknown);
+		
+		if (isset($ini->StreamHost))
+			$this->StreamHost($ini->StreamHost);
 
 		if (isset($ini->Dedicated))
 			$this->Dedicated($ini->Dedicated);
