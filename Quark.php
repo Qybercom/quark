@@ -5049,7 +5049,7 @@ class QuarkService implements IQuarkContainer {
 		if ($empty)
 			$this->_session = new QuarkSession();
 
-		if ($session)
+		if ($session || $empty)
 			$args[] = &$this->_session;
 
 		if (!method_exists($this->_service, $method))
@@ -18213,6 +18213,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$this->_log('cluster.node.node.server.connect', $node . ' -> ' . $this->_cluster->Network()->Server());
 
 		$this->_announce();
+
+		if ($this->_connect) {
+			$client = null;
+			$this->_pipe($this->_connect, 'StreamConnect', $client, null, null);
+		}
 	}
 
 	/**
@@ -18236,6 +18241,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$this->_log('cluster.node.node.server.close', $node . ' -> ' . $this->_cluster->Network()->Server());
 
 		$this->_announce();
+
+		if ($this->_close) {
+			$client = null;
+			$this->_pipe($this->_close, 'StreamClose', $client, null, null);
+		}
 	}
 
 	/**
