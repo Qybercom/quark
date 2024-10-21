@@ -286,7 +286,7 @@ class Quark {
 		if (!$full && strlen($path) != 0 && $path[0] == '/')
 			$path = Quark::Host() . self::WebOffset() . $path;
 
-		$uri = ($full ? Quark::WebHost() : '') . Quark::NormalizePath(str_replace(Quark::Host(), '/', $path), false);
+		$uri = ($full ? Quark::WebHost() : '/') . Quark::NormalizePath(str_replace(Quark::Host(), '/', $path), false);
 
 		return str_replace(':::', '://', str_replace('//', '/', str_replace('://', ':::', $uri)));
 	}
@@ -339,10 +339,7 @@ class Quark {
 		$route = explode('/', str_replace('\\', '/', $path));
 
 		foreach ($route as $i => &$part) {
-			if ('.'  == $part) {
-				$absolutes[] = '';
-				continue;
-			}
+			if ('.'  == $part || $part == '') continue;
 
 			if ('..' == $part) array_pop($absolutes);
 			else $absolutes[] = $part;
@@ -4360,6 +4357,207 @@ interface IQuarkAsyncClientProcess {
 }
 
 /**
+ * Class QuarkProcessExternal
+ *
+ * https://gist.github.com/swichers/027d5ae903350cbd4af8
+ *
+ * @package Quark
+ */
+class QuarkProcessExternal {
+	const EVENT_OUTPUT = 'output';
+	const EVENT_ERROR = 'error';
+	
+	use QuarkEvent;
+	
+	/**
+	 * @var string $_command = ''
+	 */
+	private $_command = '';
+	
+	/**
+	 * @var resource $_process
+	 */
+	private $_process;
+	
+	/**
+	 * @var array $_status = []
+	 */
+	private $_status = array();
+	
+	/**
+	 * @var int $_exitCode
+	 */
+	private $_exitCode;
+	
+	/**
+	 * @var resource[] $_pipes = []
+	 */
+	private $_pipes = array();
+	
+	/**
+	 * @param string $command = ''
+	 */
+	public function __construct ($command = '') {
+		$this->Command($command);
+	}
+	
+	/**
+	 * @param string $command = ''
+	 *
+	 * @return string
+	 */
+	public function Command ($command = '') {
+		if (func_num_args() != 0)
+			$this->_command = $command;
+		
+		return $this->_command;
+	}
+	
+	/**
+	 * @return resource
+	 */
+	public function Process () {
+		return $this->_process;
+	}
+	
+	/**
+	 * @return array
+	 */
+	public function Status () {
+		return $this->_status;
+	}
+	
+	/**
+	 * @return resource[]
+	 */
+	public function &Pipes () {
+		return $this->_pipes;
+	}
+	
+	/**
+	 * @return resource
+	 */
+	public function &PipeInput () {
+		return $this->_pipes[0];
+	}
+	
+	/**
+	 * @return resource
+	 */
+	public function &PipeOutput () {
+		return $this->_pipes[1];
+	}
+	
+	/**
+	 * @return resource
+	 */
+	public function &PipeError () {
+		return $this->_pipes[2];
+	}
+	
+	/**
+	 * @return int
+	 */
+	public function ExitCode () {
+		if ($this->_exitCode === null) {
+			$this->_status = proc_get_status($this->_process);
+			$this->_exitCode = $this->_status['exitcode'];
+		}
+		
+		return $this->_exitCode;
+	}
+	
+	/**
+	 * @param bool $checkEOF = true
+	 *
+	 * @return bool
+	 */
+	public function Running ($checkEOF = true) {
+		return isset($this->_status['running']) && $this->_status['running']
+			&& ($checkEOF ? isset($this->_pipes[1]) && !feof($this->_pipes[1]) : true);
+	}
+	
+	/**
+	 * @return bool
+	 */
+	public function Open () {
+		if ($this->_command == '') return false;
+		
+		$ok = false;
+		$pipesConfig = array(
+			0 => array('pipe', 'r'),
+			1 => array('pipe', 'w'),
+			2 => array('pipe', 'w'),
+		);
+		
+		$this->_pipes = array();
+		$this->_process = proc_open($this->_command, $pipesConfig, $this->_pipes);
+		
+		if (is_resource($this->_process)) {
+        	$this->_status = proc_get_status($this->_process);
+			$ok = is_array($this->_status);
+			
+			if ($ok) {
+				stream_set_blocking($this->_pipes[1], 0);
+				stream_set_blocking($this->_pipes[2], 0);
+			}
+		}
+		
+		return $ok;
+	}
+	
+	/**
+	 * @return bool
+	 */
+	public function Pipe () {
+		if (!is_resource($this->_process)) return false;
+		
+		$this->_status = proc_get_status($this->_process);
+		
+		if (!$this->Running())
+			return $this->Close();
+		
+		if (isset($this->_pipes[1]) && $this->_pipes[1]) {
+			$output = stream_get_contents($this->_pipes[1]);
+			
+			if (strlen($output) != 0)
+				$this->TriggerArgs(self::EVENT_OUTPUT, array($output));
+		}
+		
+		if (isset($this->_pipes[2]) && $this->_pipes[2]) {
+			$error = stream_get_contents($this->_pipes[2]);
+			
+			if (strlen($error) != 0)
+				$this->TriggerArgs(self::EVENT_ERROR, array($error));
+		}
+		
+		return true;
+	}
+	
+	/**
+	 * @param string $data
+	 *
+	 * @return bool
+	 */
+	public function Send ($data) {
+		$out = isset($this->_pipes[0]) && $this->_pipes[0]
+			? fwrite($this->_pipes[0], $data)
+			: false;
+		
+		return $out;
+	}
+	
+	/**
+	 * @return int
+	 */
+	public function Close () {
+		$this->_exitCode = $this->_status['exitcode'];
+		
+		return proc_close($this->_process);
+	}
+}
+
+/**
  * Trait QuarkStreamBehavior
  *
  * @package Quark
@@ -4495,6 +4693,9 @@ class QuarkCLIColor {
 	const CYAN = 6;
 	const WHITE = 7;
 	
+	const BOLD = '_bold';
+	const SPACE = '_space';
+	
 	/**
 	 * @var array
 	 */
@@ -4569,6 +4770,29 @@ class QuarkCLIColor {
 	 */
 	public static function Reset () {
 		return new self(null);
+	}
+	
+	/**
+	 * // http://stackoverflow.com/questions/1375683/converting-ansi-escape-sequences-to-html-using-php/2233231
+	 *
+	 * @param string $content = ''
+	 * @param string[] $colors = []
+	 * @param callable $replacer = null
+	 *
+	 * @return string
+	 */
+	public static function Format ($content = '', $colors = [], callable $replacer = null) {
+		$colors[self::BOLD] = '1';
+		$colors[self::SPACE] = '0';
+		
+		foreach ($colors as $color => &$code)
+			$content = preg_replace_callback('#\x1B\[' . $code . 'm(.*?)(\x1B\[0m)#', function ($matches) use (&$replacer, &$color, &$code) {
+				return is_callable($replacer) ? $replacer($color, $code, $matches[1]) : $matches[0];
+			}, $content);
+		
+		unset($color, $code);
+		
+		return $content;
 	}
 }
 
@@ -22773,8 +22997,11 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			 */
 			$item = new QuarkModel(new self());
 
-			$item->Location($file->getRealPath());
 			$item->isDir = $file->isDir();
+			$item->extension = $file->getExtension();
+			$item->Location($file->getRealPath());
+			$item->DateCreated(QuarkDate::FromTimestamp($file->getCTime()));
+			$item->DateModified(QuarkDate::FromTimestamp($file->getMTime()));
 
 			$out[] = $item;
 		}
