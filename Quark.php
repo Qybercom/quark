@@ -337,7 +337,14 @@ class Quark {
 	 * @return string
 	 */
 	public static function RealPath ($path) {
+		if (!is_scalar($path) || $path == '') return '';
+		
 		$absolutes = array();
+		
+		$begin = '';
+		if ($path[0] == '/') $begin = '/';
+		if (substr($path, 0, 2) == '\\\\') $begin = '//';
+		
 		$route = explode('/', str_replace('\\', '/', $path));
 
 		foreach ($route as $i => &$part) {
@@ -347,7 +354,7 @@ class Quark {
 			else $absolutes[] = $part;
 		}
 
-		return implode('/', $absolutes);
+		return $begin . implode('/', $absolutes);
 	}
 
 	/**
