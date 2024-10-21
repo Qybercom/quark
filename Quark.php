@@ -321,10 +321,12 @@ class Quark {
 	 * @return string
 	 */
 	public static function NormalizePath ($path, $endSlash = true) {
-		return is_scalar($path)
-			? trim(preg_replace('#/+#', '/', self::RealPath(str_replace('\\', '/', $path))))
-				. ($endSlash && (strlen($path) != 0 && $path[strlen($path) - 1] != '/') ? '/' : '')
-			: ($path instanceof QuarkFile ? $path->location : '');
+		if ($path instanceof QuarkFile) return $path->location; // TODO: maybe obsolete
+		if (!is_scalar($path)) return '';
+		
+		$out = trim(preg_replace('#/+#', '/', self::RealPath(str_replace('\\', '/', $path))));
+		
+		return $out . ($endSlash && (strlen($out) != 0 && $out[strlen($out) - 1] != '/') ? '/' : '');
 	}
 
 	/**
