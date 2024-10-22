@@ -4404,10 +4404,27 @@ class QuarkProcessExternal {
 	private $_pipes = array();
 	
 	/**
-	 * @param string $command = ''
+	 * @var bool $_buffer = false
 	 */
-	public function __construct ($command = '') {
+	private $_buffer = false;
+	
+	/**
+	 * @var string $_bufferOutput = ''
+	 */
+	private $_bufferOutput = '';
+	
+	/**
+	 * @var string $_bufferError = ''
+	 */
+	private $_bufferError = '';
+	
+	/**
+	 * @param string $command = ''
+	 * @param bool $buffer = false
+	 */
+	public function __construct ($command = '', $buffer = false) {
 		$this->Command($command);
+		$this->Buffer($buffer);
 	}
 	
 	/**
@@ -4420,6 +4437,32 @@ class QuarkProcessExternal {
 			$this->_command = $command;
 		
 		return $this->_command;
+	}
+	
+	/**
+	 * @param bool $buffer = false
+	 *
+	 * @return bool
+	 */
+	public function Buffer ($buffer = false) {
+		if (func_num_args() != 0)
+			$this->_buffer = $buffer;
+		
+		return $this->_buffer;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function BufferOutput () {
+		return $this->_bufferOutput;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function BufferError () {
+		return $this->_bufferError;
 	}
 	
 	/**
@@ -4462,6 +4505,13 @@ class QuarkProcessExternal {
 	 */
 	public function &PipeError () {
 		return $this->_pipes[2];
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function PID () {
+		return isset($this->_status['pid']) ? $this->_status['pid'] : null;
 	}
 	
 	/**
@@ -4529,15 +4579,23 @@ class QuarkProcessExternal {
 		if (isset($this->_pipes[1]) && $this->_pipes[1]) {
 			$output = stream_get_contents($this->_pipes[1]);
 			
-			if (strlen($output) != 0)
+			if (strlen($output) != 0) {
+				if ($this->_buffer)
+					$this->_bufferOutput .= $output;
+				
 				$this->TriggerArgs(self::EVENT_OUTPUT, array($output));
+			}
 		}
 		
 		if (isset($this->_pipes[2]) && $this->_pipes[2]) {
 			$error = stream_get_contents($this->_pipes[2]);
 			
-			if (strlen($error) != 0)
+			if (strlen($error) != 0) {
+				if ($this->_buffer)
+					$this->_bufferError .= $error;
+				
 				$this->TriggerArgs(self::EVENT_ERROR, array($error));
+			}
 		}
 		
 		return true;
