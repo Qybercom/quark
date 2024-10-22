@@ -4419,6 +4419,16 @@ class QuarkProcessExternal {
 	private $_bufferError = '';
 	
 	/**
+	 * @var QuarkDate $_dateSOpened
+	 */
+	private $_dateOpened;
+	
+	/**
+	 * @var QuarkDate $_dateClosed
+	 */
+	private $_dateClosed;
+	
+	/**
 	 * @param string $command = ''
 	 * @param bool $buffer = false
 	 */
@@ -4463,6 +4473,31 @@ class QuarkProcessExternal {
 	 */
 	public function BufferError () {
 		return $this->_bufferError;
+	}
+	
+	/**
+	 * @return QuarkDate
+	 */
+	public function DateOpened () {
+		return $this->_dateOpened;
+	}
+	
+	/**
+	 * @return QuarkDate
+	 */
+	public function DateClosed () {
+		return $this->_dateClosed;
+	}
+	
+	/**
+	 * @return QuarkDateInterval
+	 */
+	public function Uptime () {
+		return $this->_dateOpened == null ? null : $this->_dateOpened->Interval($this->_dateClosed == null
+			? QuarkDate::NowUTC()
+			: $this->_dateClosed,
+			true
+		);
 	}
 	
 	/**
@@ -4559,6 +4594,8 @@ class QuarkProcessExternal {
 			if ($ok) {
 				stream_set_blocking($this->_pipes[1], 0);
 				stream_set_blocking($this->_pipes[2], 0);
+				
+				$this->_dateOpened = QuarkDate::NowUTC();
 			}
 		}
 		
@@ -4569,7 +4606,11 @@ class QuarkProcessExternal {
 	 * @return bool
 	 */
 	public function Pipe () {
-		if (!is_resource($this->_process)) return false;
+		if (!is_resource($this->_process)) {
+			$this->_dateClosed = QuarkDate::NowUTC();
+			
+			return false;
+		}
 		
 		$this->_status = proc_get_status($this->_process);
 		
@@ -4619,6 +4660,7 @@ class QuarkProcessExternal {
 	 */
 	public function Close () {
 		$this->_exitCode = $this->_status['exitcode'];
+		$this->_dateClosed = QuarkDate::NowUTC();
 		
 		return proc_close($this->_process);
 	}
