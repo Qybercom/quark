@@ -4662,7 +4662,7 @@ class QuarkProcessExternal {
 		$this->_exitCode = $this->_status['exitcode'];
 		$this->_dateClosed = QuarkDate::NowUTC();
 		
-		return proc_close($this->_process);
+		return is_resource($this->_process) ? proc_close($this->_process) : -1;
 	}
 }
 
