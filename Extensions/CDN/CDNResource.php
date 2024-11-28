@@ -6,8 +6,8 @@ use Quark\IQuarkModel;
 use Quark\IQuarkModelWithAfterPopulate;
 use Quark\IQuarkStrongModel;
 use Quark\IQuarkLinkedModel;
-
 use Quark\IQuarkStrongModelWithRuntimeFields;
+
 use Quark\Quark;
 use Quark\QuarkException;
 use Quark\QuarkFile;
@@ -33,17 +33,24 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	private $_config;
 
 	/**
-	 * @var QuarkFile $_default
+	 * @var QuarkFile $_fallback
 	 */
-	private $_default;
+	private $_fallback;
+	
+	/**
+	 * @var string $_fallbackURL
+	 */
+	private $_fallbackURL;
 
 	/**
 	 * @param string $config
 	 * @param string $fallback = ''
+	 * @param string $fallbackURL = ''
 	 */
-	public function __construct ($config, $fallback = '') {
+	public function __construct ($config, $fallback = null, $fallbackURL = null) {
 		$this->_config = Quark::Config()->Extension($config);
-		$this->_default = new QuarkFile($fallback);
+		$this->_fallback = $fallback === null ? null : new QuarkFile($fallback);
+		$this->_fallbackURL = $fallbackURL;
 	}
 
 	/**
@@ -65,7 +72,21 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	public function File () {
 		return $this->resource != null
 			? QuarkHTTPClient::Download($this->URL())
-			: $this->_default;
+			: $this->_fallback;
+	}
+	
+	/**
+	 * @return QuarkFile
+	 */
+	public function Fallback () {
+		return $this->_fallback;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function FallbackURL () {
+		return $this->_fallbackURL;
 	}
 
 	/**
@@ -74,8 +95,12 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 * @return string
 	 */
 	public function URL (QuarkFile $fallback = null) {
-		if (!isset($this->resource) || $this->resource == null)
-			return $this->_default->WebLocation();
+		if (!isset($this->resource) || $this->resource == null) {
+			if ($this->_fallback != null)
+				return $this->_fallback->WebLocation();
+			
+			return $this->_fallbackURL;
+		}
 
 		$url = $this->_config->CDNProvider()->CDNResourceURL($this->resource);
 
@@ -133,7 +158,7 @@ class CDNResource implements IQuarkExtension, IQuarkModel, IQuarkStrongModel, IQ
 	 * @return bool
 	 */
 	public function Exists () {
-		return $this->URL($this->_default) != $this->_default->WebLocation();
+		return $this->URL($this->_fallback) != $this->_fallback->WebLocation();
 	}
 
 	/**

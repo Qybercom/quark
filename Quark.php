@@ -2866,7 +2866,46 @@ trait QuarkCLIViewBehavior {
 	 */
 	public function ShellArchException ($message = '') {
 		$this->ShellLog($message, Quark::LOG_FATAL); echo "\r\n";
+		
 		throw new QuarkArchException($message);
+	}
+	
+	/**
+	 * @param int $row
+	 * @param int $column
+	 *
+	 * @return void
+	 */
+	public function ShellCursor ($row, $column) {
+		echo "\033", '[', $row, ';', $column, 'H';
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function ShellClearScreen () {
+		echo "\x1B[H\x1B[J";
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function ShellClearLine () {
+		echo "\033[2K";
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function ShellClearLineToStart () {
+		echo "\033[1K";
+	}
+	
+	/**
+	 * @return void
+	 */
+	public function ShellClearLineToEnd () {
+		echo "\033[K";
 	}
 }
 
@@ -4882,7 +4921,7 @@ class QuarkCLIColor {
 	}
 	
 	/**
-	 * // http://stackoverflow.com/questions/1375683/converting-ansi-escape-sequences-to-html-using-php/2233231
+	 * http://stackoverflow.com/questions/1375683/converting-ansi-escape-sequences-to-html-using-php/2233231
 	 *
 	 * @param string $content = ''
 	 * @param string[] $colors = []
@@ -4902,6 +4941,130 @@ class QuarkCLIColor {
 		unset($color, $code);
 		
 		return $content;
+	}
+}
+
+/**
+ * Class QuarkCLIView
+ *
+ * @package Quark
+ */
+class QuarkCLIView {
+	const EVENT_KEYBOARD = 'keyboard';
+	
+	use QuarkEvent;
+	
+	/**
+	 * @var int $_width = null
+	 */
+	private $_width = null;
+	
+	/**
+	 * @var int $_height = null
+	 */
+	private $_height = null;
+	
+	/**
+	 * @var resource $_keyboard = null
+	 */
+	private $_keyboard = null;
+	
+	/**
+	 * @var int $width = null
+	 * @var int $height = null
+	 */
+	public function __construct ($width = null, $height = null) {
+		$this->Width($width);
+		$this->Height($height);
+	}
+	
+	/**
+	 * @param int $width = null
+	 *
+	 * @return int
+	 */
+	public function Width ($width = null) {
+		if (func_num_args() != 0)
+			$this->_width = $width;
+		
+		return $this->_width;
+	}
+	
+	/**
+	 * @param int $height = null
+	 *
+	 * @return int
+	 */
+	public function Height ($height = null) {
+		if (func_num_args() != 0)
+			$this->_height = $height;
+		
+		return $this->_height;
+	}
+	
+	/**
+	 * @param bool $enabled = false
+	 *
+	 * @return bool
+	 */
+	public function Keyboard ($enabled = false) {
+		if (func_num_args() != 0) {
+			if (is_resource($this->_keyboard) && !$enabled) {
+				fclose($this->_keyboard);
+				$this->_keyboard = null;
+			}
+			
+			if (!is_resource($this->_keyboard) && $enabled) {
+				$this->_keyboard = fopen('php://stdin', 'r');
+				stream_set_blocking($this->_keyboard, false);
+			}
+		}
+		
+		return is_resource($this->_keyboard);
+	}
+	
+	/**
+	 * @return bool
+	 */
+	public function Render () {
+		$width = null;
+		$height = null;
+		
+		if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+			$info = shell_exec('mode 2>&1');
+			//$info = shell_exec('powershell -Command "Write-Output ((Get-Host).UI.RawUI.WindowSize.Width):((Get-Host).UI.RawUI.WindowSize.Height) 2>&1');
+			
+			if (preg_match('#Lines:\s*(\d+).*Columns:\s*(\d+)#s', $info, $found)) {
+				$width = $found[1];
+				$height = $found[2];
+			}
+		}
+		
+		if (strtoupper(substr(PHP_OS, 0, 5)) === 'LINUX') {
+			$info = shell_exec('stty size 2>&1');
+			
+			if (preg_match('#^(\d+)\s+(\d+)$#s', $info, $found)) {
+				$height = $found[1];
+				$width = $found[2];
+			}
+		}
+		
+		if ($width == null) $width = $this->_width;
+		if ($height == null) $height = $this->_height;
+		
+		if ($width == null || $height == null) return false;
+		
+		return true;
+	}
+	
+	/**
+	 * QuarkCLIView destructor
+	 */
+	public function __destruct () {
+		if (is_resource($this->_keyboard))
+			fclose($this->_keyboard);
+		
+		unset($this->_keyboard);
 	}
 }
 
@@ -28252,9 +28415,9 @@ class QuarkSQL {
 		//if ($value === null) $value = self::NULL;
 		// TODO: investigate, seems like QuarkCollection on this step is not used. UPD: used, but it's weird
 		if ($value instanceof QuarkCollection) $value = json_encode($value->Extract(), JSON_UNESCAPED_UNICODE);
-		// TODO: investigate, maybe need additional handling of nested models
+		// TODO: investigate, maybe need additional handling of nested models. UPD: seems for PostgreSQL need to be used
 		/*if ($value instanceof IQuarkModel) $value = new QuarkModel($value);
-		if ($value instanceof QuarkModel) $value = json_encode($value->Extract());*/
+		if ($value instanceof QuarkModel) $value = json_encode($value->Export());*/
 		if (is_array($value)) $value = json_encode($value, JSON_UNESCAPED_UNICODE);
 		if (!is_scalar($value)) $value = null;
 		if (is_bool($value))
