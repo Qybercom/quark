@@ -4945,6 +4945,13 @@ interface IQuarkCLIViewArea {
 	 * @return void
 	 */
 	public function CLIViewAreaPosition($x, $y);
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe(&$changes);
 }
 
 /**
@@ -5100,13 +5107,24 @@ class QuarkCLIView {
 		unset($line, $cells);
 		
 		$out = '';
+		$x = 1;
+		$y = 1;
+		$positions = array();
 		
 		foreach ($matrix as $line => &$cells) {
 			$i = 0;
+			$x = 1;
 			
 			while ($i < $lineHeights[$line]) {
 				foreach ($cells as $j => &$cell) {
 					if (!isset($areas[$cell][$i])) continue;
+				
+					if (!isset($positions[$cell])) {
+						$positions[$cell] = new QuarkKeyValuePair($x, $y);
+						$this->_areas[$cell]->CLIViewAreaPosition($x, $y);
+					}
+				
+					$x += $this->CLIVisibleLength($areas[$cell][$i]);
 					
 					$out .= $areas[$cell][$i];
 				}
@@ -5115,13 +5133,25 @@ class QuarkCLIView {
 				
 				$i++;
 			}
+			
+			$y += $lineHeights[$line];
 		}
 		
 		return $out;
 	}
 	
-	public function Pipe ($changes = []) {
-	
+	/**
+	 * @param QuarkKeyValuePair[] $changes = []
+	 *
+	 * @return string
+	 */
+	public function Pipe (&$changes = []) {
+		$out = '';
+		
+		foreach ($this->_areas as $key => &$area)
+			$out .= $area->CLIViewAreaPipe($changes);
+		
+		return $out;
 	}
 	
 	/**
@@ -5775,6 +5805,15 @@ class QuarkCLIViewImage implements IQuarkCLIViewArea {
 	}
 	
 	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		// TODO: Implement CLIViewAreaPipe() method.
+	}
+	
+	/**
 	 * @param QuarkFile $file = null
 	 * @param QuarkCLIColor $color = null
 	 *
@@ -5817,6 +5856,11 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 	 * @var QuarkCLIViewDataTable[] $_data = []
 	 */
 	private $_data = array();
+	
+	/**
+	 * @var int[] $_dataRows = []
+	 */
+	private $_dataRows = array();
 	
 	/**
 	 * @var QuarkKeyValuePair[] $_areas = []
@@ -5922,13 +5966,15 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 		foreach ($this->_data as $key => &$data) {
 			if (!($data instanceof IQuarkCLIViewArea)) continue;
 			
-			$buffer = trim($data->CLIViewAreaRender());
+			$buffer = $data->CLIViewAreaRender();
 			$rowsData = explode($this->_cEOL, $buffer);
 			
 			foreach ($rowsData as $i => &$row)
 				$rows[] = $row;
 			
 			$rows[] = '';
+			
+			$this->_dataRows[$key] = sizeof($rowsData) + 1;
 		}
 		
 		unset($rows[sizeof($rows) - 1]);
@@ -5966,6 +6012,29 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 			. $this->_border->cCornerRB
 			. $this->_cReset
 			. $this->_cEOL;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		$x = $this->_positionX + $this->_border->Size() / 2 + $this->_paddingLeft;
+		$y = $this->_positionY + $this->_border->Size() / 2 + $this->_paddingTop;
+		
+		$out = $this->CLICursorSet($this->_positionY, $this->_positionX); // . '!GROUP!';
+		
+		foreach ($this->_data as $key => &$item) {
+			$item->CLIViewAreaPosition($x, $y);
+			$out .= $item->CLIViewAreaPipe($changes);
+		
+			$y += $this->_dataRows[$key];
+		}
+		
+		unset($key, $item, $x, $y);
+		
+		return $out;
 	}
 }
 
@@ -6080,6 +6149,15 @@ class QuarkCLIViewTab implements IQuarkCLIViewArea {
 			. $this->_border->cCornerRB
 			. $this->_cReset
 			. $this->_cEOL;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		// TODO: Implement CLIViewAreaPipe() method.
 	}
 }
 
@@ -6230,6 +6308,15 @@ class QuarkCLIViewTable implements IQuarkCLIViewArea {
 			. $this->_border->cCornerRB
 			. $this->_cReset
 			. $this->_cEOL;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		// TODO: Implement CLIViewAreaPipe() method.
 	}
 }
 
@@ -16547,6 +16634,11 @@ class QuarkNullable implements IQuarkModel, IQuarkLinkedModel, IQuarkPolymorphic
  */
 interface IQuarkCLIViewDataTableModel extends IQuarkModel {
 	/**
+	 * @return string
+	 */
+	public function CLIViewDataTableModelArea();
+	
+	/**
 	 * @return string[]
 	 */
 	public function CLIViewDataTableModelColumns();
@@ -16581,9 +16673,9 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 	private $_headerColor = null;
 	
 	/**
-	 * @var int $_widthCalculated = 0
+	 * @var QuarkKeyValuePair[] $_areas = []
 	 */
-	private $_widthCalculated = 0;
+	private $_areas = array();
 	
 	/**
 	 * @param IQuarkCLIViewDataTableModel $model = null
@@ -16660,7 +16752,7 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 		if ($this->_data != null)
 			foreach ($this->_data as $item) {
 				/**
-				 * @var QuarkModel|IQuarkLIViewDataTableModel $model
+				 * @var QuarkModel|IQuarkCLIViewDataTableModel $model
 				 */
 				$model = $item->Model();
 				
@@ -16689,24 +16781,52 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 			$out .= ' ' . $label . ' ' . str_repeat(' ', $colWidths[$column] - $this->CLIVisibleLength($label) - 2);
 		
 		$out .= $this->_cReset . $this->_cEOL;
+		$x = 1;
+		$y = 1;
 		
 		if ($this->_data != null)
 			foreach ($this->_data as $item) {
 				/**
-				 * @var QuarkModel|IQuarkLIViewDataTableModel $model
+				 * @var QuarkModel|IQuarkCLIViewDataTableModel $model
 				 */
 				$model = $item->Model();
 				
 				if ($model instanceof IQuarkCLIViewDataTableModel) {
 					$row = $model->CLIViewDataTableModelRow();
+					$x = 1;
 					
-					foreach ($row as $column => &$value)
+					foreach ($row as $column => &$value) {
 						$out .= ' ' . $value . ' ' . str_repeat(' ', $colWidths[$column] - $this->CLIVisibleLength($value) - 2);
+						
+						$this->_areas[$model->CLIViewDataTableModelArea() . ':' . $column] = new QuarkKeyValuePair($y, $x);
+						$x += $colWidths[$column];
+					}
+					
+					$y++;
 					
 					// TODO: add styling for each line
 					$out .= $this->_cReset . $this->_cEOL;
 				}
 			}
+		
+		return $out;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		$out = $this->CLICursorSet($this->_positionY, $this->_positionX); // . '!TABLE!';
+		
+		foreach ($this->_areas as $key => &$area) {
+			foreach ($changes as $j => &$change) {
+				if ($change->Key() != $key) continue;
+				
+				$out .= $this->CLICursorSet($this->_positionY + $area->Key(), $this->_positionX + $area->Value()) . $change->Value();
+			}
+		}
 		
 		return $out;
 	}
