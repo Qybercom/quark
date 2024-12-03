@@ -4934,17 +4934,17 @@ class QuarkCLIColor {
  */
 interface IQuarkCLIViewArea {
 	/**
-	 * @return int
-	 */
-	public function CLIViewAreaMinimalWidth();
-	
-	/**
-	 * @param int $width
-	 * @param int $height
-	 *
 	 * @return string
 	 */
-	public function CLIViewAreaRender($width, $height);
+	public function CLIViewAreaRender();
+	
+	/**
+	 * @param int $x
+	 * @param int $y
+	 *
+	 * @return void
+	 */
+	public function CLIViewAreaPosition($x, $y);
 }
 
 /**
@@ -5068,17 +5068,60 @@ class QuarkCLIView {
 		
 		if ($width == null || $height == null) return '';
 		
-		$out = '';
+		$areas = array();
+		$areaHeights = array();
 		
-		foreach ($this->_areas as $i => &$area) {
-			$minWidth = $area->CLIViewAreaMinimalWidth();
+		foreach ($this->_areas as $key => &$area) {
+			//$minWidth = $area->CLIViewAreaMinimalWidth();
 			
-			$out .= $area->CLIViewAreaRender($width, $height);
+			$areas[$key] = explode($this->_cEOL, $area->CLIViewAreaRender(0, 0));
+			$areaHeights[$key] = sizeof($areas[$key]);
 		}
 		
-		unset($i, $area, $width, $height);
+		unset($key, $area);
+		
+		$lines = explode($this->_cEOL, $this->_layout);
+		$matrix = array();
+		
+		foreach ($lines as $i => &$line)
+			$matrix[] = explode(' ', $line);
+		
+		unset($i, $line, $lines);
+		
+		$lineHeights = array();
+		
+		foreach ($matrix as $line => &$cells) {
+			if (!isset($lineHeights[$line])) $lineHeights[$line] = 0;
+			
+			foreach ($cells as $i => &$cell)
+				$lineHeights[$line] = max($lineHeights[$line], $areaHeights[$cell]);
+		}
+		
+		unset($line, $cells);
+		
+		$out = '';
+		
+		foreach ($matrix as $line => &$cells) {
+			$i = 0;
+			
+			while ($i < $lineHeights[$line]) {
+				foreach ($cells as $j => &$cell) {
+					if (!isset($areas[$cell][$i])) continue;
+					
+					$out .= $areas[$cell][$i];
+				}
+				
+				$out .= $this->_cEOL;
+				
+				$i++;
+			}
+		}
 		
 		return $out;
+	}
+	
+	public function Pipe ($changes = []) {
+	
 	}
 	
 	/**
@@ -5437,6 +5480,27 @@ trait QuarkCLIViewAreaBehavior {
 	private $_paddingLeft = 0;
 	
 	/**
+	 * @var int $_positionX
+	 */
+	private $_positionX;
+	
+	/**
+	 * @var int $_positionY
+	 */
+	private $_positionY;
+	
+	/**
+	 * @param int $x
+	 * @param int $y
+	 *
+	 * @return void
+	 */
+	public function CLIViewAreaPosition ($x, $y) {
+		$this->_positionX = $x;
+		$this->_positionY = $y;
+	}
+	
+	/**
 	 * @param QuarkCLIViewBorder $border = null
 	 *
 	 * @return QuarkCLIViewBorder
@@ -5644,8 +5708,86 @@ trait QuarkCLIViewAreaBehavior {
 }
 
 /**
- * Class QuarkCLIViewGroup
+ * Class QuarkCLIViewImage
  *
+ * @package Quark
+ */
+class QuarkCLIViewImage implements IQuarkCLIViewArea {
+	use QuarkCLIViewAreaBehavior;
+	
+	/**
+	 * @var string $_content = ''
+	 */
+	private $_content = '';
+	
+	/**
+	 * @var QuarkCLIColor $_color = null
+	 */
+	private $_color = null;
+	
+	/**
+	 * @param string $content = ''
+	 * @param QuarkCLIColor $color = null
+	 */
+	public function __construct ($content = '', QuarkCLIColor $color = null) {
+		$this->Content($content);
+		$this->Color(func_num_args() < 2 ? new QuarkCLIColor(QuarkCLIColor::WHITE) : $color);
+	}
+	
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return string
+	 */
+	public function Content ($content = '') {
+		if (func_num_args() != 0)
+			$this->_content = $content;
+		
+		return $this->_content;
+	}
+	
+	/**
+	 * @param QuarkCLIColor $color = null
+	 *
+	 * @return QuarkCLIColor
+	 */
+	public function Color (QuarkCLIColor $color = null) {
+		if (func_num_args() != 0)
+			$this->_color = $color;
+		
+		return $this->_color;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function CLIViewAreaRender () {
+		// TODO: add support of borders and margin
+		$color = $this->_color->Display();
+		
+		$lines = explode($this->_cEOL, $this->_content);
+		$out = '';
+		
+		foreach ($lines as $i => &$line)
+			$out .= $this->_cReset . $color . $line . $this->_cReset . $this->_cEOL;
+		
+		return $out;
+	}
+	
+	/**
+	 * @param QuarkFile $file = null
+	 * @param QuarkCLIColor $color = null
+	 *
+	 * @return QuarkCLIViewImage
+	 */
+	public static function FromFile (QuarkFile $file = null, QuarkCLIColor $color = null) {
+		return $file == null ? null : new self($file->Content(), func_num_args() < 2 ? new QuarkCLIColor(QuarkCLIColor::WHITE) : $color);
+	}
+}
+
+/**
+ * Class QuarkCLIViewGroup
+ *s
  * @package Quark
  */
 class QuarkCLIViewGroup implements IQuarkCLIViewArea {
@@ -5665,6 +5807,21 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 	 * @var bool $_headerVisible = true
 	 */
 	private $_headerVisible = true;
+	
+	/**
+	 * @var string $_content
+	 */
+	private $_content;
+	
+	/**
+	 * @var QuarkCLIViewDataTable[] $_data = []
+	 */
+	private $_data = array();
+	
+	/**
+	 * @var QuarkKeyValuePair[] $_areas = []
+	 */
+	private $_areas = array();
 	
 	/**
 	 * @param string $headerContent = ''
@@ -5720,26 +5877,66 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 	 * @return int
 	 */
 	public function HeaderSize () {
-		return $this->_headerVisible ? strlen($this->_headerContent) + 2 : 0;
+		return $this->_headerVisible ? $this->CLIVisibleLength($this->_headerContent) + 2 : 0;
 	}
 	
 	/**
-	 * @return int
-	 */
-	public function CLIViewAreaMinimalWidth () {
-		return max($this->SizeInnerHorizontal(), $this->HeaderSize());
-	}
-	
-	/**
-	 * @param int $width
-	 * @param int $height
+	 * @param string $content = null
 	 *
 	 * @return string
 	 */
-	public function CLIViewAreaRender ($width, $height) {
-		$content = 'Lorem ipsum dolor sit amet consectetur adipiscing elit';
+	public function Content ($content = null) {
+		if (func_num_args() != 0)
+			$this->_content = $content;
 		
-		$width = 70;
+		return $this->_content;
+	}
+	
+	/**
+	 * @param string $key = ''
+	 * @param QuarkCLIViewDataTable $data = null
+	 *
+	 * @return QuarkCLIViewDataTable
+	 */
+	public function Data ($key = '', QuarkCLIViewDataTable $data = null) {
+		if (func_num_args() > 1)
+			$this->_data[$key] = $data;
+		
+		return isset($this->_data[$key]) ? $this->_data[$key] : null;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function CLIViewAreaRender () {
+		$content = $this->_content;
+		
+		$width = 0;
+		$rows = $content === null ? array() : explode($this->_cEOL, $content);
+		$rowsData = null;
+		$key = null;
+		$data = null;
+		$i = 0;
+		$row = '';
+		
+		foreach ($this->_data as $key => &$data) {
+			if (!($data instanceof IQuarkCLIViewArea)) continue;
+			
+			$buffer = trim($data->CLIViewAreaRender());
+			$rowsData = explode($this->_cEOL, $buffer);
+			
+			foreach ($rowsData as $i => &$row)
+				$rows[] = $row;
+			
+			$rows[] = '';
+		}
+		
+		unset($rows[sizeof($rows) - 1]);
+		
+		foreach ($rows as $i => &$row) {
+			$width = max($width, $this->CLIVisibleLength($row) + $this->SizeInnerHorizontal());
+		}
+		
 		$widthBox = $width - $this->_border->Size();
 		$widthInner = $width - $this->SizeInnerHorizontal();
 		$headerColor = $this->_headerColor->Display();
@@ -5754,11 +5951,12 @@ class QuarkCLIViewGroup implements IQuarkCLIViewArea {
 		$out .= str_repeat($this->_border->cH, $widthBox - $this->HeaderSize()) . $this->_border->cCornerRT . $this->_cEOL
 			. $this->RenderTop($widthInner);
 		
-		$out .= $this->RenderLeft()
-			. $content
-			. str_repeat(' ', $widthInner - strlen($content))
-			. $this->RenderRight()
-			. $this->_cEOL;
+		foreach ($rows as $i => &$row)
+			$out .= $this->RenderLeft()
+				. $row
+				. str_repeat(' ', $widthInner - $this->CLIVisibleLength($row))
+				. $this->RenderRight()
+				. $this->_cEOL;
 		
 		return $out
 			. $this->RenderBottom($widthInner)
@@ -5833,19 +6031,9 @@ class QuarkCLIViewTab implements IQuarkCLIViewArea {
 	}
 	
 	/**
-	 * @return int
-	 */
-	public function CLIViewAreaMinimalWidth () {
-		return max($this->SizeInnerHorizontal(), $this->HeaderSize());
-	}
-	
-	/**
-	 * @param int $width
-	 * @param int $height
-	 *
 	 * @return string
 	 */
-	public function CLIViewAreaRender ($width, $height) {
+	public function CLIViewAreaRender () {
 		$content = 'Lorem ipsum dolor sit amet consectetur adipiscing elit';
 		
 		$width = 70;
@@ -5995,19 +6183,9 @@ class QuarkCLIViewTable implements IQuarkCLIViewArea {
 	}
 	
 	/**
-	 * @return int
-	 */
-	public function CLIViewAreaMinimalWidth () {
-		return max($this->SizeInnerHorizontal(), $this->HeaderSize());
-	}
-	
-	/**
-	 * @param int $width
-	 * @param int $height
-	 *
 	 * @return string
 	 */
-	public function CLIViewAreaRender ($width, $height) {
+	public function CLIViewAreaRender () {
 		$content = 'Lorem ipsum dolor sit amet consectetur adipiscing elit';
 		
 		$width = 70;
@@ -16455,20 +16633,9 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 	}
 	
 	/**
-	 * @return int
-	 */
-	public function CLIViewAreaMinimalWidth () {
-		// TODO: add support of padding and borders
-		return $this->_widthCalculated;
-	}
-	
-	/**
-	 * @param int $width
-	 * @param int $height
-	 *
 	 * @return string
 	 */
-	public function CLIViewAreaRender ($width, $height) {
+	public function CLIViewAreaRender () {
 		if ($this->_model == null) return null;
 		
 		$out = '';
@@ -19146,6 +19313,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private $_dedicated;
 
 	/**
+	 * @var bool $_logEvents = true
+	 */
+	private $_logEvents = true;
+
+	/**
 	 * @var bool $_controllerFromConfig = false
 	 */
 	private $_controllerFromConfig = false;
@@ -19174,6 +19346,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param string[] $args = []
 	 */
 	private function _log ($action = '', $message = '', $args = []) {
+		if (!$this->_logEvents) return;
+		
 		$append = '';
 
 		foreach ($args as $i => &$arg)
@@ -19574,6 +19748,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param bool $log = true
+	 *
+	 * @return bool
+	 */
+	public function &LogEvents ($log = true) {
+		if (func_num_args() != 0)
+			$this->_logEvents = $log;
+
+		return $this->_logEvents;
+	}
+
+	/**
 	 * @param QuarkURI|string $uri = ''
 	 *
 	 * @return QuarkURI
@@ -19708,6 +19894,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		if (isset($ini->Dedicated))
 			$this->Dedicated($ini->Dedicated);
+
+		if (isset($ini->LogEvents))
+			$this->LogEvents($ini->LogEvents);
 	}
 
 	/**
