@@ -5079,9 +5079,7 @@ class QuarkCLIView {
 		$areaHeights = array();
 		
 		foreach ($this->_areas as $key => &$area) {
-			//$minWidth = $area->CLIViewAreaMinimalWidth();
-			
-			$areas[$key] = explode($this->_cEOL, $area->CLIViewAreaRender(0, 0));
+			$areas[$key] = explode($this->_cEOL, $area->CLIViewAreaRender());
 			$areaHeights[$key] = sizeof($areas[$key]);
 		}
 		
@@ -5117,7 +5115,12 @@ class QuarkCLIView {
 			
 			while ($i < $lineHeights[$line]) {
 				foreach ($cells as $j => &$cell) {
-					if (!isset($areas[$cell][$i])) continue;
+					if (!isset($areas[$cell][$i + 1])) {
+						if (isset($areas[$cell][0]))
+							$out .= str_repeat(' ', $this->CLIVisibleLength($areas[$cell][0]));
+						
+						continue;
+					}
 				
 					if (!isset($positions[$cell])) {
 						$positions[$cell] = new QuarkKeyValuePair($x, $y);
@@ -16775,6 +16778,8 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 				}
 			}
 		
+		// TODO: add table name
+		
 		$out .= $this->_cReset . $headerColor;
 		
 		foreach ($columns as $column => &$label)
@@ -16809,7 +16814,7 @@ class QuarkCLIViewDataTable implements IQuarkCLIViewArea {
 				}
 			}
 		
-		return $out;
+		return trim($out);
 	}
 	
 	/**
