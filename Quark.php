@@ -19110,8 +19110,8 @@ class QuarkCluster {
 			if ($start === false) return false;
 			$this->_startedNode = true;
 		}
-
-		if (!$this->_server->Running())
+		
+		if (!$this->_server->Running() && !$this->_server->URI()->IsNull())
 			$run = $this->_server->Bind();
 
 		if (!$this->_network->Running())
@@ -19128,16 +19128,19 @@ class QuarkCluster {
 	 * @throws QuarkArchException
 	 */
 	public function NodePipe () {
-		$run = $this->NodeBind() &&
-			$this->_server->Pipe();
-			$this->_network->Pipe();
-			$this->_controller->Pipe();
-
-		if (!$this->_server->Running())
-			throw new QuarkArchException('Cluster server not started. Expected address ' . $this->_server);
-
+		$run = $this->NodeBind();
+		
+		if ($this->_server->Running()) $run &= $this->_server->Pipe();
+		else {
+			if (!$this->_server->URI()->IsNull())
+				throw new QuarkArchException('Cluster server not started. Expected address ' . $this->_server);
+		}
+		
 		if (!$this->_network->Running())
 			throw new QuarkArchException('Cluster peering not started. Expected address ' . $this->_network);
+
+		$this->_network->Pipe();
+		$this->_controller->Pipe();
 
 		return $run;
 	}
@@ -19560,7 +19563,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$internal->host = Quark::HostIP();
 
 		$external = $this->_cluster->Server()->URI();
-		$external->host = Quark::HostIP();
+		if ($external->host != '')
+			$external->host = Quark::HostIP();
 
 		$clients = $this->_cluster->Server()->Clients();
 		$frontend = array();
@@ -19744,7 +19748,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		$stream->_name = $name;
 		$stream->_transportClient = $transport;
-		$stream->_cluster = QuarkCluster::NodeInstance($stream, $external, $internal, !$controller ? Quark::Config()->ClusterControllerConnect() : $controller);
+		$stream->_cluster = QuarkCluster::NodeInstance($stream, $transport == null ? null : $external, $internal, !$controller ? Quark::Config()->ClusterControllerConnect() : $controller);
 
 		if (!$controller)
 			$stream->_controllerFromConfig = true;
@@ -20084,7 +20088,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 				if (is_callable($filter) && !call_user_func_array($filter, array(&$client))) continue;
 			}
 
-			$session = QuarkSession::Get($client->Session());
+			$session = $auth ? QuarkSession::Get($client->Session()) : null;
 			if ($auth && ($session == null || $session->User() == null)) continue;
 			
 			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
@@ -20115,6 +20119,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return void
 	 */
 	public function NodeStart (QuarkServer $server, QuarkPeer $network, QuarkClient $controller) {
+		if ($this->_transportClient == null)
+			$this->ExceptionHandler(new QuarkArchException('[QuarkStreamEnvironment::' . $this->_name . '] NodeStart: external transport not set, cluster node will start with internal connections only', Quark::LOG_WARN));
+
 		$this->ControllerURI(Quark::Config()->ClusterControllerConnect());
 	}
 
