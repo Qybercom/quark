@@ -5797,12 +5797,15 @@ class QuarkCLIViewImage implements IQuarkCLIViewArea {
 	public function CLIViewAreaRender () {
 		// TODO: add support of borders and margin
 		$color = $this->_color->Display();
+		$content = str_replace("\r\r", "\r", str_replace("\n", "\r\n", $this->_content));
 		
-		$lines = explode($this->_cEOL, $this->_content);
+		$lines = explode($this->_cEOL, $content);
 		$out = '';
 		
 		foreach ($lines as $i => &$line)
 			$out .= $this->_cReset . $color . $line . $this->_cReset . $this->_cEOL;
+		
+		unset($i, $line, $lines, $content);
 		
 		return $out;
 	}
