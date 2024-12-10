@@ -9,6 +9,7 @@ use Quark\QuarkModelBehavior;
 /**
  * Class FlowprintScriptLink
  *
+ * @property string $id
  * @property string $p1
  * @property string $p2
  *
@@ -22,6 +23,7 @@ class FlowprintScriptLink implements IQuarkModel, IQuarkStrongModel {
 	 */
 	public function Fields () {
 		return array(
+			'id' => $this->Nullable(''),
 			'p1' => '',
 			'p2' => '',
 		);

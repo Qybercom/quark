@@ -6,7 +6,6 @@ use Quark\IQuarkModelWithAfterPopulate;
 use Quark\IQuarkModelWithDefaultExtract;
 use Quark\IQuarkStrongModelWithRuntimeFields;
 
-use Quark\Quark;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
 
@@ -42,7 +41,7 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 */
 	public function Fields () {
 		return array(
-			'id' => Quark::GuID(),
+			'id' => $this->Nullable(''),
 			'kind' => self::KIND_UNKNOWN,
 			'direction' => self::DIRECTION_UNKNOWN,
 			'place' => self::PLACE_UNKNOWN

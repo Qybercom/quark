@@ -2,12 +2,9 @@
 namespace Quark\Extensions\FlowprintScript;
 
 use Quark\IQuarkModel;
-use Quark\IQuarkModelWithAfterPopulate;
 use Quark\IQuarkStrongModelWithRuntimeFields;
 
-use Quark\Quark;
 use Quark\QuarkCollection;
-use Quark\QuarkKeyValuePair;
 use Quark\QuarkModel;
 use Quark\QuarkModelBehavior;
 
@@ -21,7 +18,6 @@ use Quark\QuarkModelBehavior;
  * @property QuarkCollection|FlowprintScriptNodePin[] $pins
  * @property QuarkCollection|FlowprintScriptNodeProperty[] $properties
  *
- * @property string $kindMapped
  * @property bool $header_use
  * @property string $header_content
  * @property bool $body_use
@@ -30,7 +26,7 @@ use Quark\QuarkModelBehavior;
  *
  * @package Quark\Extensions\FlowprintScript
  */
-class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFields, IQuarkModelWithAfterPopulate {
+class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFields {
 	const KIND_UNKNOWN = '';
 	
 	use QuarkModelBehavior;
@@ -40,7 +36,7 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 	 */
 	public function Fields () {
 		return array(
-			'id' => Quark::GuID(),
+			'id' => $this->Nullable(''),
 			'kind' => self::KIND_UNKNOWN,
 			'x' => 0.0,
 			'y' => 0.0,
@@ -61,23 +57,12 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 	 */
 	public function RuntimeFields () {
 		return array(
-			'kindMapped' => self::KIND_UNKNOWN,
 			'header_use' => true,
 			'header_content' => '',
 			'body_use' => true,
 			'body_content' => '',
 			'properties_runtime' => new QuarkCollection(new FlowprintScriptNodeProperty())
 		);
-	}
-	
-	/**
-	 * @param $raw
-	 *
-	 * @return mixed
-	 */
-	public function AfterPopulate ($raw) {
-		if (isset($raw->kindMapped))
-			$this->kind = $this->kindMapped;
 	}
 	
 	/**
@@ -184,42 +169,72 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 	}
 	
 	/**
-	 * @param string $key
+	 * @param string $id = ''
+	 * @param bool $idPrefix = true
+	 *
+	 * @return QuarkModel|FlowprintScriptNodePin
+	 */
+	public function PinById ($id = '', $idPrefix = true) {
+		return $this->pins->SelectOne(array(
+			'id' => ($idPrefix ? $this->id . '_' : '') . $id
+		));
+	}
+	
+	/**
+	 * @param string $key = ''
 	 * @param string $value = ''
 	 * @param bool $runtime = false
+	 * @param int $position = 0
 	 *
 	 * @return QuarkModel|FlowprintScriptNodeProperty
 	 */
-	public function Property ($key, $value = '', $runtime = false) {
-		if (func_num_args() > 1) {
+	public function Property ($key = '', $value = '', $runtime = false, $position = 0) {
+		$query = array('key' => $key);
+		$property = $this->PropertyValue($key);
+		
+		if ($property == null) {
 			/**
 			 * @var QuarkModel|FlowprintScriptNodeProperty $property
 			 */
 			$property = new QuarkModel(new FlowprintScriptNodeProperty(), array(
 				'key' => $key,
-				'value' => $value
+				'position' => $position
 			));
 			
 			if ($runtime) $this->properties_runtime[] = $property;
 			else $this->properties[] = $property;
-		
-			return $property;
 		}
 		
-		return $this->properties->SelectOne(array('key' => $key));
+		if ($runtime) $this->properties_runtime->Change($query, array('value' => $value));
+		else $this->properties->Change($query, array('value' => $value));
+		
+		return $property;
+	}
+	
+	/**
+	 * @param string $key = ''
+	 * @param bool $runtime = false
+	 *
+	 * @return QuarkModel|FlowprintScriptNodeProperty
+	 */
+	public function PropertyValue ($key = '', $runtime = false) {
+		$query = array('key' => $key);
+		
+		return $runtime
+			? $this->properties_runtime->SelectOne($query)
+			: $this->properties->SelectOne($query);
 	}
 	
 	/**
 	 * @return array
 	 */
-	public function Data () {
+	public function FlowprintData () {
 		return array(
 			'id' => $this->id,
 			'class' => $this->kind,
 			'x' => $this->x,
 			'y' => $this->y,
-			'properties' => $this->properties->Extract(),
-			'kindMapped' => $this->kind,
+			'properties' => $this->properties->Aggregate(array(QuarkModel::OPTION_SORT => array('position' => 1)))->Extract(),
 			'kindOptions' => array(
 				'header' => array(
 					'use' => $this->header_use,

@@ -10,18 +10,25 @@ use Quark\IQuarkViewResourceWithDependencies;
  * @package Quark\ViewResources\Flowprint
  */
 class Flowprint implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '1.0.2';
+	const CURRENT_VERSION = '1.0.3';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
 	 */
 	private $_version = self::CURRENT_VERSION;
+	
+	/**
+	 * @var bool $_minified = true
+	 */
+	private $_minified = true;
 
 	/**
 	 * @param string $version = self::CURRENT_VERSION
+	 * @param bool $minified = true
 	 */
-	public function __construct ($version = self::CURRENT_VERSION) {
+	public function __construct ($version = self::CURRENT_VERSION, $minified = true) {
 		$this->_version = $version;
+		$this->_minified = $minified;
 	}
 
 	/**
@@ -29,8 +36,8 @@ class Flowprint implements IQuarkViewResource, IQuarkViewResourceWithDependencie
 	 */
 	public function Dependencies () {
 		return array(
-			new FlowprintCSS($this->_version),
-			new FlowprintJS($this->_version)
+			new FlowprintCSS($this->_version, $this->_minified),
+			new FlowprintJS($this->_version, $this->_minified)
 		);
 	}
 }
