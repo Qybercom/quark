@@ -10,7 +10,7 @@ use Quark\IQuarkViewResourceWithDependencies;
  * @package Quark\ViewResources\Flowprint
  */
 class Flowprint implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const CURRENT_VERSION = '1.0.3';
+	const CURRENT_VERSION = '1.0.4';
 
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
