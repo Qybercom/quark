@@ -17,6 +17,7 @@ use Quark\QuarkModelBehavior;
  * @property float $y
  * @property QuarkCollection|FlowprintScriptNodePin[] $pins
  * @property QuarkCollection|FlowprintScriptNodeProperty[] $properties
+ * @property bool $enabled
  *
  * @property bool $header_use
  * @property string $header_content
@@ -41,7 +42,8 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 			'x' => 0.0,
 			'y' => 0.0,
 			'pins' => new QuarkCollection(new FlowprintScriptNodePin()),
-			'properties' => new QuarkCollection(new FlowprintScriptNodeProperty())
+			'properties' => new QuarkCollection(new FlowprintScriptNodeProperty()),
+			'enabled' => true
 		);
 	}
 	
@@ -72,10 +74,11 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 	 * @param string $label = ''
 	 * @param string $id = ''
 	 * @param bool $unique = true
+	 * @param bool $enabled = true
 	 *
 	 * @return bool
 	 */
-	public function Pin ($kind = FlowprintScriptNodePin::KIND_UNKNOWN, $direction = FlowprintScriptNodePin::DIRECTION_UNKNOWN, $place = FlowprintScriptNodePin::PLACE_UNKNOWN, $label = '', $id = '', $unique = true) {
+	public function Pin ($kind = FlowprintScriptNodePin::KIND_UNKNOWN, $direction = FlowprintScriptNodePin::DIRECTION_UNKNOWN, $place = FlowprintScriptNodePin::PLACE_UNKNOWN, $label = '', $id = '', $unique = true, $enabled = true) {
 		$_id = $this->id . '_' . $id;
 		$found = false;
 		
@@ -95,7 +98,7 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 		}
 		
 		if (!$unique || !$found)
-			$this->pins[] = FlowprintScriptNodePin::Init($kind, $direction, $place, $label, $_id);
+			$this->pins[] = FlowprintScriptNodePin::Init($kind, $direction, $place, $label, $enabled, $_id);
 		
 		return true;
 	}
@@ -235,6 +238,7 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 			'x' => $this->x,
 			'y' => $this->y,
 			'properties' => $this->properties->Aggregate(array(QuarkModel::OPTION_SORT => array('position' => 1)))->Extract(),
+			'enabled' => $this->enabled,
 			'kindOptions' => array(
 				'header' => array(
 					'use' => $this->header_use,

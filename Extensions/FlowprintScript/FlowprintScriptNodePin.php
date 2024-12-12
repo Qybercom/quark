@@ -16,6 +16,7 @@ use Quark\QuarkModelBehavior;
  * @property string $kind
  * @property string $direction
  * @property string $place
+ * @property bool $enabled
  *
  * @property string $content
  *
@@ -44,7 +45,8 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 			'id' => $this->Nullable(''),
 			'kind' => self::KIND_UNKNOWN,
 			'direction' => self::DIRECTION_UNKNOWN,
-			'place' => self::PLACE_UNKNOWN
+			'place' => self::PLACE_UNKNOWN,
+			'enabled' => true
 		);
 	}
 	
@@ -74,7 +76,8 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 		return array(
 			'id',
 			'kind',
-			'content'
+			'content',
+			'enabled'
 		);
 	}
 	
@@ -100,11 +103,12 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 * @param string $direction = self::DIRECTION_UNKNOWN
 	 * @param string $place = self::PLACE_UNKNOWN
 	 * @param string $label = ''
+	 * @param bool $enabled = true
 	 * @param string $id = null
 	 *
 	 * @return FlowprintScriptNodePin|QuarkModel
 	 */
-	public static function Init ($kind = self::KIND_UNKNOWN, $direction = self::DIRECTION_UNKNOWN, $place = self::PLACE_UNKNOWN, $label = '', $id = null) {
+	public static function Init ($kind = self::KIND_UNKNOWN, $direction = self::DIRECTION_UNKNOWN, $place = self::PLACE_UNKNOWN, $label = '', $enabled = true, $id = null) {
 		/**
 		 * @var QuarkModel|FlowprintScriptNodePin $node
 		 */
@@ -112,7 +116,8 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 			'kind' => $kind,
 			'direction' => $direction,
 			'place' => $place,
-			'content' => $label
+			'content' => $label,
+			'enabled' => $enabled
 		));
 		
 		if ($id !== null)
@@ -125,15 +130,16 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 * @param string $label = ''
 	 * @param bool $header = true
 	 * @param string $id = null
+	 * @param bool $enabled = true
 	 *
 	 * @return QuarkModel|FlowprintScriptNodePin
 	 */
-	public static function FlowIn ($label = '', $header = true, $id = null) {
+	public static function FlowIn ($label = '', $header = true, $id = null, $enabled = true) {
 		return self::Init(
 			self::KIND_FLOW,
 			self::DIRECTION_IN,
 			$header ? self::PLACE_HEADER : self::PLACE_BODY,
-			$label, $id
+			$label, $enabled, $id
 		);
 	}
 	
@@ -141,15 +147,16 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 * @param string $label = ''
 	 * @param bool $header = true
 	 * @param string $id = null
+	 * @param bool $enabled = true
 	 *
 	 * @return QuarkModel|FlowprintScriptNodePin
 	 */
-	public static function FlowOut ($label = '', $header = true, $id = null) {
+	public static function FlowOut ($label = '', $header = true, $id = null, $enabled = true) {
 		return self::Init(
 			self::KIND_FLOW,
 			self::DIRECTION_OUT,
 			$header ? self::PLACE_HEADER : self::PLACE_BODY,
-			$label, $id
+			$label, $enabled, $id
 		);
 	}
 	
@@ -157,15 +164,16 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 * @param string $label = ''
 	 * @param bool $body = true
 	 * @param string $id = null
+	 * @param bool $enabled = true
 	 *
 	 * @return QuarkModel|FlowprintScriptNodePin
 	 */
-	public static function ValueIn ($label = '', $body = true, $id = null) {
+	public static function ValueIn ($label = '', $body = true, $id = null, $enabled = true) {
 		return self::Init(
 			self::KIND_VALUE,
 			self::DIRECTION_IN,
 			$body ? self::PLACE_BODY : self::PLACE_HEADER,
-			$label, $id
+			$label, $enabled, $id
 		);
 	}
 	
@@ -173,15 +181,16 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 	 * @param string $label = ''
 	 * @param bool $body = true
 	 * @param string $id = null
+	 * @param bool $enabled = true
 	 *
 	 * @return QuarkModel|FlowprintScriptNodePin
 	 */
-	public static function ValueOut ($label = '', $body = true, $id = null) {
+	public static function ValueOut ($label = '', $body = true, $id = null, $enabled = true) {
 		return self::Init(
 			self::KIND_VALUE,
 			self::DIRECTION_OUT,
 			$body ? self::PLACE_BODY : self::PLACE_HEADER,
-			$label, $id
+			$label, $enabled, $id
 		);
 	}
 }
