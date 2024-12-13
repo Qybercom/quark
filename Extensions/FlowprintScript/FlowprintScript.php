@@ -253,6 +253,25 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	}
 	
 	/**
+	 * @param string $sourceNode = ''
+	 * @param string $sourcePin = ''
+	 * @param string $targetPin = ''
+	 * @param bool $targetPinPrefix = true
+	 *
+	 * @return mixed
+	 */
+	public function NodeLinkData ($sourceNode = '', $sourcePin = '', $targetPin = '', $targetPinPrefix = true) {
+		$link = $this->NodeLink($sourceNode, $sourcePin);
+		$node = $this->Node($link->Key());
+		
+		if ($node == null) return null;
+		
+		return func_num_args() < 3
+			? $this->Data($node->id)
+			: $this->Data($node->id, $targetPin, $targetPinPrefix);
+	}
+	
+	/**
 	 * @param string $id = ''
 	 *
 	 * @return QuarkModel|FlowprintScriptNode

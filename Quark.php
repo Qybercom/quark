@@ -87,6 +87,11 @@ class Quark {
 	 * @var string $_currentLanguage = ''
 	 */
 	private static $_currentLanguage = '';
+	
+	/**
+	 * @var array $_signals = []
+	 */
+	private static $_signals = array();
 
 	/**
 	 * @var float $_execTime = 0.0
@@ -674,6 +679,28 @@ class Quark {
 		return self::$_currentLanguage != QuarkLanguage::ANY && preg_match('#^([a-z]{2})\-[A-Z]{2}$#is', self::$_currentLanguage, $found)
 			? strtolower($found[1])
 			: '';
+	}
+	
+	/**
+	 * @param string $signal = ''
+	 * @param $data = []
+	 *
+	 * @return array|int
+	 */
+	public static function Signal ($signal = '', $data = []) {
+		if (func_num_args() > 1) {
+			if (!isset(self::$_signals[$signal]))
+				self::$_signals[$signal] = array();
+			
+			self::$_signals[$signal][] = $data;
+			
+			return sizeof(self::$_signals[$signal]);
+		}
+		
+		$out = isset(self::$_signals[$signal]) ? self::$_signals[$signal] : array();
+		self::$_signals[$signal] = array();
+		
+		return $out;
 	}
 
 	/**
@@ -4683,7 +4710,7 @@ trait QuarkStreamBehavior {
 	 */
 	public function Broadcast ($data = null, $url = '') {
 		$env = Quark::CurrentEnvironment();
-		$url = func_num_args() == 2 ? $url : $this->CalledURL();
+		$url = func_num_args() > 1 ? $url : $this->CalledURL();
 
 		if ($env instanceof QuarkStreamEnvironment) {
 			$session = $this->Session();
@@ -4741,18 +4768,19 @@ trait QuarkStreamBehavior {
 	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
 	 * @param string $url = $url = null
+	 * @param callable $urlProcessor = null
 	 *
 	 * @return bool
 	 *
 	 * @throws QuarkArchException
 	 */
-	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true, $url = null) {
+	public function ChannelEvent ($channel = '', callable $sender = null, $auth = true, $url = null, callable $urlProcessor = null) {
 		$env = Quark::CurrentEnvironment();
 		
 		if (func_num_args() < 4)
 			$url = $this->URL();
 
-		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($url, $sender, $auth, $channel);
+		if ($env instanceof QuarkStreamEnvironment) return $env->BroadcastLocal($url, $sender, $auth, $channel, $urlProcessor);
 		else throw new QuarkArchException('QuarkStreamBehavior: the `ChannelEvent` method cannot be called in a non-stream environment');
 	}
 
@@ -4769,8 +4797,8 @@ trait QuarkStreamBehavior {
 		return $this->InvokeURL(
 			$url,
 			'Stream',
-			$num < 3 ? $this->Input() : $input,
-			$num < 4 ? $this->Session() : $session
+			$num < 2 ? $this->Input() : $input,
+			$num < 3 ? $this->Session() : $session
 		);
 	}
 
@@ -20073,14 +20101,15 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param callable(QuarkSession $client) $sender = null
 	 * @param bool $auth = true
 	 * @param string|string[]|callable(QuarkClient $client) $filter = null
+	 * @param callable $urlProcessor = null
 	 *
 	 * @return bool
 	 */
-	public function BroadcastLocal ($url, callable &$sender = null, $auth = true, &$filter = null) {
+	public function BroadcastLocal ($url, callable &$sender = null, $auth = true, &$filter = null, callable &$urlProcessor = null) {
 		$ok = true;
 		$clients = $this->_cluster->Server()->Clients();
-		$filtered = func_num_args() == 4;
-
+		$filtered = $filter !== null;
+		
 		foreach ($clients as $i => &$client) {
 			if ($filtered) {
 				if (is_string($filter) && !$client->Subscribed($filter)) continue;
@@ -20093,8 +20122,12 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			
 			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
 
-			if ($data !== null)
+			if ($data !== null) {
+				if ($urlProcessor != null)
+					$url = $urlProcessor($client, $url);
+				
 				$ok &= $client->Send(self::Package(self::PACKAGE_EVENT, $url, $data, $session));
+			}
 
 			unset($data, $session);
 		}
