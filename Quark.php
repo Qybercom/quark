@@ -8821,7 +8821,7 @@ class QuarkView implements IQuarkContainer {
 			$data = $data->Model();
 
 		foreach ($data as $key => $value) {
-			$append = $prefix . $key;
+			$append = QuarkRegEx::Escape($prefix . $key);
 			
 			if (is_callable($value)) {
 				$source = preg_replace_callback('#\{' . $append . '\}#Uisu', function ($matches) use (&$value, &$key, &$append) {
