@@ -8761,12 +8761,15 @@ class QuarkView implements IQuarkContainer {
 	/**
 	 * @param IQuarkViewModel $view
 	 * @param array $vars
+	 * @param bool $resources = true
 	 *
 	 * @return QuarkView|IQuarkVIewModel
 	 */
-	public function Nested (IQuarkViewModel $view, $vars = []) {
+	public function Nested (IQuarkViewModel $view, $vars = [], $resources = true) {
 		$out = new self($view, $vars);
-		$this->_resources($out->ResourceList());
+		
+		if ($resources)
+			$this->_resources($out->ResourceList());
 
 		return $out;
 	}
