@@ -14,7 +14,7 @@ use Quark\QuarkJSViewResourceType;
  * @package Quark\ViewResources\AceEditor
  */
 class AceEditor implements IQuarkSpecifiedViewResource, IQuarkForeignViewResource {
-	const CURRENT_VERSION = '1.36.2';
+	const CURRENT_VERSION = '1.40.0';//36.2';
 	
 	/**
 	 * @var string $_version = self::CURRENT_VERSION
