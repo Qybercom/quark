@@ -12,6 +12,7 @@ use Quark\QuarkModelBehavior;
  * @property string $key
  * @property string $value
  * @property int $position
+ * @property bool $editable
  *
  * @package Quark\Extensions\FlowprintScript
  */
@@ -25,7 +26,8 @@ class FlowprintScriptNodeProperty implements IQuarkModel, IQuarkStrongModel {
 		return array(
 			'key' => '',
 			'value' => '',
-			'position' => 0
+			'position' => 0,
+			'editable' => false
 		);
 	}
 	

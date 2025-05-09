@@ -182,50 +182,117 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 			'id' => ($idPrefix ? $this->id . '_' : '') . $id
 		));
 	}
-	
+
 	/**
 	 * @param string $key = ''
-	 * @param string $value = ''
 	 * @param bool $runtime = false
-	 * @param int $position = 0
 	 *
 	 * @return QuarkModel|FlowprintScriptNodeProperty
 	 */
-	public function Property ($key = '', $value = '', $runtime = false, $position = 0) {
+	public function Property ($key = '', $runtime = false) {
 		$query = array('key' => $key);
-		$property = $this->PropertyValue($key);
-		
+
+		return $runtime
+			? $this->properties_runtime->SelectOne($query)
+			: $this->properties->SelectOne($query);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param bool $runtime = false
+	 * @param string $value = ''
+	 * @param int $position = 0
+	 * @param bool $editable = false
+	 *
+	 * @return QuarkModel|FlowprintScriptNodeProperty
+	 */
+	public function PropertyConfig ($key = '', $runtime = false, $value = '', $position = 0, $editable = false) {
+		$property = $this->Property($key, $runtime);
+
 		if ($property == null) {
 			/**
 			 * @var QuarkModel|FlowprintScriptNodeProperty $property
 			 */
 			$property = new QuarkModel(new FlowprintScriptNodeProperty(), array(
-				'key' => $key,
-				'position' => $position
+				'key' => $key
 			));
-			
+
 			if ($runtime) $this->properties_runtime[] = $property;
 			else $this->properties[] = $property;
 		}
-		
-		if ($runtime) $this->properties_runtime->Change($query, array('value' => $value));
-		else $this->properties->Change($query, array('value' => $value));
-		
+
+		$num = func_num_args();
+		$data = array();
+
+		if ($num > 2) { $property->value = $value; $data['value'] = $value; }
+		if ($num > 3) { $property->position = $position; $data['position'] = $position; }
+		if ($num > 4) { $property->editable = $editable; $data['editable'] = $editable; }
+
+		if (sizeof($data) != 0) {
+			$query = array('key' => $key);
+
+			if ($runtime) $this->properties_runtime->Change($query, $data);
+			else $this->properties->Change($query, $data);
+		}
+
 		return $property;
 	}
-	
+
 	/**
 	 * @param string $key = ''
 	 * @param bool $runtime = false
+	 * @param string $k = null
+	 * @param string $v = null
 	 *
 	 * @return QuarkModel|FlowprintScriptNodeProperty
 	 */
-	public function PropertyValue ($key = '', $runtime = false) {
+	private function _propertySet ($key = '', $runtime = false, $k = null, $v = null) {
+		$property = $this->Property($key, $runtime);
+		if ($property == null) return null;
+
 		$query = array('key' => $key);
-		
-		return $runtime
-			? $this->properties_runtime->SelectOne($query)
-			: $this->properties->SelectOne($query);
+		$changed = 0;
+
+		if ($runtime) $changed = $this->properties_runtime->Change($query, array($k => $v));
+		else $changed = $this->properties->Change($query, array($k => $v));
+
+		if ($changed != 0)
+			$property->$k = $v;
+
+		return $property;
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param bool $runtime = false
+	 * @param string $value = ''
+	 *
+	 * @return QuarkModel|FlowprintScriptNodeProperty
+	 */
+	public function PropertySetValue ($key = '', $runtime = false, $value = '') {
+		return $this->_propertySet($key, $runtime, 'value', $value);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param bool $runtime = false
+	 * @param int $position = 0
+	 *
+	 * @return QuarkModel|FlowprintScriptNodeProperty
+	 */
+	public function PropertySetPosition ($key = '', $runtime = false, $position = 0) {
+		return $this->_propertySet($key, $runtime, 'position', $position);
+	}
+
+	/**
+	 * @param string $key = ''
+	 * @param bool $runtime = false
+	 * @param bool $editable = false
+	 *
+	 * @return QuarkModel|FlowprintScriptNodeProperty
+	 */
+	public function PropertySetEditable ($key = '', $runtime = false, $editable = false) {
+		return $this->_propertySet($key, $runtime, 'editable', $editable);
 	}
 	
 	/**
