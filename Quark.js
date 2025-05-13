@@ -1034,6 +1034,37 @@ Quark.Print = function (url, windowName, windowFeatures, windowCloseTimeout) {
 	}, true);
 };
 
+/**
+ * https://devncoffee.com/save-files-in-html-javascript/
+ *
+ * @param {string} dataURL
+ * @param {string} name
+ */
+Quark.Download = function (dataURL, name) {
+	var a = document.createElement('a');
+	
+	a.href = dataURL;
+	a.download = name;
+	
+	a.click();
+	a.remove();
+};
+/**
+ * @param {any} data
+ * @param {string} name
+ * @param {{description: string, accept: {string:string[]}}[]} types
+ *
+ * @returns {Promise}
+ */
+Quark.SaveAs = function (data, name, types) {
+	return window.showSaveFilePicker({ suggestedName: name, types: types }).then(async handler => {
+		var writable = await handler.createWritable();
+		
+		await writable.write(data);
+		await writable.close();
+	});
+};
+
 Quark.Clipboard = {};
 
 /**

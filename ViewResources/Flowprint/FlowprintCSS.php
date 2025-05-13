@@ -19,9 +19,9 @@ class FlowprintCSS implements IQuarkViewResource, IQuarkSpecifiedViewResource, I
 	use QuarkMinimizableViewResourceBehavior;
 
 	/**
-	 * @var string $_version = Flowprint::CURRENT_VERSION
+	 * @var string $_version = Flowprint::VERSION_CURRENT
 	 */
-	private $_version = Flowprint::CURRENT_VERSION;
+	private $_version = Flowprint::VERSION_CURRENT;
 	
 	/**
 	 * @var bool $_minified = true
@@ -29,10 +29,10 @@ class FlowprintCSS implements IQuarkViewResource, IQuarkSpecifiedViewResource, I
 	private $_minified = true;
 
 	/**
-	 * @param string $version = Flowprint::CURRENT_VERSION
+	 * @param string $version = Flowprint::VERSION_CURRENT
 	 * @param bool $minified = true
 	 */
-	public function __construct ($version = Flowprint::CURRENT_VERSION, $minified = true) {
+	public function __construct ($version = Flowprint::VERSION_CURRENT, $minified = true) {
 		$this->_version = $version;
 		$this->_minified = $minified;
 	}

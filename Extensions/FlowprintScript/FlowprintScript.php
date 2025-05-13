@@ -230,7 +230,7 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 			if (!in_array($pin, $pIDs)) continue;
 			
 			foreach ($links as $i => &$link)
-				$out[$pin] = $link;
+				$out[] = $link;
 		}
 		
 		unset($i, $link, $links, $pIDs, $all);
@@ -239,36 +239,29 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	}
 	
 	/**
-	 * @param string $nodeID = ''
-	 * @param string $pinID = ''
-	 * @param bool $pinIDPrefix = true
-	 *
-	 * @return QuarkKeyValuePair
-	 */
-	public function NodeLink ($nodeID = '', $pinID = '', $pinIDPrefix = true) {
-		$links = $this->NodeLinks($nodeID, $pinID, $pinIDPrefix);
-		$pID = ($pinIDPrefix ? $nodeID . '_' : '') . $pinID;
-		
-		return isset($links[$pID]) ? $links[$pID] : null;
-	}
-	
-	/**
 	 * @param string $sourceNode = ''
 	 * @param string $sourcePin = ''
 	 * @param string $targetPin = ''
 	 * @param bool $targetPinPrefix = true
 	 *
-	 * @return mixed
+	 * @return QuarkKeyValuePair[]
 	 */
-	public function NodeLinkData ($sourceNode = '', $sourcePin = '', $targetPin = '', $targetPinPrefix = true) {
-		$link = $this->NodeLink($sourceNode, $sourcePin);
-		$node = $this->Node($link->Key());
+	public function NodeLinksData ($sourceNode = '', $sourcePin = '', $targetPin = '', $targetPinPrefix = true) {
+		$links = $this->NodeLinks($sourceNode, $sourcePin);
+		$prefix = func_num_args() > 2;
+		$out = array();
 		
-		if ($node == null) return null;
+		foreach ($links as $i => &$link) {
+			$node = $this->Node($link->Key());
+			
+			if ($node != null)
+				$out[] = new QuarkKeyValuePair($node->id, $prefix
+					? $this->Data($node->id, $targetPin, $targetPinPrefix)
+					: $this->Data($node->id)
+				);
+		}
 		
-		return func_num_args() < 3
-			? $this->Data($node->id)
-			: $this->Data($node->id, $targetPin, $targetPinPrefix);
+		return $out;
 	}
 	
 	/**
