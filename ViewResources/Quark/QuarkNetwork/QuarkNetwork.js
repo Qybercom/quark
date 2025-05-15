@@ -20,19 +20,27 @@ Quark.Network.Socket = function (opt) {
 
 	var that = this,
 		connected = false,
-		reconnect = null,
-		_reconnectDisabled = false,
-		_reconnect = function () {
-			if (!that.reconnect || _reconnectDisabled) return;
+		reconnectAttempt = true,
+		reconnectDisabled = false,
+		reconnect = setInterval(function () {
+			if (connected || reconnectDisabled) return;
 
 			if (that.onReconnect instanceof Function)
 				that.onReconnect();
 
-			if (!reconnect)
-				reconnect = setInterval(function () {
-					that.Connect();
-				}, that.reconnect);
-		};
+			reconnectAttempt = true;
+		}, opt.reconnect ? opt.reconnect : 50),
+		heartbeat = setInterval(function () {
+			if (connected) {
+				return;
+			}
+			
+			if (reconnectAttempt) {
+				reconnectAttempt = false;
+				
+				that.Connect();
+			}
+		}, 50);
 
 	that.Socket = null;
 
@@ -72,14 +80,12 @@ Quark.Network.Socket = function (opt) {
 	 */
 	that.Connect = function () {
 		try {
-			_reconnectDisabled = false;
+			reconnectDisabled = false;
 
 			that.Socket = new WebSocket(that.URL());
 
 			that.Socket.onopen = function (e) {
 				connected = true;
-
-				clearInterval(reconnect);
 
 				if (that.onConnect instanceof Function)
 					that.onConnect(e);
@@ -100,8 +106,6 @@ Quark.Network.Socket = function (opt) {
 
 				if (that.onClose instanceof Function)
 					that.onClose(e);
-
-				_reconnect();
 			};
 
 			return true;
@@ -109,8 +113,6 @@ Quark.Network.Socket = function (opt) {
 		catch (e) {
 			if (opt.onError instanceof Function)
 				opt.onError(e);
-
-			_reconnect();
 
 			return false;
 		}
@@ -125,7 +127,7 @@ Quark.Network.Socket = function (opt) {
 		that.Socket.close();
 		that.Socket = null;
 
-		_reconnectDisabled = true;
+		reconnectDisabled = true;
 
 		return true;
 	};

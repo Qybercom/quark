@@ -4765,28 +4765,14 @@ trait QuarkStreamBehavior {
 	public function Broadcast ($data = null, $url = '') {
 		$env = Quark::CurrentEnvironment();
 		$url = func_num_args() > 1 ? $url : $this->CalledURL();
-
-		if ($env instanceof QuarkStreamEnvironment) {
-			// maybe obsolete
-			/*$session = $this->Session();
-			$clients = $env->Cluster()->Server()->Clients();
-
-			foreach ($clients as $i => &$client) {
-				$connection = $session->Connection();
-
-				if ($connection && $client->ID() == $connection->ID())
-					$client->Session($session->ID());
-			}
-
-			unset($connection, $i, $client, $clients, $session);*/
-
-			$out = $env->BroadcastNetwork($url, $data);
-		}
-		else $out = QuarkStreamEnvironment::ControllerCommand(
-			QuarkStreamEnvironment::COMMAND_BROADCAST,
-			QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
-			$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'QuarkCLIEnvironment'
-		);
+		
+		$out = $env instanceof QuarkStreamEnvironment
+			? $env->BroadcastNetwork($url, $data)
+			: QuarkStreamEnvironment::ControllerCommand(
+				QuarkStreamEnvironment::COMMAND_BROADCAST,
+				QuarkStreamEnvironment::Payload(QuarkStreamEnvironment::PACKAGE_REQUEST, $url, $data),
+				$env instanceof QuarkCLIEnvironment // TODO: change to ability check, not of direct 'QuarkCLIEnvironment'
+			);
 
 		unset($env, $data);
 
@@ -4811,31 +4797,24 @@ trait QuarkStreamBehavior {
 	 * @return bool
 	 */
 	public function BroadcastInstance ($data = null, $names = [], $url = '') {
-		//echo '> 1: ', Quark::MemoryUsage(), "\r\n";
 		$url = func_num_args() > 2 ? $url : $this->CalledURL();
-		
-		//echo '> 2: ', Quark::MemoryUsage(), "\r\n";
-		$out = true;
 		$envs = Quark::Environments(QuarkStreamEnvironment::KIND);
 		$env_current = Quark::CurrentEnvironment();
-		//echo '> 3: ', Quark::MemoryUsage(), "\r\n";
+		
+		$out = true;
 		
 		foreach ($envs as $i => &$env) {
 			if (!($env instanceof QuarkStreamEnvironment)) continue;
-			//echo '!!! 1 ', QuarkObject::ConstValue($env->EnvironmentName()), "\r\n";print_r($names);
 			if (!$env->UsageCriteria() || !in_array(QuarkObject::ConstValue($env->EnvironmentName()), $names)) continue;
-			//echo '!!! 2 ', /*$env_current->EnvironmentName(), ' ', */QuarkObject::ConstValue($env->EnvironmentName()), "\r\n";print_r($names);
-			//echo '!!! 2', "\r\n";
+			
 			Quark::CurrentEnvironment($env);
 			
 			$out &= $env->BroadcastNetwork($url, $data);
 		}
 		
 		Quark::CurrentEnvironment($env_current);
-		//echo '> 4: ', Quark::MemoryUsage(), "\r\n";
 		
 		unset($i, $env, $envs, $env_current);
-		//echo '> 5: ', Quark::MemoryUsage(), "\r\n";
 		
 		return $out;
 	}
@@ -6281,7 +6260,7 @@ class QuarkCLIViewTab implements IQuarkCLIViewArea {
 			. $this->_cReset . $this->_cEOL
 			. $this->RenderTop($widthInner);
 		
-		// TODO: add suport for multi-tabbing (add `active` state)
+		// TODO: add support for multi-tabbing (add `active` state)
 		
 		$out .= $this->RenderLeft()
 			. $content
@@ -20411,7 +20390,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public function NetworkServerConnect (QuarkClient $node) {
 		$this->_log('cluster.node.node.server.connect', $node . ' -> ' . $this->_cluster->Network()->Server());
 
-		//$this->_announce();
+		$this->_announce();
 
 		if ($this->_connect) {
 			$client = null;
@@ -20439,7 +20418,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	public function NetworkServerClose (QuarkClient $node) {
 		$this->_log('cluster.node.node.server.close', $node . ' -> ' . $this->_cluster->Network()->Server());
 
-		//$this->_announce();
+		$this->_announce();
 
 		if ($this->_close) {
 			$client = null;
@@ -20507,6 +20486,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			}
 			
 			$ok = true;
+			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $this->_node(), null, true), false);
+			usleep(10000);
 			
 			foreach ($nodes as $i => &$node)
 				/*$ok &= isset($node->uri) && */$this->_peer($node->uri); // TODO:in some cases gets false
@@ -20570,10 +20551,6 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$this->_log('cluster.controller.node.announce', isset($state->uri->internal) ? '"' . $state->uri->internal . '"' : 'UNKNOWN');
 			
 			if (!isset($state->uri->internal)) return;
-			// TODO: maybe obsolete
-			/*if (!isset($state->uri->internal) || !isset($state->uri->external)) return;
-			if (!isset($state->clients) || !is_array($state->clients)) return;
-			if (!isset($state->peers) || !is_array($state->peers)) return;*/
 
 			/**
 			 * @var \stdClass $node
@@ -20584,7 +20561,8 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$this->_monitor();
 			
 			$node->Send(self::Package(self::PACKAGE_COMMAND, self::COMMAND_INFRASTRUCTURE, $this->_infrastructure(), null, true));
-			usleep(10000); // !!! CRUCIAL !!!
+			usleep(10000);
+			
 			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $state->uri, null, true), false);
 		});
 	}
