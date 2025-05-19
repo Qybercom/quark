@@ -78,6 +78,13 @@ Quark.Network.Socket = function (opt) {
 	/**
 	 * @returns {boolean}
 	 */
+	that.Connected = function () {
+		return connected;
+	};
+
+	/**
+	 * @returns {boolean}
+	 */
 	that.Connect = function () {
 		try {
 			reconnectDisabled = false;

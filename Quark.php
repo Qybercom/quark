@@ -19640,8 +19640,6 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return bool
 	 */
 	public static function ControllerCommand ($name = '', $data = [], $persistent = false) {
-		var_dump($name, $data);
-		return;
 		if (self::$_controller != null) $ok = self::$_controller->Send(self::Package(self::PACKAGE_COMMAND, $name, $data, null, true));
 		else {
 			self::$_controller = new QuarkClient(Quark::Config()->ClusterControllerConnect(), self::TCPProtocol());

@@ -718,6 +718,45 @@ Quark.CSS = function (selector) {
 };
 
 /**
+ * https://stackoverflow.com/a/5624139/2097055
+ */
+Quark.Color = {};
+
+/**
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ *
+ * @returns {string}
+ */
+Quark.Color.RGB2HEX = function (r, g, b) {
+	return '#' + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1);
+};
+
+/**
+ * @param {string} hex
+ * @param {bool=} array
+ *
+ * @returns {{r: number, g: number, b: number}}
+ */
+Quark.Color.HEX2RGB = function (hex, array) {
+	hex = hex.replace(/^#?([a-f\d])([a-f\d])([a-f\d])$/i, function(m, r, g, b) {
+		return r + r + g + g + b + b;
+	});
+	
+	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+	if (!result) return array ? [] : null;
+	
+	var out = {
+		r: parseInt(result[1], 16),
+		g: parseInt(result[2], 16),
+		b: parseInt(result[3], 16)
+	};
+	
+	return array ? [out.r, out.g, out.b] : out;
+};
+
+/**
  * http://stackoverflow.com/a/6969486
  *
  * @param {string} str
