@@ -12,7 +12,7 @@ use Quark\QuarkGenericViewResource;
  * @package Quark\ViewResources\Flowprint
  */
 class Flowprint implements IQuarkViewResource, IQuarkViewResourceWithDependencies {
-	const VERSION_CURRENT = '1.1.0';
+	const VERSION_CURRENT = '1.2.0';
 	const VERSION_UNKNOWN = 'unknown';
 
 	/**
