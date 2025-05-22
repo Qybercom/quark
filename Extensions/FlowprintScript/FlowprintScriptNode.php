@@ -18,6 +18,7 @@ use Quark\QuarkModelBehavior;
  * @property QuarkCollection|FlowprintScriptNodePin[] $pins
  * @property QuarkCollection|FlowprintScriptNodeProperty[] $properties
  * @property bool $enabled
+ * @property string $comment
  *
  * @property bool $header_use
  * @property string $header_content
@@ -43,7 +44,8 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 			'y' => 0.0,
 			'pins' => new QuarkCollection(new FlowprintScriptNodePin()),
 			'properties' => new QuarkCollection(new FlowprintScriptNodeProperty()),
-			'enabled' => true
+			'enabled' => true,
+			'comment' => ''
 		);
 	}
 	
@@ -95,6 +97,8 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 					'content' => $label
 				));
 			}
+			
+			unset($pin);
 		}
 		
 		if (!$unique || !$found)
@@ -306,6 +310,7 @@ class FlowprintScriptNode implements IQuarkModel, IQuarkStrongModelWithRuntimeFi
 			'y' => $this->y,
 			'properties' => $this->properties->Aggregate(array(QuarkModel::OPTION_SORT => array('position' => 1)))->Extract(),
 			'enabled' => $this->enabled,
+			'comment' => $this->comment,
 			'kindOptions' => array(
 				'header' => array(
 					'use' => $this->header_use,

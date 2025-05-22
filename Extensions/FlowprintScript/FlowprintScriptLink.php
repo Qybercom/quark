@@ -13,6 +13,7 @@ use Quark\QuarkModelBehavior;
  * @property string $p1
  * @property string $p2
  * @property bool $enabled
+ * @property string $comment
  *
  * @package Quark\Extensions\FlowprintScript
  */
@@ -27,7 +28,8 @@ class FlowprintScriptLink implements IQuarkModel, IQuarkStrongModel {
 			'id' => $this->Nullable(''),
 			'p1' => '',
 			'p2' => '',
-			'enabled' => true
+			'enabled' => true,
+			'comment' => ''
 		);
 	}
 	

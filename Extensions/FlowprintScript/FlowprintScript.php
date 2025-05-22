@@ -90,6 +90,9 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	 * @return QuarkModel|FlowprintScript
 	 */
 	public function BuildLinks () {
+		$node1 = null;
+		$node2 = null;
+		
 		foreach ($this->links as $link) {
 			/**
 			 * @var QuarkModel|FlowprintScriptNode $node1
@@ -135,6 +138,8 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 		foreach ($this->links as $link)
 			$links[] = $link->Extract();
 		
+		unset($link, $node);
+		
 		return array(
 			'blocks' => $blocks,
 			'links' => $links,
@@ -147,6 +152,8 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	public function Init () {
 		foreach ($this->nodes as $node)
 			$this->_processorNode($node);
+		
+		unset($node);
 		
 		return $this->Container();
 	}
@@ -189,7 +196,7 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 			$processor->FlowprintScriptProcessorNodeInit($script, $node);
 		}
 		
-		unset($i, $processor, $processors);
+		unset($i, $processor, $processors, $script);
 	}
 	
 	/**
@@ -209,6 +216,8 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	 * @return QuarkKeyValuePair[]
 	 */
 	public function NodeLinks ($nodeID = '', $pinID = '', $pinIDPrefix = true) {
+		// TODO: deal with `enabled` flag of the links
+		
 		/**
 		 * @var QuarkModel|FlowprintScriptNode $node
 		 */
@@ -233,7 +242,7 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 				$out[] = $link;
 		}
 		
-		unset($i, $link, $links, $pIDs, $all);
+		unset($i, $link, $links, $pIDs, $pin, $all);
 		
 		return $out;
 	}
@@ -250,6 +259,7 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 		$links = $this->NodeLinks($sourceNode, $sourcePin);
 		$prefix = func_num_args() > 2;
 		$out = array();
+		$node = null;
 		
 		foreach ($links as $i => &$link) {
 			$node = $this->Node($link->Key());
@@ -260,6 +270,8 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 					: $this->Data($node->id)
 				);
 		}
+		
+		unset($i, $link, $links, $node);
 		
 		return $out;
 	}
@@ -276,11 +288,33 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	}
 	
 	/**
+	 * @param QuarkKeyValuePair $link = null
+	 * @param bool $enabled = true
+	 *
+	 * @return QuarkModel|FlowprintScriptNode
+	 */
+	public function NodeByLink (QuarkKeyValuePair $link = null, $enabled = true) {
+		if ($link == null) return null;
+		
+		$query = array(
+			'id' => $link->Key()
+		);
+		
+		if (func_num_args() > 1)
+			$query['enabled'] = $enabled;
+		
+		unset($link);
+		
+		return $this->nodes->SelectOne($query);
+	}
+	
+	/**
 	 * @param QuarkKeyValuePair[] $links = []
+	 * @param bool $enabled = true
 	 *
 	 * @return QuarkCollection|FlowprintScriptNode[]
 	 */
-	public function NodesByLinks ($links = []) {
+	public function NodesByLinks ($links = [], $enabled = true) {
 		$ids = array();
 		
 		foreach ($links as $i => &$link)
@@ -289,9 +323,14 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 		
 		unset($i, $link, $links);
 		
-		return $this->nodes->Select(array(
+		$query = array(
 			'id' => array('$in' => $ids)
-		));
+		);
+		
+		if (func_num_args() > 1)
+			$query['enabled'] = $enabled;
+		
+		return $this->nodes->Select($query);
 	}
 	
 	/**
@@ -324,7 +363,7 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 			break;
 		}
 		
-		unset($i, $processor, $processors);
+		unset($i, $processor, $processors, $pID, $node, $script);
 		
 		return $out;
 	}
@@ -341,18 +380,19 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 		$script = $this->Container();
 		$processors = $this->_config->Processors();
 		$next = null;
+		$i = null;
+		$n = null;
 		
 		foreach ($processors as $i => &$processor) {
 			if (!($processor instanceof IQuarkFlowprintScriptProcessorNode)) continue;
 			if (!$processor->FlowprintScriptProcessorNodeApplicable($script, $node)) continue;
 			
 			$next = $processor->FlowprintScriptProcessorNodeProcess($script, $node);
-		
 			if ($next instanceof QuarkCollection)
 				foreach ($next as $n)
 					$this->Process($n);
 		}
 		
-		unset($i, $processor, $processors, $next, $script);
+		unset($i, $n, $processor, $processors, $next, $script, $node);
 	}
 }

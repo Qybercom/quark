@@ -4809,7 +4809,7 @@ trait QuarkStreamBehavior {
 			
 			Quark::CurrentEnvironment($env);
 			
-			$out &= $env->BroadcastNetwork($url, $data);
+			$out &= $env->BroadcastNetwork($url, $data, true, false);
 		}
 		
 		Quark::CurrentEnvironment($env_current);
@@ -12537,6 +12537,8 @@ class QuarkModel implements IQuarkContainer {
 					: $field
 				);
 		}
+		
+		unset($key, $field, $fields);
 
 		return $output;
 	}
@@ -19163,17 +19165,23 @@ class QuarkCluster {
 	/**
 	 * @param string $data
 	 * @param bool $local = true
+	 * @param bool $network = true
 	 *
 	 * @return bool
 	 */
-	public function Broadcast ($data, $local = true) {
+	public function Broadcast ($data, $local = true, $network = true) {
 		if ($this->_controller instanceof QuarkServer)
 			return $this->_controller->Broadcast($data);
 		
 		if ($local)
 			$this->_cluster->NetworkServerData(null, $data);
 		
-		return $this->_network->Broadcast($data);
+		$ok = true;
+		
+		if ($network)
+			$ok &= $this->_network->Broadcast($data);
+		
+		return $ok;
 	}
 
 	/**
@@ -20211,11 +20219,13 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	/**
 	 * @param string $url
 	 * @param QuarkDTO|object|array $payload
+	 * @param bool $local = true
+	 * @param bool $network = true
 	 *
 	 * @return bool
 	 */
-	public function BroadcastNetwork ($url, $payload) {
-		return $this->_cluster->Broadcast(self::Package(self::PACKAGE_REQUEST, $url, $payload, null, true));
+	public function BroadcastNetwork ($url, $payload, $local = true, $network = true) {
+		return $this->_cluster->Broadcast(self::Package(self::PACKAGE_REQUEST, $url, $payload, null, true), $local, $network);
 	}
 
 	/**

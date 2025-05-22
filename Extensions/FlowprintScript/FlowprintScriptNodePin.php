@@ -17,6 +17,7 @@ use Quark\QuarkModelBehavior;
  * @property string $direction
  * @property string $place
  * @property bool $enabled
+ * @property string $comment
  *
  * @property string $content
  *
@@ -46,7 +47,8 @@ class FlowprintScriptNodePin implements IQuarkModel, IQuarkStrongModelWithRuntim
 			'kind' => self::KIND_UNKNOWN,
 			'direction' => self::DIRECTION_UNKNOWN,
 			'place' => self::PLACE_UNKNOWN,
-			'enabled' => true
+			'enabled' => true,
+			'comment' => ''
 		);
 	}
 	
