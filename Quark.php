@@ -17860,7 +17860,7 @@ trait QuarkNetwork {
 			$this->_timeout = $timeout;
 
 			if (is_resource($this->_socket))
-				stream_set_timeout($this->_socket, $this->_timeout, QuarkThreadSet::TICK);
+				stream_set_timeout($this->_socket, $this->_timeout, 0);//QuarkThreadSet::TICK);
 		}
 
 		return $this->_timeout;
@@ -18173,9 +18173,13 @@ class QuarkClient implements IQuarkEventable {
 	 * @return bool
 	 */
 	public function Send ($data) {
-		$out = $this->_socket && is_resource($this->_socket) && $this->_transport instanceof IQuarkNetworkTransport
-			? @fwrite($this->_socket, $this->_transport->Send($data))
-			: false;
+		if (!$this->_socket || !is_resource($this->_socket)) return false;
+		if (!($this->_transport instanceof IQuarkNetworkTransport)) return false;
+		
+		fflush($this->_socket);
+		$out = @fwrite($this->_socket, $this->_transport->Send($data));
+		usleep(10000);
+		fflush($this->_socket);
 
 		return $out;
 	}
@@ -18666,6 +18670,7 @@ class QuarkServer implements IQuarkEventable {
 		if (in_array($this->_socket, $this->_read, true)) {
 			if ($stream) {
 				$socket = stream_socket_accept($this->_socket, $this->_timeout, $address);
+				stream_set_chunk_size($this->_socket, 1);
 
 				$client = QuarkClient::ForServer($this->_transport, $socket, $address, $this->URI()->scheme);
 				$client->Remote(QuarkURI::FromURI($this->ConnectionURI()));
@@ -20397,7 +20402,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function NetworkServerConnect (QuarkClient $node) {
 		$this->_log('cluster.node.node.server.connect', $node . ' -> ' . $this->_cluster->Network()->Server());
-
+		
 		$this->_announce();
 
 		if ($this->_connect) {
