@@ -5862,6 +5862,86 @@ trait QuarkCLIViewAreaBehavior {
 }
 
 /**
+ * Class QuarkCLIViewLabel
+ *
+ * @package Quark
+ */
+class QuarkCLIViewLabel implements IQuarkCLIViewArea {
+	use QuarkCLIViewAreaBehavior;
+	
+	/**
+	 * @var string $_content = ''
+	 */
+	private $_content = '';
+	
+	/**
+	 * @var QuarkCLIColor $_color = null
+	 */
+	private $_color = null;
+	
+	/**
+	 * @param string $content = ''
+	 * @param QuarkCLIColor $color = null
+	 */
+	public function __construct ($content = '', QuarkCLIColor $color = null) {
+		$this->Content($content);
+		$this->Color(func_num_args() < 2 ? new QuarkCLIColor(QuarkCLIColor::WHITE) : $color);
+	}
+	
+	/**
+	 * @param string $content = ''
+	 *
+	 * @return string
+	 */
+	public function Content ($content = '') {
+		if (func_num_args() != 0)
+			$this->_content = $content;
+		
+		return $this->_content;
+	}
+	
+	/**
+	 * @param QuarkCLIColor $color = null
+	 *
+	 * @return QuarkCLIColor
+	 */
+	public function Color (QuarkCLIColor $color = null) {
+		if (func_num_args() != 0)
+			$this->_color = $color;
+		
+		return $this->_color;
+	}
+	
+	/**
+	 * @return string
+	 */
+	public function CLIViewAreaRender () {
+		// TODO: add support of borders and margin
+		$color = $this->_color->Display();
+		$content = str_replace("\r\r", "\r", str_replace("\n", "\r\n", $this->_content));
+		
+		$lines = explode($this->_cEOL, $content);
+		$out = '';
+		
+		foreach ($lines as $i => &$line)
+			$out .= $this->_cReset . $color . $line . $this->_cReset . $this->_cEOL;
+		
+		unset($i, $line, $lines, $content);
+		
+		return $out;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair[] $changes
+	 *
+	 * @return string
+	 */
+	public function CLIViewAreaPipe (&$changes) {
+		// TODO: Implement CLIViewAreaPipe() method.
+	}
+}
+
+/**
  * Class QuarkCLIViewImage
  *
  * @package Quark
@@ -10213,8 +10293,10 @@ trait QuarkCollectionBehavior {
 				$this->_collection[$i] = $iterator($item);
 			}
 
-			unset($i, $item, $iterator);
+			unset($i, $item);
 		}
+		
+		unset($iterator, $query);
 
 		return $this;
 	}
@@ -10225,7 +10307,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	public function Match ($document = null, $query = []) {
+	public function Match (&$document = null, $query = []) {
 		if (is_scalar($query) || is_null($query)) return $document == $query;
 		if (is_scalar($document) || is_null($document))
 			return $this->_matchTarget($document, $query);
@@ -10311,8 +10393,9 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _matchDocument ($role, $document, $query, $append = null) {
+	private function _matchDocument ($role, &$document, $query, $append = null) {
 		$out = true;
+		$hook = '';
 		
 		foreach ($query as $state => &$expected) {
 			$hook = str_replace('$', $role, $state);
@@ -10321,7 +10404,7 @@ trait QuarkCollectionBehavior {
 				: false;
 		}
 
-		unset($state, $expected);
+		unset($hook, $state, $expected, $document, $query);
 		
 		return $out;
 	}
@@ -10355,7 +10438,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _aggregate_and ($document, $rule) {
+	private function _aggregate_and (&$document, $rule) {
 		$state = true;
 		
 		foreach ($rule as $i => &$item)
@@ -10373,7 +10456,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _aggregate_nand ($document, $rule) {
+	private function _aggregate_nand (&$document, $rule) {
 		$state = true;
 		
 		foreach ($rule as $i => &$item)
@@ -10391,7 +10474,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _aggregate_or ($document, $rule) {
+	private function _aggregate_or (&$document, $rule) {
 		$state = false;
 		
 		foreach ($rule as $i => &$item)
@@ -10409,7 +10492,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _aggregate_nor ($document, $rule) {
+	private function _aggregate_nor (&$document, $rule) {
 		$state = false;
 		
 		foreach ($rule as $i => &$item)
@@ -10427,7 +10510,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _aggregate_not ($document, $rule) {
+	private function _aggregate_not (&$document, $rule) {
 		$state = true;
 		
 		foreach ($rule as $i => &$item)
@@ -10520,7 +10603,9 @@ trait QuarkCollectionBehavior {
 	 * @return bool
 	 */
 	private function _array_size ($property, $expected) {
-		return $this->Match(sizeof($property), $expected);
+		$size = sizeof($property);
+		
+		return $this->Match($size, $expected);
 	}
 	
 	/** @noinspection PhpUnusedPrivateMethodInspection
@@ -10688,7 +10773,7 @@ trait QuarkCollectionBehavior {
 	 *
 	 * @return bool
 	 */
-	private function _compare_not ($document, $rule) {
+	private function _compare_not (&$document, $rule) {
 		return !$this->Match($document, $rule);
 	}
 	
@@ -10843,16 +10928,20 @@ trait QuarkCollectionBehavior {
 			if ($size == 0 || $this->Match($item, $query))
 				$change[$i] = $item;
 		
+		unset($i, $item);
+		
 		$change = $this->_slice($change, $options, true);
 		$keys = array_keys($change);
 		
-		foreach ($keys as &$i) {
-			if (is_callable($update)) $update($this->_collection[$i]);
+		foreach ($keys as $i => &$key) {
+			if (is_callable($update)) $update($this->_collection[$key]);
 			else {
-				if ($options[QuarkModel::OPTION_FORCE_DEFINITION]) $this->_collection[$i] = $update;
-				else $this->_change($i, $update);
+				if ($options[QuarkModel::OPTION_FORCE_DEFINITION]) $this->_collection[$key] = $update;
+				else $this->_change($key, $update);
 			}
 		}
+		
+		unset($i, $key, $keys, $query, $update, $options);
 		
 		return sizeof($change);
 	}
@@ -10944,9 +11033,10 @@ trait QuarkCollectionBehavior {
 		
 		$purge = $this->_slice($purge, $options, true);
 
-		/** @noinspection PhpUnusedLocalVariableInspection */
 		foreach ($purge as $i => &$item)
 			unset($this->_collection[$i]);
+		
+		unset($i, $item, $query, $options);
 		
 		if (!$preserveKeys)
 			$this->_collection = array_values($this->_collection);
@@ -18178,7 +18268,7 @@ class QuarkClient implements IQuarkEventable {
 		
 		fflush($this->_socket);
 		$out = @fwrite($this->_socket, $this->_transport->Send($data));
-		usleep(10000);
+		//usleep(1000);
 		fflush($this->_socket);
 
 		return $out;
