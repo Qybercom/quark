@@ -17,6 +17,8 @@ namespace Quark;
  * @me Furnica Alexandru Dumitru, web programmer since 2009 (Фурника Александр Дмитриевич, веб-программист с 2009 года)
  */
 class Quark {
+	const APPLICATION = 'application';
+
 	const MODE_DEV = 'dev';
 	const MODE_PRODUCTION = 'production';
 
@@ -57,6 +59,11 @@ class Quark {
 	 * @var string[] $_argv = []
 	 */
 	private static $_argv = array();
+
+	/**
+	 * @var string $_application = self::APPLICATION
+	 */
+	private static $_application = self::APPLICATION;
 	
 	/**
 	 * @var QuarkConfig $_config
@@ -111,9 +118,21 @@ class Quark {
 	}
 
 	/**
+	 * @param string $application = self::APPLICATION
+	 *
+	 * @return string
+	 */
+	public static function Application ($application = self::APPLICATION) {
+		if (func_num_args() != 0)
+			self::$_application = $application;
+
+		return self::$_application;
+	}
+
+	/**
 	 * @return QuarkConfig
 	 */
-	public static function Config () {
+	public static function &Config () {
 		if (self::$_config == null)
 			self::$_config = new QuarkConfig();
 
@@ -157,8 +176,19 @@ class Quark {
 	public static function Run (QuarkConfig $config = null) {
 		self::$_execTime = microtime(true);
 		
-		self::$_config = $config ? $config : new QuarkConfig();
-		self::$_config->ConfigReady();
+		self::$_config = $config != null ? $config : new QuarkConfig();
+
+		$iniMain = self::$_config->INI();
+		if ($iniMain)
+			self::$_config->INIApply($iniMain);
+
+		// TODO: adjust and refactor
+		$context = QuarkTask::ContextKey(self::$_argv);
+		if ($context)
+			self::$_config->INIApply(self::Host() . '/' . self::$_config->Location(QuarkConfig::RUNTIME) . '/' . self::$_application . '.' . $context . '.ini', true);
+
+		$ready = self::$_config->ReadyCallback();
+		if (is_callable($ready)) $ready();
 
 		$threads = new QuarkThreadSet(self::$_argc, self::$_argv);
 
@@ -360,6 +390,29 @@ class Quark {
 		}
 
 		return $begin . implode('/', $absolutes);
+	}
+
+	/**
+	 * @param string[] $argv
+	 * @param string $argFull
+	 * @param string $argShort = null
+	 *
+	 * @return string
+	 */
+	public static function CLIArgument ($argv, $argFull, $argShort = null) {
+		if (is_array($argv)) {
+			$i = 0;
+			$size = sizeof($argv);
+
+			while ($i < $size) {
+				if ($argv[$i] == $argFull && isset($argv[$i + 1])) return $argv[$i + 1];
+				if ($argv[$i] == $argShort && isset($argv[$i + 1])) return $argv[$i + 1];
+
+				$i++;
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -573,6 +626,24 @@ class Quark {
 	}
 
 	/**
+	 * @param string $environment
+	 *
+	 * @return QuarkCluster
+	 */
+	public static function &Cluster ($environment) {
+		$cluster = null;
+
+		foreach (self::$_environment as $i => &$e) {
+			if ($e->EnvironmentName() != $environment) continue;
+			if (!($e instanceof QuarkStreamEnvironment)) continue;
+
+			$cluster = $e->Cluster();
+		}
+
+		return $cluster;
+	}
+
+	/**
 	 * @param string $name
 	 * @param IQuarkStackable $component = null
 	 *
@@ -769,17 +840,16 @@ class Quark {
 	/**
 	 * @param string $message
 	 * @param string $lvl = self::LOG_INFO
-	 * @param string $domain = 'application'
 	 *
 	 * @return int|bool
 	 */
-	public static function Log ($message, $lvl = self::LOG_INFO, $domain = 'application') {
+	public static function Log ($message, $lvl = self::LOG_INFO) {
 		$logs = self::NormalizePath(self::Host() . '/' . self::Config()->Location(QuarkConfig::RUNTIME) . '/');
 
 		if (!is_dir($logs)) mkdir($logs);
 
 		return file_put_contents(
-			$logs . $domain . '.log',
+			$logs . self::$_application . '.log',
 			'[' . $lvl . '] ' . QuarkDate::Now() . ' ' . $message . "\r\n",
 			FILE_APPEND | LOCK_EX
 		);
@@ -787,12 +857,11 @@ class Quark {
 
 	/**
 	 * @param mixed $needle
-	 * @param string $domain = 'application'
 	 *
 	 * @return int|bool
 	 */
-	public static function Trace ($needle, $domain = 'application') {
-		return self::Log('[' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO, $domain);
+	public static function Trace ($needle) {
+		return self::Log('[' . gettype($needle) . '] ' . print_r($needle, true), self::LOG_INFO);
 	}
 
 	/**
@@ -1950,18 +2019,27 @@ class QuarkConfig {
 
 	/**
 	 * @param callable $callback = null
+	 *
+	 * @return callable
 	 */
-	public function ConfigReady (callable $callback = null) {
-		if (func_num_args() != 0) {
+	public function ReadyCallback (callable $callback = null) {
+		if (func_num_args() != 0)
 			$this->_readyCallback = $callback;
-			return;
-		}
 		
-		if (!$this->_ini) return;
+		return $this->_readyCallback;
+	}
 
-		$file = QuarkFile::FromLocation($this->_ini);
-		
-		if (!$file->Exists() && $this->_allowINIFallback) return;
+	/**
+	 * @param string $iniLocation
+	 * @param bool $allowFallback = false
+	 *
+	 * @return bool
+	 */
+	public function INIApply ($iniLocation, $allowFallback = false) {
+		$file = QuarkFile::FromLocation($iniLocation);
+
+		$allowFallback = func_num_args() > 1 ? $allowFallback : $this->_allowINIFallback;
+		if (!$file->Exists() && $allowFallback) return false;
 		
 		$ini = $file->Load()->Decode(new QuarkINIIOProcessor());
 		$callback = $this->_readyCallback;
@@ -1969,7 +2047,7 @@ class QuarkConfig {
 		if ($callback != null)
 			$callback($this, $ini);
 
-		if (!$ini) return;
+		if (!$ini) return false;
 		$ini = (array)$ini;
 
 		if (isset($ini[self::INI_PHP]))
@@ -2074,6 +2152,8 @@ class QuarkConfig {
 		$this->_ready = true;
 
 		$this->ApplicationSettings($this->_settingsApp);
+
+		return true;
 	}
 	
 	/**
@@ -3388,6 +3468,9 @@ class QuarkTask {
 	const DEDICATED = '--dedicated';
 	const DEDICATED_ALIAS = '-d';
 
+	const CONTEXT = '--context';
+	const CONTEXT_ALIAS = '-c';
+
 	const QUEUE = 'tcp://127.0.0.1:25500';
 
 	/**
@@ -3541,7 +3624,16 @@ class QuarkTask {
 	 * @return string|null
 	 */
 	public static function DedicatedKey ($argv = []) {
-		return isset($argv[1]) && isset($argv[2]) && ($argv[1] == self::DEDICATED || $argv[1] == self::DEDICATED_ALIAS) ? $argv[2] : null;
+		return Quark::CLIArgument($argv, self::DEDICATED, self::DEDICATED_ALIAS);
+	}
+
+	/**
+	 * @param string[] $argv = []
+	 *
+	 * @return string|null
+	 */
+	public static function ContextKey ($argv = []) {
+		return Quark::CLIArgument($argv, self::CONTEXT, self::CONTEXT_ALIAS);
 	}
 
 	/**
@@ -19075,8 +19167,10 @@ class QuarkPeer {
 	public function Broadcast ($data = '') {
 		$ok = true;
 
-		foreach ($this->_peers as $peer)
+		foreach ($this->_peers as $i => &$peer)
 			$ok &= $peer->Send($data);
+
+		unset($i, $peer);
 
 		return $ok;
 	}
@@ -19087,8 +19181,14 @@ class QuarkPeer {
 	public function Pipe () {
 		$ok = $this->_server->Pipe();
 
-		foreach ($this->_peers as $peer)
+		foreach ($this->_peers as $i => &$peer) {
 			$ok &= $peer->Pipe();
+
+			if (!$peer->Connected())
+				unset($this->_peers[$i]);
+		}
+
+		unset($i, $peer);
 
 		return $ok;
 	}
@@ -19972,7 +20072,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	private function _peer ($node) {
 		$out = isset($node->internal) && $this->_cluster->Network()->Peer($node->internal);
-		
+
 		// TODO: in some cases return false, maybe for :///
 		//if (!$out)
 			//Quark::Log('[stream] Can not peer StreamEnvironment node with following: ' . print_r($node, true), Quark::LOG_WARN);
