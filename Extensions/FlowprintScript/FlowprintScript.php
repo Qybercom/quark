@@ -35,6 +35,11 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 	private $_links = array();
 	
 	/**
+	 * @var QuarkKeyValuePair[] $_environment = []
+	 */
+	private $_environment = array();
+	
+	/**
 	 * @param string $config
 	 */
 	public function __construct ($config) {
@@ -364,6 +369,109 @@ class FlowprintScript implements IQuarkExtension, IQuarkModel, IQuarkStrongModel
 		}
 		
 		unset($i, $processor, $processors, $pID, $node, $script);
+		
+		return $out;
+	}
+	
+	/**
+	 * @param QuarkKeyValuePair $link = null
+	 *
+	 * @return mixed
+	 */
+	public function DataByLink (QuarkKeyValuePair $link = null) {
+		if ($link == null) return null;
+		
+		/**
+		 * @var QuarkModel|FlowprintScriptNode $node
+		 */
+		$node = $this->NodeByLink($link, true);
+		if ($node == null) return null;
+		
+		$pin = $link->Value();
+		
+		return $this->Data($node->id, $pin, false);
+	}
+	
+	/**
+	 * @param string $nodeID = ''
+	 * @param string $pinID = ''
+	 * @param bool $pinIDPrefix = true
+	 *
+	 * @return array
+	 */
+	public function DataByPin ($nodeID = '', $pinID = '', $pinIDPrefix = true) {
+		$links = $this->NodeLinks($nodeID, $pinID, $pinIDPrefix);
+		$out = array();
+		
+		foreach ($links as $pin => &$link)
+			$out[] = $this->DataByLink($link);
+		
+		unset($pin, $link, $links);
+		
+		return $out;
+	}
+	
+	/**
+	 * @param string $nodeID = ''
+	 * @param string $pinID = ''
+	 * @param bool $pinIDPrefix = true
+	 *
+	 * @return bool
+	 */
+	public function FlagByPin ($nodeID = '', $pinID = '', $pinIDPrefix = true) {
+		$flags = $this->NodeLinks($nodeID, $pinID, $pinIDPrefix);
+		$pin = null;
+		$link = null;
+		$out = null;
+		$buffer = null;
+		
+		foreach ($flags as $pin => &$link) {
+			$buffer = $this->DataByLink($link);
+			
+			if ($buffer !== null) {
+				if ($out === null)
+					$out = false;
+				
+				$out |= $buffer;
+			}
+		}
+		
+		unset($pin, $link, $buffer, $flags);
+		
+		return $out;
+	}
+	
+	/**
+	 * @return QuarkKeyValuePair[]
+	 */
+	public function &Environment () {
+		return $this->_environment;
+	}
+	
+	/**
+	 * @param string $key = ''
+	 * @param $value = null
+	 *
+	 * @return QuarkKeyValuePair
+	 */
+	public function EnvironmentItem ($key = '', $value = null) {
+		$set = func_num_args() > 1;
+		$out = null;
+		
+		foreach ($this->_environment as $i => &$item) {
+			if ($item->Key() !== $key) continue;
+			
+			if ($set)
+				$this->_environment[$i]->Value($value);
+			
+			$out = $this->_environment[$i];
+			break;
+		}
+		
+		if ($out == null && $set)
+			$this->_environment[] = new QuarkKeyValuePair($key, $value);
+		
+		unset($i, $item);
 		
 		return $out;
 	}

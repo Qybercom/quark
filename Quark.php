@@ -20447,7 +20447,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$session = $auth ? QuarkSession::Get($client->Session()) : null;
 			if ($auth && ($session == null || $session->User() == null)) continue;
 			
-			$data = $sender ? call_user_func_array($sender, array(&$session)) : null;
+			$data = $sender ? call_user_func_array($sender, array(&$session, &$filter, &$client)) : null;
 
 			if ($data !== null) {
 				if ($urlProcessor != null)
