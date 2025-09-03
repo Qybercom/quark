@@ -20055,39 +20055,31 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @param QuarkClient $client = null
 	 */
 	private function _pipeData ($method, $data, $signature = false, QuarkClient &$client = null) {
-		$uri = $client == null ? '' : $client->ConnectionURI()->URI();
+		$uri = $client == null ? '' : $client->URI()->URI();
 		if (!isset($this->_buffer[$uri])) $this->_buffer[$uri] = '';
-		
-		//echo '!!! ', $data, "\r\n";
-		$data = preg_replace('#}[^,]*{#', '}}-{{', $data);
-		$cmds = explode('}-{', $this->_buffer[$uri] . $data);
-		
-		foreach ($cmds as $i => &$cmd) {
-			//echo $cmd, "\r\n";
-			$json = json_decode($cmd);
-			$err = json_last_error();
-			
-			if ($err !== JSON_ERROR_NONE) {
-				//var_dump($cmd);
-				//$json = self::$_json->Decode($data);
-				//if (strlen($this->_buffer[$uri]) > 8192) var_dump($this->_buffer[$uri]);
-				/*if (strlen($this->_buffer[$uri]) > 8192) $this->_buffer[$uri] = '';
-				else else $this->_buffer[$uri] .= $cmd;*/
-				
-				continue;
-			}
-			
-			$this->_buffer[$uri] = str_replace($cmd, '', $this->_buffer[$uri]);
-			
+
+		$data = preg_replace('#}[^,]*{#', '}}-{{', trim($data));
+		$this->_buffer[$uri] .= $data;
+		$chunks = explode('}-{', $this->_buffer[$uri]);
+		$error = null;
+
+		foreach ($chunks as $i => &$chunk) {
+			$json = json_decode($chunk);
+			$error = json_last_error();
+
+			if ($error !== JSON_ERROR_NONE) continue;
+
+			$this->_buffer[$uri] = str_replace($chunk, '', $this->_buffer[$uri]);
+
 			if ($json && isset($json->url) && ($signature ? (isset($json->signature) && $json->signature == Quark::Config()->ClusterKey()) : true)) {
 				if (isset($json->language))
 					Quark::CurrentLanguage($json->language);
-	
+
 				$this->_pipe($json->url, $method, $client, isset($json->data) ? $json->data : new \stdClass(), isset($json->session) ? $json->session : null);
 			}
 		}
-		
-		unset($i, $cmd, $cmds, $err);
+
+		unset($i, $chunk, $chunks, $error);
 
 		unset($json, $client, $data, $method);
 	}
