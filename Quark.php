@@ -19974,17 +19974,17 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
-	 * @param string $source
+	 * @param object $json
 	 * @param string $cmd
 	 * @param callable $callback = null
 	 * @param bool $signature = true
 	 *
 	 * @return bool
 	 */
-	private function _cmd ($source, $cmd, callable $callback = null, $signature = true) {
+	private function _cmd ($json, $cmd, callable $callback = null, $signature = true) {
 		if ($callback == null) return false;
 
-		$json = self::$_json->Decode($source);
+		//$json = self::$_json->Decode($source);
 
 		if (!isset($json->cmd) || $json->cmd != $cmd) return false;
 		if (!isset($json->data)) return false;
@@ -20045,8 +20045,6 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		unset($session, $service, $connected, $input, $client, $method, $url);
 	}
-	
-	private $_buffer = array();
 
 	/**
 	 * @param string $method
@@ -20056,32 +20054,27 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	private function _pipeData ($method, $data, $signature = false, QuarkClient &$client = null) {
 		$uri = $client == null ? '' : $client->URI()->URI();
-		if (!isset($this->_buffer[$uri])) $this->_buffer[$uri] = '';
-
-		$data = preg_replace('#}[^,]*{#', '}}-{{', trim($data));
-		$this->_buffer[$uri] .= $data;
-		$chunks = explode('}-{', $this->_buffer[$uri]);
-		$error = null;
-
+		$chunks = self::$_json->BatchDecode($data, 'client ' . $uri);
+		
 		foreach ($chunks as $i => &$chunk) {
-			$json = json_decode($chunk);
-			$error = json_last_error();
-
-			if ($error !== JSON_ERROR_NONE) continue;
-
-			$this->_buffer[$uri] = str_replace($chunk, '', $this->_buffer[$uri]);
-
-			if ($json && isset($json->url) && ($signature ? (isset($json->signature) && $json->signature == Quark::Config()->ClusterKey()) : true)) {
-				if (isset($json->language))
-					Quark::CurrentLanguage($json->language);
-
-				$this->_pipe($json->url, $method, $client, isset($json->data) ? $json->data : new \stdClass(), isset($json->session) ? $json->session : null);
+			if (!$chunk) continue;
+			if (!isset($chunk->url)) continue;
+			if ($signature) {
+				if (!isset($chunk->signature)) continue;
+				if ($chunk->signature != Quark::Config()->ClusterKey()) continue;
 			}
+			
+			if (isset($chunk->language))
+				Quark::CurrentLanguage($chunk->language);
+
+			$this->_pipe(
+				$chunk->url, $method, $client,
+				isset($chunk->data) ? $chunk->data : new \stdClass(),
+				isset($chunk->session) ? $chunk->session : null
+			);
 		}
 
-		unset($i, $chunk, $chunks, $error);
-
-		unset($json, $client, $data, $method);
+		unset($i, $chunk, $chunks, $client, $data, $method, $uri);
 	}
 	
 	/**
@@ -20549,6 +20542,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		if ($this->_close)
 			$this->_pipe($this->_close, 'StreamClose', $client, null, $client->Session() ? $client->Session()->Extract() : null);
+		
+		$uri = $client == null ? '' : $client->URI()->URI();
+		self::$_json->BatchBufferClear('client ' . $uri);
 	}
 
 	/**
@@ -20593,6 +20589,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function NetworkClientClose (QuarkClient $node) {
 		$this->_log('cluster.node.node.client.close', $this->_cluster->Network()->Server() . ' <- ' . $node);
+		
+		$uri = $node == null ? '' : $node->URI()->URI();
+		self::$_json->BatchBufferClear('node ' . $uri);
 	}
 
 	/**
@@ -20646,6 +20645,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 			$client = null;
 			$this->_pipe($this->_close, 'StreamClose', $client, null, null);
 		}
+		
+		$uri = $node == null ? '' : $node->URI()->URI();
+		self::$_json->BatchBufferClear('node ' . $uri);
 	}
 
 	/**
@@ -20692,39 +20694,46 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return void
 	 */
 	public function ControllerClientData (QuarkClient $controller, $data) {
-		$this->_cmd($data, self::COMMAND_ANNOUNCE, function ($node) {
-			$this->_log('cluster.node.controller.announce', isset($node->internal) ? '"' . $node->internal . '"' : 'UNKNOWN (see log)');
-
-			$this->_peer($node);
-		});
-
-		$this->_cmd($data, self::COMMAND_INFRASTRUCTURE, function ($nodes) {
-			$this->_log('cluster.node.controller.infrastructure');
-
-			if (!is_array($nodes)) {
-				Quark::Log('[stream] Invalid infrastructure command, got: ' . print_r($nodes, true), Quark::LOG_WARN);
+		$uri = $controller == null ? '' : $controller->URI()->URI();
+		$chunks = self::$_json->BatchDecode($data, 'controller ' . $uri);
+		
+		foreach ($chunks as $i => &$chunk) {
+			$this->_cmd($chunk, self::COMMAND_ANNOUNCE, function ($node) {
+				$this->_log('cluster.node.controller.announce', isset($node->internal) ? '"' . $node->internal . '"' : 'UNKNOWN (see log)');
+	
+				$this->_peer($node);
+			});
+	
+			$this->_cmd($chunk, self::COMMAND_INFRASTRUCTURE, function ($nodes) {
+				$this->_log('cluster.node.controller.infrastructure');
+	
+				if (!is_array($nodes)) {
+					Quark::Log('[stream] Invalid infrastructure command, got: ' . print_r($nodes, true), Quark::LOG_WARN);
+					
+					return;
+				}
 				
-				return;
-			}
-			
-			$ok = true;
-			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $this->_node(), null, true), false);
-			usleep(10000);
-			
-			foreach ($nodes as $i => &$node)
-				/*$ok &= isset($node->uri) && */$this->_peer($node->uri); // TODO:in some cases gets false
-			
-			if (!$ok)
-				Quark::Log('[stream] Some nodes failed peering process, requested: ' . print_r($nodes, true), Quark::LOG_WARN);
-			
-			unset($i, $node, $nodes);
-		});
+				$ok = true;
+				$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $this->_node(), null, true), false);
+				usleep(10000);
+				
+				foreach ($nodes as $i => &$node)
+					/*$ok &= isset($node->uri) && */$this->_peer($node->uri); // TODO:in some cases gets false
+				
+				if (!$ok)
+					Quark::Log('[stream] Some nodes failed peering process, requested: ' . print_r($nodes, true), Quark::LOG_WARN);
+				
+				unset($i, $node, $nodes);
+			});
+	
+			$this->_cmd($chunk, self::COMMAND_BROADCAST, function ($payload) {
+				if (!isset($payload->url)) return;
+	
+				$this->_cluster->Broadcast(self::Package(self::PACKAGE_REQUEST, $payload->url, $payload->data, null, true));
+			});
+		}
 
-		$this->_cmd($data, self::COMMAND_BROADCAST, function ($payload) {
-			if (!isset($payload->url)) return;
-
-			$this->_cluster->Broadcast(self::Package(self::PACKAGE_REQUEST, $payload->url, $payload->data, null, true));
-		});
+		unset($i, $chunk, $chunks);
 	}
 
 	/**
@@ -20734,6 +20743,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function ControllerClientClose (QuarkClient $controller) {
 		$this->_log('cluster.node.controller.close', $this->_cluster->Controller() . ' <- ' . $controller);
+		
+		$uri = $controller == null ? '' : $controller->URI()->URI();
+		self::$_json->BatchBufferClear('controller ' . $uri);
 	}
 
 	/**
@@ -20763,30 +20775,37 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return void
 	 */
 	public function ControllerServerData (QuarkClient $node, $data) {
-		$this->_cmd($data, self::COMMAND_BROADCAST, function ($payload) {
-			if (!isset($payload->url)) return;
+		$uri = $node == null ? '' : $node->URI()->URI();
+		$chunks = self::$_json->BatchDecode($data, 'node ' . $uri);
+		
+		foreach ($chunks as $i => &$chunk) {
+			$this->_cmd($chunk, self::COMMAND_BROADCAST, function ($payload) {
+				if (!isset($payload->url)) return;
+	
+				$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_BROADCAST, $payload, null, true));
+			});
+	
+			$this->_cmd($chunk, self::COMMAND_ANNOUNCE, function ($state, $signature) use (&$node) {
+				$this->_log('cluster.controller.node.announce', isset($state->uri->internal) ? '"' . $state->uri->internal . '"' : 'UNKNOWN');
+				
+				if (!isset($state->uri->internal)) return;
+	
+				/**
+				 * @var \stdClass $node
+				 */
+				$node->state = $state;
+				$node->signature = $signature;
+	
+				$this->_monitor();
+				
+				$node->Send(self::Package(self::PACKAGE_COMMAND, self::COMMAND_INFRASTRUCTURE, $this->_infrastructure(), null, true));
+				usleep(10000);
+				
+				$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $state->uri, null, true), false);
+			});
+		}
 
-			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_BROADCAST, $payload, null, true));
-		});
-
-		$this->_cmd($data, self::COMMAND_ANNOUNCE, function ($state, $signature) use (&$node) {
-			$this->_log('cluster.controller.node.announce', isset($state->uri->internal) ? '"' . $state->uri->internal . '"' : 'UNKNOWN');
-			
-			if (!isset($state->uri->internal)) return;
-
-			/**
-			 * @var \stdClass $node
-			 */
-			$node->state = $state;
-			$node->signature = $signature;
-
-			$this->_monitor();
-			
-			$node->Send(self::Package(self::PACKAGE_COMMAND, self::COMMAND_INFRASTRUCTURE, $this->_infrastructure(), null, true));
-			usleep(10000);
-			
-			$this->_cluster->Broadcast(self::Package(self::PACKAGE_COMMAND, self::COMMAND_ANNOUNCE, $state->uri, null, true), false);
-		});
+		unset($i, $chunk, $chunks);
 	}
 
 	/**
@@ -20798,6 +20817,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 		$this->_log('cluster.controller.node.close', $node . ' -> ' . $this->_cluster->Controller());
 
 		$this->_monitor();
+		
+		$uri = $node == null ? '' : $node->URI()->URI();
+		self::$_json->BatchBufferClear('node ' . $uri);
 	}
 
 	/**
@@ -20832,35 +20854,42 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @return void
 	 */
 	public function TerminalData (QuarkClient $terminal, $data) {
-		/** @noinspection PhpUnusedParameterInspection */
-		$this->_cmd($data, self::COMMAND_AUTHORIZE, function ($client, $signature) use (&$terminal) {
-			/**
-			 * @var \stdClass|QuarkClient $terminal
-			 */
-			$terminal->signature = $signature;
-			$terminal->Send(self::Package(
-				self::PACKAGE_COMMAND,
-				self::COMMAND_INFRASTRUCTURE,
-				$this->_infrastructure(), null, true
-			));
-		});
+		$uri = $terminal == null ? '' : $terminal->URI()->URI();
+		$chunks = self::$_json->BatchDecode($data, 'terminal ' . $uri);
+		
+		foreach ($chunks as $i => &$chunk) {
+			/** @noinspection PhpUnusedParameterInspection */
+			$this->_cmd($chunk, self::COMMAND_AUTHORIZE, function ($client, $signature) use (&$terminal) {
+				/**
+				 * @var \stdClass|QuarkClient $terminal
+				 */
+				$terminal->signature = $signature;
+				$terminal->Send(self::Package(
+					self::PACKAGE_COMMAND,
+					self::COMMAND_INFRASTRUCTURE,
+					$this->_infrastructure(), null, true
+				));
+			});
+	
+			$this->_cmd($chunk, self::COMMAND_ENDPOINT, function () use (&$terminal) {
+				$nodes = $this->_infrastructure();
+	
+				/**
+				 * @var \stdClass $endpoint
+				 */
+				$endpoint = sizeof($nodes) != 0 ? $nodes[0] : null;
+	
+				$terminal->Send(self::Package(
+					self::PACKAGE_COMMAND,
+					self::COMMAND_ENDPOINT,
+					$endpoint == null ? null : $endpoint->external, null, true
+				));
+	
+				$terminal->Close();
+			}, false);
+		}
 
-		$this->_cmd($data, self::COMMAND_ENDPOINT, function () use (&$terminal) {
-			$nodes = $this->_infrastructure();
-
-			/**
-			 * @var \stdClass $endpoint
-			 */
-			$endpoint = sizeof($nodes) != 0 ? $nodes[0] : null;
-
-			$terminal->Send(self::Package(
-				self::PACKAGE_COMMAND,
-				self::COMMAND_ENDPOINT,
-				$endpoint == null ? null : $endpoint->external, null, true
-			));
-
-			$terminal->Close();
-		}, false);
+		unset($i, $chunk, $chunks);
 	}
 
 	/**
@@ -20870,6 +20899,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function TerminalClose (QuarkClient $terminal) {
 		$this->_log('cluster.controller.terminal.close', $terminal . ' -> ' . $this->_cluster->Terminal());
+		
+		$uri = $terminal == null ? '' : $terminal->URI()->URI();
+		self::$_json->BatchBufferClear('terminal ' . $uri);
 	}
 
 	/**
@@ -25816,6 +25848,12 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
  */
 class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	const MIME = 'application/json';
+	const BATCH_BUFFER_SIZE = 16384;
+	
+	/**
+	 * @var string[] $_buffer = []
+	 */
+	private $_buffer = array();
 
 	/**
 	 * @return string
@@ -25856,6 +25894,60 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		}
 
 		return $fallback ? array($raw) : array();
+	}
+	
+	/**
+	 * @param string $raw = ''
+	 * @param string $buffer = ''
+	 *
+	 * @return array
+	 */
+	public function BatchDecode ($raw = '', $buffer = '', $size = self::BATCH_BUFFER_SIZE) {
+		if (!isset($this->_buffer[$buffer]))
+			$this->_buffer[$buffer] = '';
+		
+		$raw = preg_replace('#}[^,]*{#', '}}-{{', trim($raw));
+		$this->_buffer[$buffer] .= $raw;
+		$chunks = explode('}-{', $this->_buffer[$buffer]);
+		$error = null;
+		$out = array();
+
+		foreach ($chunks as $i => &$chunk) {
+			$data = json_decode($chunk);
+			$error = json_last_error();
+			
+			if ($error !== JSON_ERROR_NONE) continue;
+			if (strlen($this->_buffer[$buffer]) > $size) {
+				$this->_buffer[$buffer] = '';
+				
+				continue;
+			}
+			
+			$out[] = $data;
+			
+			$this->_buffer[$buffer] = str_replace($chunk, '', $this->_buffer[$buffer]);
+		}
+		
+		unset($i, $chunk, $chunks, $error);
+		
+		return $out;
+	}
+	
+	/**
+	 * @param string $buffer = ''
+	 *
+	 * @return QuarkJSONIOProcessor
+	 */
+	public function &BatchBufferClear ($buffer = '') {
+		$all = func_num_args() == 0;
+		
+		foreach ($this->_buffer as $key => &$value)
+			if ($all || $key == $buffer)
+				unset($this->_buffer[$key]);
+		
+		unset($key, $value, $all);
+		
+		return $this;
 	}
 
 	/**
