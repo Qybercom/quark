@@ -20424,6 +20424,33 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param string[] $channels = []
+	 * @param bool $strict = false
+	 * @param string $prefix = 'client '
+	 *
+	 * @return int
+	 */
+	public function ClearBufferForClient ($channels = [], $strict = false, $prefix = 'client ') {
+		$all = func_num_args() == 0;
+		$clients = $this->_cluster->Server()->Clients();
+		$uri = '';
+		$out = 0;
+
+		foreach ($clients as $i => &$client) {
+			if (!$all && !$client->SubscribedList($channels, $strict)) continue;
+
+			$uri = $client == null ? '' : $client->URI()->URI();
+			self::$_json->BatchBufferClear($prefix . $uri);
+
+			$out++;
+		}
+
+		unset($i, $client, $clients, $uri);
+
+		return $out;
+	}
+
+	/**
 	 * @param string $url
 	 * @param QuarkDTO|object|array $payload
 	 * @param bool $local = true
