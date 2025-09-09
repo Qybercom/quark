@@ -25933,9 +25933,11 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		if (!isset($this->_buffer[$buffer]))
 			$this->_buffer[$buffer] = '';
 		
-		$raw = preg_replace('#}[^,]*{#', '}}-{{', trim($raw));
+		$sep = '}-{';
+		$raw = preg_replace('#}[^,]*{#', '}' . $sep . '{', trim($raw));
 		$this->_buffer[$buffer] .= $raw;
-		$chunks = explode('}-{', $this->_buffer[$buffer]);
+		$chunks = explode($sep, $this->_buffer[$buffer]);
+		$count = sizeof($chunks);
 		$error = null;
 		$out = array();
 
@@ -25943,7 +25945,12 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 			$data = json_decode($chunk);
 			$error = json_last_error();
 			
-			if ($error !== JSON_ERROR_NONE) continue;
+			if ($error !== JSON_ERROR_NONE) {
+				if ($i != $count - 1)
+					$this->_buffer[$buffer] = str_replace($chunk, '', $this->_buffer[$buffer]);
+				
+				continue;
+			}
 			if (strlen($this->_buffer[$buffer]) > $size) {
 				$this->_buffer[$buffer] = '';
 				
