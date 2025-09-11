@@ -4762,7 +4762,7 @@ class QuarkProcessExternal {
 		$this->_process = proc_open($this->_command, $pipesConfig, $this->_pipes);
 		
 		if (is_resource($this->_process)) {
-        	$this->_status = proc_get_status($this->_process);
+			$this->_status = proc_get_status($this->_process);
 			$ok = is_array($this->_status);
 			
 			if ($ok) {
@@ -12674,7 +12674,7 @@ class QuarkModel implements IQuarkContainer {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $fields
+	 * @param array $fields
 	 *
 	 * @return IQuarkModel
 	 */
@@ -19984,8 +19984,6 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private function _cmd ($json, $cmd, callable $callback = null, $signature = true) {
 		if ($callback == null) return false;
 
-		//$json = self::$_json->Decode($source);
-
 		if (!isset($json->cmd) || $json->cmd != $cmd) return false;
 		if (!isset($json->data)) return false;
 		if ($signature && (!isset($json->signature) || $json->signature != Quark::Config()->ClusterKey())) return false;
@@ -22003,7 +22001,7 @@ class QuarkDTO {
 
 	/**
 	 * @param IQuarkIOProcessor $processor
-	 * @param QuarkURI          $uri
+	 * @param QuarkURI $uri
 	 *
 	 * @return QuarkDTO
 	 */
@@ -22013,7 +22011,7 @@ class QuarkDTO {
 
 	/**
 	 * @param IQuarkIOProcessor $processor
-	 * @param QuarkURI          $uri
+	 * @param QuarkURI $uri
 	 *
 	 * @return QuarkDTO
 	 */
@@ -25154,7 +25152,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 	public static function FromFiles ($files) {
 		$output = array();
 		
-        foreach ($files as $name => &$value) {
+		foreach ($files as $name => &$value) {
 			$output[$name] = array();
 			
 			foreach ($value as $param => &$data) {
@@ -25170,7 +25168,7 @@ class QuarkFile implements IQuarkModel, IQuarkStrongModel, IQuarkLinkedModel {
 			}
 
 			unset($param, $data);
-        }
+		}
 
 		unset($name, $value);
 
@@ -25933,21 +25931,25 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 		if (!isset($this->_buffer[$buffer]))
 			$this->_buffer[$buffer] = '';
 		
-		$sep = '}-{';
-		$raw = preg_replace('#}[^,]*{#', '}' . $sep . '{', trim($raw));
+		$sep = Quark::GuID();
+		$raw = preg_replace('#}\s*{#', '}' . $sep . '{', trim($raw));
+		$raw = preg_replace('#\\]\s*\\[#', ']' . $sep . '[', trim($raw));
+		
 		$this->_buffer[$buffer] .= $raw;
+		
 		$chunks = explode($sep, $this->_buffer[$buffer]);
-		$count = sizeof($chunks);
 		$error = null;
 		$out = array();
 
 		foreach ($chunks as $i => &$chunk) {
+			if ($chunk == '') continue;
+			
 			$data = json_decode($chunk);
 			$error = json_last_error();
 			
 			if ($error !== JSON_ERROR_NONE) {
-				if ($i != $count - 1)
-					$this->_buffer[$buffer] = str_replace($chunk, '', $this->_buffer[$buffer]);
+				// @note - strange enought - must be commented out, but commented works instable...
+				$this->_buffer[$buffer] = str_replace($chunk, '', $this->_buffer[$buffer]);
 				
 				continue;
 			}
@@ -30745,7 +30747,7 @@ class QuarkSQL {
 
 	/**
 	 * @param IQuarkModel $model
-	 * @param array       $options
+	 * @param array $options
 	 *
 	 * @return mixed
 	 */
