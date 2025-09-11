@@ -25948,7 +25948,7 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 			$error = json_last_error();
 			
 			if ($error !== JSON_ERROR_NONE) {
-				// @note - strange enought - must be commented out, but commented works instable...
+				// @note - strange enough - must be commented out, but commented works instable...
 				$this->_buffer[$buffer] = str_replace($chunk, '', $this->_buffer[$buffer]);
 				
 				continue;
