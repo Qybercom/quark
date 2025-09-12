@@ -19783,6 +19783,11 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 * @var bool $_controllerFromConfig = false
 	 */
 	private $_controllerFromConfig = false;
+	
+	/**
+	 * @var int $_batchBuffer = QuarkJSONIOProcessor::BATCH_BUFFER_SIZE
+	 */
+	private $_batchBuffer = QuarkJSONIOProcessor::BATCH_BUFFER_SIZE;
 
 	/**
 	 * @var string $_name = ''
@@ -19827,6 +19832,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	private function _errorCryptogram ($action, $error) {
 		$this->_log($action, $error, array(
 			'This usually happens when mistyping certificate options for stream environment or client requested a non-supported SSL/TLS protocol version. Check your configuration.'
+		));
+	}
+	
+	/**
+	 * @param string $data = ''
+	 * @param string $buffer = ''
+	 *
+	 * @return array
+	 */
+	private function _batch ($data = '', $buffer = '') {
+		return self::$_json->BatchDecode($data, $buffer, $this->_batchBuffer, array(
+			QuarkJSONIOProcessor::BATCH_MARK_OBJECT => '}~{'
 		));
 	}
 
@@ -19881,7 +19898,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 				: $env->ServerURI()->ConnectionURI($host);
 		}
 
-		unset($i, $env);
+		unset($i, $env, $buffer, $environment);
 
 		return null;
 	}
@@ -20052,7 +20069,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	private function _pipeData ($method, $data, $signature = false, QuarkClient &$client = null) {
 		$uri = $client == null ? '' : $client->URI()->URI();
-		$chunks = self::$_json->BatchDecode($data, 'client ' . $uri);
+		$chunks = $this->_batch($data, 'client ' . $uri);
 		
 		foreach ($chunks as $i => &$chunk) {
 			if (!$chunk) continue;
@@ -20236,6 +20253,18 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	}
 
 	/**
+	 * @param int $size = QuarkJSONIOProcessor::BATCH_BUFFER_SIZE
+	 *
+	 * @return int
+	 */
+	public function &BatchBuffer ($size = QuarkJSONIOProcessor::BATCH_BUFFER_SIZE) {
+		if (func_num_args() != 0)
+			$this->_batchBuffer = $size;
+
+		return $this->_batchBuffer;
+	}
+
+	/**
 	 * @param bool $log = true
 	 *
 	 * @return bool
@@ -20389,6 +20418,9 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 
 		if (isset($ini->Dedicated))
 			$this->Dedicated($ini->Dedicated);
+
+		if (isset($ini->BatchBuffer))
+			$this->BatchBuffer($ini->BatchBuffer);
 
 		if (isset($ini->LogEvents))
 			$this->LogEvents($ini->LogEvents);
@@ -20720,7 +20752,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function ControllerClientData (QuarkClient $controller, $data) {
 		$uri = $controller == null ? '' : $controller->URI()->URI();
-		$chunks = self::$_json->BatchDecode($data, 'controller ' . $uri);
+		$chunks = $this->_batch($data, 'controller ' . $uri);
 		
 		foreach ($chunks as $i => &$chunk) {
 			$this->_cmd($chunk, self::COMMAND_ANNOUNCE, function ($node) {
@@ -20801,7 +20833,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function ControllerServerData (QuarkClient $node, $data) {
 		$uri = $node == null ? '' : $node->URI()->URI();
-		$chunks = self::$_json->BatchDecode($data, 'node ' . $uri);
+		$chunks = $this->_batch($data, 'node ' . $uri);
 		
 		foreach ($chunks as $i => &$chunk) {
 			$this->_cmd($chunk, self::COMMAND_BROADCAST, function ($payload) {
@@ -20880,7 +20912,7 @@ class QuarkStreamEnvironment implements IQuarkEnvironment, IQuarkCluster {
 	 */
 	public function TerminalData (QuarkClient $terminal, $data) {
 		$uri = $terminal == null ? '' : $terminal->URI()->URI();
-		$chunks = self::$_json->BatchDecode($data, 'terminal ' . $uri);
+		$chunks = $this->_batch($data, 'terminal ' . $uri);
 		
 		foreach ($chunks as $i => &$chunk) {
 			/** @noinspection PhpUnusedParameterInspection */
@@ -25874,6 +25906,8 @@ class QuarkFormIOProcessor implements IQuarkIOProcessor {
 class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	const MIME = 'application/json';
 	const BATCH_BUFFER_SIZE = 16384;
+	const BATCH_MARK_OBJECT = '#}\s*{#';
+	const BATCH_MARK_ARRAY = '#]\s*\\[#';
 	
 	/**
 	 * @var string[] $_buffer = []
@@ -25924,16 +25958,27 @@ class QuarkJSONIOProcessor implements IQuarkIOProcessor {
 	/**
 	 * @param string $raw = ''
 	 * @param string $buffer = ''
+	 * @param int $size = self::BATCH_BUFFER_SIZE
+	 * @param string[] $marks = []
 	 *
 	 * @return array
 	 */
-	public function BatchDecode ($raw = '', $buffer = '', $size = self::BATCH_BUFFER_SIZE) {
+	public function BatchDecode ($raw = '', $buffer = '', $size = self::BATCH_BUFFER_SIZE, $marks = []) {
+		if (func_num_args() < 4)
+			$marks = array(
+				self::BATCH_MARK_OBJECT => '}~{',
+				self::BATCH_MARK_ARRAY => ']~['
+			);
+		
 		if (!isset($this->_buffer[$buffer]))
 			$this->_buffer[$buffer] = '';
 		
 		$sep = Quark::GuID();
-		$raw = preg_replace('#}\s*{#', '}' . $sep . '{', trim($raw));
-		$raw = preg_replace('#\\]\s*\\[#', ']' . $sep . '[', trim($raw));
+		
+		foreach ($marks as $markA => &$markB)
+			$raw = preg_replace($markA, str_replace('~', $sep, $markB), trim($raw));
+		
+		unset($markA, $markB, $marks);
 		
 		$this->_buffer[$buffer] .= $raw;
 		
